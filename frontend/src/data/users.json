@@ -1,0 +1,152 @@
+{
+  "employees": [
+    {
+      "id": "EMP-001",
+      "first_name": "Jason",
+      "last_name": "G",
+      "name": "Jason G",
+      "profile_picture": "https://i.pravatar.cc/300?img=11",
+      "email": "jason@pixs.com",
+      "role": "admin",
+      "status": "active",
+      "contact_number": "+63 912 345 6789",
+      "contact_numbers": ["+63 912 345 6789", "+63 917 200 1001"],
+      "company_name": "PIXS PRINTING SHOP",
+      "business_address": "Laguna, Philippines",
+      "addresses": [
+        {
+          "label": "Main Office",
+          "address": "Laguna, Philippines"
+        },
+        {
+          "label": "Warehouse",
+          "address": "Binan, Laguna, Philippines"
+        }
+      ],
+      "password": "••••••••",
+      "date_created": "2024-01-15T08:00:00Z",
+      "last_login": "2026-03-28T10:30:00Z",
+      "total_orders_value": 0,
+      "daily_rate": 850,
+      "ot_rate": 150
+    },
+    {
+      "id": "EMP-002",
+      "first_name": "Staff",
+      "last_name": "A",
+      "name": "Staff A",
+      "profile_picture": "https://i.pravatar.cc/300?img=12",
+      "email": "staff_a@pixs.com",
+      "role": "staff",
+      "status": "active",
+      "contact_number": "+63 912 345 6780",
+      "contact_numbers": ["+63 912 345 6780", "+63 917 200 1002"],
+      "company_name": "PIXS PRINTING SHOP",
+      "business_address": "Laguna, Philippines",
+      "addresses": [
+        {
+          "label": "Primary",
+          "address": "Laguna, Philippines"
+        },
+        {
+          "label": "Secondary",
+          "address": "Cabuyao, Laguna, Philippines"
+        }
+      ],
+      "password": "••••••••",
+      "date_created": "2024-02-10T09:00:00Z",
+      "last_login": "2026-03-28T08:15:00Z",
+      "total_orders_value": 0,
+      "daily_rate": 600,
+      "ot_rate": 100
+    },
+    {
+      "id": "EMP-003",
+      "first_name": "Inventory",
+      "last_name": "B",
+      "name": "Inventory B",
+      "profile_picture": "https://i.pravatar.cc/300?img=13",
+      "email": "inv_b@pixs.com",
+      "role": "inventory",
+      "status": "inactive",
+      "contact_number": "+63 912 345 6781",
+      "contact_numbers": ["+63 912 345 6781", "+63 917 200 1003"],
+      "company_name": "PIXS PRINTING SHOP",
+      "business_address": "Laguna, Philippines",
+      "addresses": [
+        {
+          "label": "Primary",
+          "address": "Laguna, Philippines"
+        },
+        {
+          "label": "Stock Yard",
+          "address": "Santa Rosa, Laguna, Philippines"
+        }
+      ],
+      "password": "••••••••",
+      "date_created": "2024-03-05T10:30:00Z",
+      "last_login": "2026-03-25T16:45:00Z",
+      "total_orders_value": 0,
+      "daily_rate": 650,
+      "ot_rate": 110
+    }
+  ],
+  "customers": [
+    {
+      "id": "CUST-501",
+      "first_name": "Juan",
+      "last_name": "Dela Cruz",
+      "name": "Juan Dela Cruz",
+      "profile_picture": "https://i.pravatar.cc/300?img=14",
+      "email": "juan@example.com",
+      "status": "active",
+      "contact_number": "+63 918 111 2233",
+      "contact_numbers": ["+63 918 111 2233", "+63 919 444 5566"],
+      "company_name": "Juan's Sari-Sari",
+      "business_address": "Binan, Laguna",
+      "addresses": [
+        {
+          "label": "Business",
+          "address": "Binan, Laguna"
+        },
+        {
+          "label": "Delivery",
+          "address": "San Pedro, Laguna"
+        }
+      ],
+      "password": "1234",
+      "date_created": "2024-05-12T14:20:00Z",
+      "last_login": "2026-03-27T11:00:00Z",
+      "total_orders_value": 15450.50,
+      "orders": 12
+    },
+    {
+      "id": "CUST-502",
+      "first_name": "Laguna",
+      "last_name": "Prints",
+      "name": "Laguna Prints",
+      "profile_picture": "https://i.pravatar.cc/300?img=15",
+      "email": "info@lagunaprints.com",
+      "status": "active",
+      "contact_number": "+63 920 555 8888",
+      "contact_numbers": ["+63 920 555 8888", "+63 921 222 1010"],
+      "company_name": "Laguna Prints & Design",
+      "business_address": "Santa Rosa, Laguna",
+      "addresses": [
+        {
+          "label": "Main Branch",
+          "address": "Santa Rosa, Laguna"
+        },
+        {
+          "label": "Pickup Point",
+          "address": "Calamba, Laguna"
+        }
+      ],
+      "password": "••••••••",
+      "date_created": "2024-06-20T11:45:00Z",
+      "last_login": "2026-03-28T09:30:00Z",
+      "total_orders_value": 85200.00,
+      "orders": 45
+    }
+  ]
+}

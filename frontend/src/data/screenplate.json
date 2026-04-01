@@ -1,0 +1,61 @@
+[
+  {
+    "plate_id": "SP-MINT-001",
+    "plate_name": "Standard 1-Color Silk Screen",
+    "type": "1-Color / Single Side",
+    "setup_fee": 450.00,
+    "description": "High-tension mesh for detailed logo printing.",
+    "logo_url": "https://pixs-storage.link/sp-mint-logo.png",
+    "dimensions": "120mm x 120mm Mesh",
+    "capabilities": {
+      "print_type": "Single",
+      "max_colors": 1,
+      "special_logic": "Standard Print"
+    },
+    "technical_info": "Precision mesh count: 120T. Optimized for UV inks.",
+    "compatible_products": [
+      {
+        "product_id": "P001",
+        "product_name": "PP Cup 16oz",
+        "print_price_per_unit": 1.50,
+        "max_print_area": "60mm x 60mm",
+        "position_allowed": ["Front", "Back"]
+      },
+      {
+        "product_id": "P002",
+        "product_name": "Hard Cup 22oz",
+        "print_price_per_unit": 2.00,
+        "max_print_area": "70mm x 70mm",
+        "position_allowed": ["Front Center"]
+      }
+    ],
+    "is_active": true,
+    "created_by": "Admin"
+  },
+  {
+    "plate_id": "SP-GOLD-002",
+    "plate_name": "Premium Multi-Color Node",
+    "type": "Multi-Color / Double Side",
+    "setup_fee": 1200.00,
+    "description": "Industrial grade plate for complex multi-tonal branding.",
+    "logo_url": "https://pixs-storage.link/sp-gold-logo.png",
+    "dimensions": "150mm x 150mm Mesh",
+    "capabilities": {
+      "print_type": "Double / 5x Color",
+      "max_colors": 5,
+      "special_logic": "High-Accuracy Registration"
+    },
+    "technical_info": "Hardened frame structure. Zero-warp technology for b2v registration.",
+    "compatible_products": [
+      {
+        "product_id": "P001",
+        "product_name": "PP Cup 16oz",
+        "print_price_per_unit": 3.50,
+        "max_print_area": "60mm x 60mm (B2B)",
+        "position_allowed": ["Front & Back Sync"]
+      }
+    ],
+    "is_active": true,
+    "created_by": "Admin"
+  }
+]

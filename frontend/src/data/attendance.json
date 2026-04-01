@@ -1,0 +1,46 @@
+[
+  {
+    "id": "ATT-001",
+    "employee_id": "EMP-001",
+    "date": "2026-03-27",
+    "status": "Present",
+    "time_in": "08:00",
+    "time_out": "17:30",
+    "ot_hours": 0.5,
+    "is_half_day": false,
+    "is_holiday": false
+  },
+  {
+    "id": "ATT-002",
+    "employee_id": "EMP-002",
+    "date": "2026-03-27",
+    "status": "Present",
+    "time_in": "08:15",
+    "time_out": "17:00",
+    "ot_hours": 0,
+    "is_half_day": false,
+    "is_holiday": false
+  },
+  {
+    "id": "ATT-003",
+    "employee_id": "EMP-003",
+    "date": "2026-03-27",
+    "status": "Absent",
+    "time_in": null,
+    "time_out": null,
+    "ot_hours": 0,
+    "is_half_day": false,
+    "is_holiday": false
+  },
+  {
+    "id": "ATT-004",
+    "employee_id": "EMP-001",
+    "date": "2026-03-28",
+    "status": "Present",
+    "time_in": "07:55",
+    "time_out": null,
+    "ot_hours": 0,
+    "is_half_day": false,
+    "is_holiday": false
+  }
+]

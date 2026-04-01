@@ -1,0 +1,100 @@
+{
+  "shop": {
+    "name": "PIXS Printing Shop",
+    "tagline": "Premium Printing Solutions",
+    "logo": null,
+    "businessHours": {
+      "monday": { "open": "08:00", "close": "18:00", "enabled": true },
+      "tuesday": { "open": "08:00", "close": "18:00", "enabled": true },
+      "wednesday": { "open": "08:00", "close": "18:00", "enabled": true },
+      "thursday": { "open": "08:00", "close": "18:00", "enabled": true },
+      "friday": { "open": "08:00", "close": "18:00", "enabled": true },
+      "saturday": { "open": "09:00", "close": "14:00", "enabled": true },
+      "sunday": { "open": "00:00", "close": "00:00", "enabled": false }
+    }
+  },
+  "account": {
+    "name": "Jason",
+    "email": "jason@pixs.com",
+    "role": "admin",
+    "avatar": null,
+    "phone": "+63 912 345 6789"
+  },
+  "printing": {
+    "defaultMarkup": 30,
+    "screenPlateSetupFee": 150,
+    "rushFeePercentage": 50,
+    "minimumOrderAmount": 100,
+    "colorMatchTolerance": 95
+  },
+  "payment": {
+    "gcash": {
+      "number": "09123456789",
+      "name": "PIXS Printing",
+      "enabled": true
+    },
+    "maya": {
+      "number": "09123456789",
+      "name": "PIXS Printing",
+      "enabled": false
+    },
+    "bankTransfer": {
+      "bank": "BDO",
+      "accountNumber": "1234567890",
+      "accountName": "PIXS Printing Shop",
+      "enabled": false
+    },
+    "downpaymentPercentage": 50,
+    "requireDownpayment": true
+  },
+  "addressBook": {
+    "suppliers": [
+      {
+        "id": "SUP-001",
+        "name": "Premier Paper Supply",
+        "contact": "Maria Santos",
+        "phone": "+63 922 111 2222",
+        "email": "sales@premierpaper.ph",
+        "address": "123 Industrial Ave, Quezon City, Metro Manila",
+        "notes": "Primary supplier for A4 and A3 paper stocks"
+      },
+      {
+        "id": "SUP-002",
+        "name": "Ink Masters Co.",
+        "contact": "Roberto Cruz",
+        "phone": "+63 933 333 4444",
+        "email": "orders@inkmasters.ph",
+        "address": "456 Commerce St, Makati City, Metro Manila",
+        "notes": "Specialized in UV inks for outdoor printing"
+      }
+    ],
+    "branches": [
+      {
+        "id": "BR-001",
+        "name": "Main Branch",
+        "address": "789 Business Center, Ortigas, Pasig City",
+        "phone": "+63 2 8888 8888",
+        "isMain": true
+      }
+    ]
+  },
+  "policies": {
+    "returnRefund": "All custom-printed items are non-refundable once production has begun. For defective prints, please notify us within 24 hours of receipt with photo documentation. We will remake the affected items at no additional cost.\n\nEligibility for refunds applies only to:\n- Items with clear manufacturing defects\n- Orders cancelled before production starts\n- Incorrect items shipped due to our error",
+    "productionLeadTime": "Standard production takes 3-5 business days after artwork approval.\n\nRush orders (50% surcharge) are completed within 24-48 hours.\n\nLarge orders (500+ items) may require additional 2-3 business days.\n\nLead time begins after downpayment is received and artwork is approved.",
+    "dataPrivacy": "PIXS Printing Shop is committed to protecting your privacy.\n\nData Collection: We collect only necessary information for order processing and customer service.\n\nData Usage: Your information is used solely for order fulfillment and communication regarding your orders.\n\nData Protection: We implement appropriate security measures to protect your personal information.\n\nYour Rights: You may request access to, correction of, or deletion of your personal data by contacting us at privacy@pixs.ph"
+  },
+  "notifications": {
+    "lowStock": true,
+    "newComplaint": true,
+    "newMessage": true,
+    "orderCompleted": true,
+    "paymentReceived": false
+  },
+  "system": {
+    "theme": "light",
+    "autoBackup": false,
+    "backupFrequency": "daily",
+    "version": "4.0.0",
+    "lastBackup": null
+  }
+}

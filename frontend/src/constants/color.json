@@ -1,0 +1,8 @@
+[
+  { "id": "C001", "name": "Deep Mint", "hex": "#75EEA5", "type": "Standard" },
+  { "id": "C002", "name": "Electric Blue", "hex": "#4A90E2", "type": "Standard" },
+  { "id": "C003", "name": "Lava Red", "hex": "#E74C3C", "type": "Standard" },
+  { "id": "C004", "name": "Matte Black", "hex": "#2C3E50", "type": "Premium" },
+  { "id": "C005", "name": "Pearl White", "hex": "#FDFEFE", "type": "Standard" },
+  { "id": "C006", "name": "Gold Leaf", "hex": "#D4AF37", "type": "Premium" }
+]

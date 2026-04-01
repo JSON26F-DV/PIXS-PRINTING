@@ -1,0 +1,47 @@
+[
+  {
+    "id": "SUP-001",
+    "full_name": "Premier Paper Supply",
+    "phone": "09221112222",
+    "street": "123 Industrial Ave",
+    "barangay": "San Antonio",
+    "city": "Quezon City",
+    "province": "Metro Manila",
+    "region": "National Capital Region",
+    "postal_code": "1100",
+    "notes": "Primary supplier for A4 and A3 paper stocks",
+    "latitude": 14.676,
+    "longitude": 121.0437,
+    "is_default": true
+  },
+  {
+    "id": "SUP-002",
+    "full_name": "Ink Masters Co.",
+    "phone": "09333334444",
+    "street": "456 Commerce St",
+    "barangay": "Makati",
+    "city": "Makati City",
+    "province": "Metro Manila",
+    "region": "National Capital Region",
+    "postal_code": "1200",
+    "notes": "Specialized in UV inks for outdoor printing",
+    "latitude": 14.5547,
+    "longitude": 121.0244,
+    "is_default": false
+  },
+  {
+    "id": "SUP-003",
+    "full_name": "Plastic Solutions Inc.",
+    "phone": "09445556666",
+    "street": "789 Manufacturing Zone",
+    "barangay": "Real",
+    "city": "Calamba",
+    "province": "Laguna",
+    "region": "Region IV-A",
+    "postal_code": "4027",
+    "notes": "Supplier for plastic cups and containers",
+    "latitude": 14.2125,
+    "longitude": 121.1611,
+    "is_default": false
+  }
+]

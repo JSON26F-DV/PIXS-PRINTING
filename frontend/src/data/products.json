@@ -1,0 +1,96 @@
+[
+  {
+    "id": "P001",
+    "name": "Injection PP Cup (Series)",
+    "category": "Milktea Cup",
+    "short_description": "Premium injection-molded cup. Durable, crystal clear, and leak-proof.",
+    "long_description": "Our Standard PP Cups are engineered for high-volume milktea shops. Made from high-quality food-grade polypropylene, these cups offer superior clarity and strength. Compatible with standard 95mm sealing films and dome lids.",
+    "best_for": "Milktea Shops, Coffee Houses, and Catering Events.",
+    "base_price": 5.50,
+    "raw_material_cost": 2.50,
+    "current_stock": 8500,
+    "min_threshold": 500,
+    "min_order": 100,
+    "main_image": "https://images.unsplash.com/photo-1558961363-fa8fdf82db35?auto=format&fit=crop&q=80",
+    "gallery": [
+      "https://images.unsplash.com/photo-1558961363-fa8fdf82db35?auto=format&fit=crop&q=80",
+      "https://images.unsplash.com/photo-1517142089942-ba376ce32a2e?auto=format&fit=crop&q=80"
+    ],
+    "print_method": "Screen Print / Offset",
+    "tags": ["Best Seller", "Eco-Friendly", "Food Grade"],
+    "is_need_screenplate": true,
+    "is_need_color": true,
+    "variants": [
+      { "variant_id": "V-12OZ", "size": "12oz", "width": "95mm", "height": "100mm", "price": 4.50, "stock": 1500 },
+      { "variant_id": "V-16OZ", "size": "16oz", "width": "95mm", "height": "120mm", "price": 5.50, "stock": 5000 },
+      { "variant_id": "V-22OZ", "size": "22oz", "width": "95mm", "height": "150mm", "price": 6.50, "stock": 2000 }
+    ]
+  },
+  {
+    "id": "P002",
+    "name": "U Cup (Series)",
+    "category": "Milktea Cup",
+    "short_description": "Premium U-shaped cup, extra thick.",
+    "long_description": "Premium U-shaped cup, extra thick for durability and a premium feel. Unique rounded bottom design.",
+    "best_for": "High-end café experience.",
+    "base_price": 4.75,
+    "raw_material_cost": 2.00,
+    "current_stock": 1000,
+    "min_threshold": 500,
+    "min_order": 100,
+    "main_image": "https://images.unsplash.com/photo-1558961363-fa8fdf82db35?auto=format&fit=crop&q=80",
+    "gallery": [],
+    "print_method": "Screen",
+    "tags": ["Premium", "Durable"],
+    "is_need_screenplate": true,
+    "is_need_color": true,
+    "variants": [
+      { "variant_id": "U-12OZ", "size": "12oz", "width": "95mm", "height": "95mm", "price": 4.75, "stock": 420 },
+      { "variant_id": "U-16OZ", "size": "16oz", "width": "95mm", "height": "115mm", "price": 5.75, "stock": 580 }
+    ]
+  },
+  {
+    "id": "P006",
+    "name": "Heavy Duty Cup Sealer",
+    "category": "Machine",
+    "short_description": "Professional automated cup sealing machine.",
+    "long_description": "Industrial grade automated cup sealer for high-output environments. Features precise temperature control and universal cup compatible logic (90mm-95mm). Durable build quality for 24/7 operations.",
+    "best_for": "Commercial milktea chains and beverage production units.",
+    "base_price": 12500.00,
+    "raw_material_cost": 8500.00,
+    "current_stock": 25,
+    "min_threshold": 5,
+    "min_order": 1,
+    "main_image": "https://images.unsplash.com/photo-1594212699903-ec8a3ecc50f1?auto=format&fit=crop&q=80",
+    "gallery": [],
+    "print_method": "Industrial Hardware",
+    "tags": ["Machinery", "Industrial", "Automation"],
+    "is_need_screenplate": false,
+    "is_need_color": false,
+    "variants": [
+      { "variant_id": "M-PRO-01", "size": "Standard", "width": "450mm", "height": "800mm", "price": 12500.00, "stock": 25 }
+    ]
+  },
+  {
+    "id": "P005",
+    "name": "Flat Lid (Standard)",
+    "category": "Milktea Cup",
+    "short_description": "Universal flat lid for standard cup sizes.",
+    "long_description": "Universal flat lid for PP/U cups. Crystal clear and tight seal.",
+    "best_for": "Cold beverages with straws.",
+    "base_price": 1.50,
+    "raw_material_cost": 0.50,
+    "current_stock": 15000,
+    "min_threshold": 2000,
+    "min_order": 1000,
+    "main_image": "https://images.unsplash.com/photo-1517142089942-ba376ce32a2e?auto=format&fit=crop&q=80",
+    "gallery": [],
+    "print_method": "None",
+    "tags": ["Essential"],
+    "is_need_screenplate": false,
+    "is_need_color": false,
+    "variants": [
+      { "variant_id": "L-95MM", "size": "95mm", "width": "95mm", "height": "10mm", "price": 1.50, "stock": 15000 }
+    ]
+  }
+]

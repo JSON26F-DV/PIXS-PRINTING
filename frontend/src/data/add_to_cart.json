@@ -1,0 +1,23 @@
+[
+  {
+    "id": "prod_001__v_001__no-color__no-plate",
+    "productId": "prod_001",
+    "productName": "Matte Reusable Cup",
+    "productImage": "https://images.unsplash.com/photo-1550572017-eddf77227ae1?auto=format&fit=crop&q=80",
+    "category": "Cylindrical Hub",
+    "minOrder": 50,
+    "currentStock": 500,
+    "quantity": 100,
+    "variant": {
+      "id": "v_001",
+      "size": "Medium",
+      "width": "8cm",
+      "height": "12cm",
+      "unitPrice": 45,
+      "stock": 1000
+    },
+    "color": null,
+    "plate": null,
+    "createdAt": "2026-04-01T12:00:00Z"
+  }
+]

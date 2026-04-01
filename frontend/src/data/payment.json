@@ -1,0 +1,16 @@
+[
+  {
+    "id": "pay_001",
+    "type": "bank",
+    "bank_name": "BDO",
+    "masked_number": "**** 1234",
+    "is_default": true
+  },
+  {
+    "id": "pay_002",
+    "type": "ewallet",
+    "provider": "GCash",
+    "masked_number": "**** 5678",
+    "is_default": false
+  }
+]

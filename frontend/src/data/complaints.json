@@ -1,0 +1,46 @@
+[
+  {
+    "id": "C-1001",
+    "order_id": "ORD-5501",
+    "customer_id": "CUST-501",
+    "issue_type": "Faded Print",
+    "description": "The logo on the PP cups is fading after one wash. Seems like a curing issue.",
+    "status": "Open",
+    "severity": "High",
+    "date": "2026-03-28T09:00:00Z",
+    "photo_url": "https://placehold.co/400x300?text=Faded+Print+Example"
+  },
+  {
+    "id": "C-1002",
+    "order_id": "ORD-5502",
+    "customer_id": "CUST-502",
+    "issue_type": "Wrong Quantity",
+    "description": "Received only 450 cups instead of 500. Box was partially opened.",
+    "status": "In Review",
+    "severity": "Med",
+    "date": "2026-03-27T15:30:00Z",
+    "photo_url": "https://placehold.co/400x300?text=Quantity+Discrepancy"
+  },
+  {
+    "id": "C-1003",
+    "order_id": "ORD-5503",
+    "customer_id": "CUST-503",
+    "issue_type": "Damaged Cup",
+    "description": "About 20 cups from the bottom of the stack are cracked.",
+    "status": "Resolved",
+    "severity": "Low",
+    "date": "2026-03-26T11:20:00Z",
+    "photo_url": "https://placehold.co/400x300?text=Damaged+Product"
+  },
+  {
+    "id": "C-1004",
+    "order_id": "ORD-5504",
+    "customer_id": "CUST-501",
+    "issue_type": "Faded Print",
+    "description": "Significant fading on the 'Laguna Prints' batch. Might be Ink Batch RM-001.",
+    "status": "Open",
+    "severity": "High",
+    "date": "2026-03-28T12:00:00Z",
+    "photo_url": "https://placehold.co/400x300?text=Ink+Issue+RM-001"
+  }
+]

@@ -1,0 +1,5 @@
+[
+  { "id": "L001", "product_id": "P001", "qty_added": 500, "date": "2026-03-28T10:00:00Z", "staff_name": "Jason" },
+  { "id": "L002", "product_id": "P002", "qty_added": 200, "date": "2026-03-27T14:30:00Z", "staff_name": "Staff_A" },
+  { "id": "L003", "product_id": "P005", "qty_added": 5000, "date": "2026-03-26T09:15:00Z", "staff_name": "Inventory_B" }
+]

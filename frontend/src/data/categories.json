@@ -1,0 +1,8 @@
+[
+  { "id": "Milktea Cup", "label": "Milktea Cups", "count": 12, "image": "https://images.unsplash.com/photo-1558961363-fa8fdf82db35?auto=format&fit=crop&q=80" },
+  { "id": "Paper Cup", "label": "Paper Cups", "count": 8, "image": "https://images.unsplash.com/photo-1517142089942-ba376ce32a2e?auto=format&fit=crop&q=80" },
+  { "id": "Tumbler", "label": "Tumblers", "count": 15, "image": "https://images.unsplash.com/photo-1626785774573-4b799315345d?auto=format&fit=crop&q=80" },
+  { "id": "Bottles", "label": "Bottles", "count": 9, "image": "https://images.unsplash.com/photo-1550572017-eddf77227ae1?auto=format&fit=crop&q=80" },
+  { "id": "Machine", "label": "Machinery", "count": 5, "image": "https://images.unsplash.com/photo-1626785774573-4b799315345d?auto=format&fit=crop&q=80" },
+  { "id": "Eco Bag", "label": "Eco Bags", "count": 20, "image": "https://images.unsplash.com/photo-1626785774573-4b799315345d?auto=format&fit=crop&q=80" }
+]

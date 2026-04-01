@@ -1,0 +1,140 @@
+{
+  "cartOrders": [
+    {
+      "id": "ORD-9001",
+      "customer": "Pila Central School",
+      "email": "pila.central@deped.gov.ph",
+      "product": "12oz PP Cup",
+      "qty": 500,
+      "unit_price": 5.50,
+      "total": 2750.00,
+      "artwork": "https://placehold.co/200",
+      "added_at": "2026-03-28T09:15:00Z",
+      "status": "pending_approval"
+    },
+    {
+      "id": "ORD-9002",
+      "customer": "Laguna Cafe",
+      "email": "orders@lagunacafe.ph",
+      "product": "16oz U Cup",
+      "qty": 200,
+      "unit_price": 6.75,
+      "total": 1350.00,
+      "artwork": "https://placehold.co/200",
+      "added_at": "2026-03-28T10:30:00Z",
+      "status": "pending_approval"
+    },
+    {
+      "id": "ORD-9003",
+      "customer": "Victoria Bakery",
+      "email": "vicky@bakerysto.ph",
+      "product": "Hard Cup 22oz",
+      "qty": 1000,
+      "unit_price": 8.00,
+      "total": 8000.00,
+      "artwork": "https://placehold.co/200",
+      "added_at": "2026-03-28T11:45:00Z",
+      "status": "pending_approval"
+    },
+    {
+      "id": "ORD-9004",
+      "customer": "Meycauayan Print Hub",
+      "email": "sales@meyprint.ph",
+      "product": "Sticker Pack (100 pcs)",
+      "qty": 50,
+      "unit_price": 120.00,
+      "total": 6000.00,
+      "artwork": "https://placehold.co/200",
+      "added_at": "2026-03-28T14:20:00Z",
+      "status": "pending_approval"
+    }
+  ],
+  "productionQueue": [
+    {
+      "id": "ORD-8265",
+      "customer": "Makati Co-working Space",
+      "product": "12oz PP Cup",
+      "qty": 300,
+      "approved_at": "2026-03-27T08:00:00Z",
+      "assigned_to": "Staff-A",
+      "status": "approved",
+      "is_printed": false
+    },
+    {
+      "id": "ORD-8266",
+      "customer": "Batangas Resort",
+      "product": "16oz U Cup",
+      "qty": 150,
+      "approved_at": "2026-03-27T09:30:00Z",
+      "assigned_to": "Staff-B",
+      "status": "approved",
+      "is_printed": false
+    },
+    {
+      "id": "ORD-8267",
+      "customer": "Quezon City Gym",
+      "product": "Hard Cup 22oz",
+      "qty": 200,
+      "approved_at": "2026-03-27T10:00:00Z",
+      "assigned_to": "Staff-A",
+      "status": "approved",
+      "is_printed": false
+    },
+    {
+      "id": "ORD-8268",
+      "customer": "Cebu Logistics Inc",
+      "product": "Tote Bag (Mint)",
+      "qty": 75,
+      "approved_at": "2026-03-27T11:15:00Z",
+      "assigned_to": "Staff-C",
+      "status": "approved",
+      "is_printed": false
+    },
+    {
+      "id": "ORD-8264",
+      "customer": "Taguig Tech Park",
+      "product": "Lanyard Custom",
+      "qty": 500,
+      "approved_at": "2026-03-26T14:00:00Z",
+      "assigned_to": "Staff-B",
+      "status": "ready_for_qc",
+      "is_printed": true,
+      "printed_at": "2026-03-28T08:30:00Z"
+    }
+  ],
+  "disputes": [
+    {
+      "id": "DSP-001",
+      "order_id": "ORD-8250",
+      "customer": "Manila Office Supply",
+      "issue_type": "Defective Print",
+      "description": "Color bleeding on 40% of the cups. Artwork design not properly aligned with cup curve.",
+      "photo_evidence": "https://placehold.co/400x300",
+      "reported_at": "2026-03-27T15:00:00Z",
+      "status": "Pending",
+      "resolution": null
+    },
+    {
+      "id": "DSP-002",
+      "order_id": "ORD-8245",
+      "customer": "Pasig Marketing Agency",
+      "issue_type": "Missing Item",
+      "description": "Received 450 pieces instead of 500. Missing 50pcs from the order.",
+      "photo_evidence": null,
+      "reported_at": "2026-03-26T10:30:00Z",
+      "status": "Re-print",
+      "resolution": "Re-print order for 50 additional pieces scheduled for 2026-03-29"
+    },
+    {
+      "id": "DSP-003",
+      "order_id": "ORD-8238",
+      "customer": "Alabang Restaurant",
+      "issue_type": "Wrong Design",
+      "description": "Logo printed in reverse/mirrored orientation. Customer uploaded corrected artwork.",
+      "photo_evidence": "https://placehold.co/400x300",
+      "reported_at": "2026-03-25T09:15:00Z",
+      "status": "Resolved",
+      "resolution": "Reprinted 100% of order with correct artwork orientation. Customer confirmed satisfaction."
+    }
+  ]
+}

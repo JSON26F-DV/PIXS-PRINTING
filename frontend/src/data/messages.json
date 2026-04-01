@@ -1,0 +1,75 @@
+[
+  {
+    "id": "msg_1711964400000",
+    "sender": "admin",
+    "senderName": "PIXS Admin",
+    "text": "Welcome to PIXS Printing Shop! How can we help you with your production requirements today?",
+    "timestamp": "2026-03-31T08:00:00Z",
+    "reactions": [
+      { "user": "customer", "emoji": "❤️" }
+    ]
+  },
+  {
+    "id": "msg_1711964500000",
+    "sender": "customer",
+    "senderName": "You",
+    "text": "Hi! I need to print 500 copies of this design on high-gloss 300gsm cardstock.",
+    "timestamp": "2026-03-31T08:05:00Z",
+    "attachments": [
+      {
+        "type": "image",
+        "url": "https://images.unsplash.com/photo-1561070791-2526d30994b5?q=80&w=500&auto=format&fit=crop",
+        "name": "business_card_v1.png"
+      }
+    ],
+    "reactions": [
+      { "user": "admin", "emoji": "👍" }
+    ]
+  },
+  {
+    "id": "msg_1711964600000",
+    "sender": "admin",
+    "senderName": "PIXS Admin",
+    "text": "Understood. The gloss finish on 300gsm is a premium choice. Let me verify the technical specs from your file.",
+    "timestamp": "2026-03-31T08:10:00Z",
+    "reactions": [
+      { "user": "customer", "emoji": "😮" },
+      { "user": "admin", "emoji": "😮" }
+    ]
+  },
+  {
+    "id": "msg_1711964700000",
+    "sender": "customer",
+    "senderName": "You",
+    "text": "Wait, I updated the file. Please use this one instead.",
+    "timestamp": "2026-03-31T08:15:00Z",
+    "replyTo": {
+      "id": "msg_1711964500000",
+      "text": "Hi! I need to print 500 copies of this design on high-gloss 300gsm cardstock.",
+      "senderName": "You"
+    },
+    "isEdited": true,
+    "originalText": "Please use this updated design. The previous one had a typo in the contact info.",
+    "attachments": [
+      {
+        "type": "file",
+        "url": "#",
+        "name": "business_card_FINAL_v2.pdf"
+      }
+    ],
+    "reactions": [
+      { "user": "admin", "emoji": "👍" },
+      { "user": "customer", "emoji": "👍" }
+    ]
+  },
+  {
+    "id": "msg_1711964800000",
+    "sender": "admin",
+    "senderName": "PIXS Admin",
+    "text": "Perfect. Spec verification complete. We'll start the printing node immediately.",
+    "timestamp": "2026-03-31T08:20:00Z",
+    "reactions": [
+      { "user": "customer", "emoji": "😂" }
+    ]
+  }
+]
