@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useLayoutEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, HelpCircle } from 'lucide-react';
+import { ArrowLeft, PackageCheck } from 'lucide-react';
+
 import { clsx } from 'clsx';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -21,7 +22,9 @@ import ColorPicker from './components/ColorPicker';
 import PlateSelector from './components/PlateSelector';
 import ProductInfoCard from './components/ProductInfoCard';
 import PriceCalculatorUI from './components/PriceCalculatorUI';
+import FullscreenGalleryModal from '../../components/common/FullscreenGalleryModal';
 import { mockCartService } from '../../pages/AddToCart/services/mockCartService';
+
 
 // ─── Loading State UI Protocol ────────────────────────────────────────────────
 const Skeleton: React.FC<{ className?: string }> = ({ className }) => (
@@ -37,6 +40,21 @@ const ProductDetailInner: React.FC<{ product: IProduct; compatiblePlates: IScree
   
   // Logic Engine Integration
   const { state, actions, computed } = useProductDetail({ product, compatiblePlates });
+
+  // Gallery Modal State Protocol
+  const [isGalleryOpen, setIsGalleryOpen] = useState(false);
+  const [galleryIndex, setGalleryIndex] = useState(0);
+
+  // Cross-Table Logic Matrix: Identify compat variants based on selected screenplate
+  const compatibleVariantSizes = React.useMemo(() => {
+    if (!state.selectedPlateId) return null;
+    const selectedPlate = compatiblePlates.find(p => p.plate_id === state.selectedPlateId);
+    if (!selectedPlate) return null;
+    
+    const compatibility = selectedPlate.compatible_products.find(cp => cp.product_id === product.id);
+    return compatibility?.compatible_variants || null;
+  }, [state.selectedPlateId, compatiblePlates, product.id]);
+
 
   // Automatic Top-0 Scroll Protocol
   useLayoutEffect(() => {
@@ -172,7 +190,21 @@ const ProductDetailInner: React.FC<{ product: IProduct; compatiblePlates: IScree
             <div className="h-4 w-px bg-slate-100 mx-2" />
             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest italic">{product.category}</span>
           </div>
-          <HelpCircle size={14} className="text-slate-200" />
+          <button
+            onClick={handleBuyNow}
+            disabled={!computed.canAddToCart}
+            className={clsx(
+              'px-6 py-2 rounded-full flex items-center justify-center gap-4 transition-all duration-500 relative overflow-hidden group active:scale-[0.98]',
+              computed.canAddToCart 
+                ? 'bg-slate-900 text-white shadow-xl hover:scale-[1.01]' 
+                : 'bg-slate-100 text-slate-300 cursor-not-allowed grayscale opacity-60'
+            )}
+          >
+            <span className="text-[10px] font-black uppercase italic tracking-tighter">
+              {computed.canAddToCart ? 'BUY NOW' : 'Protocol Locked'}
+            </span>
+            <PackageCheck size={14} strokeWidth={3} />
+          </button>
         </div>
       </div>
 
@@ -186,8 +218,13 @@ const ProductDetailInner: React.FC<{ product: IProduct; compatiblePlates: IScree
               mainImage={product.main_image}
               gallery={product.gallery}
               productName={product.name}
+              onImageClick={(idx) => {
+                setGalleryIndex(idx);
+                setIsGalleryOpen(true);
+              }}
             />
           </div>
+
 
           {/* ── Right Control Space: Order Configuration ──────────────────────── */}
           <div className="space-y-12">
@@ -217,8 +254,10 @@ const ProductDetailInner: React.FC<{ product: IProduct; compatiblePlates: IScree
                 selectedVariantId={state.selectedVariantId}
                 onSelect={actions.setSelectedVariantId}
                 minThreshold={product.min_threshold}
+                compatibleVariantSizes={compatibleVariantSizes}
               />
             </div>
+
 
             {/* Selection Node: Master Color Inventory (Condition Protocol) */}
             {product.is_need_color && (
@@ -279,7 +318,17 @@ const ProductDetailInner: React.FC<{ product: IProduct; compatiblePlates: IScree
           </div>
         </div>
       </div>
+
+      {/* Cinematic Fullscreen Viewing Hub */}
+      <FullscreenGalleryModal 
+        isOpen={isGalleryOpen}
+        onClose={() => setIsGalleryOpen(false)}
+        images={[product.main_image, ...product.gallery]}
+        initialIndex={galleryIndex}
+        productName={product.name}
+      />
     </div>
+
   );
 };
 

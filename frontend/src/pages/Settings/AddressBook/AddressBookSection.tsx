@@ -8,8 +8,10 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useAccountInfo } from '../AccountInfo/hooks/useAccountInfo';
 import { useCustomerAddressStore } from '../../../store/useCustomerAddressStore';
+
 import {
   getAllProvinces,
   getAllRegions,
@@ -215,7 +217,10 @@ const MapSelectorLazy = React.lazy(async () => {
 
 const AddressBookSection: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const { defaultAccount } = useAccountInfo();
   const { addresses, addAddress, updateAddress, removeAddress, setDefaultAddress } = useCustomerAddressStore();
+
   
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingAddress, setEditingAddress] = useState<CustomerAddress | null>(null);
@@ -581,11 +586,30 @@ const AddressBookSection: React.FC = () => {
               <input className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" {...register('full_name')} />
               {errors.full_name && <p className="text-xs text-rose-500">{errors.full_name.message}</p>}
             </div>
-            <div>
-              <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Phone</label>
-              <input className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" {...register('phone')} />
-              {errors.phone && <p className="text-xs text-rose-500">{errors.phone.message}</p>}
+            <div className="AddressContactWrapper space-y-3">
+              <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Select Contact Number</label>
+              <select 
+                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold text-slate-800 focus:border-pixs-mint outline-none"
+                {...register('phone')}
+                onChange={(e) => {
+                   if (e.target.value === 'ADD_NEW') {
+                     navigate('/settings/account-info?scroll=contact-section&action=add-contact');
+                   } else {
+                     setValue('phone', e.target.value, { shouldValidate: true });
+                   }
+                }}
+              >
+                 <option value="">Select a number...</option>
+                 {defaultAccount.contacts.map((c, i) => (
+                   <option key={i} value={c.number}>
+                     {c.number} {c.is_default ? '(Default)' : ''}
+                   </option>
+                 ))}
+                
+              </select>
+              {errors.phone && <p className="text-[10px] font-black uppercase text-rose-500 italic px-1">{errors.phone.message}</p>}
             </div>
+
           </div>
           
           <div className={`space-y-4 rounded-3xl border p-5 transition-all md:p-8 ${selectionMode === 'map' ? 'border-slate-900 bg-slate-50/50 shadow-inner' : 'border-slate-100 opacity-40 bg-white'}`}>

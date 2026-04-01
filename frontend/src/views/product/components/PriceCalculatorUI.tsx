@@ -1,5 +1,5 @@
-import React from 'react';
 import { ShoppingCart, AlertTriangle, Info, Printer, PackageCheck, Layers, Palette } from 'lucide-react';
+
 import { clsx } from 'clsx';
 import type { IPriceBreakdown } from '../../../types/product.types';
 
@@ -119,7 +119,7 @@ const PriceCalculatorUI: React.FC<PriceCalculatorUIProps> = ({
             )}
           >
             <span className="text-xl font-black uppercase italic tracking-tighter">
-              {canAddToCart ? 'BUY NOW DIRECTLY' : 'Protocol Locked'}
+              {canAddToCart ? 'BUY NOW' : 'Protocol Locked'}
             </span>
             <PackageCheck size={24} strokeWidth={3} />
           </button>
@@ -135,10 +135,11 @@ const PriceCalculatorUI: React.FC<PriceCalculatorUIProps> = ({
             )}
           >
             <span className="text-xs font-black uppercase tracking-[3px] italic">
-              Add to Cart Inventory
+              ADD TO CART
             </span>
             <ShoppingCart size={16} strokeWidth={2.5} />
           </button>
+
         </div>
       </div>
     </div>

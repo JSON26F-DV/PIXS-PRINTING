@@ -1,27 +1,28 @@
 import { z } from 'zod';
+import { passwordSchema } from '../../../../utils/passwordValidation';
 
-export const philippinePhoneRegex = /^(\+63|0)9\d{9}$/;
-
-// ─── Profile Selection Node Schema ───────────────────────────────────────────
+/**
+ * Industrial Profile Logic Schema.
+ * Linked to communication terminal requirements.
+ */
 export const profileSchema = z.object({
-  name: z.string().trim().min(2, 'Name is required'),
-  email: z.string().trim().email('Please enter a valid email'),
-  phone: z
-    .string()
-    .trim()
-    .regex(philippinePhoneRegex, 'Please enter a valid PH mobile number'),
+  name: z.string().trim().min(2, 'Name node too short'),
+  email: z.string().trim().email('Invalid coordination terminal'),
 });
 
 export type ProfileFormValues = z.infer<typeof profileSchema>;
 
-// ─── Password Configuration Protocol Schema ──────────────────────────────────
-export const passwordSchema = z.object({
-  currentPassword: z.string().min(1, 'Current password is required'),
-  newPassword: z.string().min(8, 'New password must be at least 8 characters'),
-  confirmPassword: z.string().min(1, 'Please confirm your new password'),
+/**
+ * Enterprise Password Reset Protocol Schema.
+ * Enforces dual-node confirmation alignment.
+ */
+export const passwordFormSchema = z.object({
+  currentPassword: z.string().optional(),
+  newPassword: passwordSchema,
+  confirmPassword: z.string(),
 }).refine((data) => data.newPassword === data.confirmPassword, {
-  message: "Passwords do not match",
+  message: "Configuration mismatch: Encryption sequences do not align.",
   path: ["confirmPassword"],
 });
 
-export type PasswordFormValues = z.infer<typeof passwordSchema>;
+export type PasswordFormValues = z.infer<typeof passwordFormSchema>;

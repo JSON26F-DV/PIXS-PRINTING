@@ -16,17 +16,19 @@
     "compatible_products": [
       {
         "product_id": "P001",
-        "product_name": "PP Cup 16oz",
+        "product_name": "PPY Cup",
         "print_price_per_unit": 1.50,
         "max_print_area": "60mm x 60mm",
-        "position_allowed": ["Front", "Back"]
+        "position_allowed": ["Front", "Back"],
+        "compatible_variants": ["16oz", "22oz"]
       },
       {
         "product_id": "P002",
-        "product_name": "Hard Cup 22oz",
+        "product_name": "UCUP",
         "print_price_per_unit": 2.00,
         "max_print_area": "70mm x 70mm",
-        "position_allowed": ["Front Center"]
+        "position_allowed": ["Front Center"],
+        "compatible_variants": ["16oz", "22oz"]
       }
     ],
     "is_active": true,
@@ -49,10 +51,11 @@
     "compatible_products": [
       {
         "product_id": "P001",
-        "product_name": "PP Cup 16oz",
+        "product_name": "PPY Cup",
         "print_price_per_unit": 3.50,
         "max_print_area": "60mm x 60mm (B2B)",
-        "position_allowed": ["Front & Back Sync"]
+        "position_allowed": ["Front & Back Sync"],
+        "compatible_variants": ["16oz", "22oz"]
       }
     ],
     "is_active": true,

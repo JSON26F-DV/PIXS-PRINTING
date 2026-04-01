@@ -47,6 +47,7 @@ export interface IScreenPlateCompatibility {
   print_price_per_unit: number;
   max_print_area: string;
   position_allowed: string[];
+  compatible_variants: string[];
 }
 
 export interface IScreenPlateCapabilities {

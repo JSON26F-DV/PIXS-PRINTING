@@ -1,8 +1,11 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { X, Image as ImageIcon, FileText, Download, ExternalLink } from 'lucide-react';
+
 import { format } from 'date-fns';
+import FullscreenGalleryModal from '../../../components/common/FullscreenGalleryModal';
 import type { IMessage } from '../MessengerPage.tsx';
+
 
 
 interface GalleryViewProps {
@@ -12,7 +15,11 @@ interface GalleryViewProps {
 }
 
 const GalleryView: React.FC<GalleryViewProps> = ({ messages, onClose, isMobile }) => {
+  const [fullscreenOpen, setFullscreenOpen] = React.useState(false);
+  const [fullscreenIndex, setFullscreenIndex] = React.useState(0);
+
   // Extract all attachments across all messages
+
   const allAttachments = messages.flatMap(msg => 
     (msg.attachments || []).map(at => ({ ...at, timestamp: msg.timestamp }))
   ).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
@@ -53,9 +60,13 @@ const GalleryView: React.FC<GalleryViewProps> = ({ messages, onClose, isMobile }
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: i * 0.05 }}
                   className="group aspect-square rounded-[18px] bg-slate-100 overflow-hidden relative cursor-pointer border border-slate-200/50"
-                  onClick={() => window.open(img.url, '_blank')}
+                  onClick={() => {
+                    setFullscreenIndex(i);
+                    setFullscreenOpen(true);
+                  }}
                 >
                   <img src={img.url} alt={img.name} className="w-full h-full object-cover transition-transform group-hover:scale-110 duration-500" />
+
                   <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                     <ExternalLink size={20} className="text-white" />
                   </div>
@@ -121,7 +132,16 @@ const GalleryView: React.FC<GalleryViewProps> = ({ messages, onClose, isMobile }
            </div>
         </div>
       )}
+
+      <FullscreenGalleryModal 
+        isOpen={fullscreenOpen}
+        onClose={() => setFullscreenOpen(false)}
+        images={images.map(img => img.url)}
+        initialIndex={fullscreenIndex}
+        productName="Production Assets"
+      />
     </div>
+
   );
 };
 

@@ -6,13 +6,15 @@ interface ImageGalleryProps {
   mainImage: string;
   gallery: string[];
   productName: string;
+  onImageClick?: (index: number) => void;
 }
 
 /**
  * Enterprise Image Gallery for the Product Information Page.
  * Responsive mosaic layout with focus zoom and high-end transitons.
  */
-const ImageGallery: React.FC<ImageGalleryProps> = ({ mainImage, gallery, productName }) => {
+const ImageGallery: React.FC<ImageGalleryProps> = ({ mainImage, gallery, productName, onImageClick }) => {
+
   const images = [mainImage, ...gallery];
   const [activeIndex, setActiveIndex] = useState(0);
 
@@ -22,8 +24,12 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ mainImage, gallery, product
   return (
     <div className="space-y-6">
       {/* Primary Display Logic */}
-      <div className="relative aspect-[4/5] md:aspect-[3/4] bg-white rounded-[48px] overflow-hidden group shadow-2xl shadow-slate-200/50 border border-slate-100 p-4 transition-all duration-700 hover:shadow-pixs-mint/5">
+      <div 
+        className="relative aspect-[4/5] md:aspect-[3/4] bg-white rounded-[48px] overflow-hidden group shadow-2xl shadow-slate-200/50 border border-slate-100 p-4 transition-all duration-700 hover:shadow-pixs-mint/5 cursor-zoom-in"
+        onClick={() => onImageClick?.(activeIndex)}
+      >
         <div className="w-full h-full rounded-[40px] overflow-hidden bg-slate-50 relative">
+
           <img
             src={images[activeIndex]}
             alt={`${productName} View ${activeIndex + 1}`}

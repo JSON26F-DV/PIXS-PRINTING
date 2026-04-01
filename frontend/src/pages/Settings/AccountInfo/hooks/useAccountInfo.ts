@@ -2,24 +2,29 @@ import { useMemo } from 'react';
 import usersData from '../../../../data/users.json';
 import type { ProfileFormValues, PasswordFormValues } from '../utils/validation';
 
+
+interface IContactNode {
+  number: string;
+  is_default: boolean;
+}
+
 interface MockCustomer {
   id: string;
   name: string;
   email: string;
-  contact_number?: string;
-  contact_numbers?: string[];
+  contact_numbers: IContactNode[];
   profile_picture?: string;
 }
 
 interface UsersDataShape {
-  customers?: MockCustomer[];
+  customers: MockCustomer[];
 }
 
 export interface AccountInfo {
   id: string;
   name: string;
   email: string;
-  phone: string;
+  contacts: IContactNode[];
   profilePicture?: string;
 }
 
@@ -32,7 +37,7 @@ export const useAccountInfo = () => {
       id: firstCustomer?.id ?? 'CUST-LOCAL',
       name: firstCustomer?.name ?? '',
       email: firstCustomer?.email ?? '',
-      phone: firstCustomer?.contact_numbers?.[0] ?? firstCustomer?.contact_number ?? '',
+      contacts: firstCustomer?.contact_numbers ?? [],
       profilePicture: firstCustomer?.profile_picture ?? '',
     };
   }, []);
