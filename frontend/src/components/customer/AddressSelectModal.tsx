@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiEdit2, FiMapPin, FiPlus, FiX, FiCheckCircle } from 'react-icons/fi';
+import { FiEdit2, FiMapPin, FiPlus, FiCheckCircle } from 'react-icons/fi';
+import { ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useCustomerAddressStore } from '../../store/useCustomerAddressStore';
 
@@ -42,44 +43,45 @@ const AddressSelectModal: React.FC<AddressSelectModalProps> = ({ isOpen, onClose
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="AddressSelectModal fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <div className="AddressSelectModal fixed inset-0 z-[100] h-screen w-screen overflow-hidden flex flex-col justify-end">
           {/* Overlay */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="AddressSelectOverlay absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+            className="AddressSelectOverlay absolute inset-0 bg-slate-900/60 backdrop-blur-xl pointer-events-auto"
           />
 
           {/* Modal Container */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="AddressSelectContainer relative z-10 w-full max-w-lg overflow-hidden rounded-[32px] bg-white shadow-2xl"
+            initial={{ y: '100%' }}
+            animate={{ y: 0 }}
+            exit={{ y: '100%' }}
+            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+            className="AddressSelectContainer relative h-[92vh] w-full bg-white rounded-t-[52px] shadow-2xl flex flex-col overflow-hidden z-20"
           >
             {/* Header */}
-            <div className="AddressSelectHeader flex items-center justify-between border-b border-slate-100 bg-slate-50/50 p-6">
-              <div className="flex items-center gap-3">
+            <div className="AddressSelectHeader sticky top-0 z-50 bg-white/80 backdrop-blur-md p-6 border-b border-slate-50 flex items-center gap-4">
+              <button
+                onClick={onClose}
+                className="w-12 h-12 flex items-center justify-center bg-slate-50 text-slate-400 rounded-2xl hover:bg-slate-100 transition-all active:scale-90"
+              >
+                <ArrowLeft size={22} />
+              </button>
+              <div className="flex-1 flex items-center gap-4">
                 <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-pixs-mint text-slate-900 shadow-lg shadow-pixs-mint/20">
                   <FiMapPin size={20} />
                 </div>
                 <div>
                   <h2 className="text-lg font-black uppercase italic tracking-tighter text-slate-900 leading-none">Select Address</h2>
-                  <p className="text-[10px] font-bold uppercase tracking-[2px] text-slate-400 mt-1">Delivery Destination</p>
+                  <p className="text-[10px] font-bold uppercase tracking-[2px] text-slate-400 mt-1">Delivery Protocol</p>
                 </div>
               </div>
-              <button
-                onClick={onClose}
-                className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white text-slate-400 hover:text-slate-900 transition-colors shadow-sm"
-              >
-                <FiX size={20} />
-              </button>
             </div>
 
             {/* Address List */}
-            <div className="AddressSelectList max-h-[60vh] overflow-y-auto p-6 space-y-4 custom-scrollbar">
+            <div className="AddressSelectList flex-1 overflow-y-auto p-6 md:p-12 space-y-4 custom-scrollbar pb-32">
               {addresses.map((addr) => {
                 const isActive = addr.id === defaultAddressId;
                 return (
@@ -129,12 +131,12 @@ const AddressSelectModal: React.FC<AddressSelectModalProps> = ({ isOpen, onClose
             </div>
 
             {/* Footer / Add New */}
-            <div className="p-6 bg-slate-50/50 border-t border-slate-100">
+            <div className="p-6 md:px-12 bg-white border-t border-slate-50 mt-auto pb-safe">
               <button
                 onClick={handleAddNew}
-                className="AddressAddNewButton w-full flex items-center justify-center gap-2 rounded-2xl bg-slate-900 py-4 text-[10px] font-black uppercase tracking-[4px] text-white italic shadow-lg hover:scale-[1.02] active:scale-95 transition-all"
+                className="AddressAddNewButton w-full flex items-center justify-center gap-2 rounded-2xl bg-slate-900 py-5 text-[10px] font-black uppercase tracking-[4px] text-white italic shadow-lg hover:scale-[1.02] active:scale-95 transition-all"
               >
-                <FiPlus size={16} /> Add New Address
+                <FiPlus size={16} /> Add New Protocol
               </button>
             </div>
           </motion.div>

@@ -44,31 +44,22 @@ export interface IColor {
 export interface IScreenPlateCompatibility {
   product_id: string;
   product_name: string;
-  print_price_per_unit: number;
-  max_print_area: string;
-  position_allowed: string[];
-  compatible_variants: string[];
-}
-
-export interface IScreenPlateCapabilities {
-  print_type: string;
-  max_colors: number;
-  special_logic: string;
+  allowed_variants: string[];
+  allowed_alignments: string[];
+  print_price_per_unit?: Record<string, number>;
 }
 
 export interface IScreenPlate {
   plate_id: string;
   plate_name: string;
-  type: string;
-  setup_fee: number;
-  description: string;
-  logo_url: string;
+  base_setup_fee: number;
+  is_flatscreen: boolean;
+  max_colors: number;
+  supported_alignments: string[];
   dimensions: string;
-  capabilities: IScreenPlateCapabilities;
-  technical_info: string;
+  technical_info?: string;
   compatible_products: IScreenPlateCompatibility[];
-  is_active: boolean;
-  created_by: string;
+  incompatible_products: string[];
 }
 
 // ─── Order Configuration ──────────────────────────────────────────────────────

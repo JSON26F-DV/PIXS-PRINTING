@@ -5,7 +5,6 @@ import type { IScreenPlate } from '../../../types/product.types';
 
 interface PrintConfigProps {
   compatiblePlates: IScreenPlate[];
-  productId: string;
   selectedPlateId: string | null;
   selectedPosition: string | null;
   availablePositions: string[];
@@ -14,7 +13,7 @@ interface PrintConfigProps {
 }
 
 const PrintConfig: React.FC<PrintConfigProps> = ({
-  compatiblePlates, productId, selectedPlateId, selectedPosition,
+  compatiblePlates, selectedPlateId, selectedPosition,
   availablePositions, onPlateChange, onPositionChange,
 }) => {
   // ─── No Compatible Plates State ─────────────────────────────────────────
@@ -60,7 +59,6 @@ const PrintConfig: React.FC<PrintConfigProps> = ({
         </button>
 
         {compatiblePlates.map(plate => {
-          const compat = plate.compatible_products.find(cp => cp.product_id === productId);
           const isSelected = selectedPlateId === plate.plate_id;
           return (
             <button
@@ -79,13 +77,12 @@ const PrintConfig: React.FC<PrintConfigProps> = ({
                   <span className={clsx('text-[10px] font-black uppercase tracking-widest', isSelected ? 'text-pixs-mint' : 'text-slate-700')}>{plate.plate_name}</span>
                 </div>
                 <span className={clsx('text-[9px] font-black px-2 py-1 rounded-lg', isSelected ? 'bg-white/10 text-slate-300' : 'bg-slate-50 text-slate-400')}>
-                  {plate.type}
+                  {plate.is_flatscreen ? 'Flatscreen' : 'Cylindrical'}
                 </span>
               </div>
               <div className={clsx('text-[9px] font-bold flex items-center gap-4 pl-6', isSelected ? 'text-slate-400' : 'text-slate-400')}>
-                <span>+₱{compat?.print_price_per_unit?.toFixed(2)}/unit</span>
-                <span>Setup: ₱{plate.setup_fee.toLocaleString()}</span>
-                {compat && <span>Area: {compat.max_print_area}</span>}
+                <span>Setup: ₱{plate.base_setup_fee.toLocaleString()}</span>
+                {plate.dimensions && <span>Size: {plate.dimensions}</span>}
               </div>
             </button>
           );

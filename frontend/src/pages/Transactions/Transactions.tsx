@@ -16,6 +16,7 @@ import ExtraNotesSection from '../../components/Transactions/ExtraNotesSection';
 
 import addressData from '../../data/address_book.json';
 import paymentData from '../../data/payment.json';
+import deliveryData from '../../data/delivery_methods.json';
 import { ORDER_STATUS, type OrderStatus } from '../../types/order';
 
 // --- Zod Validation Schema ---
@@ -107,8 +108,7 @@ const Transactions: React.FC = () => {
       const selectedPayment = paymentData.find(p => p.id === selectedPaymentId);
       
       // We need to re-find delivery meta because it wasn't store in state directly
-      const deliveryModules = await import('../../data/delivery_methods.json');
-      const delMeta = deliveryModules.default.find((d: { id: string }) => d.id === selectedDeliveryId);
+      const delMeta = deliveryData.find((d: { id: string }) => d.id === selectedDeliveryId);
 
       const orderData = {
         order_id: orderId,

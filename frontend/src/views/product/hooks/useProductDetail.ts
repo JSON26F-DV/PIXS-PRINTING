@@ -59,11 +59,11 @@ export const useProductDetail = ({ product, compatiblePlates }: UseProductDetail
 
   const priceBreakdown = useMemo<IPriceBreakdown>(() => {
     const base = calculatePrice({ product, variantId: selectedVariantId, plateId: selectedPlateId, quantity });
-    if (selectedPlate) {
-      return calculatePriceWithPlate(base, selectedPlate, product.id, quantity);
+    if (selectedPlate && selectedVariant) {
+      return calculatePriceWithPlate(base, selectedPlate, product.id, quantity, selectedVariant.size);
     }
     return base;
-  }, [product, selectedVariantId, quantity, selectedPlateId, selectedPlate]);
+  }, [product, selectedVariantId, selectedVariant, quantity, selectedPlateId, selectedPlate]);
 
   const stockForVariant = selectedVariant?.stock ?? product.current_stock;
   const isQuantityTooLow = quantity < product.min_order;

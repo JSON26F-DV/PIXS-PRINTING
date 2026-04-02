@@ -1,0 +1,15 @@
+[
+  {
+    "request_id": "RSP-001",
+    "customer_id": "CUST-1092",
+    "product_id": "P001",
+    "variant": "16oz",
+    "color_count": 2,
+    "alignment": "Back to Back",
+    "reference_image": "/assets/placeholder-logo.png",
+    "comment": "Sample comment for alignment logic...",
+    "calculated_total": 1400,
+    "status": "Pending",
+    "created_at": "2026-04-02T09:00:00.000Z"
+  }
+]

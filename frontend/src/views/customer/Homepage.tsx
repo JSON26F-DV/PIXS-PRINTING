@@ -22,8 +22,8 @@ import { clsx } from 'clsx'
 import productsData from '../../data/products.json'
 import categoriesData from '../../data/categories.json'
 import screenplateData from '../../data/screenplate.json'
+import orderData from '../../data/order.json'
 import { useDiscovery } from '../../context/DiscoveryContext'
-import gsap from 'gsap'
 import Footer from '../../components/Footer/Footer'
 
 // --- Interfaces ---
@@ -33,6 +33,9 @@ interface IProduct {
   category: string
   base_price: number
   current_stock: number
+  main_image: string
+  short_description: string
+  min_order?: number
 }
 
 interface ICategory {
@@ -91,7 +94,7 @@ const FilterDropdown: React.FC<{
       <button
         onClick={() => setIsOpen(!isOpen)}
         className={clsx(
-          'flex w-full items-center justify-between rounded-2xl border px-5 py-3.5 text-[10px] font-black tracking-widest uppercase transition-all',
+          'MarketplaceDropdownButton flex w-full items-center justify-between rounded-2xl border px-5 py-3.5 text-[10px] font-black tracking-widest uppercase transition-all',
           isActive
             ? 'border-pixs-mint text-pixs-mint shadow-pixs-mint/5 bg-white shadow-lg'
             : 'border-slate-100 bg-white text-slate-400 hover:border-slate-200',
@@ -121,7 +124,7 @@ const FilterDropdown: React.FC<{
             initial={{ opacity: 0, y: 10, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 10, scale: 0.95 }}
-            className="custom-scrollbar absolute top-full right-0 left-0 z-[100] mt-2 max-h-64 overflow-y-auto rounded-[24px] border border-slate-100 bg-white p-2 shadow-2xl"
+            className="MarketplaceDropdownMenu custom-scrollbar absolute top-full right-0 left-0 z-[100] mt-2 max-h-64 overflow-y-auto rounded-[24px] border border-slate-100 bg-white p-2 shadow-2xl"
           >
             {options.map((opt) => (
               <button
@@ -131,7 +134,7 @@ const FilterDropdown: React.FC<{
                   setIsOpen(false)
                 }}
                 className={clsx(
-                  'w-full rounded-xl px-4 py-3 text-left text-[10px] font-black tracking-widest uppercase transition-colors',
+                  'MarketplaceDropdownItem w-full rounded-xl px-4 py-3 text-left text-[10px] font-black tracking-widest uppercase transition-colors',
                   value === opt
                     ? 'bg-pixs-mint text-slate-900'
                     : 'text-slate-500 hover:bg-slate-50',
@@ -149,10 +152,26 @@ const FilterDropdown: React.FC<{
 
 const Storefront: React.FC = () => {
   const [currentHeroIndex, setCurrentHeroIndex] = useState(0)
-  const [favorites, setFavorites] = useState<string[]>([])
+  const [favorites, setFavorites] = useState<string[]>(() => {
+    // Initializing from terminal storage
+    const saved = localStorage.getItem('pixs_favorites')
+    return saved ? JSON.parse(saved) : []
+  })
   const { openDiscovery } = useDiscovery()
 
-  // Marketplace Command State
+  // ─── Data Nodes Discovery ───────────────────────────────────────────────
+  const soldMap = useMemo(() => {
+    const map: Record<string, number> = {};
+    (orderData as { products: { productId: string; quantity: number }[] }[]).forEach(order => {
+      order.products?.forEach(p => {
+        if (p.productId) {
+          map[p.productId] = (map[p.productId] || 0) + (p.quantity || 0);
+        }
+      });
+    });
+    return map;
+  }, []);
+
   const [searchQuery, setSearchQuery] = useState('')
   const [filters, setFilters] = useState<IFilters>({
     category: 'All',
@@ -162,10 +181,27 @@ const Storefront: React.FC = () => {
     screenplate: 'All Plates',
   })
 
+  // Meta Filters
+  const [showMostSold, setShowMostSold] = useState(false)
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false)
+
   const navigate = useNavigate()
   const [currentPage, setCurrentPage] = useState(1)
-  const itemsPerPage = 8
-  const gridRef = useRef<HTMLDivElement>(null)
+  
+  // ─── Responsive Matrix ──────────────────────────────────────────────────
+  const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200)
+  
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowWidth(window.innerWidth)
+      setCurrentPage(1)
+    }
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
+  const itemsPerPage = windowWidth < 768 ? 10 : 20
+  const marketplaceRef = useRef<HTMLDivElement>(null)
 
   const heroImages = [
     {
@@ -184,7 +220,7 @@ const Storefront: React.FC = () => {
 
   const categories = [
     'All',
-    ...(categoriesData as ICategory[]).map((c) => c.id),
+    ...(categoriesData as ICategory[]).map((c) => c.label),
   ]
   const priceRanges = [
     'All Prices',
@@ -241,15 +277,29 @@ const Storefront: React.FC = () => {
           )
         }
 
+        // 6. Meta Filters
+        let matchMeta = true
+        if (showFavoritesOnly) matchMeta = favorites.includes(p.id)
+        if (showMostSold && matchMeta) {
+          const soldCount = soldMap[p.id] || 0
+          matchMeta = soldCount > 100 // Updated industrial threshold
+        }
+
         return (
           matchCategory &&
           matchSearch &&
           matchPrice &&
           matchStatus &&
-          matchPlate
+          matchPlate &&
+          matchMeta
         )
       })
       .sort((a, b) => {
+        if (showMostSold) {
+           const soldA = soldMap[a.id] || 0
+           const soldB = soldMap[b.id] || 0
+           return soldB - soldA
+        }
         if (filters.sort === 'A to Z') return a.name.localeCompare(b.name)
         if (filters.sort === 'Z to A') return b.name.localeCompare(a.name)
         if (filters.sort === 'Price: Low-High')
@@ -258,13 +308,15 @@ const Storefront: React.FC = () => {
           return b.base_price - a.base_price
         return 0
       })
-  }, [searchQuery, filters])
+  }, [searchQuery, filters, favorites, showMostSold, showFavoritesOnly, soldMap])
 
   const totalPages = Math.ceil(filteredProducts.length / itemsPerPage)
+  
+
   const paginatedProducts = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage
     return filteredProducts.slice(start, start + itemsPerPage)
-  }, [filteredProducts, currentPage])
+  }, [filteredProducts, currentPage, itemsPerPage])
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -282,43 +334,29 @@ const Storefront: React.FC = () => {
       screenplate: 'All Plates',
     })
     setSearchQuery('')
+    setShowMostSold(false)
+    setShowFavoritesOnly(false)
     setCurrentPage(1)
   }
 
   const handlePageChange = (newPage: number) => {
     if (newPage < 1 || newPage > totalPages) return
-
-    if (gridRef.current) {
-      const direction = newPage > currentPage ? -40 : 40
-      gsap.to(gridRef.current.children, {
-        x: direction,
-        opacity: 0,
-        stagger: 0.02,
-        duration: 0.3,
-        onComplete: () => {
-          setCurrentPage(newPage)
-          gsap.fromTo(
-            gridRef.current!.children,
-            { x: -direction, opacity: 0 },
-            {
-              x: 0,
-              opacity: 1,
-              stagger: 0.02,
-              duration: 0.4,
-              ease: 'power2.out',
-            },
-          )
-        },
-      })
-    } else {
-      setCurrentPage(newPage)
+    setCurrentPage(newPage)
+    
+    // Smooth scroll to marketplace node top
+    if (marketplaceRef.current) {
+      const topOffset = marketplaceRef.current.getBoundingClientRect().top + window.scrollY - 100
+      window.scrollTo({ top: topOffset, behavior: 'smooth' })
     }
   }
 
   const toggleFavorite = (id: string) => {
-    setFavorites((prev) =>
-      prev.includes(id) ? prev.filter((f) => f !== id) : [...prev, id],
-    )
+    setFavorites((prev) => {
+       const updated = prev.includes(id) ? prev.filter((f) => f !== id) : [...prev, id]
+       // Commit to terminal storage
+       localStorage.setItem('pixs_favorites', JSON.stringify(updated))
+       return updated
+    })
   }
 
   return (
@@ -472,25 +510,56 @@ const Storefront: React.FC = () => {
       {/* 3. Marketplace Command Center (Dropdown Refactor) */}
       <section
         id="marketplace"
+        ref={marketplaceRef}
         className="scroll-mt-24 space-y-12 px-6 md:px-16"
       >
         <div className="flex flex-col gap-10">
-          {/* Section Title */}
-          <div className="flex items-end justify-between">
+          <div className="HomepageMarketplaceCommandCenter flex flex-col gap-8 md:flex-row md:items-end md:justify-between">
             <div className="space-y-4">
-              <h2 className="text-5xl leading-[0.8] font-black tracking-tighter text-slate-900 uppercase italic">
+              <h2 className="MarketplaceLabel text-5xl leading-[0.8] font-black tracking-tighter text-slate-900 uppercase italic md:text-7xl">
                 Marketplace Scan
               </h2>
               <p className="text-[10px] font-black tracking-[6px] text-slate-400 uppercase italic">
                 Automated Product Cluster Logic
               </p>
             </div>
-            <button
-              onClick={resetFilters}
-              className="hover:text-pixs-mint flex items-center gap-2 text-[10px] font-black tracking-widest text-slate-400 uppercase transition-colors"
-            >
-              <RotateCcw size={14} /> Clear System Filters
-            </button>
+            
+            <div className="flex flex-wrap items-center gap-6">
+              <button 
+                onClick={() => {
+                  setShowMostSold(!showMostSold)
+                  setCurrentPage(1)
+                }}
+                className={clsx(
+                   "flex items-center gap-2 text-[10px] font-black tracking-widest uppercase transition-all px-4 py-2 rounded-xl",
+                   showMostSold ? "bg-pixs-mint text-slate-900 shadow-lg shadow-pixs-mint/20" : "text-slate-400 hover:text-slate-900 bg-white border border-slate-100"
+                )}
+              >
+                <Zap size={14} className={showMostSold ? "fill-slate-900" : ""} /> Most Sold
+              </button>
+
+              <button 
+                onClick={() => {
+                  setShowFavoritesOnly(!showFavoritesOnly)
+                  setCurrentPage(1)
+                }}
+                className={clsx(
+                   "flex items-center gap-2 text-[10px] font-black tracking-widest uppercase transition-all px-4 py-2 rounded-xl",
+                   showFavoritesOnly ? "bg-rose-500 text-white shadow-lg shadow-rose-200" : "text-slate-400 hover:text-slate-900 bg-white border border-slate-100"
+                )}
+              >
+                <Heart size={14} className={showFavoritesOnly ? "fill-white" : ""} /> Favorites
+              </button>
+
+              <div className="h-8 w-px bg-slate-100 hidden sm:block" />
+
+              <button
+                onClick={resetFilters}
+                className="hover:text-pixs-mint flex items-center gap-2 text-[10px] font-black tracking-widest text-slate-400 uppercase transition-colors"
+              >
+                <RotateCcw size={14} /> Reset System
+              </button>
+            </div>
           </div>
 
           {/* Command Node (Sticky) */}
@@ -570,25 +639,32 @@ const Storefront: React.FC = () => {
         </div>
 
         {/* Output Matrix */}
-        <div className="space-y-16">
+        <div className="HomepageOutputMatrix space-y-16">
           {paginatedProducts.length > 0 ? (
             <div
-              ref={gridRef}
-              className="grid grid-cols-2 gap-4 md:gap-12 lg:grid-cols-4"
+              className="ProductGridContainer grid grid-cols-2 gap-4 md:gap-12 lg:grid-cols-4 xl:grid-cols-5"
             >
-              {paginatedProducts.map((product) => (
-                <motion.div
+              {paginatedProducts.map((product) => {
+                const soldCount = soldMap[product.id] || 0
+                return (
+                <div
                   key={product.id}
-                  whileHover={{ y: -12 }}
                   onClick={() => navigate(`/product/${product.id}`)}
-                  className="group relative cursor-pointer rounded-[32px] border border-slate-100 bg-white p-2 transition-all md:rounded-[56px] md:p-3"
+                  className="HomepageProductCard ProductCardWrapper group relative cursor-pointer rounded-[32px] border border-slate-100 bg-white p-2 transition-all md:rounded-[44px] md:p-2.5 hover:-translate-y-3"
                 >
-                  <div className="relative flex aspect-square items-center justify-center overflow-hidden rounded-[24px] border border-slate-50 bg-slate-50 shadow-inner transition-colors duration-500 group-hover:bg-white md:rounded-[48px]">
-                    <Package className="group-hover:text-pixs-mint/10 h-10 w-10 text-slate-100 transition-transform duration-1000 group-hover:scale-110 md:h-20 md:w-20" />
+                  <div className="relative flex aspect-square items-center justify-center overflow-hidden rounded-[24px] border border-slate-50 bg-slate-50 shadow-inner transition-colors duration-500 group-hover:bg-white md:rounded-[36px]">
+                    <img 
+                      src={product.main_image} 
+                      alt={product.name}
+                      className="ProductCardImage h-full w-full object-cover transition-transform duration-1000 group-hover:scale-110"
+                    />
 
                     <button
-                      onClick={() => toggleFavorite(product.id)}
-                      className="absolute top-3 right-3 z-20 flex h-8 w-8 items-center justify-center rounded-xl border border-white bg-white/90 shadow-lg backdrop-blur-xl transition-all md:top-8 md:right-8 md:h-14 md:w-14 md:rounded-[28px]"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleFavorite(product.id);
+                      }}
+                      className="absolute top-3 right-3 z-20 flex h-8 w-8 items-center justify-center rounded-xl border border-white bg-white/90 shadow-lg backdrop-blur-xl transition-all md:top-6 md:right-6 md:h-12 md:w-12 md:rounded-[22px]"
                     >
                       <Heart
                         size={20}
@@ -602,7 +678,7 @@ const Storefront: React.FC = () => {
 
                     <div
                       className={clsx(
-                        'absolute bottom-2 left-2 flex items-center gap-1.5 rounded-lg border border-white/10 px-2 py-1 text-[8px] font-black tracking-widest uppercase shadow-2xl md:bottom-8 md:left-8 md:gap-3 md:rounded-2xl md:px-5 md:py-2 md:text-[10px]',
+                        'absolute bottom-2 left-2 flex items-center gap-1.5 rounded-lg border border-white/10 px-2 py-1 text-[8px] font-black tracking-widest uppercase shadow-2xl md:bottom-6 md:left-6 md:gap-2.5 md:rounded-xl md:px-4 md:py-2 md:text-[9px]',
                         product.current_stock > 50
                           ? 'bg-slate-900 text-white'
                           : 'bg-rose-500 text-white',
@@ -621,22 +697,36 @@ const Storefront: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="p-4 md:p-10">
-                    <h4 className="group-hover:text-pixs-mint mb-6 truncate text-sm leading-none font-black tracking-tighter text-slate-900 uppercase italic transition-colors md:text-2xl">
-                      {product.name}
-                    </h4>
+                  <div className="ProductCardContent p-3 md:p-6 pb-2 md:pb-4">
+                    <div className="flex items-center justify-between mb-2">
+                       <h4 className="ProductCardName group-hover:text-pixs-mint truncate text-[11px] leading-tight font-black tracking-tight text-slate-900 uppercase italic transition-colors md:text-lg flex-1">
+                         {product.name}
+                       </h4>
+                       <span className="text-[8px] font-black bg-slate-50 text-slate-400 px-2 py-0.5 rounded-full md:text-[9px]">
+                         {soldCount.toLocaleString()}+ sold
+                       </span>
+                    </div>
+                    
+                    <p className="ProductCardShortDescription mb-4 line-clamp-2 text-[8px] font-bold tracking-widest text-slate-300 uppercase italic opacity-60 md:text-[9px]">
+                      {product.short_description}
+                    </p>
 
-                    <div className="flex items-center justify-between border-t border-slate-50 pt-4">
-                      <span className="font-mono text-lg leading-none font-black tracking-tighter text-slate-900 italic md:text-3xl">
-                        ₱{product.base_price.toLocaleString()}
-                      </span>
-                      <button className="hover:bg-pixs-mint hover:border-pixs-mint flex h-10 w-10 items-center justify-center rounded-[14px] border border-slate-100 bg-slate-50 text-slate-900 shadow-lg transition-all group-hover:rotate-12 active:scale-95 md:h-16 md:w-16 md:rounded-[28px]">
-                        <Plus size={22} strokeWidth={3} />
+                    <div className="flex items-center justify-between border-t border-slate-50 pt-3">
+                      <div className="flex flex-col">
+                        <span className="text-[9px] font-black text-rose-500 tracking-tighter md:text-sm">
+                          Min: ₱{((product.base_price || 0) * (product.min_order || 1)).toLocaleString()}
+                        </span>
+                        <span className="font-mono text-[10px] leading-none font-black tracking-tighter text-slate-900 italic md:text-lg">
+                          ₱{product.base_price.toLocaleString()}/pc
+                        </span>
+                      </div>
+                      <button className="hover:bg-pixs-mint hover:border-pixs-mint flex h-8 w-8 items-center justify-center rounded-xl border border-slate-100 bg-slate-50 text-slate-900 shadow-lg transition-all group-hover:rotate-12 active:scale-95 md:h-12 md:w-12 md:rounded-2xl">
+                        <Plus size={18} strokeWidth={3} />
                       </button>
                     </div>
                   </div>
-                </motion.div>
-              ))}
+                </div>
+              )})}
             </div>
           ) : (
             <div className="space-y-8 rounded-[64px] border border-dashed border-slate-100 bg-white py-40 text-center">
@@ -662,23 +752,24 @@ const Storefront: React.FC = () => {
 
           {/* Pagination Node */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-center gap-4">
+            <div className="HomepagePagination flex items-center justify-center gap-6">
               <button
                 onClick={() => handlePageChange(currentPage - 1)}
                 disabled={currentPage === 1}
-                className="hover:bg-pixs-mint h-14 w-14 rounded-2xl border border-slate-100 bg-white text-slate-400 transition-all hover:text-slate-900 disabled:opacity-20"
+                className="PaginationArrow hover:bg-pixs-mint flex h-14 w-14 items-center justify-center rounded-2xl border border-slate-100 bg-white text-slate-400 transition-all hover:text-slate-900 disabled:opacity-20"
               >
                 <ChevronLeft size={24} />
               </button>
-              <div className="flex gap-2">
+              
+              <div className="HomepagePaginationWrapper flex gap-3">
                 {Array.from({ length: totalPages }).map((_, i) => (
                   <button
                     key={i}
                     onClick={() => handlePageChange(i + 1)}
                     className={clsx(
-                      'h-12 w-12 rounded-2xl text-[10px] font-black transition-all',
+                      'PaginationNumber flex h-12 w-12 items-center justify-center rounded-2xl text-[10px] font-black transition-all',
                       currentPage === i + 1
-                        ? 'bg-slate-900 text-white'
+                        ? 'PaginationActive bg-slate-900 text-white'
                         : 'border border-slate-100 bg-white text-slate-400',
                     )}
                   >
@@ -686,10 +777,11 @@ const Storefront: React.FC = () => {
                   </button>
                 ))}
               </div>
+
               <button
                 onClick={() => handlePageChange(currentPage + 1)}
                 disabled={currentPage === totalPages}
-                className="hover:bg-pixs-mint h-14 w-14 rounded-2xl border border-slate-100 bg-white text-slate-400 transition-all hover:text-slate-900 disabled:opacity-20"
+                className="PaginationArrow hover:bg-pixs-mint flex h-14 w-14 items-center justify-center rounded-2xl border border-slate-100 bg-white text-slate-400 transition-all hover:text-slate-900 disabled:opacity-20"
               >
                 <ChevronRight size={24} />
               </button>

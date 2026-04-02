@@ -13,7 +13,7 @@ function App() {
       <AuthProvider>
         {/* <NotificationProvider> */}
           <DiscoveryProvider>
-            <div className="min-h-screen bg-white">
+            <div className="min-h-screen bg-white pb-16 pt-28 lg:pb-0 lg:pt-0">
               <CustomerNavbar />
               <Toaster position="top-right" />
               <main>

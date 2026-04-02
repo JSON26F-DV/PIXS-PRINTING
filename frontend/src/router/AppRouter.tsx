@@ -8,6 +8,7 @@ import SettingsPage from '../views/customer/SettingsPage';
 import Transactions from '../pages/Transactions/Transactions';
 import OrderSuccess from '../pages/Transactions/OrderSuccess';
 import MessengerPage from '../pages/Messenger/MessengerPage';
+import ScreenplatePage from '../pages/Screenplate/ScreenplatePage';
 import { useAuth } from '../context/AuthContext';
 
 // Simple placeholder for Dashboard views
@@ -42,6 +43,7 @@ const AppRouter: React.FC = () => {
       <Route path="/transactions" element={<Transactions />} />
       <Route path="/order-success/:orderId" element={<OrderSuccess />} />
       <Route path="/chat" element={<MessengerPage />} />
+      <Route path="/screenplate" element={<ScreenplatePage />} />
       
       <Route 
         path="/admin/dashboard" 

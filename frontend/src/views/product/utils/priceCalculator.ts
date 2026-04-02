@@ -33,10 +33,11 @@ export const calculatePriceWithPlate = (
   breakdown: IPriceBreakdown,
   plate: IScreenPlate,
   productId: string,
-  quantity: number
+  quantity: number,
+  variantSize: string
 ): IPriceBreakdown => {
   const compat = plate.compatible_products.find(cp => cp.product_id === productId);
-  const printPricePerUnit = compat?.print_price_per_unit ?? 0;
+  const printPricePerUnit = compat?.print_price_per_unit?.[variantSize] ?? 0;
   
   // Rule: Concept of Setup Fee (+) addition is removed as per updated specification.
   const setupFee = 0;

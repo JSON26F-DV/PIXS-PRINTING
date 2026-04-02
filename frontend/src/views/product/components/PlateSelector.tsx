@@ -1,5 +1,5 @@
 import React from 'react';
-import { Layers, AlertTriangle, Check } from 'lucide-react';
+import { Layers, AlertTriangle, Check, Box } from 'lucide-react';
 import { clsx } from 'clsx';
 import type { IScreenPlate } from '../../../types/product.types';
 
@@ -76,15 +76,7 @@ const PlateSelector: React.FC<PlateSelectorProps> = ({
               )}
             >
               <div className="relative w-24 h-24 bg-slate-50 rounded-2xl flex-shrink-0 flex items-center justify-center border border-slate-100 group-hover:bg-white group-hover:scale-105 transition-all">
-                <img 
-                  src={plate.logo_url} 
-                  alt={plate.plate_name}
-                  className="w-16 h-16 object-contain opacity-40 group-hover:opacity-100 transition-opacity grayscale group-hover:grayscale-0"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.src = 'https://pixs-storage.link/placeholder-plate.png';
-                  }}
-                />
+                <Box className="w-10 h-10 opacity-10 group-hover:opacity-40 transition-opacity" />
               </div>
 
               <div className="flex-grow space-y-3">
@@ -103,11 +95,11 @@ const PlateSelector: React.FC<PlateSelectorProps> = ({
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
                    <div className="space-y-1">
                       <span className="text-[7px] font-black uppercase text-slate-400 tracking-widest leading-none">Type Protocol</span>
-                      <p className="text-[10px] font-black text-slate-900 uppercase italic truncate">{plate.capabilities.print_type}</p>
+                      <p className="text-[10px] font-black text-slate-900 uppercase italic truncate">{plate.is_flatscreen ? 'Flatscreen' : 'Cylindrical'}</p>
                    </div>
                    <div className="space-y-1">
                       <span className="text-[7px] font-black uppercase text-slate-400 tracking-widest leading-none">Color Channels</span>
-                      <p className="text-[10px] font-black text-slate-900 uppercase italic truncate">{plate.capabilities.max_colors} Channels</p>
+                      <p className="text-[10px] font-black text-slate-900 uppercase italic truncate">{plate.max_colors} Channels</p>
                    </div>
                    <div className="space-y-1">
                       <span className="text-[7px] font-black uppercase text-slate-400 tracking-widest leading-none">Technical Hub</span>
@@ -115,12 +107,12 @@ const PlateSelector: React.FC<PlateSelectorProps> = ({
                    </div>
                    <div className="space-y-1">
                       <span className="text-[7px] font-black uppercase text-slate-400 tracking-widest leading-none">Logic Hub</span>
-                      <p className="text-[10px] font-black text-slate-900 uppercase italic truncate">{plate.capabilities.special_logic}</p>
+                      <p className="text-[10px] font-black text-slate-900 uppercase italic truncate">{plate.supported_alignments.length} Orientations</p>
                    </div>
                 </div>
 
                 <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest italic pt-4 border-t border-slate-50/50 mt-4 leading-relaxed">
-                   Operational Logic: {plate.technical_info}
+                   Operational Logic: {plate.technical_info || 'High-accuracy production node.'}
                 </p>
               </div>
             </button>

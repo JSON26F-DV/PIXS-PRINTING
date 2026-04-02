@@ -19,7 +19,6 @@ export const fetchProductById = async (id: string): Promise<IProduct | null> => 
 export const fetchCompatiblePlates = async (productId: string): Promise<IScreenPlate[]> => {
   await delay(SIMULATED_DELAY_MS);
   return (screenplateData as IScreenPlate[]).filter(plate =>
-    plate.is_active &&
     plate.compatible_products.some((cp: IScreenPlateCompatibility) => cp.product_id === productId)
   );
 };

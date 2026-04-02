@@ -52,7 +52,7 @@ const ProductDetailInner: React.FC<{ product: IProduct; compatiblePlates: IScree
     if (!selectedPlate) return null;
     
     const compatibility = selectedPlate.compatible_products.find(cp => cp.product_id === product.id);
-    return compatibility?.compatible_variants || null;
+    return compatibility?.allowed_variants || null;
   }, [state.selectedPlateId, compatiblePlates, product.id]);
 
 
@@ -110,11 +110,13 @@ const ProductDetailInner: React.FC<{ product: IProduct; compatiblePlates: IScree
         ? {
             id: computed.selectedPlate.plate_id,
             name: computed.selectedPlate.plate_name,
-            type: computed.selectedPlate.type,
+            type: computed.selectedPlate.is_flatscreen ? 'Flatscreen' : 'Cylindrical',
             printPricePerUnit:
-              computed.selectedPlate.compatible_products.find((cp) => cp.product_id === product.id)?.print_price_per_unit ?? 0,
-            setupFee: computed.selectedPlate.setup_fee,
-            printingInfo: computed.selectedPlate.technical_info,
+              computed.selectedVariant 
+                ? (computed.selectedPlate.compatible_products.find((cp) => cp.product_id === product.id)?.print_price_per_unit?.[computed.selectedVariant.size] ?? 0)
+                : 0,
+            setupFee: computed.selectedPlate.base_setup_fee,
+            printingInfo: computed.selectedPlate.technical_info || 'High-accuracy production node.',
             isOwned: state.ownedPlateIds.includes(computed.selectedPlate.plate_id),
           }
         : null,
@@ -159,11 +161,13 @@ const ProductDetailInner: React.FC<{ product: IProduct; compatiblePlates: IScree
         ? {
             id: computed.selectedPlate.plate_id,
             name: computed.selectedPlate.plate_name,
-            type: computed.selectedPlate.type,
+            type: computed.selectedPlate.is_flatscreen ? 'Flatscreen' : 'Cylindrical',
             printPricePerUnit:
-              computed.selectedPlate.compatible_products.find((cp) => cp.product_id === product.id)?.print_price_per_unit ?? 0,
-            setupFee: computed.selectedPlate.setup_fee,
-            printingInfo: computed.selectedPlate.technical_info,
+              computed.selectedVariant 
+                ? (computed.selectedPlate.compatible_products.find((cp) => cp.product_id === product.id)?.print_price_per_unit?.[computed.selectedVariant.size] ?? 0)
+                : 0,
+            setupFee: computed.selectedPlate.base_setup_fee,
+            printingInfo: computed.selectedPlate.technical_info || 'High-accuracy production node.',
             isOwned: state.ownedPlateIds.includes(computed.selectedPlate.plate_id),
           }
         : null,

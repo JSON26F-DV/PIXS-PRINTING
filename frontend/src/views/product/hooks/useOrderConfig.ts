@@ -32,7 +32,7 @@ export const useOrderConfig = ({ product, compatiblePlates }: UseOrderConfigProp
   const availablePositions = useMemo(() => {
     if (!selectedPlate) return [];
     const compat = selectedPlate.compatible_products.find(cp => cp.product_id === product.id);
-    return compat?.position_allowed ?? [];
+    return compat?.allowed_alignments ?? [];
   }, [selectedPlate, product.id]);
 
   const priceBreakdown = useMemo<IPriceBreakdown>(() => {
@@ -42,11 +42,11 @@ export const useOrderConfig = ({ product, compatiblePlates }: UseOrderConfigProp
       plateId: selectedPlateId,
       quantity,
     });
-    if (selectedPlate) {
-      return calculatePriceWithPlate(base, selectedPlate, product.id, quantity);
+    if (selectedPlate && selectedVariant) {
+      return calculatePriceWithPlate(base, selectedPlate, product.id, quantity, selectedVariant.size);
     }
     return base;
-  }, [product, selectedVariantId, quantity, selectedPlateId, selectedPlate]);
+  }, [product, selectedVariantId, selectedVariant, quantity, selectedPlateId, selectedPlate]);
 
   // ─── Validation helpers ───────────────────────────────────────────────────
   const stockForVariant = selectedVariant?.stock ?? product.current_stock;

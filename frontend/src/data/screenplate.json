@@ -1,64 +1,83 @@
 [
   {
-    "plate_id": "SP-MINT-001",
-    "plate_name": "Standard 1-Color Silk Screen",
-    "type": "1-Color / Single Side",
-    "setup_fee": 450.00,
-    "description": "High-tension mesh for detailed logo printing.",
-    "logo_url": "https://pixs-storage.link/sp-mint-logo.png",
-    "dimensions": "120mm x 120mm Mesh",
-    "capabilities": {
-      "print_type": "Single",
-      "max_colors": 1,
-      "special_logic": "Standard Print"
-    },
-    "technical_info": "Precision mesh count: 120T. Optimized for UV inks.",
+    "plate_id": "SP-S-001",
+    "plate_name": "Standard Small Plate",
+    "base_setup_fee": 450,
+    "is_flatscreen": false,
+    "max_colors": 3,
+    "supported_alignments": ["Front", "Back-to-Back", "Triple Logo"],
+    "dimensions": "55mm x 45mm",
+    "technical_info": "Industrial Mesh 120T for small diameters.",
     "compatible_products": [
       {
         "product_id": "P001",
         "product_name": "PPY Cup",
-        "print_price_per_unit": 1.50,
-        "max_print_area": "60mm x 60mm",
-        "position_allowed": ["Front", "Back"],
-        "compatible_variants": ["16oz", "22oz"]
+        "allowed_variants": ["12oz"],
+        "allowed_alignments": ["Front"],
+        "print_price_per_unit": { "12oz": 1.50 }
       },
       {
         "product_id": "P002",
         "product_name": "UCUP",
-        "print_price_per_unit": 2.00,
-        "max_print_area": "70mm x 70mm",
-        "position_allowed": ["Front Center"],
-        "compatible_variants": ["16oz", "22oz"]
+        "allowed_variants": ["12oz"],
+        "allowed_alignments": ["Front"],
+        "print_price_per_unit": { "12oz": 1.50 }
       }
     ],
-    "is_active": true,
-    "created_by": "Admin"
+    "incompatible_products": ["P016", "P012"]
   },
   {
-    "plate_id": "SP-GOLD-002",
-    "plate_name": "Premium Multi-Color Node",
-    "type": "Multi-Color / Double Side",
-    "setup_fee": 1200.00,
-    "description": "Industrial grade plate for complex multi-tonal branding.",
-    "logo_url": "https://pixs-storage.link/sp-gold-logo.png",
-    "dimensions": "150mm x 150mm Mesh",
-    "capabilities": {
-      "print_type": "Double / 5x Color",
-      "max_colors": 5,
-      "special_logic": "High-Accuracy Registration"
-    },
-    "technical_info": "Hardened frame structure. Zero-warp technology for b2v registration.",
+    "plate_id": "SP-MH-002",
+    "plate_name": "Medium/High Power Plate",
+    "base_setup_fee": 550,
+    "is_flatscreen": false,
+    "max_colors": 3,
+    "supported_alignments": ["Front", "Back-to-Back", "Triple Logo"],
+    "dimensions": "85mm x 65mm",
+    "technical_info": "High-velocity industrial mesh for 16-22oz variants.",
     "compatible_products": [
       {
         "product_id": "P001",
         "product_name": "PPY Cup",
-        "print_price_per_unit": 3.50,
-        "max_print_area": "60mm x 60mm (B2B)",
-        "position_allowed": ["Front & Back Sync"],
-        "compatible_variants": ["16oz", "22oz"]
+        "allowed_variants": ["16oz", "22oz"],
+        "allowed_alignments": ["Front", "Back-to-Back", "Triple Logo"],
+        "print_price_per_unit": { "16oz": 1.70, "22oz": 2.00 }
+      },
+      {
+        "product_id": "P002",
+        "product_name": "UCUP",
+        "allowed_variants": ["16oz", "22oz"],
+        "allowed_alignments": ["Front", "Back-to-Back"],
+        "print_price_per_unit": { "16oz": 1.70, "22oz": 2.00 }
       }
     ],
-    "is_active": true,
-    "created_by": "Admin"
+    "incompatible_products": ["P004"]
+  },
+  {
+    "plate_id": "SP-FLAT-001",
+    "plate_name": "Flatscreen Meal Node",
+    "base_setup_fee": 650,
+    "is_flatscreen": true,
+    "max_colors": 2,
+    "supported_alignments": ["Front"],
+    "dimensions": "120mm x 90mm",
+    "technical_info": "Flatscreen photopolymer terminal for meal boxes.",
+    "compatible_products": [
+      {
+        "product_id": "P016",
+        "product_name": "Meal Box",
+        "allowed_variants": ["750cc", "880cc"],
+        "allowed_alignments": ["Front"],
+        "print_price_per_unit": { "750cc": 1.60, "880cc": 1.80 }
+      },
+      {
+        "product_id": "P012",
+        "product_name": "Paper Bowl",
+        "allowed_variants": ["320cc", "520cc"],
+        "allowed_alignments": ["Front"],
+        "print_price_per_unit": { "320cc": 1.20, "520cc": 1.50 }
+      }
+    ],
+    "incompatible_products": ["P001", "P002", "P003"]
   }
 ]
