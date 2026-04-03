@@ -32,13 +32,41 @@ const MessengerPage: React.FC = () => {
     const saved = localStorage.getItem('pixs_messenger_v1');
     const localMessages: IMessage[] = saved ? JSON.parse(saved) : [];
     
-    // Merge initialMessages (casted to IMessage[]) and localMessages
-    const combined = [...(initialMessages as IMessage[]), ...localMessages];
+    // Transform initialMessages (new format) to IMessage[]
+    const transformedInitial = (initialMessages as unknown[]).map((m: unknown): IMessage => {
+      interface LegacyMsg {
+        id?: string;
+        sender?: 'customer' | 'admin';
+        senderName?: string;
+        text?: string;
+        message?: string;
+        timestamp?: string;
+        created_at?: string;
+        sender_id?: string;
+        attachments?: unknown[];
+      }
+      const typedM = m as LegacyMsg;
+      if (typedM.sender && (typedM.text || typedM.message)) return typedM as IMessage;
+      
+      // Map new format to old
+      return {
+        id: typedM.id || `msg_${Math.random()}`,
+        sender: typedM.sender_id === 'CUST-501' ? 'customer' : 'admin',
+        senderName: typedM.sender_id === 'CUST-501' ? 'You' : 'PIXS Admin',
+        text: typedM.message || typedM.text || '',
+        timestamp: typedM.created_at || typedM.timestamp || new Date().toISOString(),
+        attachments: typedM.attachments || [],
+        reactions: []
+      } as IMessage;
+    });
+    
+    // Merge transformedInitial and localMessages
+    const combined = [...transformedInitial, ...localMessages];
     const unique = combined.filter((m, i, self) => 
        i === self.findIndex(t => t.id === m.id)
     );
     
-    return unique.length > 0 ? unique : (initialMessages as IMessage[]);
+    return unique;
   });
 
 

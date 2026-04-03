@@ -16,13 +16,14 @@ interface CartItem {
 interface ReceiptSectionProps {
   items: CartItem[];
   deliveryFee: number;
+  discountAmount?: number;
 }
 
-const ReceiptSection: React.FC<ReceiptSectionProps> = ({ items, deliveryFee }) => {
+const ReceiptSection: React.FC<ReceiptSectionProps> = ({ items, deliveryFee, discountAmount = 0 }) => {
   const cartItems = items;
   
   const subtotal = cartItems.reduce((acc, item) => acc + (item.quantity * item.variant.unitPrice), 0);
-  const total = subtotal + deliveryFee;
+  const total = subtotal + deliveryFee - discountAmount;
 
   return (
     <div className="ReceiptSection space-y-8 bg-white/80 rounded-[32px] border border-slate-100 p-8 shadow-2xl backdrop-blur-xl">
@@ -82,6 +83,16 @@ const ReceiptSection: React.FC<ReceiptSectionProps> = ({ items, deliveryFee }) =
              {deliveryFee === 0 ? 'COLLECT (DIRECT)' : `PHP ${deliveryFee.toFixed(2)}`}
            </span>
         </div>
+
+        {discountAmount > 0 && (
+          <div className="flex items-center justify-between text-[11px] font-black uppercase tracking-widest text-emerald-500 italic animate-in slide-in-from-right-2">
+             <div className="flex items-center gap-2">
+               <span>Voucher Optimization</span>
+               <Tag size={12} className="text-emerald-300" />
+             </div>
+             <span className="font-black">- PHP {discountAmount.toLocaleString()}</span>
+          </div>
+        )}
 
         <div className="ReceiptTotal flex flex-col items-center justify-center p-6 bg-slate-50 rounded-3xl border border-slate-100/50 mt-6 shadow-inner">
           <p className="text-[9px] font-black uppercase tracking-[6px] text-slate-400 mb-2 italic">Terminal Net Total</p>

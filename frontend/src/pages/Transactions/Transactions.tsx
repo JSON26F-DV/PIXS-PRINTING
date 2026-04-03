@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
-import { ShieldCheck, ArrowLeft, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
+import { ShieldCheck, ArrowLeft, CheckCircle2, AlertCircle, Loader2, Gift, Ticket } from 'lucide-react';
 import toast from 'react-hot-toast';
 import CryptoJS from 'crypto-js';
+import { useAuth } from '../../context/AuthContext';
 import AbortConfirmModal from '../../components/Transactions/AbortConfirmModal';
 import type { CartItem } from '../../types/cart';
 
@@ -17,7 +18,29 @@ import ExtraNotesSection from '../../components/Transactions/ExtraNotesSection';
 import addressData from '../../data/address_book.json';
 import paymentData from '../../data/payment.json';
 import deliveryData from '../../data/delivery_methods.json';
+import userData from '../../data/user.json';
 import { ORDER_STATUS, type OrderStatus } from '../../types/order';
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+
+interface LocalDiscount {
+  discount_id: string;
+  type: 'unit' | 'percentage' | 'fixed' | 'product-specific';
+  value: number;
+  product_id?: string;
+  expires_at: string;
+  status: string;
+}
+
+interface LocalUser {
+  id: string;
+  discounts?: LocalDiscount[];
+}
+
+// Utility for class merging
+function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
 
 // --- Zod Validation Schema ---
 const OrderSchema = z.object({
@@ -49,6 +72,7 @@ const OrderSchema = z.object({
 const Transactions: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useAuth();
   const [isProcessing, setIsProcessing] = useState(false);
   
   // Selections
@@ -60,6 +84,10 @@ const Transactions: React.FC = () => {
 
   const [isAbortModalOpen, setIsAbortModalOpen] = useState(false);
   const [checkoutItems, setCheckoutItems] = useState<CartItem[]>([]);
+  
+  // Discount System
+  const [selectedDiscountId, setSelectedDiscountId] = useState<string | null>(null);
+  const [discountAmount, setDiscountAmount] = useState(0);
 
   // Initial Data Load
   useEffect(() => {
@@ -85,6 +113,45 @@ const Transactions: React.FC = () => {
       }
     }
   }, [navigate, location.search]);
+
+  // Sync Discount Logic
+  const currentUserData = useMemo(() => (userData as LocalUser[]).find(u => u.id === user.id), [user.id]);
+  const availableDiscounts = useMemo(() => 
+    currentUserData?.discounts?.filter(d => d.status === 'active') || [],
+    [currentUserData]
+  );
+
+  useEffect(() => {
+    if (!selectedDiscountId) {
+      setDiscountAmount(0);
+      return;
+    }
+
+    const discount = availableDiscounts.find(d => d.discount_id === selectedDiscountId);
+    if (!discount) return;
+
+    let amount = 0;
+    const subtotal = checkoutItems.reduce((acc, item) => acc + (item.quantity * item.variant.unitPrice), 0);
+
+    if (discount.type === 'percentage') {
+      amount = subtotal * (discount.value / 100);
+    } else if (discount.type === 'fixed') {
+      amount = discount.value;
+    } else if (discount.type === 'unit') {
+      // Find matching product
+      const targetItem = checkoutItems.find(i => i.productId === discount.product_id);
+      if (targetItem) {
+        amount = targetItem.quantity * discount.value;
+      }
+    } else if (discount.type === 'product-specific') {
+      const targetItem = checkoutItems.find(i => i.productId === discount.product_id);
+      if (targetItem) {
+        amount = (targetItem.quantity * targetItem.variant.unitPrice) * (discount.value / 100);
+      }
+    }
+
+    setDiscountAmount(amount);
+  }, [selectedDiscountId, checkoutItems, availableDiscounts]);
 
   const handleAbortSequence = () => {
     localStorage.removeItem('pixs_checkout_node');
@@ -112,7 +179,7 @@ const Transactions: React.FC = () => {
 
       const orderData = {
         order_id: orderId,
-        user_id: "user_001", // Mock User
+        user_id: user.id || "GUEST",
         products: checkoutItems,
         shipping_address: selectedAddress,
         payment_method: selectedPayment,
@@ -120,7 +187,11 @@ const Transactions: React.FC = () => {
         notes: notes,
         status: ORDER_STATUS.PAYMENT_VERIFIED as OrderStatus,
         created_at: new Date().toISOString(),
-        payment_hash: CryptoJS.SHA256(selectedPaymentId + orderId).toString()
+        payment_hash: CryptoJS.SHA256(selectedPaymentId + orderId).toString(),
+        discount: {
+          discount_id: selectedDiscountId,
+          total_discount_amount: discountAmount
+        }
       };
 
       // Validate via Zod
@@ -229,11 +300,72 @@ const Transactions: React.FC = () => {
             </div>
 
             <ExtraNotesSection notes={notes} setNotes={setNotes} />
+
+            <div className="h-px bg-slate-100 w-full" />
+
+            {/* 🎁 LOYALTY VOUCHER HUB */}
+            <div className="LoyaltySection space-y-8">
+               <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-xl font-black uppercase italic tracking-tighter text-slate-900 leading-none">Available Vouchers</h2>
+                    <p className="text-[10px] font-black uppercase tracking-[4px] text-slate-400 mt-1 italic opacity-80">PIXS_LOYALTY_VAULT</p>
+                  </div>
+                  <Gift className="text-pixs-mint animate-bounce" size={24} />
+               </div>
+
+               {availableDiscounts.length > 0 ? (
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {availableDiscounts.map((discount) => (
+                      <div 
+                        key={discount.discount_id}
+                        onClick={() => setSelectedDiscountId(selectedDiscountId === discount.discount_id ? null : discount.discount_id)}
+                        className={cn(
+                          "relative p-6 rounded-[28px] border cursor-pointer transition-all flex items-center gap-4 group",
+                          selectedDiscountId === discount.discount_id 
+                            ? "bg-slate-900 border-slate-900 shadow-2xl scale-[1.02]" 
+                            : "bg-white border-slate-100 hover:border-pixs-mint hover:bg-slate-50"
+                        )}
+                      >
+                         <div className={cn(
+                           "w-12 h-12 rounded-[18px] flex items-center justify-center transition-colors",
+                           selectedDiscountId === discount.discount_id ? "bg-pixs-mint text-slate-900 font-black shadow-lg shadow-pixs-mint/20" : "bg-slate-50 text-slate-400 group-hover:text-pixs-mint"
+                         )}>
+                            <Ticket size={24} />
+                         </div>
+                         <div className="flex-1 min-w-0">
+                            <h4 className={cn("text-xs font-black uppercase italic tracking-widest", selectedDiscountId === discount.discount_id ? "text-white" : "text-slate-900 line-clamp-1")}>
+                               {discount.type === 'unit' ? `₱${discount.value} OFF PER UNIT` : 
+                                discount.type === 'percentage' ? `${discount.value}% OFF TOTAL` :
+                                discount.type === 'fixed' ? `₱${discount.value} OFF` : 'DIRECT VOUCHER'}
+                            </h4>
+                            <p className={cn("text-[8px] font-bold uppercase tracking-widest mt-1", selectedDiscountId === discount.discount_id ? "text-white/40" : "text-slate-400")}>
+                               EXPIRES: {new Date(discount.expires_at).toLocaleDateString()}
+                            </p>
+                         </div>
+                         {selectedDiscountId === discount.discount_id && (
+                           <div className="absolute top-2 right-2 flex items-center justify-center w-6 h-6 bg-pixs-mint rounded-full text-slate-900">
+                              <CheckCircle2 size={12} strokeWidth={4} />
+                           </div>
+                         )}
+                      </div>
+                    ))}
+                 </div>
+               ) : (
+                 <div className="p-8 border-2 border-dashed border-slate-100 rounded-[32px] flex flex-col items-center justify-center text-center opacity-40">
+                    <AlertCircle size={32} className="text-slate-300 mb-2" />
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">No active loyalty vouchers detected.</p>
+                 </div>
+               )}
+            </div>
           </div>
 
           <div className="TransactionsRight space-y-8">
             <div className="sticky top-32">
-              <ReceiptSection items={checkoutItems} deliveryFee={deliveryFee} />
+              <ReceiptSection 
+                items={checkoutItems} 
+                deliveryFee={deliveryFee} 
+                discountAmount={discountAmount}
+              />
               
               <div className="mt-8 space-y-4">
                 <button 

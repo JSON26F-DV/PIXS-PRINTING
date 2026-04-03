@@ -161,8 +161,8 @@ const Storefront: React.FC = () => {
   // ─── Data Nodes Discovery ───────────────────────────────────────────────
   const soldMap = useMemo(() => {
     const map: Record<string, number> = {};
-    (orderData as { products: { productId: string; quantity: number }[] }[]).forEach(order => {
-      order.products?.forEach(p => {
+    (orderData as { items: { productId: string; quantity: number }[] }[]).forEach(order => {
+      order.items?.forEach(p => {
         if (p.productId) {
           map[p.productId] = (map[p.productId] || 0) + (p.quantity || 0);
         }

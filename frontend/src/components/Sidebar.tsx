@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   LayoutDashboard, 
   PackageOpen, 
@@ -22,6 +22,8 @@ import { useAuth, type RoleType } from '../context/AuthContext';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { useNavigate } from 'react-router-dom';
+import AdminLogoutModal from './admin/AdminLogoutModal';
+import toast from 'react-hot-toast';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -69,10 +71,23 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed, isMobileOpen, setIsMobileOpen, activeTab, setActiveTab }) => {
-  const { user, login } = useAuth();
+  const { user, login, logout } = useAuth();
   const navigate = useNavigate();
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   
   if (!user) return null;
+
+  const handleLogoutConfirm = () => {
+    setIsLoggingOut(true);
+    
+    // Quick logout per user request
+    logout();
+    setIsLoggingOut(false);
+    setShowLogoutModal(false);
+    toast.success('Session terminated');
+    navigate('/login');
+  };
 
   const navItems: Record<string, { id: string, label: string, icon: LucideIcon }[]> = {
     admin: [
@@ -82,27 +97,26 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed, isMobile
       { id: 'screenplate', label: 'Screenplate Registry', icon: Layers },
       { id: 'stock', label: 'Stock Analytics', icon: BarChart3 },
       { id: 'account', label: 'Accounts', icon: Users },
-      { id: 'complaints', label: 'Complaints & QA', icon: AlertCircle },
       { id: 'payroll', label: 'Attendance & Payroll', icon: CalendarCheck },
       { id: 'marketing', label: 'Marketing & Promos', icon: TicketPercent },
-      { id: 'messenger', label: 'Messenger', icon: MessageSquare },
-      { id: 'settings', label: 'Settings', icon: Settings },
+      { id: 'message', label: 'Enterprise Messaging', icon: MessageSquare },
+      { id: 'setting', label: 'Settings', icon: Settings },
     ],
     staff: [
       { id: 'overview', label: 'Overview', icon: LayoutDashboard },
+      { id: 'chat', label: 'Shift Chat', icon: MessageSquare },
       { id: 'livequeue', label: 'Live Queue', icon: Activity },
       { id: 'complaints', label: 'Complaints & QA', icon: AlertCircle },
       { id: 'payroll', label: 'Attendance', icon: CalendarCheck },
-      { id: 'messenger', label: 'Comm-Hub', icon: MessageSquare },
       { id: 'history', label: 'Order History', icon: ScrollText },
-      { id: 'settings', label: 'Settings', icon: Settings },
+      { id: 'setting', label: 'Settings', icon: Settings },
     ],
     inventory: [
       { id: 'dashboard', label: 'Stock Manager', icon: LayoutDashboard },
       { id: 'raw-materials', label: 'Raw Materials', icon: PackageOpen },
       { id: 'payroll', label: 'Attendance', icon: CalendarCheck },
       { id: 'messenger', label: 'Comm-Hub', icon: MessageSquare },
-      { id: 'settings', label: 'Settings', icon: Settings },
+      { id: 'setting', label: 'Settings', icon: Settings },
     ],
     customer: [
       { id: 'dashboard', label: 'My Orders', icon: ScrollText },
@@ -159,11 +173,9 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed, isMobile
                 collapsed={isCollapsed}
                 onClick={() => {
                   setActiveTab(item.id);
-                  const isStaffOrInv = user.role === 'staff' || user.role === 'inventory' || user.role === 'admin';
-                  const base = isStaffOrInv ? '/admin' : `/${user.role}`;
+                  const base = user.role === 'staff' ? '/staff' : (user.role === 'admin' || user.role === 'inventory' ? '/admin' : `/${user.role}`);
                   // Map roles to their primary view if necessary, otherwise use item.id
-                  let path = item.id;
-                  if (item.id === 'overview') path = 'dashboard';
+                  const path = item.id;
                   
                   navigate(`${base}/${path}`);
                   if (isMobileOpen) setIsMobileOpen(false);
@@ -188,15 +200,25 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed, isMobile
         </div>
         
         <div className="p-4 border-t border-slate-100">
-          <button className={cn(
-            "w-full flex items-center gap-3 text-sm text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-colors rounded-xl font-medium",
-            isCollapsed ? "px-0 justify-center h-12" : "px-4 py-3"
-          )}>
+          <button 
+            onClick={() => setShowLogoutModal(true)}
+            className={cn(
+              "w-full flex items-center gap-3 text-sm text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-colors rounded-xl font-medium",
+              isCollapsed ? "px-0 justify-center h-12" : "px-4 py-3"
+            )}
+          >
             <LogOut size={20} />
             {!isCollapsed && <span>Logout</span>}
           </button>
         </div>
       </aside>
+
+      <AdminLogoutModal 
+        isOpen={showLogoutModal}
+        onClose={() => setShowLogoutModal(false)}
+        onConfirm={handleLogoutConfirm}
+        isLoading={isLoggingOut}
+      />
     </>
   );
 };

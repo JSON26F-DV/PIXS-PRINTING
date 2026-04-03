@@ -1,0 +1,31 @@
+[
+  {
+    "id": "PROMO-001",
+    "title": "VIP Laguna Client",
+    "discount_type": "unit",
+    "discount_value": 1.5,
+    "target_type": "specific_user",
+    "assigned_user_id": "CUST-501",
+    "product_id": "P001",
+    "code": "LAGUNA300",
+    "max_uses": 1,
+    "used_count": 0,
+    "expires_at": "2026-06-01T00:00:00Z",
+    "status": "active",
+    "conditions": {
+      "minimum_quantity": 300
+    }
+  },
+  {
+    "id": "PROMO-002",
+    "title": "Welcome Discount",
+    "discount_type": "percentage",
+    "discount_value": 10,
+    "target_type": "all_users",
+    "code": "WELCOME10",
+    "max_uses": 100,
+    "used_count": 5,
+    "expires_at": "2026-12-31T23:59:59Z",
+    "status": "active"
+  }
+]

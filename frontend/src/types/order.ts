@@ -22,16 +22,23 @@ export interface OrderProduct {
 }
 
 export interface Order {
-  order_id: string;
+  id: string;
   user_id: string;
-  products: OrderProduct[];
+  items: OrderProduct[];
+  total_amount: number;
   shipping_address: unknown;
   payment_method: unknown;
   delivery_method: unknown;
-
   notes?: string;
   status: OrderStatus;
   created_at: string;
   payment_hash: string;
+  discount?: {
+    discount_id: string | null;
+    total_discount_amount: number;
+  };
+  feedback?: string;
+  complaint?: string;
+  rating?: number;
 }
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, type ReactNode, useCallback, useRef } from 'react';
 import { NotificationContext } from './NotificationContextInstance';
-import type { INotification, IComplaint, IMessage, IOrder } from '../types/notification';
+import type { INotification, IComplaint, IOrder } from '../types/notification';
 import complaintsData from '../data/complaints.json';
 import messagesData from '../data/messages.json';
 import workflowData from '../data/workflow.json';
@@ -30,16 +30,32 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
       }
     });
 
-    (messagesData as unknown as IMessage[]).forEach((msg) => {
+    (messagesData as unknown[]).forEach((m: unknown) => {
+      interface MsgData {
+        id: string;
+        created_at?: string;
+        timestamp?: string;
+        sender_id?: string;
+        sender?: string;
+        message?: string;
+        text?: string;
+        senderName?: string;
+      }
+      const msg = m as MsgData;
+      // Handle both old and new format for robustness
+      const timestamp = msg.created_at || msg.timestamp || new Date().toISOString();
+      const senderId = msg.sender_id || msg.sender;
+      const messageText = msg.message || msg.text || "No Content";
+      const senderName = msg.sender_id === 'CUST-501' ? 'Juan Dela Cruz' : (msg.senderName || 'PIXS Admin');
 
-      const msgDate = new Date(msg.timestamp);
-      if (msgDate > lastCheck && msg.sender !== 'admin') {
+      const msgDate = new Date(timestamp);
+      if (msgDate > lastCheck && senderId !== 'admin' && senderId !== 'EMP-001') {
         newNotifications.push({
           id: `message-${msg.id}`,
           type: 'message',
-          title: `New Message from ${msg.senderName}`,
-          description: msg.text.substring(0, 50) + '...',
-          timestamp: msg.timestamp,
+          title: `New Message from ${senderName}`,
+          description: messageText.substring(0, 50) + '...',
+          timestamp: timestamp,
           isRead: false,
           linkTo: '/messenger',
         });

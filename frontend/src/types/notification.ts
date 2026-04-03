@@ -19,10 +19,14 @@ export interface IComplaint {
 
 export interface IMessage {
   id: string;
-  timestamp: string;
-  sender: string;
-  senderName: string;
-  text: string;
+  conversation_id: string;
+  participants: string[];
+  sender_id: string;
+  receiver_id: string;
+  message: string;
+  attachments?: { type: 'image' | 'file'; url: string; name: string }[];
+  is_read: boolean;
+  created_at: string;
 }
 
 export interface IOrder {

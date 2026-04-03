@@ -20,8 +20,14 @@ import ScreenplateManagement from '../views/admin/ScreenplateManagement';
 import StockAnalytics from '../views/admin/StockAnalytics';
 import Accounts from '../views/admin/Accounts';
 import Payroll from '../views/admin/payroll/Payroll';
-// import MarketingPromotions from '../views/admin/MarketingPromotions';
+import Orders from '../views/admin/Orders';
+import MarketingPromotions from '../views/admin/MarketingPromotions';
+import AdminSettings from '../views/admin/Settings/AdminSettings';
 // import DisputeView from '../views/admin/DisputeView';
+// Staff Views
+import StaffOverview from '../views/staff/StaffOverview';
+import StaffComHub from '../views/staff/StaffComHub';
+
 const ProtectedRoute: React.FC<{ children: React.ReactNode; allowedRoles: string[] }> = ({ children, allowedRoles }) => {
   const { user, isLoading } = useAuth();
 
@@ -51,7 +57,7 @@ const AppRouter: React.FC = () => {
       <Route 
         path="/admin" 
         element={
-          <ProtectedRoute allowedRoles={['admin', 'staff', 'inventory']}>
+          <ProtectedRoute allowedRoles={['admin', 'inventory']}>
             <AdminLayout />
           </ProtectedRoute>
         }
@@ -63,12 +69,28 @@ const AppRouter: React.FC = () => {
         <Route path="stock" element={<StockAnalytics />} />
         <Route path="account" element={<Accounts />} />
         <Route path="payroll" element={<Payroll />} />
-        {/* <Route path="marketing" element={<MarketingPromotions />} />
-        <Route path="complaints" element={<DisputeView />} /> */}
+        <Route path="orders" element={<Orders />} />
+        <Route path="message" element={<StaffComHub />} />
+        <Route path="setting" element={<AdminSettings />} />
+        <Route path="marketing" element={<MarketingPromotions />} />
+        {/* <Route path="complaints" element={<DisputeView />} /> */}
+      </Route>
+
+      {/* Staff Routes */}
+      <Route 
+        path="/staff" 
+        element={
+          <ProtectedRoute allowedRoles={['staff']}>
+            <AdminLayout />
+          </ProtectedRoute>
+        }
+      >
+        <Route index element={<Navigate to="overview" replace />} />
+        <Route path="overview" element={<StaffOverview />} />
+        <Route path="chat" element={<MessengerPage />} />
+        <Route path="setting" element={<AdminSettings />} />
       </Route>
       
-
-
       {/* Fallback */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

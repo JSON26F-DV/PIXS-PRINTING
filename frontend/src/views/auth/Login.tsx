@@ -28,7 +28,7 @@ const Login: React.FC<LoginProps> = ({ isOpen = true, onClose }) => {
 
   const ROLE_REDIRECTS: Record<string, string> = {
     admin: '/admin/dashboard',
-    staff: '/admin/dashboard',
+    staff: '/staff/overview',
     inventory: '/admin/dashboard',
     customer: '/',
   };
@@ -39,7 +39,15 @@ const Login: React.FC<LoginProps> = ({ isOpen = true, onClose }) => {
 
     // Mock auth — swap for real API call when backend is ready
     setTimeout(() => {
+      const mockIdMap: Record<string, string> = {
+        admin: 'EMP-001',
+        staff: 'EMP-002',
+        inventory: 'EMP-003',
+        customer: 'CUST-501'
+      };
+      
       login({
+        id: mockIdMap[role],
         name: role === 'admin' ? 'Jason Admin' : `Jason ${role.charAt(0).toUpperCase() + role.slice(1)}`,
         role: role,
       });

@@ -1,0 +1,54 @@
+{
+  "notifications": {
+    "new_order": true,
+    "new_message": true,
+    "low_stock": true,
+    "expiring_promo": true
+  },
+  "system": {
+    "currency": "₱",
+    "tax_percentage": 12,
+    "delivery_fee": 50,
+    "auto_complete_orders": false,
+    "allow_discount_stacking": false
+  },
+  "roles": [
+    {
+      "name": "admin",
+      "permissions": {
+        "can_edit_inventory": true,
+        "can_view_payroll": true,
+        "can_delete_orders": true,
+        "can_manage_users": true
+      }
+    },
+    {
+      "name": "staff",
+      "permissions": {
+        "can_edit_inventory": true,
+        "can_view_payroll": false,
+        "can_delete_orders": false,
+        "can_manage_users": false
+      }
+    },
+    {
+      "name": "accountant",
+      "permissions": {
+        "can_edit_inventory": false,
+        "can_view_payroll": true,
+        "can_delete_orders": false,
+        "can_manage_users": false
+      }
+    },
+    {
+      "name": "marketing",
+      "permissions": {
+        "can_edit_inventory": false,
+        "can_view_payroll": false,
+        "can_delete_orders": false,
+        "can_manage_users": false,
+        "can_manage_promos": true
+      }
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+[
+  { "id": "EMP-001", "name": "Jason G", "email": "jason@pixs.com", "role": "admin" },
+  { "id": "EMP-002", "name": "Staff A", "email": "staff_a@pixs.com", "role": "staff" },
+  { 
+    "id": "CUST-501", 
+    "name": "Juan Dela Cruz", 
+    "email": "juan@example.com", 
+    "role": "customer",
+    "discounts": [
+      {
+        "discount_id": "DISC-001",
+        "type": "unit",
+        "value": 1.5,
+        "product_id": "P001",
+        "remaining_uses": 1,
+        "is_one_time": true,
+        "expires_at": "2026-06-01T00:00:00Z",
+        "status": "active"
+      }
+    ]
+  },
+  { 
+    "id": "CUST-502", 
+    "name": "Laguna Prints", 
+    "email": "info@lagunaprints.com", 
+    "role": "customer",
+    "discounts": []
+  },
+  { "id": "CUST-503", "name": "Maria Clara", "email": "maria@example.com", "role": "customer", "discounts": [] },
+  { "id": "CUST-504", "name": "Andres Bonifacio", "email": "andres@example.com", "role": "customer", "discounts": [] },
+  { "id": "CUST-505", "name": "Rizal Dimasalang", "email": "rizal@example.com", "role": "customer", "discounts": [] }
+]

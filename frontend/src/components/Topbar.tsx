@@ -12,6 +12,7 @@ import type { NavigateFunction } from 'react-router-dom';
 import productsData from '../data/products.json';
 import workflowData from '../data/workflow.json';
 import usersData from '../data/users.json';
+import { SafeTerminal } from '../utils/safeTerminal';
 
 interface IProduct {
   id: string;
@@ -34,6 +35,16 @@ interface IUserData {
   role?: string;
   type?: string;
   email: string;
+}
+
+interface RawWorkflow {
+  cartOrders: IWorkflowOrder[];
+  productionQueue: IWorkflowOrder[];
+}
+
+interface RawUsers {
+  employees: IUserData[];
+  customers: IUserData[];
 }
 
 function cn(...inputs: ClassValue[]) {
@@ -115,46 +126,38 @@ const SmartSearch: React.FC<{
             type: 'product',
             title: p.name,
             subtitle: `${p.category} • ₱${p.base_price}`,
-            link: 'products',
+            link: 'product',
           });
         });
 
-      (workflowData.cartOrders as IWorkflowOrder[])
+      const allWorkflowOrders = [
+        ...SafeTerminal.array<IWorkflowOrder>((workflowData as unknown as RawWorkflow).cartOrders),
+        ...SafeTerminal.array<IWorkflowOrder>((workflowData as unknown as RawWorkflow).productionQueue)
+      ] as IWorkflowOrder[];
+
+      allWorkflowOrders
         .filter(o => o.id.toLowerCase().includes(lowerQuery) || o.product.toLowerCase().includes(lowerQuery))
-        .slice(0, 3)
+        .slice(0, 5)
         .forEach(o => {
           searchResults.push({
             id: `order-${o.id}`,
             type: 'order',
             title: `#${o.id} - ${o.product}`,
-            subtitle: `${o.customer} • ${o.qty} pcs`,
-            link: 'orders',
+            subtitle: `${o.customer} • ${o.status || 'Active'}`,
+            link: user.role === 'staff' ? 'history' : 'orders',
           });
         });
 
-      (workflowData.productionQueue as IWorkflowOrder[])
-        .filter(o => o.id.toLowerCase().includes(lowerQuery) || o.product.toLowerCase().includes(lowerQuery))
-        .slice(0, 3)
-        .forEach(o => {
-          searchResults.push({
-            id: `prod-${o.id}`,
-            type: 'order',
-            title: `#${o.id} - ${o.product}`,
-            subtitle: `${o.customer} • ${o.status}`,
-            link: 'orders',
-          });
-        });
-
-      ([...usersData.employees, ...usersData.customers] as IUserData[])
+      ([...SafeTerminal.array<IUserData>((usersData as unknown as RawUsers).employees), ...SafeTerminal.array<IUserData>((usersData as unknown as RawUsers).customers)] as IUserData[])
         .filter(u => u.name.toLowerCase().includes(lowerQuery))
-        .slice(0, 3)
+        .slice(0, 5)
         .forEach(u => {
           searchResults.push({
             id: `user-${u.id}`,
             type: 'customer',
             title: u.name,
-            subtitle: `${u.role || u.type} • ${u.email}`,
-            link: 'accounts',
+            subtitle: `${u.role || u.type || 'Client'} • ${u.email}`,
+            link: 'account',
           });
         });
 
@@ -162,7 +165,7 @@ const SmartSearch: React.FC<{
     }, 100);
 
     return () => clearTimeout(handler);
-  }, [query]);
+  }, [query, user.role]);
 
   const handleSelect = (result: SearchResult) => {
     onClose();
