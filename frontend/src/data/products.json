@@ -36,7 +36,7 @@
     "best_for": "Milktea Shops, Juice Bars, and Premium Cafes.",
     "base_price": 2.95,
     "raw_material_cost": 1.20,
-    "current_stock": 8000,
+    "current_stock": 5,
     "min_threshold": 500,
     "min_order": 100,
     "main_image": "https://images.unsplash.com/photo-1563805042-7684c019e1cb?auto=format&fit=crop&q=80",

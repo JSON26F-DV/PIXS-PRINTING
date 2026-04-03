@@ -11,6 +11,7 @@ export interface CartPlateInfo {
   type: string;
   printPricePerUnit: number;
   setupFee: number;
+  channels: number;
   printingInfo: string;
   isOwned: boolean;
 }
@@ -34,7 +35,7 @@ export interface CartItem {
   currentStock: number;
   quantity: number;
   variant: CartVariantInfo;
-  color: CartColorInfo | null;
+  colors: CartColorInfo[];
   plate: CartPlateInfo | null;
   createdAt: string;
 }

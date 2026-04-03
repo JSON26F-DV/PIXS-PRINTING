@@ -11,7 +11,7 @@ export interface AddCartItemInput {
   currentStock: number;
   quantity: number;
   variant: CartVariantInfo;
-  color: CartColorInfo | null;
+  colors: CartColorInfo[];
   plate: CartPlateInfo | null;
 }
 
@@ -19,7 +19,7 @@ const makeCartItemId = (input: AddCartItemInput): string => {
   return [
     input.productId,
     input.variant.id,
-    input.color?.id ?? 'no-color',
+    input.colors.map(c => c.id).sort().join('-') || 'no-color',
     input.plate?.id ?? 'no-plate',
   ].join('__');
 };
@@ -74,8 +74,31 @@ export const mockCartService = {
     return updated;
   },
 
-  updateColor(itemId: string, color: CartColorInfo | null): CartItem[] {
-    const updated = readStorage().map((item) => (item.id === itemId ? { ...item, color } : item));
+  updateColors(itemId: string, colors: CartColorInfo[]): CartItem[] {
+    const current = readStorage();
+    const updated = current.map((item) => (item.id === itemId ? { ...item, colors } : item));
+    writeStorage(updated);
+    return updated;
+  },
+
+  updateVariant(itemId: string, variant: CartVariantInfo): CartItem[] {
+    const current = readStorage();
+    const updated = current.map((item) => (item.id === itemId ? { ...item, variant } : item));
+    writeStorage(updated);
+    return updated;
+  },
+
+  updatePlatePrice(itemId: string, printPricePerUnit: number): CartItem[] {
+    const current = readStorage();
+    const updated = current.map((item) => {
+      if (item.id === itemId && item.plate) {
+        return {
+          ...item,
+          plate: { ...item.plate, printPricePerUnit }
+        };
+      }
+      return item;
+    });
     writeStorage(updated);
     return updated;
   },

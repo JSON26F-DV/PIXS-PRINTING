@@ -25,15 +25,15 @@ export const useOrderConfig = ({ product, compatiblePlates }: UseOrderConfigProp
   );
 
   const selectedPlate = useMemo(
-    () => compatiblePlates.find(p => p.plate_id === selectedPlateId) ?? null,
+    () => compatiblePlates.find(p => p.id === selectedPlateId) ?? null,
     [compatiblePlates, selectedPlateId]
   );
 
   const availablePositions = useMemo(() => {
     if (!selectedPlate) return [];
-    const compat = selectedPlate.compatible_products.find(cp => cp.product_id === product.id);
-    return compat?.allowed_alignments ?? [];
-  }, [selectedPlate, product.id]);
+    // Since allowed_alignments is removed from compatibility, we'll use the plate's supported_alignments
+    return selectedPlate.supported_alignments ?? [];
+  }, [selectedPlate]);
 
   const priceBreakdown = useMemo<IPriceBreakdown>(() => {
     const base = calculatePrice({

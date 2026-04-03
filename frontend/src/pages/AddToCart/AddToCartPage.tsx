@@ -4,13 +4,14 @@ import { ArrowLeft, Minus, Plus, Trash2, Circle, CheckCircle2 } from 'lucide-rea
 import toast from 'react-hot-toast';
 import colorData from '../../data/color.json';
 import productsData from '../../data/products.json';
+import screenplateData from '../../data/screenplate.json';
 import { useCart } from './hooks/useCart';
 import type { CartColorInfo } from '../../types/cart';
-import type { IProduct } from '../../types/product.types';
+import type { IProduct, IScreenPlate } from '../../types/product.types';
 
 const AddToCartPage: React.FC = () => {
   const navigate = useNavigate();
-  const { items, updateQuantity, updateColor, removeItem, getItemTotal } = useCart();
+  const { items, updateQuantity, updateColors, updateVariant, updatePlatePrice, removeItem, getItemTotal } = useCart();
   const colors = colorData as CartColorInfo[];
   const products = productsData as IProduct[];
   
@@ -54,15 +55,57 @@ const AddToCartPage: React.FC = () => {
     updateQuantity(target, nextQty);
   };
 
-  const handleColorChange = (itemId: string, colorId: string) => {
-    const selectedColor = colors.find((color) => color.id === colorId) ?? null;
-    updateColor(itemId, selectedColor);
-    toast.success('Product color updated.');
+  const handleColorChange = (item: typeof items[0], colorId: string) => {
+    const selectedColor = colors.find((c) => c.id === colorId);
+    if (!selectedColor) return;
+
+    const maxChannels = item.plate?.channels || 1;
+    const currentColors = item.colors || [];
+    
+    let nextColors: CartColorInfo[];
+    if (currentColors.some(c => c.id === colorId)) {
+      nextColors = currentColors.filter(c => c.id !== colorId);
+    } else if (currentColors.length < maxChannels) {
+      nextColors = [...currentColors, selectedColor];
+    } else {
+      if (maxChannels === 1) {
+        nextColors = [selectedColor];
+      } else {
+        return; // Block if at max
+      }
+    }
+    
+    updateColors(item.id, nextColors);
+    toast.success('Configuration updated.');
+  };
+
+  const handleVariantChange = (itemId: string, variantId: string, productId: string) => {
+    const product = products.find(p => p.id === productId);
+    const variant = product?.variants.find(v => v.variant_id === variantId);
+    if (!variant) return;
+
+    const targetItem = items.find(i => i.id === itemId);
+    if (targetItem?.plate) {
+      const plate = (screenplateData as IScreenPlate[]).find(p => p.id === targetItem.plate?.id);
+      const compatibility = plate?.compatibility.find(cp => cp.product_id === productId);
+      const newPrice = compatibility?.print_price_per_unit?.[variant.size] ?? 0;
+      updatePlatePrice(itemId, newPrice);
+    }
+
+    updateVariant(itemId, {
+      id: variant.variant_id,
+      size: variant.size,
+      width: variant.width,
+      height: variant.height,
+      unitPrice: variant.price,
+      stock: variant.stock,
+    });
+    toast.success('Product variant updated.');
   };
 
   return (
     <div className="AddToCartPage min-h-screen bg-slate-50 pb-32">
-      <div className="sticky top-24 z-30 border-b border-slate-100 bg-white/60 px-6 py-5 backdrop-blur-3xl md:px-16">
+      <div className="sticky top-32 lg:top-20 z-30 border-b border-slate-100 bg-white/60 px-6 py-5 backdrop-blur-3xl md:px-16">
         <div className="mx-auto flex max-w-[1400px] items-center justify-between">
           <button
             onClick={() => navigate('/')}
@@ -116,7 +159,7 @@ const AddToCartPage: React.FC = () => {
                 const itemTotal = getItemTotal(item.id);
                 if (!itemTotal) return null;
                 const productMeta = products.find((product) => product.id === item.productId);
-                const isNeedColor = productMeta?.is_need_color ?? !!item.color;
+                const isNeedColor = productMeta?.is_need_color ?? item.colors.length > 0;
                 const shortDescription = productMeta?.short_description ?? 'No short description available.';
                 const isSelected = selectedItemIds.includes(item.id);
 
@@ -160,23 +203,92 @@ const AddToCartPage: React.FC = () => {
                           </button>
                         </div>
 
+                        {/* Variant Configuration Hub */}
+                        <div className="CartProductVariantPicker space-y-2">
+                          <div className="flex items-center justify-between">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Variant Node</label>
+                            {item.plate && (
+                              <span className="text-[9px] font-black uppercase tracking-widest text-pixs-mint flex items-center gap-1">
+                                <CheckCircle2 size={10} /> Compatibility Locked
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {productMeta?.variants.map((v) => {
+                              const isSelected = item.variant.id === v.variant_id;
+                              let isCompatible = true;
+                              
+                              if (item.plate) {
+                                const plate = (screenplateData as IScreenPlate[]).find(p => p.id === item.plate?.id);
+                                const compatibility = plate?.compatibility.find(cp => cp.product_id === item.productId);
+                                isCompatible = compatibility?.allowed_variants.includes(v.size) ?? false;
+                              }
+
+                              return (
+                                <button
+                                  key={`${item.id}-${v.variant_id}`}
+                                  disabled={!isCompatible}
+                                  onClick={() => handleVariantChange(item.id, v.variant_id, item.productId)}
+                                  className={`rounded-xl border px-3 py-2 text-[10px] font-black uppercase tracking-wider transition relative ${
+                                    isSelected
+                                      ? 'border-slate-900 bg-slate-900 text-white'
+                                      : isCompatible
+                                        ? 'border-slate-200 bg-white text-slate-600 hover:border-slate-400'
+                                        : 'border-slate-100 bg-slate-50 text-slate-300 cursor-not-allowed grayscale'
+                                  }`}
+                                >
+                                  {v.size}
+                                  {!isCompatible && isSelected && (
+                                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-rose-500 rounded-full border-2 border-white" />
+                                  )}
+                                </button>
+                              );
+                            })}
+                          </div>
+                          {item.plate && (
+                            <p className="text-[9px] font-bold text-slate-400 italic">
+                              * Note: Locked to your screenplate. Contact Admin if you need other variants or <button onClick={() => navigate(`/screenplate?product_id=${item.productId}&variant=${item.variant.size}&mode=incompatible`)} className="underline hover:text-slate-900">request new plate</button>.
+                            </p>
+                          )}
+                          {!item.plate && productMeta?.is_need_screenplate && (
+                            <div className="p-3 bg-amber-50 border border-amber-100 rounded-xl flex items-center justify-between">
+                              <p className="text-[9px] font-black uppercase text-amber-700">Missing Screenplate Requirement</p>
+                              <button 
+                                onClick={() => navigate(`/screenplate?product_id=${item.productId}&variant=${item.variant.size}`)}
+                                className="px-3 py-1 bg-amber-600 text-white text-[8px] font-black uppercase rounded-lg hover:bg-amber-700 transition-colors"
+                              >
+                                Initialize Setup
+                              </button>
+                            </div>
+                          )}
+                        </div>
+
                         {isNeedColor && (
                           <div className="CartProductColorPicker space-y-2">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Color</label>
+                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">
+                              Master Color Sequence {item.plate && `(${item.colors.length}/${item.plate.channels} Channels)`}
+                            </label>
                             <div className="flex flex-wrap gap-2">
                               {colors.map((color) => {
-                                const selected = item.color?.id === color.id;
+                                const index = item.colors.findIndex((c) => c.id === color.id);
+                                const selected = index !== -1;
+                                const label = selected ? (index === 0 ? 'Primary' : index === 1 ? 'Secondary' : 'Accent') : null;
+                                
                                 return (
                                   <button
                                     key={`${item.id}-${color.id}`}
-                                    onClick={() => handleColorChange(item.id, color.id)}
-                                    className={`rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-wider transition ${
+                                    onClick={() => handleColorChange(item, color.id)}
+                                    className={`relative rounded-full border px-3 py-1.5 text-[10px] font-black uppercase tracking-wider transition ${
                                       selected
                                         ? 'border-slate-900 bg-slate-900 text-white'
                                         : 'border-slate-200 bg-white text-slate-600 hover:border-slate-400'
                                     }`}
                                   >
-                                    {color.name}
+                                    <div className="flex items-center gap-2">
+                                      <div className="w-2.5 h-2.5 rounded-full border border-slate-200" style={{ backgroundColor: color.hex }} />
+                                      {color.name}
+                                      {label && <span className="ml-1 text-[8px] text-pixs-mint italic">{label}</span>}
+                                    </div>
                                   </button>
                                 );
                               })}
@@ -223,7 +335,7 @@ const AddToCartPage: React.FC = () => {
               })}
             </section>
 
-            <aside className="CartTotalSection sticky top-32 h-fit rounded-[24px] border border-slate-100 bg-white p-6 shadow-sm">
+            <aside className="CartTotalSection sticky top-36 lg:top-40 h-fit rounded-[24px] border border-slate-100 bg-white p-6 shadow-sm">
               <h2 className="text-xl font-black uppercase italic tracking-tight text-slate-900">Cart Total</h2>
               <p className="mt-1 text-[10px] font-black uppercase tracking-widest text-slate-400">
                 {selectedItems.length} Selected Item{selectedItems.length > 1 ? 's' : ''}

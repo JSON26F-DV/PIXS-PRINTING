@@ -163,7 +163,7 @@ const SettingsPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Sticky Top Bar */}
-      <div className="sticky top-24 z-30 border-b border-slate-100 bg-white/90 backdrop-blur-md">
+      <div className="sticky top-32 lg:top-20 z-30 border-b border-slate-100 bg-white/90 backdrop-blur-md">
         <div className="mx-auto flex h-14 max-w-[1440px] items-center justify-between gap-4 px-4 md:px-8">
           {/* Back Button */}
           <button
@@ -246,7 +246,7 @@ const SettingsPage: React.FC = () => {
         <div className="flex gap-6 lg:gap-8">
           {/* Desktop Sidebar */}
           <aside className="hidden w-64 shrink-0 lg:block xl:w-72">
-            <div className="sticky top-44">
+            <div className="sticky top-36">
               <SidebarContent
                 user={user}
                 activeSection={activeSection}

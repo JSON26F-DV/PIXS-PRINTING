@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { FiUploadCloud, FiSearch, FiX, FiCheckCircle, FiInfo } from 'react-icons/fi';
+import { FiUploadCloud, FiSearch, FiX, FiCheckCircle, FiInfo, FiAlertTriangle } from 'react-icons/fi';
+import { useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import productsDataRaw from '../../data/products.json';
 
@@ -31,6 +32,7 @@ const ScreenplatePage: React.FC = () => {
   const [alignment, setAlignment] = useState<string>('');
   const [referenceImage, setReferenceImage] = useState<string | null>(null);
   const [comment, setComment] = useState<string>('');
+  const [searchParams] = useSearchParams();
 
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -44,6 +46,26 @@ const ScreenplatePage: React.FC = () => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Handle URL Parameters for auto-selection
+  useEffect(() => {
+    const productId = searchParams.get('product_id');
+    const variantSize = searchParams.get('variant');
+
+    if (productId && variantSize) {
+      const product = productsData.find(p => p.id === productId);
+      if (product) {
+        const variant = product.variants?.find(v => v.size === variantSize);
+        if (variant) {
+          setSelectedProduct(product);
+          setSelectedVariant(variant);
+          setSearchQuery(`${product.name} - ${variant.size}`);
+        }
+      }
+    }
+  }, [searchParams]);
+
+  const isIncompatibleMode = searchParams.get('mode') === 'incompatible';
 
   const searchResults = useMemo(() => {
     if (!searchQuery.trim()) return [];
@@ -168,9 +190,21 @@ const ScreenplatePage: React.FC = () => {
               Screenplate Setup
             </h1>
             <p className="text-[10px] font-bold uppercase tracking-[4px] text-slate-400 mt-1">
-              Custom Branding Request
+              {isIncompatibleMode ? 'Incompatibility Resolution Node' : 'Custom Branding Request'}
             </p>
           </div>
+
+          {isIncompatibleMode && (
+            <div className="mx-8 mt-4 p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-start gap-3 animate-pulse">
+              <FiAlertTriangle className="text-rose-500 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-[10px] font-black uppercase text-rose-700">Protocol Mismatch Detected</p>
+                <p className="text-[9px] text-rose-600 mt-1 leading-relaxed">
+                  Your current screenplate does not support this variant configuration. Initializing new industrial node setup.
+                </p>
+              </div>
+            </div>
+          )}
 
           <div className="flex-1 overflow-y-auto px-8 py-8 space-y-12">
             

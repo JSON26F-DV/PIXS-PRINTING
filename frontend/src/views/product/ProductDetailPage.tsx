@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useLayoutEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, PackageCheck } from 'lucide-react';
 
 import { clsx } from 'clsx';
@@ -32,14 +32,14 @@ const Skeleton: React.FC<{ className?: string }> = ({ className }) => (
 );
 
 // ─── Product Detail Inner Configuration (Data Hydrated) ───────────────────────
-const ProductDetailInner: React.FC<{ product: IProduct; compatiblePlates: IScreenPlate[] }> = ({
-  product, compatiblePlates,
+const ProductDetailInner: React.FC<{ product: IProduct; compatiblePlates: IScreenPlate[]; preselectedPlateName?: string | null }> = ({
+  product, compatiblePlates, preselectedPlateName
 }) => {
   const navigate = useNavigate();
   const stockStatus = getStockStatus(product.current_stock, product.min_threshold);
   
   // Logic Engine Integration
-  const { state, actions, computed } = useProductDetail({ product, compatiblePlates });
+  const { state, actions, computed } = useProductDetail({ product, compatiblePlates, preselectedPlateName });
 
   // Gallery Modal State Protocol
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
@@ -48,10 +48,10 @@ const ProductDetailInner: React.FC<{ product: IProduct; compatiblePlates: IScree
   // Cross-Table Logic Matrix: Identify compat variants based on selected screenplate
   const compatibleVariantSizes = React.useMemo(() => {
     if (!state.selectedPlateId) return null;
-    const selectedPlate = compatiblePlates.find(p => p.plate_id === state.selectedPlateId);
+    const selectedPlate = compatiblePlates.find(p => p.id === state.selectedPlateId);
     if (!selectedPlate) return null;
     
-    const compatibility = selectedPlate.compatible_products.find(cp => cp.product_id === product.id);
+    const compatibility = selectedPlate.compatibility.find(cp => cp.product_id === product.id);
     return compatibility?.allowed_variants || null;
   }, [state.selectedPlateId, compatiblePlates, product.id]);
 
@@ -98,26 +98,25 @@ const ProductDetailInner: React.FC<{ product: IProduct; compatiblePlates: IScree
         unitPrice: variant.price,
         stock: variant.stock,
       },
-      color: computed.selectedColor
-        ? {
-            id: computed.selectedColor.id,
-            name: computed.selectedColor.name,
-            hex: computed.selectedColor.hex,
-            type: computed.selectedColor.type,
-          }
-        : null,
+      colors: computed.selectedColors.map((c) => ({
+        id: c.id,
+        name: c.name,
+        hex: c.hex,
+        type: c.type,
+      })),
       plate: computed.selectedPlate
         ? {
-            id: computed.selectedPlate.plate_id,
+            id: computed.selectedPlate.id,
             name: computed.selectedPlate.plate_name,
             type: computed.selectedPlate.is_flatscreen ? 'Flatscreen' : 'Cylindrical',
             printPricePerUnit:
               computed.selectedVariant 
-                ? (computed.selectedPlate.compatible_products.find((cp) => cp.product_id === product.id)?.print_price_per_unit?.[computed.selectedVariant.size] ?? 0)
+                ? (computed.selectedPlate.compatibility.find((cp) => cp.product_id === product.id)?.print_price_per_unit?.[computed.selectedVariant.size] ?? 0)
                 : 0,
             setupFee: computed.selectedPlate.base_setup_fee,
+            channels: computed.selectedPlate.channels,
             printingInfo: computed.selectedPlate.technical_info || 'High-accuracy production node.',
-            isOwned: state.ownedPlateIds.includes(computed.selectedPlate.plate_id),
+            isOwned: state.ownedPlateIds.includes(computed.selectedPlate.id),
           }
         : null,
     });
@@ -149,26 +148,25 @@ const ProductDetailInner: React.FC<{ product: IProduct; compatiblePlates: IScree
         unitPrice: variant.price,
         stock: variant.stock,
       },
-      color: computed.selectedColor
-        ? {
-            id: computed.selectedColor.id,
-            name: computed.selectedColor.name,
-            hex: computed.selectedColor.hex,
-            type: computed.selectedColor.type,
-          }
-        : null,
+      colors: computed.selectedColors.map((c) => ({
+        id: c.id,
+        name: c.name,
+        hex: c.hex,
+        type: c.type,
+      })),
       plate: computed.selectedPlate
         ? {
-            id: computed.selectedPlate.plate_id,
+            id: computed.selectedPlate.id,
             name: computed.selectedPlate.plate_name,
             type: computed.selectedPlate.is_flatscreen ? 'Flatscreen' : 'Cylindrical',
             printPricePerUnit:
               computed.selectedVariant 
-                ? (computed.selectedPlate.compatible_products.find((cp) => cp.product_id === product.id)?.print_price_per_unit?.[computed.selectedVariant.size] ?? 0)
+                ? (computed.selectedPlate.compatibility.find((cp) => cp.product_id === product.id)?.print_price_per_unit?.[computed.selectedVariant.size] ?? 0)
                 : 0,
             setupFee: computed.selectedPlate.base_setup_fee,
+            channels: computed.selectedPlate.channels,
             printingInfo: computed.selectedPlate.technical_info || 'High-accuracy production node.',
-            isOwned: state.ownedPlateIds.includes(computed.selectedPlate.plate_id),
+            isOwned: state.ownedPlateIds.includes(computed.selectedPlate.id),
           }
         : null,
     };
@@ -205,7 +203,7 @@ const ProductDetailInner: React.FC<{ product: IProduct; compatiblePlates: IScree
             )}
           >
             <span className="text-[10px] font-black uppercase italic tracking-tighter">
-              {computed.canAddToCart ? 'BUY NOW' : 'Protocol Locked'}
+              {computed.canAddToCart ? 'BUY NOW' : computed.isOutOfStock ? 'OUT OF STOCK' : 'Protocol Locked'}
             </span>
             <PackageCheck size={14} strokeWidth={3} />
           </button>
@@ -268,7 +266,8 @@ const ProductDetailInner: React.FC<{ product: IProduct; compatiblePlates: IScree
               <div className="stagger-item">
                 <ColorPicker
                   colors={state.colors}
-                  selectedColorId={state.selectedColorId}
+                  selectedColorIds={state.selectedColorIds}
+                  maxChannels={computed.selectedPlate?.channels || 1}
                   onSelect={actions.handleColorChange}
                 />
               </div>
@@ -291,6 +290,8 @@ const ProductDetailInner: React.FC<{ product: IProduct; compatiblePlates: IScree
                 selectedPlateId={state.selectedPlateId}
                 onPlateChange={actions.handlePlateChange}
                 isRequired={product.is_need_screenplate}
+                productId={product.id}
+                selectedVariantSize={computed.selectedVariant?.size}
               />
             </div>
 
@@ -361,6 +362,10 @@ const ProductDetailPage: React.FC = () => {
     return () => { isMounted = false; };
   }, [id]);
 
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const plateName = searchParams.get('plate');
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-white pt-32">
@@ -387,7 +392,7 @@ const ProductDetailPage: React.FC = () => {
     );
   }
 
-  return <ProductDetailInner product={product} compatiblePlates={plates} />;
+  return <ProductDetailInner key={product.id} product={product} compatiblePlates={plates} preselectedPlateName={plateName} />;
 };
 
 export default ProductDetailPage;

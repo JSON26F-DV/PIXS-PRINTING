@@ -28,8 +28,8 @@ const Login: React.FC<LoginProps> = ({ isOpen = true, onClose }) => {
 
   const ROLE_REDIRECTS: Record<string, string> = {
     admin: '/admin/dashboard',
-    staff: '/staff/overview',
-    inventory: '/inventory/dashboard',
+    staff: '/admin/dashboard',
+    inventory: '/admin/dashboard',
     customer: '/',
   };
 

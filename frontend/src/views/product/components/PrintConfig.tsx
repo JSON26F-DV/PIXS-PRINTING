@@ -59,11 +59,11 @@ const PrintConfig: React.FC<PrintConfigProps> = ({
         </button>
 
         {compatiblePlates.map(plate => {
-          const isSelected = selectedPlateId === plate.plate_id;
+          const isSelected = selectedPlateId === plate.id;
           return (
             <button
-              key={plate.plate_id}
-              onClick={() => onPlateChange(plate.plate_id)}
+              key={plate.id}
+              onClick={() => onPlateChange(plate.id)}
               className={clsx(
                 'w-full flex flex-col gap-2 px-5 py-4 rounded-2xl border-2 transition-all text-left',
                 isSelected

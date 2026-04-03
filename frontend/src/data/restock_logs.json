@@ -1,5 +1,46 @@
 [
-  { "id": "L001", "product_id": "P001", "qty_added": 500, "date": "2026-03-28T10:00:00Z", "staff_name": "Jason" },
-  { "id": "L002", "product_id": "P002", "qty_added": 200, "date": "2026-03-27T14:30:00Z", "staff_name": "Staff_A" },
-  { "id": "L003", "product_id": "P005", "qty_added": 5000, "date": "2026-03-26T09:15:00Z", "staff_name": "Inventory_B" }
+  {
+    "id": "RL-001",
+    "product_id": "P001",
+    "product_name": "PPY Cup",
+    "qty_added": 500,
+    "cost": 1500.0,
+    "date": "2026-04-01T10:00:00Z",
+    "type": "RESTOCK",
+    "staff_name": "Jason",
+    "notes": "Bulk restock for April start."
+  },
+  {
+    "id": "RL-002",
+    "product_id": "P002",
+    "product_name": "Thinwall Container",
+    "qty_added": 200,
+    "cost": 800.0,
+    "date": "2026-04-02T14:30:00Z",
+    "type": "RESTOCK",
+    "staff_name": "Staff_A",
+    "notes": "Emergency restock."
+  },
+  {
+    "id": "RL-003",
+    "product_id": null,
+    "product_name": "Utility - Ink Supply",
+    "qty_added": 0,
+    "cost": 2500.0,
+    "date": "2026-04-02T16:00:00Z",
+    "type": "MISC",
+    "staff_name": "Jason",
+    "notes": "Industrial screen ink procurement."
+  },
+  {
+    "id": "RL-004",
+    "product_id": "P003",
+    "product_name": "Meal Box (Standard)",
+    "qty_added": 1000,
+    "cost": 3000.0,
+    "date": "2026-03-31T09:15:00Z",
+    "type": "RESTOCK",
+    "staff_name": "Inventory_B",
+    "notes": "Weekly base stock."
+  }
 ]

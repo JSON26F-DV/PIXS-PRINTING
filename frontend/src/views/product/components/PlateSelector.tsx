@@ -1,5 +1,6 @@
 import React from 'react';
-import { Layers, AlertTriangle, Check, Box } from 'lucide-react';
+import { Layers, Check, Box, Cpu } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { clsx } from 'clsx';
 import type { IScreenPlate } from '../../../types/product.types';
 
@@ -8,6 +9,8 @@ interface PlateSelectorProps {
   selectedPlateId: string | null;
   onPlateChange: (plateId: string | null) => void;
   isRequired: boolean;
+  productId: string;
+  selectedVariantSize?: string;
 }
 
 /**
@@ -20,7 +23,10 @@ const PlateSelector: React.FC<PlateSelectorProps> = ({
   selectedPlateId,
   onPlateChange,
   isRequired,
+  productId,
+  selectedVariantSize,
 }) => {
+  const navigate = useNavigate();
   const hasSelectablePlates = selectablePlates.length > 0;
 
   // Protocol: If not required and no owned inventory, leave selection blank to bypass UX noise
@@ -31,16 +37,23 @@ const PlateSelector: React.FC<PlateSelectorProps> = ({
   // Protocol: If required but no owned inventory, show fabrication collision warning
   if (!hasSelectablePlates && isRequired) {
     return (
-      <div className="p-8 bg-rose-50 border border-rose-100 rounded-[32px] space-y-4 border-dashed animate-in fade-in zoom-in duration-500 shadow-2xl shadow-rose-200/5">
-        <div className="flex items-center gap-3 text-rose-600">
-          <AlertTriangle size={20} strokeWidth={3} />
-          <h4 className="text-xs font-black uppercase tracking-widest text-rose-900 italic">Inventory Collision: No Plates Available</h4>
+      <div className="p-8 bg-slate-50 border border-slate-200 rounded-[32px] space-y-6 border-dashed animate-in fade-in zoom-in duration-500 shadow-2xl shadow-slate-200/5">
+        <div className="flex items-start gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-500 shrink-0 border border-amber-100">
+             <Cpu size={24} />
+          </div>
+          <div className="space-y-1">
+            <h4 className="text-xs font-black uppercase tracking-[3px] text-slate-900 italic">Industrial Protocol Required</h4>
+            <p className="text-[10px] text-slate-500 font-bold leading-relaxed pr-8 uppercase tracking-tighter">
+              This production line requires a verified screenplate node. No compatible configurations identified in your registry for the current variant.
+            </p>
+          </div>
         </div>
-        <p className="text-xs text-rose-500 font-bold leading-relaxed pr-8 uppercase tracking-tighter">
-          This customized production node requires an active screenplate protocol. NO compatible plates identified in your profile memory.
-        </p>
-        <button className="flex items-center gap-2 px-6 py-3 bg-rose-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-rose-600 transition-all shadow-lg shadow-rose-200">
-          Fabricate New Protocol Node
+        <button 
+          onClick={() => navigate(`/screenplate?product_id=${productId}&variant=${selectedVariantSize}`)}
+          className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-[4px] hover:bg-slate-800 transition-all shadow-xl shadow-slate-200 active:scale-[0.98]"
+        >
+          Initialize Fabrication Flow
         </button>
       </div>
     );
@@ -62,12 +75,12 @@ const PlateSelector: React.FC<PlateSelectorProps> = ({
 
       <div className="grid grid-cols-1 gap-4">
         {selectablePlates.map(plate => {
-          const isSelected = selectedPlateId === plate.plate_id;
+          const isSelected = selectedPlateId === plate.id;
 
           return (
             <button
-              key={plate.plate_id}
-              onClick={() => onPlateChange(isSelected ? null : plate.plate_id)}
+              key={plate.id}
+              onClick={() => onPlateChange(isSelected ? null : plate.id)}
               className={clsx(
                 'relative p-6 rounded-[32px] text-left border-2 transition-all flex flex-col md:flex-row gap-6 group overflow-hidden',
                 isSelected 
@@ -75,14 +88,18 @@ const PlateSelector: React.FC<PlateSelectorProps> = ({
                   : 'bg-white border-slate-50 hover:border-slate-200'
               )}
             >
-              <div className="relative w-24 h-24 bg-slate-50 rounded-2xl flex-shrink-0 flex items-center justify-center border border-slate-100 group-hover:bg-white group-hover:scale-105 transition-all">
-                <Box className="w-10 h-10 opacity-10 group-hover:opacity-40 transition-opacity" />
+              <div className="relative w-24 h-24 bg-slate-50 rounded-2xl flex-shrink-0 flex items-center justify-center border border-slate-100 group-hover:bg-white group-hover:scale-105 transition-all overflow-hidden">
+                {plate.image ? (
+                  <img src={plate.image} alt={plate.plate_name} className="w-full h-full object-cover" />
+                ) : (
+                  <Box className="w-10 h-10 opacity-10 group-hover:opacity-40 transition-opacity" />
+                )}
               </div>
 
               <div className="flex-grow space-y-3">
                 <div className="flex items-start justify-between">
                    <div className="space-y-0.5">
-                      <span className="text-[8px] font-black uppercase text-slate-300 tracking-[3px] italic">Node Ref: {plate.plate_id}</span>
+                      <span className="text-[8px] font-black uppercase text-slate-300 tracking-[3px] italic">Node Ref: {plate.id}</span>
                       <h5 className="text-lg font-black text-slate-900 uppercase italic leading-none tracking-tight">{plate.plate_name}</h5>
                    </div>
                    {isSelected && (
@@ -99,7 +116,7 @@ const PlateSelector: React.FC<PlateSelectorProps> = ({
                    </div>
                    <div className="space-y-1">
                       <span className="text-[7px] font-black uppercase text-slate-400 tracking-widest leading-none">Color Channels</span>
-                      <p className="text-[10px] font-black text-slate-900 uppercase italic truncate">{plate.max_colors} Channels</p>
+                      <p className="text-[10px] font-black text-slate-900 uppercase italic truncate">{plate.channels} Channels</p>
                    </div>
                    <div className="space-y-1">
                       <span className="text-[7px] font-black uppercase text-slate-400 tracking-widest leading-none">Technical Hub</span>
@@ -111,7 +128,13 @@ const PlateSelector: React.FC<PlateSelectorProps> = ({
                    </div>
                 </div>
 
-                <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest italic pt-4 border-t border-slate-50/50 mt-4 leading-relaxed">
+                {plate.comment && (
+                  <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest italic pt-3 mt-3 border-t border-slate-50">
+                    "{plate.comment}"
+                  </p>
+                )}
+                
+                <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest italic pt-1 leading-relaxed">
                    Operational Logic: {plate.technical_info || 'High-accuracy production node.'}
                 </p>
               </div>

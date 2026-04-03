@@ -9,62 +9,142 @@
         "productName": "PPY Cup",
         "productImage": "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400",
         "quantity": 2500,
-        "variant": {
-          "unitPrice": 2.85,
-          "size": "16oz"
-        }
-      },
-      {
-        "id": "cart_1711950000001",
-        "productId": "P006",
-        "productName": "Eco-friendly Meal Box",
-        "productImage": "https://images.unsplash.com/photo-1547592180-85f173990554?w=400",
-        "quantity": 500,
-        "variant": {
-          "unitPrice": 4.50,
-          "size": "Medium"
-        }
+        "variant": { "unitPrice": 2.85, "size": "16oz" },
+        "colors": [
+          { "id": "C-BLUE", "name": "Ocean Blue", "label": "Primary" },
+          { "id": "C-WHITE", "name": "Arctic White", "label": "Secondary" }
+        ],
+        "plate": { "id": "SP-S-001", "name": "Standard Small Plate" }
       }
     ],
-    "shipping_address": {
-      "full_name": "Jason Cruz",
-      "street": "123 Mabini St",
-      "barangay": "Pila",
-      "city": "Pila",
-      "province": "Laguna",
-      "postal_code": "4010"
-    },
+    "shipping_address": { "full_name": "Jason Cruz" },
     "payment_method": "GCash",
     "delivery_method": "Lalamove",
-    "notes": "Handle with care.",
-    "status": "COMPLETED",
+    "status": "PENDING",
     "created_at": "2026-04-01T10:30:00Z",
-    "payment_hash": "a1b2c3d4e5f6g7h8i9j0",
-    "total": 9375.0
+    "total": 7125.0
   },
   {
     "order_id": "ORD-20260401-C002",
-    "user_id": "user_id_002",
+    "user_id": "user_id_001",
     "products": [
-      {
-        "productId": "P002",
-        "productName": "UCUP",
-        "quantity": 1200,
-        "variant": { "unitPrice": 2.95 }
-      },
-      {
-        "productId": "P003",
-        "productName": "Slim Cup",
-        "quantity": 800,
-        "variant": { "unitPrice": 3.80 }
-      }
+      { "productId": "P002", "productName": "UCUP", "quantity": 1000, "variant": { "unitPrice": 2.95 } }
     ],
-    "shipping_address": {},
-    "payment_method": "Bank Transfer",
-    "delivery_method": "Pick-up",
-    "status": "COMPLETED",
+    "shipping_address": { "full_name": "Jason Cruz" },
+    "payment_method": "GCash",
+    "delivery_method": "Lalamove",
+    "status": "CANCELLED",
+    "created_at": "2026-04-01T11:00:00Z",
+    "total": 2950.0
+  },
+  {
+    "order_id": "ORD-20260401-003",
+    "user_id": "user_id_003",
+    "products": [
+      { "productId": "P003", "productName": "Slim Cup", "quantity": 500, "variant": { "unitPrice": 3.80 } }
+    ],
+    "shipping_address": { "full_name": "Maria Clara" },
+    "status": "PROCESSING",
     "created_at": "2026-03-31T08:15:00Z",
-    "payment_hash": "hash_xyz_789",
-    "total": 6580.0
+    "total": 1900.0
+  },
+  {
+    "order_id": "ORD-20260401-004",
+    "user_id": "user_id_003",
+    "products": [
+      { "productId": "P001", "productName": "PPY Cup", "quantity": 1000, "variant": { "unitPrice": 2.85 } }
+    ],
+    "shipping_address": { "full_name": "Maria Clara" },
+    "status": "COMPLETED",
+    "created_at": "2026-03-31T09:15:00Z",
+    "total": 2850.0
+  },
+  {
+    "order_id": "ORD-20260401-005",
+    "user_id": "user_id_003",
+    "products": [
+      { "productId": "P005", "productName": "Paper Bag", "quantity": 2000, "variant": { "unitPrice": 1.50 } }
+    ],
+    "shipping_address": { "full_name": "Maria Clara" },
+    "status": "COMPLETED",
+    "created_at": "2026-03-31T10:15:00Z",
+    "total": 3000.0
+  },
+  {
+    "order_id": "ORD-20260401-006",
+    "user_id": "user_id_003",
+    "products": [
+      { "productId": "P006", "productName": "Meal Box", "quantity": 300, "variant": { "unitPrice": 4.50 } }
+    ],
+    "shipping_address": { "full_name": "Maria Clara" },
+    "status": "COMPLETED",
+    "created_at": "2026-04-01T08:15:00Z",
+    "total": 1350.0
+  },
+  {
+    "order_id": "ORD-20260401-007",
+    "user_id": "user_id_003",
+    "products": [
+      { "productId": "P001", "productName": "PPY Cup", "quantity": 500, "variant": { "unitPrice": 2.85 } }
+    ],
+    "shipping_address": { "full_name": "Maria Clara" },
+    "status": "COMPLETED",
+    "created_at": "2026-04-01T09:15:00Z",
+    "total": 1425.0
+  },
+  {
+    "order_id": "ORD-20260401-008",
+    "user_id": "user_id_004",
+    "products": [
+      { "productId": "P001", "productName": "PPY Cup", "quantity": 5000, "variant": { "unitPrice": 2.70 } }
+    ],
+    "shipping_address": { "full_name": "Andres Bonifacio" },
+    "status": "COMPLETED",
+    "created_at": "2026-04-01T12:00:00Z",
+    "total": 13500.0
+  },
+  {
+    "order_id": "ORD-20260401-009",
+    "user_id": "user_id_004",
+    "products": [
+      { "productId": "P002", "productName": "UCUP", "quantity": 2500, "variant": { "unitPrice": 2.90 } }
+    ],
+    "shipping_address": { "full_name": "Andres Bonifacio" },
+    "status": "COMPLETED",
+    "created_at": "2026-04-02T10:00:00Z",
+    "total": 7250.0
+  },
+  {
+    "order_id": "ORD-20260401-010",
+    "user_id": "user_id_004",
+    "products": [
+      { "productId": "P003", "productName": "Slim Cup", "quantity": 1000, "variant": { "unitPrice": 3.75 } }
+    ],
+    "shipping_address": { "full_name": "Andres Bonifacio" },
+    "status": "COMPLETED",
+    "created_at": "2026-04-02T11:00:00Z",
+    "total": 3750.0
+  },
+  {
+    "order_id": "ORD-20260401-011",
+    "user_id": "user_id_005",
+    "products": [
+      { "productId": "P001", "productName": "PPY Cup", "quantity": 1000, "variant": { "unitPrice": 2.85 } }
+    ],
+    "shipping_address": { "full_name": "Rizal Dimasalang" },
+    "status": "COMPLETED",
+    "created_at": "2026-04-02T12:00:00Z",
+    "total": 2850.0
+  },
+  {
+    "order_id": "ORD-20260401-012",
+    "user_id": "user_id_005",
+    "products": [
+      { "productId": "P006", "productName": "Meal Box", "quantity": 500, "variant": { "unitPrice": 4.50 } }
+    ],
+    "shipping_address": { "full_name": "Rizal Dimasalang" },
+    "status": "COMPLETED",
+    "created_at": "2026-04-02T13:00:00Z",
+    "total": 2250.0
   }
 ]

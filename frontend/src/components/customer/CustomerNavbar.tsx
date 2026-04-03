@@ -52,6 +52,10 @@ const CustomerNavbar: React.FC = () => {
   const plateStatus = "Ready";
   const cartItemCount = getCartCount();
 
+  if (location.pathname.startsWith('/admin')) {
+    return null;
+  }
+
   return (
     <>
       {/* ─────────────────────────────────────────── */}

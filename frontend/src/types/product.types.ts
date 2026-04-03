@@ -43,22 +43,24 @@ export interface IColor {
 
 export interface IScreenPlateCompatibility {
   product_id: string;
-  product_name: string;
   allowed_variants: string[];
-  allowed_alignments: string[];
   print_price_per_unit?: Record<string, number>;
 }
 
 export interface IScreenPlate {
-  plate_id: string;
+  id: string;
+  owner_id: string;
   plate_name: string;
   base_setup_fee: number;
   is_flatscreen: boolean;
-  max_colors: number;
+  channels: number;
+  alignment: string;
   supported_alignments: string[];
   dimensions: string;
+  image: string;
+  comment?: string;
   technical_info?: string;
-  compatible_products: IScreenPlateCompatibility[];
+  compatibility: IScreenPlateCompatibility[];
   incompatible_products: string[];
 }
 
@@ -68,7 +70,7 @@ export interface IOrderConfig {
   productId: string;
   variantId: string;
   quantity: number;
-  colorId: string | null;
+  colorIds: string[];
   plateId: string | null;
   printPosition: string | null;
 }

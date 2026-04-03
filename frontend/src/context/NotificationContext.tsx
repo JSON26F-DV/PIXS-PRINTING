@@ -1,54 +1,9 @@
-/*import React, { createContext, useContext, useState, useEffect, type ReactNode, useCallback, useRef } from 'react';
+import React, { useState, useEffect, type ReactNode, useCallback, useRef } from 'react';
+import { NotificationContext } from './NotificationContextInstance';
+import type { INotification, IComplaint, IMessage, IOrder } from '../types/notification';
 import complaintsData from '../data/complaints.json';
 import messagesData from '../data/messages.json';
 import workflowData from '../data/workflow.json';
-
-export type INotification = {
-  id: string;
-  type: 'message' | 'complaint' | 'low_stock' | 'order_update';
-  title: string;
-  description: string;
-  timestamp: string;
-  isRead: boolean;
-  linkTo: string;
-  severity?: 'low' | 'medium' | 'high';
-}
-
-interface IComplaint {
-  id: string;
-  date: string;
-  issue_type: string;
-  description: string;
-  severity?: string;
-}
-
-interface IMessage {
-  id: string;
-  timestamp: string;
-  sender: string;
-  senderName: string;
-  text: string;
-}
-
-
-interface IOrder {
-
-  id: string;
-  status: string;
-  product: string;
-  customer: string;
-  approved_at: string;
-}
-
-interface NotificationContextType {
-  notifications: INotification[];
-  unreadCount: number;
-  markAsRead: (id: string) => void;
-  markAllAsRead: () => void;
-  refreshNotifications: () => void;
-}
-
-const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
 
 
 export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -159,12 +114,3 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
     </NotificationContext.Provider>
   );
 };
-
-export const useNotifications = () => {
-  const context = useContext(NotificationContext);
-  if (!context) {
-    throw new Error('useNotifications must be used within NotificationProvider');
-  }
-  return context;
-};
-*/

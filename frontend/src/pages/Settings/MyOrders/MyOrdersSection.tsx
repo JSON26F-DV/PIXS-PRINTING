@@ -189,7 +189,7 @@ const MyOrdersSection: React.FC = () => {
     const liveOrders: Order[] = saved ? JSON.parse(saved) : [];
     
     // Combine and sort by date descending
-    const combined = [...liveOrders, ...(staticOrders as Order[])].sort((a, b) => 
+    const combined = [...liveOrders, ...(staticOrders as unknown as Order[])].sort((a, b) => 
       new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     );
     

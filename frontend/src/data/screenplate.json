@@ -1,80 +1,75 @@
 [
   {
-    "plate_id": "SP-S-001",
+    "id": "SP-S-001",
+    "owner_id": "CUST-501",
     "plate_name": "Standard Small Plate",
     "base_setup_fee": 450,
     "is_flatscreen": false,
-    "max_colors": 3,
+    "channels": 3,
+    "alignment": "Front",
     "supported_alignments": ["Front", "Back-to-Back", "Triple Logo"],
     "dimensions": "55mm x 45mm",
     "technical_info": "Industrial Mesh 120T for small diameters.",
-    "compatible_products": [
+    "image": "https://images.unsplash.com/photo-1590422749897-47036da0b0ff?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+    "comment": "Industrial mesh for small profile prints.",
+    "compatibility": [
       {
         "product_id": "P001",
-        "product_name": "PPY Cup",
         "allowed_variants": ["12oz"],
-        "allowed_alignments": ["Front"],
-        "print_price_per_unit": { "12oz": 1.50 }
+        "print_price_per_unit": { "12oz": 2.50 }
       },
       {
         "product_id": "P002",
-        "product_name": "UCUP",
         "allowed_variants": ["12oz"],
-        "allowed_alignments": ["Front"],
         "print_price_per_unit": { "12oz": 1.50 }
       }
     ],
     "incompatible_products": ["P016", "P012"]
   },
   {
-    "plate_id": "SP-MH-002",
+    "id": "SP-MH-002",
+    "owner_id": "CUST-501",
     "plate_name": "Medium/High Power Plate",
     "base_setup_fee": 550,
     "is_flatscreen": false,
-    "max_colors": 3,
+    "channels": 3,
+    "alignment": "Back-to-Back",
     "supported_alignments": ["Front", "Back-to-Back", "Triple Logo"],
     "dimensions": "85mm x 65mm",
     "technical_info": "High-velocity industrial mesh for 16-22oz variants.",
-    "compatible_products": [
+    "image": "https://images.unsplash.com/photo-1581092918056-0c4c3acd3789?auto=format&fit=crop&q=80",
+    "comment": "High durability mesh for high-volume cup production.",
+    "compatibility": [
       {
         "product_id": "P001",
-        "product_name": "PPY Cup",
         "allowed_variants": ["16oz", "22oz"],
-        "allowed_alignments": ["Front", "Back-to-Back", "Triple Logo"],
-        "print_price_per_unit": { "16oz": 1.70, "22oz": 2.00 }
-      },
-      {
-        "product_id": "P002",
-        "product_name": "UCUP",
-        "allowed_variants": ["16oz", "22oz"],
-        "allowed_alignments": ["Front", "Back-to-Back"],
         "print_price_per_unit": { "16oz": 1.70, "22oz": 2.00 }
       }
     ],
     "incompatible_products": ["P004"]
   },
   {
-    "plate_id": "SP-FLAT-001",
+    "id": "SP-FLAT-001",
+    "owner_id": "CUST-502",
     "plate_name": "Flatscreen Meal Node",
     "base_setup_fee": 650,
     "is_flatscreen": true,
-    "max_colors": 2,
+    "channels": 2,
+    "alignment": "Front",
     "supported_alignments": ["Front"],
     "dimensions": "120mm x 90mm",
     "technical_info": "Flatscreen photopolymer terminal for meal boxes.",
-    "compatible_products": [
+    "image": "https://images.unsplash.com/photo-1544391496-1ca7c97457cd?auto=format&fit=crop&q=80",
+    "comment": "For large flat surfaces only.",
+    "compatibility": [
       {
-        "product_id": "P016",
-        "product_name": "Meal Box",
-        "allowed_variants": ["750cc", "880cc"],
-        "allowed_alignments": ["Front"],
-        "print_price_per_unit": { "750cc": 1.60, "880cc": 1.80 }
+        "product_id": "P015",
+        "allowed_variants": [],
+        "print_price_per_unit": { "Standard": 1.70, "750cc": 1.60, "880cc": 1.80 }
       },
       {
         "product_id": "P012",
-        "product_name": "Paper Bowl",
         "allowed_variants": ["320cc", "520cc"],
-        "allowed_alignments": ["Front"],
         "print_price_per_unit": { "320cc": 1.20, "520cc": 1.50 }
       }
     ],

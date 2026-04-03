@@ -25,18 +25,10 @@ import screenplateData from '../../data/screenplate.json'
 import orderData from '../../data/order.json'
 import { useDiscovery } from '../../context/DiscoveryContext'
 import Footer from '../../components/Footer/Footer'
+import type { IProduct, IScreenPlate } from '../../types/product.types'
 
 // --- Interfaces ---
-interface IProduct {
-  id: string
-  name: string
-  category: string
-  base_price: number
-  current_stock: number
-  main_image: string
-  short_description: string
-  min_order?: number
-}
+// Reusing central types from product.types.ts
 
 interface ICategory {
   id: string
@@ -53,11 +45,7 @@ interface IFilters {
   screenplate: string
 }
 
-interface IScreenPlate {
-  plate_id: string
-  plate_name: string
-  compatible_products: { product_id: string }[]
-}
+// Using central IScreenPlate from product.types.ts
 
 // --- Helper Components ---
 const FilterDropdown: React.FC<{
@@ -158,6 +146,17 @@ const Storefront: React.FC = () => {
     return saved ? JSON.parse(saved) : []
   })
   const { openDiscovery } = useDiscovery()
+
+  // ─── Protocol Reset Protocol ───────────────────────────────────────────
+  useEffect(() => {
+    // Cleanup any existing configuration drafts to ensure a fresh journey
+    const keys = Object.keys(localStorage);
+    keys.forEach(key => {
+      if (key.startsWith('pixs_draft_')) {
+        localStorage.removeItem(key);
+      }
+    });
+  }, []);
 
   // ─── Data Nodes Discovery ───────────────────────────────────────────────
   const soldMap = useMemo(() => {
@@ -272,7 +271,7 @@ const Storefront: React.FC = () => {
           const selectedPlate = (screenplateData as IScreenPlate[]).find(
             (sp) => sp.plate_name === filters.screenplate,
           )
-          matchPlate = !!selectedPlate?.compatible_products.some(
+          matchPlate = !!selectedPlate?.compatibility.some(
             (cp) => cp.product_id === p.id,
           )
         }
@@ -649,7 +648,10 @@ const Storefront: React.FC = () => {
                 return (
                 <div
                   key={product.id}
-                  onClick={() => navigate(`/product/${product.id}`)}
+                  onClick={() => {
+                    const plateParam = filters.screenplate !== 'All Plates' ? `?plate=${encodeURIComponent(filters.screenplate)}` : '';
+                    navigate(`/product/${product.id}${plateParam}`);
+                  }}
                   className="HomepageProductCard ProductCardWrapper group relative cursor-pointer rounded-[32px] border border-slate-100 bg-white p-2 transition-all md:rounded-[44px] md:p-2.5 hover:-translate-y-3"
                 >
                   <div className="relative flex aspect-square items-center justify-center overflow-hidden rounded-[24px] border border-slate-50 bg-slate-50 shadow-inner transition-colors duration-500 group-hover:bg-white md:rounded-[36px]">

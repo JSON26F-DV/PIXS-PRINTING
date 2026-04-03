@@ -6,7 +6,8 @@ export interface Employee {
   email: string;
   role: 'admin' | 'staff' | 'inventory' | 'designer';
   status: 'active' | 'inactive';
-  contact_number: string;
+  contact_numbers?: { number: string; is_default: boolean; }[];
+  contact_number?: string;
   company_name: string;
   business_address: string;
   password?: string;
@@ -23,9 +24,10 @@ export interface Customer {
   last_name: string;
   name: string;
   email: string;
-  type: 'retail' | 'wholesale';
+  contact_numbers?: { number: string; is_default: boolean; }[];
+  contact_number?: string;
+  type?: 'retail' | 'wholesale';
   status: 'active' | 'inactive';
-  contact_number: string;
   company_name: string;
   business_address: string;
   password?: string;
@@ -50,7 +52,9 @@ export interface AttendanceLog {
 export interface Product {
     id: string;
     name: string;
-    description: string;
+    description?: string;
+    short_description?: string;
+    long_description?: string;
     category: string;
     price?: number;
     base_price?: number;

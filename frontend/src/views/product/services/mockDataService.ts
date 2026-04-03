@@ -19,7 +19,7 @@ export const fetchProductById = async (id: string): Promise<IProduct | null> => 
 export const fetchCompatiblePlates = async (productId: string): Promise<IScreenPlate[]> => {
   await delay(SIMULATED_DELAY_MS);
   return (screenplateData as IScreenPlate[]).filter(plate =>
-    plate.compatible_products.some((cp: IScreenPlateCompatibility) => cp.product_id === productId)
+    plate.compatibility.some((cp: IScreenPlateCompatibility) => cp.product_id === productId)
   );
 };
 
@@ -32,6 +32,6 @@ export const fetchColors = async (): Promise<IColor[]> => {
 /** Mock checking if a customer already owns a screen plate to waive setup fees */
 export const checkOwnedPlates = async (): Promise<string[]> => {
   await delay(SIMULATED_DELAY_MS);
-  // Mock logic: Returns SP-MINT-001 as an owned plate for the demonstration
-  return ['SP-MINT-001']; 
+  // Returns real plate IDs from screenplate.json for demonstration
+  return (screenplateData as IScreenPlate[]).map(p => p.id); 
 };

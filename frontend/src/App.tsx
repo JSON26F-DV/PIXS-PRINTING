@@ -1,7 +1,7 @@
 import { BrowserRouter as Router } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { DiscoveryProvider } from './context/DiscoveryContext';
-// import { NotificationProvider } from './context/NotificationContext';
+import { NotificationProvider } from './context/NotificationContext';
 
 import AppRouter from './router/AppRouter';
 import CustomerNavbar from './components/customer/CustomerNavbar';
@@ -11,9 +11,9 @@ function App() {
   return (
     <Router>
       <AuthProvider>
-        {/* <NotificationProvider> */}
+        <NotificationProvider>
           <DiscoveryProvider>
-            <div className="min-h-screen bg-white pb-16 pt-28 lg:pb-0 lg:pt-0">
+            <div className="min-h-screen bg-white pb-16 lg:pb-0 lg:pt-0">
               <CustomerNavbar />
               <Toaster position="top-right" />
               <main>
@@ -21,7 +21,7 @@ function App() {
               </main>
             </div>
           </DiscoveryProvider>
-        {/* </NotificationProvider> */}
+        </NotificationProvider>
 
       </AuthProvider>
     </Router>

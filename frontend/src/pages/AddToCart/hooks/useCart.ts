@@ -32,8 +32,18 @@ export const useCart = () => {
     return true;
   };
 
-  const updateColor = (itemId: string, color: CartItem['color']) => {
-    const updated = mockCartService.updateColor(itemId, color);
+  const updateColors = (itemId: string, colors: CartItem['colors']) => {
+    const updated = mockCartService.updateColors(itemId, colors);
+    setItems(updated);
+  };
+
+  const updateVariant = (itemId: string, variant: CartItem['variant']) => {
+    const updated = mockCartService.updateVariant(itemId, variant);
+    setItems(updated);
+  };
+
+  const updatePlatePrice = (itemId: string, printPricePerUnit: number) => {
+    const updated = mockCartService.updatePlatePrice(itemId, printPricePerUnit);
     setItems(updated);
   };
 
@@ -50,7 +60,9 @@ export const useCart = () => {
     totals,
     updateQuantity,
     removeItem,
-    updateColor,
+    updateColors,
+    updateVariant,
+    updatePlatePrice,
     getItemTotal,
     getStockStatusLabel,
   };
