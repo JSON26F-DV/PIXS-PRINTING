@@ -23,7 +23,7 @@ const DecryptedText: React.FC<DecryptedTextProps> = ({
 }) => {
   const [displayText, setDisplayText] = useState(text);
   const [isAnimating, setIsAnimating] = useState(false);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const triggerAnimation = useCallback(() => {
     if (isAnimating) return;

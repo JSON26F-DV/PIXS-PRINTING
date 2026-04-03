@@ -81,7 +81,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed, isMobile
       { id: 'product', label: 'Product Catalog', icon: PackageOpen },
       { id: 'screenplate', label: 'Screenplate Registry', icon: Layers },
       { id: 'stock', label: 'Stock Analytics', icon: BarChart3 },
-      { id: 'accounts', label: 'Accounts', icon: Users },
+      { id: 'account', label: 'Accounts', icon: Users },
       { id: 'complaints', label: 'Complaints & QA', icon: AlertCircle },
       { id: 'payroll', label: 'Attendance & Payroll', icon: CalendarCheck },
       { id: 'marketing', label: 'Marketing & Promos', icon: TicketPercent },

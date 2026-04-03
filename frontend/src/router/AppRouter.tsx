@@ -9,6 +9,7 @@ import Transactions from '../pages/Transactions/Transactions';
 import OrderSuccess from '../pages/Transactions/OrderSuccess';
 import MessengerPage from '../pages/Messenger/MessengerPage';
 import ScreenplatePage from '../pages/Screenplate/ScreenplatePage';
+import DeletedAccount from '../views/auth/DeletedAccount';
 import { useAuth } from '../context/AuthContext';
 
 // Admin Layout & Views
@@ -17,8 +18,8 @@ import Dashboard from '../views/admin/Dashboard';
 import ProductManagement from '../views/admin/ProductManagement';
 import ScreenplateManagement from '../views/admin/ScreenplateManagement';
 import StockAnalytics from '../views/admin/StockAnalytics';
-// import Accounts from '../views/admin/Accounts';
-// import Payroll from '../views/admin/Payroll';
+import Accounts from '../views/admin/Accounts';
+import Payroll from '../views/admin/payroll/Payroll';
 // import MarketingPromotions from '../views/admin/MarketingPromotions';
 // import DisputeView from '../views/admin/DisputeView';
 const ProtectedRoute: React.FC<{ children: React.ReactNode; allowedRoles: string[] }> = ({ children, allowedRoles }) => {
@@ -44,6 +45,7 @@ const AppRouter: React.FC = () => {
       <Route path="/order-success/:orderId" element={<OrderSuccess />} />
       <Route path="/chat" element={<MessengerPage />} />
       <Route path="/screenplate" element={<ScreenplatePage />} />
+      <Route path="/delete-account" element={<DeletedAccount />} />
       
       {/* Admin Routes */}
       <Route 
@@ -59,9 +61,9 @@ const AppRouter: React.FC = () => {
         <Route path="product" element={<ProductManagement />} />
         <Route path="screenplate" element={<ScreenplateManagement />} />
         <Route path="stock" element={<StockAnalytics />} />
-        {/* <Route path="accounts" element={<Accounts />} />
+        <Route path="account" element={<Accounts />} />
         <Route path="payroll" element={<Payroll />} />
-        <Route path="marketing" element={<MarketingPromotions />} />
+        {/* <Route path="marketing" element={<MarketingPromotions />} />
         <Route path="complaints" element={<DisputeView />} /> */}
       </Route>
       

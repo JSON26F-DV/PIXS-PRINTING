@@ -33,7 +33,7 @@ const CartProductCard: React.FC<CartProductCardProps> = ({ item, totals, stockSt
 
           <span className="rounded bg-slate-100 px-2 py-1 text-[11px] font-medium text-slate-700">{stockStatus}</span>
 
-          <ColorInfo color={item.color} />
+          <ColorInfo colors={item.colors} />
           <PlateInfo plate={item.plate} setupFeeApplied={totals.setupFeeApplied} />
 
           <QuantityPicker

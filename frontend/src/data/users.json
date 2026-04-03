@@ -9,16 +9,13 @@
       "email": "jason@pixs.com",
       "role": "admin",
       "status": "active",
+      "age": 28,
+      "gender": "male",
       "contact_numbers": [
         { "number": "+63 912 345 6789", "is_default": true },
         { "number": "+63 917 200 1001", "is_default": false }
       ],
       "company_name": "PIXS PRINTING SHOP",
-      "business_address": "Laguna, Philippines",
-      "addresses": [
-        { "label": "Main Office", "address": "Laguna, Philippines" },
-        { "label": "Warehouse", "address": "Binan, Laguna, Philippines" }
-      ],
       "password": "••••••••",
       "date_created": "2024-01-15T08:00:00Z",
       "last_login": "2026-03-28T10:30:00Z",
@@ -35,16 +32,13 @@
       "email": "staff_a@pixs.com",
       "role": "staff",
       "status": "active",
+      "age": 24,
+      "gender": "female",
       "contact_numbers": [
         { "number": "+63 912 345 6780", "is_default": true },
         { "number": "+63 917 200 1002", "is_default": false }
       ],
       "company_name": "PIXS PRINTING SHOP",
-      "business_address": "Laguna, Philippines",
-      "addresses": [
-        { "label": "Primary", "address": "Laguna, Philippines" },
-        { "label": "Secondary", "address": "Cabuyao, Laguna, Philippines" }
-      ],
       "password": "••••••••",
       "date_created": "2024-02-10T09:00:00Z",
       "last_login": "2026-03-28T08:15:00Z",
@@ -62,16 +56,13 @@
       "profile_picture": "https://i.pravatar.cc/300?img=14",
       "email": "juan@example.com",
       "status": "active",
+      "age": 35,
+      "gender": "male",
       "contact_numbers": [
         { "number": "+63 918 111 2233", "is_default": true },
         { "number": "+63 919 444 5566", "is_default": false }
       ],
       "company_name": "Juan's Sari-Sari",
-      "business_address": "Binan, Laguna",
-      "addresses": [
-        { "label": "Business", "address": "Binan, Laguna" },
-        { "label": "Delivery", "address": "San Pedro, Laguna" }
-      ],
       "password": "1234",
       "date_created": "2024-05-12T14:20:00Z",
       "last_login": "2026-03-27T11:00:00Z",
@@ -86,16 +77,13 @@
       "profile_picture": "https://i.pravatar.cc/300?img=15",
       "email": "info@lagunaprints.com",
       "status": "active",
+      "age": 42,
+      "gender": "female",
       "contact_numbers": [
         { "number": "+63 920 555 8888", "is_default": true },
         { "number": "+63 921 222 1010", "is_default": false }
       ],
       "company_name": "Laguna Prints & Design",
-      "business_address": "Santa Rosa, Laguna",
-      "addresses": [
-        { "label": "Main Branch", "address": "Santa Rosa, Laguna" },
-        { "label": "Pickup Point", "address": "Calamba, Laguna" }
-      ],
       "password": "••••••••",
       "date_created": "2024-06-20T11:45:00Z",
       "last_login": "2026-03-28T09:30:00Z",

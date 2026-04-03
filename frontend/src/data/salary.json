@@ -1,0 +1,30 @@
+[
+  {
+    "employee_id": "EMP-001",
+    "week_start": "2026-03-30",
+    "attendance": [
+      { "date": "2026-03-30", "status": "full", "overtime_hours": 2, "computed_salary": 1150 },
+      { "date": "2026-03-31", "status": "full", "overtime_hours": 0, "computed_salary": 850 },
+      { "date": "2026-04-01", "status": "half", "overtime_hours": 1, "computed_salary": 575 },
+      { "date": "2026-04-02", "status": "full", "overtime_hours": 0, "computed_salary": 850 },
+      { "date": "2026-04-03", "status": "full", "overtime_hours": 3, "computed_salary": 1300 },
+      { "date": "2026-04-04", "status": "absent", "overtime_hours": 0, "computed_salary": 0 },
+      { "date": "2026-04-05", "status": "absent", "overtime_hours": 0, "computed_salary": 0 }
+    ],
+    "weekly_total": 4725
+  },
+  {
+    "employee_id": "EMP-002",
+    "week_start": "2026-03-30",
+    "attendance": [
+      { "date": "2026-03-30", "status": "full", "overtime_hours": 0, "computed_salary": 600 },
+      { "date": "2026-03-31", "status": "full", "overtime_hours": 2, "computed_salary": 800 },
+      { "date": "2026-04-01", "status": "full", "overtime_hours": 1, "computed_salary": 700 },
+      { "date": "2026-04-02", "status": "half", "overtime_hours": 0, "computed_salary": 300 },
+      { "date": "2026-04-03", "status": "full", "overtime_hours": 4, "computed_salary": 1000 },
+      { "date": "2026-04-04", "status": "full", "overtime_hours": 0, "computed_salary": 600 },
+      { "date": "2026-04-05", "status": "absent", "overtime_hours": 0, "computed_salary": 0 }
+    ],
+    "weekly_total": 4000
+  }
+]
