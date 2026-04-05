@@ -101,10 +101,11 @@ const PayrollCalendar: React.FC<PayrollCalendarProps> = ({
                 onChange={(e) => setRoleFilter(e.target.value)}
                 className="appearance-none pl-10 pr-10 py-4 bg-white border border-slate-100 rounded-2xl text-[11px] font-black uppercase tracking-widest focus:outline-none cursor-pointer hover:bg-slate-50 transition-all shadow-xl shadow-slate-200/40"
               >
-                <option value="all text-slate-500">All Roles</option>
+                <option value="all">All Roles</option>
                 <option value="admin">Admin</option>
                 <option value="staff">Staff</option>
-                <option value="designer">Designer</option>
+                <option value="technician">Technician</option>
+                <option value="welder">Welder</option>
                 <option value="inventory">Inventory</option>
               </select>
            </div>

@@ -32,7 +32,7 @@ import {
   AreaChart,
   Area
 } from 'recharts';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { format, isBefore, parseISO, addDays } from 'date-fns';
@@ -72,7 +72,7 @@ interface Promotion {
 }
 
 interface OrderRecord {
-  id: string;
+  order_id: string;
   discount?: {
     total_discount_amount: number;
   };
@@ -129,7 +129,7 @@ const MarketingPromotions: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
 
   // --- FORM SETUP ---
-  const { register, handleSubmit, watch, setValue, reset, formState: { errors } } = useForm<PromoFormData>({
+  const { register, handleSubmit, setValue, reset, control, formState: { errors } } = useForm<PromoFormData>({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     resolver: zodResolver(promoSchema) as any,
     defaultValues: {
@@ -145,9 +145,9 @@ const MarketingPromotions: React.FC = () => {
     }
   });
 
-  const watchType = watch('discount_type');
-  const watchTarget = watch('target_type');
-  const watchOneTime = watch('is_one_time');
+  const watchType = useWatch({ control, name: 'discount_type' });
+  const watchTarget = useWatch({ control, name: 'target_type' });
+  const watchOneTime = useWatch({ control, name: 'is_one_time' });
 
   useEffect(() => {
     if (watchOneTime) setValue('max_uses', 1);

@@ -37,6 +37,7 @@ export interface CartItem {
   variant: CartVariantInfo;
   colors: CartColorInfo[];
   plate: CartPlateInfo | null;
+  customRequirements?: string;
   createdAt: string;
 }
 

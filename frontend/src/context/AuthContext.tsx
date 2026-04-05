@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
 
-export type RoleType = 'admin' | 'staff' | 'inventory' | 'customer' | 'guest';
+export type RoleType = 'admin' | 'staff' | 'technician' | 'welder' | 'inventory' | 'customer' | 'guest';
 
 export interface User {
   id?: string;

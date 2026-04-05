@@ -18,24 +18,11 @@ import ExtraNotesSection from '../../components/Transactions/ExtraNotesSection';
 import addressData from '../../data/address_book.json';
 import paymentData from '../../data/payment.json';
 import deliveryData from '../../data/delivery_methods.json';
-import userData from '../../data/user.json';
 import { ORDER_STATUS, type OrderStatus } from '../../types/order';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import marketingPromotions from '../../data/marketing_promotions.json';
 
-interface LocalDiscount {
-  discount_id: string;
-  type: 'unit' | 'percentage' | 'fixed' | 'product-specific';
-  value: number;
-  product_id?: string;
-  expires_at: string;
-  status: string;
-}
-
-interface LocalUser {
-  id: string;
-  discounts?: LocalDiscount[];
-}
 
 // Utility for class merging
 function cn(...inputs: ClassValue[]) {
@@ -115,11 +102,14 @@ const Transactions: React.FC = () => {
   }, [navigate, location.search]);
 
   // Sync Discount Logic
-  const currentUserData = useMemo(() => (userData as LocalUser[]).find(u => u.id === user.id), [user.id]);
-  const availableDiscounts = useMemo(() => 
-    currentUserData?.discounts?.filter(d => d.status === 'active') || [],
-    [currentUserData]
-  );
+  const availableDiscounts = useMemo(() => {
+    return marketingPromotions.filter(promo => {
+      const isActive = promo.status === 'active';
+      const isForUser = promo.target_type === 'all_users' || (promo.target_type === 'specific_user' && promo.assigned_user_id === user.id);
+      const isNotExpired = new Date(promo.expires_at) > new Date();
+      return isActive && isForUser && isNotExpired;
+    });
+  }, [user.id]);
 
   useEffect(() => {
     if (!selectedDiscountId) {
@@ -127,26 +117,18 @@ const Transactions: React.FC = () => {
       return;
     }
 
-    const discount = availableDiscounts.find(d => d.discount_id === selectedDiscountId);
+    const discount = availableDiscounts.find(d => d.id === selectedDiscountId);
     if (!discount) return;
 
     let amount = 0;
-    const subtotal = checkoutItems.reduce((acc, item) => acc + (item.quantity * item.variant.unitPrice), 0);
+    const subtotal = checkoutItems.reduce((acc, item) => acc + (item.quantity * (item.variant?.unitPrice || 0)), 0);
 
-    if (discount.type === 'percentage') {
-      amount = subtotal * (discount.value / 100);
-    } else if (discount.type === 'fixed') {
-      amount = discount.value;
-    } else if (discount.type === 'unit') {
-      // Find matching product
+    if (discount.discount_type === 'percentage') {
+      amount = subtotal * (discount.discount_value / 100);
+    } else if (discount.discount_type === 'unit') {
       const targetItem = checkoutItems.find(i => i.productId === discount.product_id);
       if (targetItem) {
-        amount = targetItem.quantity * discount.value;
-      }
-    } else if (discount.type === 'product-specific') {
-      const targetItem = checkoutItems.find(i => i.productId === discount.product_id);
-      if (targetItem) {
-        amount = (targetItem.quantity * targetItem.variant.unitPrice) * (discount.value / 100);
+        amount = targetItem.quantity * discount.discount_value;
       }
     }
 
@@ -169,18 +151,23 @@ const Transactions: React.FC = () => {
     setIsProcessing(true);
 
     try {
-      // Simulate industrial-grade security processing
       const orderId = `ORD-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${uuidv4().slice(0, 5).toUpperCase()}`;
       const selectedAddress = addressData.find(a => a.id === selectedAddressId);
       const selectedPayment = paymentData.find(p => p.id === selectedPaymentId);
-      
-      // We need to re-find delivery meta because it wasn't store in state directly
       const delMeta = deliveryData.find((d: { id: string }) => d.id === selectedDeliveryId);
 
       const orderData = {
         order_id: orderId,
         user_id: user.id || "GUEST",
-        products: checkoutItems,
+        products: checkoutItems.map(item => ({
+          ...item,
+          colors: item.colors.map(c => ({ name: c.name, hex: c.hex })),
+          plate: item.plate ? { 
+            name: item.plate.name, 
+            setupFee: item.plate.setupFee, 
+            printPricePerUnit: item.plate.printPricePerUnit 
+          } : null
+        })),
         shipping_address: selectedAddress,
         payment_method: selectedPayment,
         delivery_method: delMeta,
@@ -194,18 +181,14 @@ const Transactions: React.FC = () => {
         }
       };
 
-      // Validate via Zod
       OrderSchema.parse(orderData);
-
-      // Simulate API Lag for professional UX
       await new Promise(resolve => setTimeout(resolve, 2500));
 
-      // Persist to Mock orders (Simulated persistence)
       const existingOrders = JSON.parse(localStorage.getItem('pixs_orders_v1') || '[]');
       localStorage.setItem('pixs_orders_v1', JSON.stringify([orderData, ...existingOrders]));
 
-      // Clear Cart (Simulated)
       localStorage.removeItem('pixs_cart_v1');
+      localStorage.removeItem('pixs_buy_now_v1');
 
       toast.success("Order sequence initialized successfully!");
       navigate(`/order-success/${orderId}`);
@@ -317,32 +300,31 @@ const Transactions: React.FC = () => {
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {availableDiscounts.map((discount) => (
                       <div 
-                        key={discount.discount_id}
-                        onClick={() => setSelectedDiscountId(selectedDiscountId === discount.discount_id ? null : discount.discount_id)}
+                        key={discount.id}
+                        onClick={() => setSelectedDiscountId(selectedDiscountId === discount.id ? null : discount.id)}
                         className={cn(
                           "relative p-6 rounded-[28px] border cursor-pointer transition-all flex items-center gap-4 group",
-                          selectedDiscountId === discount.discount_id 
+                          selectedDiscountId === discount.id
                             ? "bg-slate-900 border-slate-900 shadow-2xl scale-[1.02]" 
                             : "bg-white border-slate-100 hover:border-pixs-mint hover:bg-slate-50"
                         )}
                       >
                          <div className={cn(
                            "w-12 h-12 rounded-[18px] flex items-center justify-center transition-colors",
-                           selectedDiscountId === discount.discount_id ? "bg-pixs-mint text-slate-900 font-black shadow-lg shadow-pixs-mint/20" : "bg-slate-50 text-slate-400 group-hover:text-pixs-mint"
+                           selectedDiscountId === discount.id ? "bg-pixs-mint text-slate-900 font-black shadow-lg shadow-pixs-mint/20" : "bg-slate-50 text-slate-400 group-hover:text-pixs-mint"
                          )}>
                             <Ticket size={24} />
                          </div>
                          <div className="flex-1 min-w-0">
-                            <h4 className={cn("text-xs font-black uppercase italic tracking-widest", selectedDiscountId === discount.discount_id ? "text-white" : "text-slate-900 line-clamp-1")}>
-                               {discount.type === 'unit' ? `₱${discount.value} OFF PER UNIT` : 
-                                discount.type === 'percentage' ? `${discount.value}% OFF TOTAL` :
-                                discount.type === 'fixed' ? `₱${discount.value} OFF` : 'DIRECT VOUCHER'}
+                            <h4 className={cn("text-xs font-black uppercase italic tracking-widest", selectedDiscountId === discount.id ? "text-white" : "text-slate-900 line-clamp-1")}>
+                               {discount.title}
                             </h4>
-                            <p className={cn("text-[8px] font-bold uppercase tracking-widest mt-1", selectedDiscountId === discount.discount_id ? "text-white/40" : "text-slate-400")}>
-                               EXPIRES: {new Date(discount.expires_at).toLocaleDateString()}
+                            <p className={cn("text-[8px] font-bold uppercase tracking-widest mt-1", selectedDiscountId === discount.id ? "text-white/40" : "text-slate-400")}>
+                               {discount.discount_type === 'unit' ? `₱${discount.discount_value} OFF PER UNIT` : 
+                                discount.discount_type === 'percentage' ? `${discount.discount_value}% OFF TOTAL` : 'VOUCHER ACTIVE'}
                             </p>
                          </div>
-                         {selectedDiscountId === discount.discount_id && (
+                         {selectedDiscountId === discount.id && (
                            <div className="absolute top-2 right-2 flex items-center justify-center w-6 h-6 bg-pixs-mint rounded-full text-slate-900">
                               <CheckCircle2 size={12} strokeWidth={4} />
                            </div>

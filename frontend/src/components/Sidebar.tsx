@@ -3,14 +3,12 @@ import {
   LayoutDashboard, 
   PackageOpen, 
   ScrollText, 
-  UserCog,
   Users,
   LogOut,
   ChevronRight,
   ChevronLeft,
   Settings,
   MessageSquare,
-  AlertCircle,
   CalendarCheck,
   TicketPercent,
   Activity,
@@ -104,28 +102,24 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed, isMobile
     ],
     staff: [
       { id: 'overview', label: 'Overview', icon: LayoutDashboard },
-      { id: 'chat', label: 'Shift Chat', icon: MessageSquare },
+      { id: 'orders', label: 'Orders', icon: ScrollText },
       { id: 'livequeue', label: 'Live Queue', icon: Activity },
-      { id: 'complaints', label: 'Complaints & QA', icon: AlertCircle },
-      { id: 'payroll', label: 'Attendance', icon: CalendarCheck },
-      { id: 'history', label: 'Order History', icon: ScrollText },
+      { id: 'chat', label: 'Shift Chat', icon: MessageSquare },
+      { id: 'attendance', label: 'Attendance', icon: CalendarCheck },
       { id: 'setting', label: 'Settings', icon: Settings },
     ],
     inventory: [
-      { id: 'dashboard', label: 'Stock Manager', icon: LayoutDashboard },
-      { id: 'raw-materials', label: 'Raw Materials', icon: PackageOpen },
-      { id: 'payroll', label: 'Attendance', icon: CalendarCheck },
-      { id: 'messenger', label: 'Comm-Hub', icon: MessageSquare },
+      { id: 'overview', label: 'Overview', icon: LayoutDashboard },
+      { id: 'orders', label: 'Orders', icon: ScrollText },
+      { id: 'stock', label: 'Stock Strategy', icon: BarChart3 },
+      { id: 'chat', label: 'Shift Chat', icon: MessageSquare },
+      { id: 'attendance', label: 'Attendance', icon: CalendarCheck },
       { id: 'setting', label: 'Settings', icon: Settings },
-    ],
-    customer: [
-      { id: 'dashboard', label: 'My Orders', icon: ScrollText },
-      { id: 'messenger', label: 'Comm-Hub', icon: MessageSquare },
-      { id: 'profile', label: 'Profile', icon: UserCog },
-    ],
+    ]
   };
 
-  const items = navItems[user.role] || [];
+  const roleKey = (user.role === 'technician' || user.role === 'welder') ? 'staff' : user.role;
+  const items = navItems[roleKey as keyof typeof navItems] || [];
 
   return (
     <>
@@ -173,7 +167,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed, isMobile
                 collapsed={isCollapsed}
                 onClick={() => {
                   setActiveTab(item.id);
-                  const base = user.role === 'staff' ? '/staff' : (user.role === 'admin' || user.role === 'inventory' ? '/admin' : `/${user.role}`);
+                  const base = (user.role === 'staff' || user.role === 'technician') ? '/staff' : (user.role === 'inventory' ? '/inventory' : (user.role === 'admin' ? '/admin' : `/${user.role}`));
                   // Map roles to their primary view if necessary, otherwise use item.id
                   const path = item.id;
                   
@@ -194,6 +188,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed, isMobile
           >
             <option value="admin">Admin</option>
             <option value="staff">Staff</option>
+            <option value="technician">Technician</option>
+            <option value="welder">Welder</option>
             <option value="inventory">Inventory</option>
             <option value="customer">Customer</option>
           </select>

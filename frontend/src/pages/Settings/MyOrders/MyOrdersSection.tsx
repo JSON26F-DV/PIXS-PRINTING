@@ -62,13 +62,13 @@ const OrderCard: React.FC<{ order: Order }> = ({ order }) => {
   const Icon = statusConfig.icon;
   
   // Get primary product info
-  const firstProduct: OrderProduct = order.items[0] ?? { productName: 'Unknown Product', quantity: 0 };
-  const moreCount = order.items.length - 1;
+  const firstProduct: OrderProduct = order.products[0] ?? { productName: 'Unknown Product', quantity: 0 };
+  const moreCount = order.products.length - 1;
 
 
 
   const handleReview = () => {
-    toast.success(`Opening review terminal for ${order.id}`);
+    toast.success(`Opening review terminal for ${order.order_id}`);
   };
 
   const handleBuyAgain = () => {
@@ -77,11 +77,11 @@ const OrderCard: React.FC<{ order: Order }> = ({ order }) => {
   };
 
   const handleAbort = () => {
-    alert(`Initiating termination sequence for ${order.id}`);
+    alert(`Initiating termination sequence for ${order.order_id}`);
   };
 
   // Calculate total price
-  const totalPrice = order.total_amount ?? order.items.reduce((acc: number, p: OrderProduct) => acc + (p.quantity * (p.variant?.unitPrice ?? 0)), 0);
+  const totalPrice = order.total_amount ?? order.products.reduce((acc: number, p: OrderProduct) => acc + (p.quantity * (p.variant?.unitPrice ?? 0)), 0);
 
 
 
@@ -106,7 +106,7 @@ const OrderCard: React.FC<{ order: Order }> = ({ order }) => {
            )}>
               <Icon size={24} />
               <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-slate-800 border-2 border-white flex items-center justify-center text-[10px] font-black text-rose-500">
-                 {order.items.length}
+                 {order.products.length}
               </div>
            </div>
            <div>
@@ -114,7 +114,7 @@ const OrderCard: React.FC<{ order: Order }> = ({ order }) => {
                 {firstProduct.productName} {moreCount > 0 && `& ${moreCount} More`}
               </h3>
               <p className="mt-2 text-[10px] font-bold tracking-[3px] text-slate-400 uppercase">
-                {order.id} · {format(new Date(order.created_at), 'MMM dd, yyyy')}
+                {order.order_id} · {format(new Date(order.created_at), 'MMM dd, yyyy')}
               </p>
            </div>
         </div>
@@ -141,7 +141,7 @@ const OrderCard: React.FC<{ order: Order }> = ({ order }) => {
       <div className="flex flex-col md:flex-row items-center justify-between gap-4 pt-5 border-t border-slate-100">
          <div className="flex items-center gap-3">
             <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest italic leading-none">
-              Node Security: {order.payment_hash.slice(0, 10)}...
+              Node Security: {order.payment_hash?.slice(0, 10) || 'UNASSIGNED'}...
             </span>
          </div>
          
@@ -194,7 +194,7 @@ const MyOrdersSection: React.FC = () => {
     
     // Deduplicate by id
     const uniqueOrders = combined.filter((order, index, self) =>
-      index === self.findIndex((t) => t.id === order.id)
+      index === self.findIndex((t) => t.order_id === order.order_id)
     );
     
     return uniqueOrders;
@@ -285,7 +285,7 @@ const MyOrdersSection: React.FC = () => {
           {filteredOrders.length > 0 ? (
             filteredOrders.map((order) => (
               <OrderCard 
-                key={order.id} 
+                key={order.order_id} 
                 order={order} 
               />
             ))

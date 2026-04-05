@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useMemo } from 'react';
 import { useReactToPrint } from 'react-to-print';
 import { FileText, Edit2 } from 'lucide-react';
 import { type PayrollRecord, type AttendanceDay } from './types';
@@ -13,12 +13,40 @@ interface PayrollRowProps {
   onUpdateRate: (empId: string, rate: number) => void;
 }
 
+import productionLogsData from '../../../data/production_logs.json';
+
 const PayrollRow: React.FC<PayrollRowProps> = ({ row, weekDates, holidays, onUpdateDay, onUpdateRate }) => {
   const payslipRef = useRef<HTMLDivElement>(null);
   
   const handlePrint = useReactToPrint({
     contentRef: payslipRef,
   });
+
+  const employeeLogs = useMemo(() => {
+    // 1. Get static logs from JSON
+    const staticLogs = productionLogsData.logs || [];
+    
+    // 2. Get dynamic logs from LocalStorage
+    const localLogs = (() => {
+        try {
+            const saved = localStorage.getItem('pixs_production_logs');
+            return saved ? JSON.parse(saved) : [];
+        } catch { return []; }
+    })();
+
+    const allLogs = [...staticLogs, ...localLogs];
+
+    // 3. Filter for this employee AND within this week range
+    return allLogs.filter(log => {
+        const isSameEmp = log.user_id === row.employee_id;
+        const dateStr = log.completed_at.split('T')[0];
+        const isWithinWeek = weekDates.includes(dateStr);
+        return isSameEmp && isWithinWeek;
+    });
+  }, [row.employee_id, weekDates]);
+
+  // Enrich row with logs for the payslip component
+  const enrichedRow = { ...row, logs: employeeLogs };
 
   return (
     <tr className="PayrollRow border-b border-slate-50 hover:bg-slate-50/20 last:border-0 transition-colors">
@@ -76,7 +104,7 @@ const PayrollRow: React.FC<PayrollRowProps> = ({ row, weekDates, holidays, onUpd
          </button>
 
          <div className="hidden">
-           <PayrollPayslipComponent ref={payslipRef} record={row} />
+           <PayrollPayslipComponent ref={payslipRef} record={enrichedRow} />
          </div>
       </td>
     </tr>

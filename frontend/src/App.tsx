@@ -9,7 +9,7 @@ import { Toaster } from 'react-hot-toast';
 
 const NavVisibilityWrapper = () => {
   const location = useLocation();
-  const isEmployeePath = location.pathname.startsWith('/admin') || location.pathname.startsWith('/staff');
+  const isEmployeePath = location.pathname.startsWith('/admin') || location.pathname.startsWith('/staff') || location.pathname.startsWith('/inventory');
 
   if (isEmployeePath) return null;
   return <CustomerNavbar />;

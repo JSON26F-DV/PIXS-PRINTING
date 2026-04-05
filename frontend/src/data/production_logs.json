@@ -1,0 +1,22 @@
+{
+  "logs": [
+    {
+      "log_id": "LOG-001",
+      "user_id": "EMP-001",
+      "user_name": "Tech B",
+      "order_id": "ORD-12347",
+      "product_name": "Milktea Cup",
+      "quantity": 1000,
+      "completed_at": "2026-04-05T10:30:00Z"
+    },
+    {
+      "log_id": "LOG-002",
+      "user_id": "EMP-004",
+      "user_name": "Weld C",
+      "order_id": "ORD-12349",
+      "product_name": "Black Straw",
+      "quantity": 500,
+      "completed_at": "2026-04-05T14:20:00Z"
+    }
+  ]
+}

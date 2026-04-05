@@ -45,6 +45,52 @@
       "total_orders_value": 0,
       "daily_rate": 600,
       "ot_rate": 100
+    },
+    {
+      "id": "EMP-003",
+      "first_name": "Tech",
+      "last_name": "B",
+      "name": "Tech B",
+      "profile_picture": "https://i.pravatar.cc/300?img=13",
+      "email": "tech_b@pixs.com",
+      "role": "technician",
+      "status": "active",
+      "age": 30,
+      "gender": "male",
+      "contact_numbers": [
+        { "number": "+63 912 345 6788", "is_default": true }
+      ],
+      "company_name": "PIXS PRINTING SHOP",
+      "password": "••••••••",
+      "date_created": "2024-03-15T10:00:00Z",
+      "last_login": "2026-03-28T11:45:00Z",
+      "total_orders_value": 0,
+      "daily_rate": 750,
+      "ot_rate": 120,
+      "allowed_categories": ["Milktea Cup"]
+    },
+    {
+      "id": "EMP-004",
+      "first_name": "Weld",
+      "last_name": "C",
+      "name": "Weld C",
+      "profile_picture": "https://i.pravatar.cc/300?img=15",
+      "email": "weld_c@pixs.com",
+      "role": "welder",
+      "status": "active",
+      "age": 28,
+      "gender": "male",
+      "contact_numbers": [
+        { "number": "+63 912 345 6789", "is_default": true }
+      ],
+      "company_name": "PIXS PRINTING SHOP",
+      "password": "••••••••",
+      "date_created": "2024-03-15T10:00:00Z",
+      "last_login": "2026-03-28T11:45:00Z",
+      "total_orders_value": 0,
+      "daily_rate": 800,
+      "ot_rate": 150,
+      "allowed_categories": ["Accessories"]
     }
   ],
   "customers": [
@@ -67,7 +113,9 @@
       "date_created": "2024-05-12T14:20:00Z",
       "last_login": "2026-03-27T11:00:00Z",
       "total_orders_value": 15450.50,
-      "orders": 12
+      "orders": 12,
+      "google_id": null,
+      "facebook_id": null
     },
     {
       "id": "CUST-502",
@@ -88,7 +136,9 @@
       "date_created": "2024-06-20T11:45:00Z",
       "last_login": "2026-03-28T09:30:00Z",
       "total_orders_value": 85200.00,
-      "orders": 45
+      "orders": 45,
+      "google_id": null,
+      "facebook_id": null
     }
   ]
 }

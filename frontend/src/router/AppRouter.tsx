@@ -10,6 +10,7 @@ import OrderSuccess from '../pages/Transactions/OrderSuccess';
 import MessengerPage from '../pages/Messenger/MessengerPage';
 import ScreenplatePage from '../pages/Screenplate/ScreenplatePage';
 import DeletedAccount from '../views/auth/DeletedAccount';
+import OrderPage from '../pages/Order/OrderPage';
 import { useAuth } from '../context/AuthContext';
 
 // Admin Layout & Views
@@ -27,6 +28,8 @@ import AdminSettings from '../views/admin/Settings/AdminSettings';
 // Staff Views
 import StaffOverview from '../views/staff/StaffOverview';
 import StaffComHub from '../views/staff/StaffComHub';
+import LiveQueue from '../pages/staff/LiveQueue';
+import Attendance from '../pages/staff/Attendance';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode; allowedRoles: string[] }> = ({ children, allowedRoles }) => {
   const { user, isLoading } = useAuth();
@@ -52,6 +55,14 @@ const AppRouter: React.FC = () => {
       <Route path="/chat" element={<MessengerPage />} />
       <Route path="/screenplate" element={<ScreenplatePage />} />
       <Route path="/delete-account" element={<DeletedAccount />} />
+      <Route 
+        path="/order" 
+        element={
+          <ProtectedRoute allowedRoles={['customer']}>
+            <OrderPage />
+          </ProtectedRoute>
+        } 
+      />
       
       {/* Admin Routes */}
       <Route 
@@ -80,17 +91,38 @@ const AppRouter: React.FC = () => {
       <Route 
         path="/staff" 
         element={
-          <ProtectedRoute allowedRoles={['staff']}>
+          <ProtectedRoute allowedRoles={['staff', 'technician', 'welder']}>
             <AdminLayout />
           </ProtectedRoute>
         }
       >
         <Route index element={<Navigate to="overview" replace />} />
         <Route path="overview" element={<StaffOverview />} />
+        <Route path="livequeue" element={<LiveQueue />} />
+        <Route path="orders" element={<Orders />} />
+        <Route path="attendance" element={<Attendance />} />
         <Route path="chat" element={<MessengerPage />} />
         <Route path="setting" element={<AdminSettings />} />
       </Route>
       
+      {/* Inventory Routes */}
+      <Route 
+        path="/inventory" 
+        element={
+          <ProtectedRoute allowedRoles={['inventory']}>
+            <AdminLayout />
+          </ProtectedRoute>
+        }
+      >
+        <Route index element={<Navigate to="overview" replace />} />
+        <Route path="overview" element={<StaffOverview />} />
+        <Route path="orders" element={<Orders />} />
+        <Route path="stock" element={<StockAnalytics />} />
+        <Route path="attendance" element={<Attendance />} />
+        <Route path="chat" element={<MessengerPage />} />
+        <Route path="setting" element={<AdminSettings />} />
+      </Route>
+
       {/* Fallback */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

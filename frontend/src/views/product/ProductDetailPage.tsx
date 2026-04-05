@@ -119,6 +119,7 @@ const ProductDetailInner: React.FC<{ product: IProduct; compatiblePlates: IScree
             isOwned: state.ownedPlateIds.includes(computed.selectedPlate.id),
           }
         : null,
+      customRequirements: state.customRequirements,
     });
 
     toast.success('Product added to cart.');
@@ -169,6 +170,7 @@ const ProductDetailInner: React.FC<{ product: IProduct; compatiblePlates: IScree
             isOwned: state.ownedPlateIds.includes(computed.selectedPlate.id),
           }
         : null,
+      customRequirements: state.customRequirements,
     };
 
     localStorage.setItem('pixs_buy_now_v1', JSON.stringify([buyNowItem]));
@@ -293,6 +295,25 @@ const ProductDetailInner: React.FC<{ product: IProduct; compatiblePlates: IScree
                 productId={product.id}
                 selectedVariantSize={computed.selectedVariant?.size}
               />
+            </div>
+
+            {/* Selection Node: Custom Production Requisition */}
+            <div className="stagger-item space-y-4">
+               <div>
+                  <h3 className="text-[10px] font-black uppercase text-slate-400 tracking-[3px] mb-2 flex items-center gap-2">
+                     <PackageCheck size={14} className="text-slate-900" />
+                     Production Requisition Node
+                  </h3>
+                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-relaxed">
+                     Specify custom printing instructions, logo placements, or specialized material requirements for this item.
+                  </p>
+               </div>
+               <textarea 
+                 value={state.customRequirements}
+                 onChange={(e) => actions.setCustomRequirements(e.target.value)}
+                 placeholder="Terminal Input: Enter custom specifications..."
+                 className="w-full h-32 bg-slate-50 border border-slate-100 rounded-[24px] p-6 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 placeholder:text-slate-300 resize-none transition-all"
+               />
             </div>
 
             {/* Dynamic Finalization Logic: Price Calculation UI (Inclusive Protocol) */}

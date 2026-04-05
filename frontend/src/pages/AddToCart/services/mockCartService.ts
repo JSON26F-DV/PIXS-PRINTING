@@ -13,6 +13,7 @@ export interface AddCartItemInput {
   variant: CartVariantInfo;
   colors: CartColorInfo[];
   plate: CartPlateInfo | null;
+  customRequirements?: string;
 }
 
 const makeCartItemId = (input: AddCartItemInput): string => {
@@ -21,6 +22,7 @@ const makeCartItemId = (input: AddCartItemInput): string => {
     input.variant.id,
     input.colors.map(c => c.id).sort().join('-') || 'no-color',
     input.plate?.id ?? 'no-plate',
+    input.customRequirements || 'no-requirements'
   ].join('__');
 };
 

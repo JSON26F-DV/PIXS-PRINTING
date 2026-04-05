@@ -12,7 +12,8 @@ import {
   X,
   CheckCircle2,
   Circle,
-  ChevronDown
+  ChevronDown,
+  Package
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useLocation } from 'react-router-dom';
@@ -121,6 +122,7 @@ const CustomerNavbar: React.FC = () => {
                 <NavbarActionButton to="/screenplate" icon={Printer} label="Plate" className="hidden sm:flex" />
                 <NavbarActionButton to="/chat" icon={MessageCircle} label="Chat" />
                 <NavbarActionButton onClick={() => setIsNotificationModalOpen(true)} icon={Bell} label="Alert" badge={unreadCount} />
+                <NavbarActionButton to="/order" icon={Package} label="Orders" className="nav-orders-button hidden sm:flex" />
                 <NavbarActionButton to="/cart" icon={ShoppingBag} label="Cart" badge={cartItemCount} />
                 <div className="ProfileTerminal ml-2">
                   <Link
@@ -243,6 +245,17 @@ const CustomerNavbar: React.FC = () => {
               />
               <span className={`text-[8px] font-black uppercase italic tracking-[2px] leading-none ${isActive('/screenplate') ? 'text-slate-900' : 'text-slate-300 opacity-60'}`}>
                 Plate
+              </span>
+            </Link>
+
+            <Link to="/order" className="nav-item flex flex-col items-center gap-1.5 active:scale-90 transition-all duration-150 px-3 py-2 w-16 nav-orders-button">
+              <Package
+                size={22}
+                strokeWidth={isActive('/order') ? 3 : 2}
+                className={isActive('/order') ? 'text-slate-900' : 'text-slate-300'}
+              />
+              <span className={`text-[8px] font-black uppercase italic tracking-[2px] leading-none ${isActive('/order') ? 'text-slate-900' : 'text-slate-300 opacity-60'}`}>
+                Orders
               </span>
             </Link>
 

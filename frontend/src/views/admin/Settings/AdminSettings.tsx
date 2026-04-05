@@ -1,9 +1,7 @@
 import React, { useState, useRef, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx } from 'clsx';
 import { 
-  ArrowLeft, 
   Menu, 
   X, 
   User, 
@@ -77,7 +75,6 @@ const ADMIN_NAV_ITEMS: AdminNavItem[] = [
 ];
 
 const AdminSettingsContent: React.FC = () => {
-  const navigate = useNavigate();
   const { user } = useAuth();
   const [activeSection, setActiveSection] = useState<AdminSectionKey>('profile');
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -114,15 +111,6 @@ const AdminSettingsContent: React.FC = () => {
       {/* Settings Top Bar */}
       <div className="sticky top-0 z-20 border-b border-slate-50 bg-white/95 backdrop-blur-md">
         <div className="flex h-16 items-center justify-between gap-4 px-6">
-          <button
-            onClick={() => navigate('/admin/dashboard')}
-            className="AdminSettingsBackButton flex items-center gap-2 rounded-xl border border-slate-100 bg-white px-4 py-2 text-[10px] font-black tracking-widest text-slate-600 uppercase shadow-sm transition-all hover:border-slate-200 hover:text-slate-900 active:scale-95"
-          >
-            <ArrowLeft size={14} />
-            <span className="hidden sm:inline">Dashboard</span>
-            <span className="sm:hidden">Back</span>
-          </button>
-
           <div className="flex items-center gap-2">
             <span className="hidden text-[10px] font-black tracking-widest text-slate-300 uppercase sm:block">Admin Terminal</span>
             <span className="hidden text-slate-200 sm:block">/</span>

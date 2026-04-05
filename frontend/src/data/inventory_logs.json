@@ -1,0 +1,16 @@
+{
+  "logs": [
+    {
+      "id": "INV-LOG-001",
+      "user_id": "EMP-005",
+      "user_name": "Inv Staff A",
+      "action": "UPDATE_STOCK",
+      "product_id": "PROD-001",
+      "product_name": "Milktea Cup",
+      "previous_value": 500,
+      "new_value": 550,
+      "timestamp": "2026-04-05T10:00:00Z",
+      "notes": "Manual adjustment (+50)"
+    }
+  ]
+}

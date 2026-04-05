@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useAuth } from '../../../context/AuthContext';
 import { 
   TrendingUp, TrendingDown, Briefcase, Filter, Package, AlertCircle, 
   History as HistoryIcon, FileText, PlusCircle, Search 
@@ -18,6 +19,19 @@ interface InventoryAnalyticsSectionProps {
   setRestockLogs: React.Dispatch<React.SetStateAction<IRestockLog[]>>;
 }
 
+interface IInventoryLog {
+  id: string;
+  user_id: string;
+  user_name: string;
+  action: string;
+  product_id: string;
+  product_name: string;
+  previous_value: unknown;
+  new_value: unknown;
+  timestamp: string;
+  notes?: string;
+}
+
 export const InventoryAnalyticsSection: React.FC<InventoryAnalyticsSectionProps> = ({ 
   products, categories, restockLogs, setProducts, setRestockLogs 
 }) => {
@@ -26,7 +40,7 @@ export const InventoryAnalyticsSection: React.FC<InventoryAnalyticsSectionProps>
   const [stockStatusFilter, setStockStatusFilter] = useState<string | null>(null);
   const [productSearch, setProductSearch] = useState('');
   const [logSearch, setLogSearch] = useState('');
-  const [logTypeFilter, setLogTypeFilter] = useState<'ALL' | 'RESTOCK' | 'MISC'>('ALL');
+  const [logTypeFilter, setLogTypeFilter] = useState<'ALL' | 'RESTOCK' | 'MISC' | 'UPDATE_STOCK' | 'UPDATE_BASE_PRICE' | 'UPDATE_RAW_MATERIAL_COST'>('ALL');
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [restockForm, setRestockForm] = useState<{ productId: string; qty: number; cost: number } | null>(null);
   const [miscExpenseForm, setMiscExpenseForm] = useState<{ name: string; cost: number } | null>(null);
@@ -64,11 +78,65 @@ export const InventoryAnalyticsSection: React.FC<InventoryAnalyticsSectionProps>
     return result;
   }, [products, categoryFilter, stockStatusFilter, chartFilter, productSearch]);
 
+  const [inventoryLogs, setInventoryLogs] = useState<IInventoryLog[]>(() => {
+    try {
+      const saved = localStorage.getItem('pixs_inventory_logs');
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
+
+  const { user } = useAuth();
+  
+  // SHARED LOGGER FUNCTION
+  const logInventoryAction = (action: string, productId: string, productName: string, prev: unknown, current: unknown, notes: string = "") => {
+    try {
+      const saved = localStorage.getItem('pixs_inventory_logs');
+      const allLogs = saved ? JSON.parse(saved) : [];
+      const newLog: IInventoryLog = {
+        id: `INV-LOG-${new Date().getTime()}`,
+        user_id: user?.id || 'unknown',
+        user_name: user?.name || 'Inventory Node',
+        action,
+        product_id: productId,
+        product_name: productName,
+        previous_value: prev,
+        new_value: current,
+        timestamp: new Date().toISOString(),
+        notes
+      };
+      const updatedLogs = [newLog, ...allLogs];
+      localStorage.setItem('pixs_inventory_logs', JSON.stringify(updatedLogs));
+      setInventoryLogs(updatedLogs); 
+    } catch (e) { console.error("Logging failure", e); }
+  };
+
+  const combinedLogs = useMemo(() => {
+    // Standardize inventory logs into the restock log format for the UI
+    const mappedInvLogs = inventoryLogs.map((l) => ({
+      id: l.id,
+      product_id: l.product_id,
+      product_name: l.product_name,
+      qty_added: l.action === 'RESTOCK' ? (Number(l.new_value) - Number(l.previous_value)) : 0,
+      cost: l.action === 'MISC_EXPENSE' ? Number(l.new_value) : 0, 
+      date: l.timestamp,
+      type: l.action,
+      staff_name: l.user_name,
+      notes: l.notes || `${l.action} from ${l.previous_value} to ${l.new_value}`
+    }));
+
+    // Merge with financial restock logs
+    const mappedRestockLogs = restockLogs.map(l => ({ ...l, type: l.type as string }));
+
+    return [...mappedRestockLogs, ...mappedInvLogs].sort((a, b) => 
+      new Date(b.date).getTime() - new Date(a.date).getTime()
+    );
+  }, [restockLogs, inventoryLogs]);
+
   const filteredLogs = useMemo(() => {
-    let result = [...restockLogs];
+    let result = [...combinedLogs];
 
     if (logTypeFilter !== 'ALL') {
-      result = result.filter(l => l.type === logTypeFilter);
+      result = result.filter(l => l.type === logTypeFilter || (logTypeFilter === 'RESTOCK' && l.type === 'RESTOCK'));
     }
 
     if (logSearch) {
@@ -76,12 +144,13 @@ export const InventoryAnalyticsSection: React.FC<InventoryAnalyticsSectionProps>
       result = result.filter(l => 
         l.product_name.toLowerCase().includes(q) || 
         l.notes?.toLowerCase().includes(q) ||
-        l.id.toLowerCase().includes(q)
+        l.id.toLowerCase().includes(q) ||
+        l.staff_name?.toLowerCase().includes(q)
       );
     }
 
     return result;
-  }, [restockLogs, logTypeFilter, logSearch]);
+  }, [combinedLogs, logTypeFilter, logSearch]);
 
   const chartData = useMemo(() => 
     filteredProducts.slice(0, 15).map(p => ({ 
@@ -94,24 +163,42 @@ export const InventoryAnalyticsSection: React.FC<InventoryAnalyticsSectionProps>
 
   const updateStock = (id: string, val: number) => {
     if (isNaN(val)) return;
-    setProducts(prev => prev.map(p => p.id === id ? { ...p, current_stock: Math.max(0, val) } : p));
+    const prod = products.find(p => p.id === id);
+    if (!prod) return;
+    
+    const prev = prod.current_stock;
+    const current = Math.max(0, val);
+    
+    setProducts(prevProducts => prevProducts.map(p => p.id === id ? { ...p, current_stock: current } : p));
+    
+    logInventoryAction("UPDATE_STOCK", id, prod.name, prev, current, `Manual adjustment of stock count.`);
   };
 
   const updateProductField = (id: string, field: keyof IProduct, val: number) => {
     if (isNaN(val)) return;
-    setProducts(prev => prev.map(p => p.id === id ? { ...p, [field]: val } : p));
+    const prod = products.find(p => p.id === id);
+    if (!prod) return;
+
+    const prev = prod[field];
+    const current = val;
+
+    setProducts(prevProducts => prevProducts.map(p => p.id === id ? { ...p, [field]: val } : p));
+    
+    logInventoryAction(`UPDATE_${field.toUpperCase()}`, id, prod.name, prev, current, `Configurable node [${field}] remapped.`);
   };
 
   const handleRestock = (productId: string, productName: string, qty: number, cost: number) => {
     if (qty <= 0 || cost < 0) return;
     
     const timestamp = new Date().getTime();
+    const prod = products.find(p => p.id === productId);
+    const prevStock = prod?.current_stock || 0;
     
     // Update Stock
     setProducts(prev => prev.map(p => p.id === productId ? { ...p, current_stock: (p.current_stock || 0) + qty } : p));
     
-    // Log Activity
-    const newLog: IRestockLog = {
+    // Financial Log (restock_logs.json concept)
+    const newRestockLog: IRestockLog = {
       id: `RL-${timestamp}`,
       product_id: productId,
       product_name: productName,
@@ -119,10 +206,14 @@ export const InventoryAnalyticsSection: React.FC<InventoryAnalyticsSectionProps>
       cost: cost,
       date: new Date().toISOString(),
       type: 'RESTOCK',
-      staff_name: 'Admin',
+      staff_name: user?.name || 'Inventory Node',
       notes: `Restocked ${qty} units via Direct Control.`
     };
-    setRestockLogs(prev => [newLog, ...prev]);
+    setRestockLogs(prev => [newRestockLog, ...prev]);
+
+    // Operational Log (inventory_logs.json concept)
+    logInventoryAction("RESTOCK", productId, productName, prevStock, prevStock + qty, `Inbound stock injection of ${qty} units at total cost ₱${cost.toLocaleString()}.`);
+    
     setRestockForm(null);
   };
 
@@ -137,10 +228,13 @@ export const InventoryAnalyticsSection: React.FC<InventoryAnalyticsSectionProps>
       cost: cost,
       date: new Date().toISOString(),
       type: 'MISC',
-      staff_name: 'Admin',
+      staff_name: user?.name || 'Inventory Node',
       notes: 'Unexpected miscellaneous expense.'
     };
     setRestockLogs(prev => [newLog, ...prev]);
+    
+    logInventoryAction("MISC_EXPENSE", "N/A", name, 0, cost, `Recorded external expenditure: ${name}.`);
+    
     setMiscExpenseForm(null);
   };
 

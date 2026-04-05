@@ -80,6 +80,17 @@ export const useProductDetail = ({ product, compatiblePlates, preselectedPlateNa
     }
     return null;
   });
+
+  const [customRequirements, setCustomRequirements] = useState<string>(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        return parsed.customRequirements ?? '';
+      } catch { return ''; }
+    }
+    return '';
+  });
   const [colors, setColors] = useState<IColor[]>([]);
   const [ownedPlateIds, setOwnedPlateIds] = useState<string[]>([]);
   const [isLoadingMetadata, setIsLoadingMetadata] = useState(true);
@@ -112,10 +123,11 @@ export const useProductDetail = ({ product, compatiblePlates, preselectedPlateNa
       quantity,
       selectedColorIds,
       selectedPlateId,
-      selectedPosition
+      selectedPosition,
+      customRequirements
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
-  }, [selectedVariantId, quantity, selectedColorIds, selectedPlateId, selectedPosition, STORAGE_KEY]);
+  }, [selectedVariantId, quantity, selectedColorIds, selectedPlateId, selectedPosition, customRequirements, STORAGE_KEY]);
 
   const selectablePlates = useMemo(
     () => compatiblePlates.filter(plate => ownedPlateIds.includes(plate.id)),
@@ -199,8 +211,8 @@ export const useProductDetail = ({ product, compatiblePlates, preselectedPlateNa
   };
 
   return {
-    state: { selectedVariantId, quantity, selectedColorIds, selectedPlateId, selectedPosition, colors, ownedPlateIds, selectablePlates, isLoadingMetadata },
-    actions: { setSelectedVariantId, setQuantity, handleColorChange, handlePlateChange, setSelectedPosition },
+    state: { selectedVariantId, quantity, selectedColorIds, selectedPlateId, selectedPosition, colors, ownedPlateIds, selectablePlates, isLoadingMetadata, customRequirements },
+    actions: { setSelectedVariantId, setQuantity, handleColorChange, handlePlateChange, setSelectedPosition, setCustomRequirements },
     computed: { selectedVariant, selectedPlate, selectedColors, priceBreakdown, stockForVariant, isQuantityTooLow, isQuantityTooHigh, isOutOfStock, canAddToCart, hasRequiredPlate, hasRequiredColor }
   };
 };

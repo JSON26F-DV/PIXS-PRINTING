@@ -24,6 +24,7 @@ import {
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { format, parseISO } from 'date-fns';
+import { useAuth } from '../../context/AuthContext';
 
 // Data Sources (Simulated relational structure)
 import rawOrders from '../../data/order.json';
@@ -49,23 +50,37 @@ const RatingStars = ({ rating }: { rating: number }) => (
 
 // Interfaces
 interface OrderItem {
+  id: string;
   productId: string;
   productName: string;
+  productImage: string;
+  category: string;
   quantity: number;
-  unitPrice: number;
+  variant: {
+    unitPrice: number;
+    size: string;
+    id: string;
+  };
+  colors: { name: string; hex: string }[];
+  plate: { name: string; setupFee: number; printPricePerUnit: number } | null;
+  customRequirements?: string;
 }
 
 interface Order {
-  id: string;
+  order_id: string; // Changed from id to order_id to match order.json
   user_id: string;
-  items: OrderItem[];
+  products: OrderItem[]; // Changed from items to products
   total_amount: number;
   status: string;
   created_at: string;
-  updated_at: string;
+  updated_at?: string;
   feedback?: string;
   complaint?: string;
   rating?: number;
+  discount?: {
+    discount_id: string | null;
+    total_discount_amount: number;
+  };
 }
 
 interface User {
@@ -76,6 +91,7 @@ interface User {
 }
 
 const Orders: React.FC = () => {
+  const { user } = useAuth();
   // --- STATE ---
   const [orders, setOrders] = useState<Order[]>(rawOrders);
   const [users] = useState<User[]>(rawUsers);
@@ -116,7 +132,7 @@ const Orders: React.FC = () => {
       result = result.filter(o => {
         const customer = users.find(u => u.id === o.user_id);
         return (
-          o.id.toLowerCase().includes(q) ||
+          o.order_id.toLowerCase().includes(q) ||
           customer?.name.toLowerCase().includes(q) ||
           customer?.email.toLowerCase().includes(q)
         );
@@ -202,7 +218,7 @@ const Orders: React.FC = () => {
   // --- HANDLERS ---
   const handleUpdateStatus = (orderId: string, newStatus: string) => {
     setOrders(prev => prev.map(o => {
-      if (o.id === orderId) {
+      if (o.order_id === orderId) {
         // Validation: Cannot update Completed -> Pending
         if (o.status === 'Completed' && newStatus === 'Pending') return o;
         return {
@@ -410,10 +426,10 @@ const Orders: React.FC = () => {
                       {paginatedOrders.map(order => {
                         const customer = users.find(u => u.id === order.user_id);
                         return (
-                          <React.Fragment key={order.id}>
+                          <React.Fragment key={order.order_id}>
                             <tr className="orders-row group hover:bg-slate-50/80 transition-colors">
                                <td className="px-8 py-6 font-mono text-[11px] font-bold text-slate-500">
-                                  {order.id}
+                                  {order.order_id}
                                </td>
                                {!selectedCustomerId && (
                                  <td className="px-8 py-6">
@@ -424,10 +440,10 @@ const Orders: React.FC = () => {
                                <td className="px-8 py-6">
                                   <div className="flex items-center gap-2">
                                      <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-900 font-black text-xs">
-                                        {order.items.reduce((sum, i) => sum + i.quantity, 0)}
+                                        {order.products.reduce((sum, i) => sum + i.quantity, 0)}
                                      </div>
                                      <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-                                        {order.items.length} Product Types
+                                        {order.products.length} Product Types
                                      </div>
                                   </div>
                                </td>
@@ -435,10 +451,12 @@ const Orders: React.FC = () => {
                                   <span className="text-base font-black text-slate-900 tracking-tighter italic">₱{order.total_amount.toLocaleString()}</span>
                                </td>
                                <td className="px-8 py-6">
-                                  <div className="relative group/status">
+                                  <div className="relative group/status flex items-center gap-3">
                                      <select 
+                                       disabled={user?.role === 'staff'}
                                        className={cn(
-                                         "orders-status-dropdown px-4 py-2 text-[10px] font-black uppercase rounded-xl border appearance-none pr-8 cursor-pointer transition-all",
+                                         "orders-status-dropdown px-4 py-2 text-[10px] font-black uppercase rounded-xl border appearance-none pr-8 transition-all",
+                                         user?.role === 'staff' ? "cursor-not-allowed opacity-70" : "cursor-pointer",
                                          order.status === 'Completed' ? "bg-emerald-50 text-emerald-600 border-emerald-100" :
                                          order.status === 'Pending' ? "bg-amber-50 text-amber-600 border-amber-100" :
                                          order.status === 'Processing' ? "bg-blue-50 text-blue-600 border-blue-100" :
@@ -446,7 +464,7 @@ const Orders: React.FC = () => {
                                          "bg-slate-100 text-slate-600 border-slate-200"
                                        )}
                                        value={order.status}
-                                       onChange={(e) => handleUpdateStatus(order.id, e.target.value)}
+                                       onChange={(e) => handleUpdateStatus(order.order_id, e.target.value)}
                                      >
                                         <option value="Pending">Pending</option>
                                         <option value="Processing">Processing</option>
@@ -454,7 +472,14 @@ const Orders: React.FC = () => {
                                         <option value="Completed">Completed</option>
                                         <option value="Cancelled">Cancelled</option>
                                      </select>
-                                     <MoreVertical className="absolute right-2 top-1/2 -translate-y-1/2 text-current opacity-30" size={12} />
+                                     <MoreVertical className="absolute right-2 top-1/2 -translate-y-1/2 text-current opacity-30 pointer-events-none" size={12} />
+                                     
+                                     {/* ⚠️ DISPUTE SIGNAL */}
+                                     {order.complaint && (
+                                       <div className="animate-pulse">
+                                          <AlertTriangle className="text-rose-500" size={16} />
+                                       </div>
+                                     )}
                                   </div>
                                </td>
                                <td className="px-8 py-6">
@@ -468,39 +493,95 @@ const Orders: React.FC = () => {
                                </td>
                             </tr>
                             
-                            {/* ⭐ CUSTOMER FEEDBACK SYSTEM */}
-                            {order.status === 'Completed' && (order.feedback || order.rating) && (
-                              <tr className="bg-emerald-50/20">
-                                <td colSpan={selectedCustomerId ? 6 : 7} className="px-12 py-6">
-                                   <div className="flex flex-col md:flex-row md:items-start justify-between gap-6 border-l-4 border-emerald-400 pl-8 py-2">
-                                      <div className="flex-1">
-                                         <div className="flex items-center gap-4 mb-3">
-                                            <RatingStars rating={order.rating || 0} />
-                                            {order.rating === 5 && <span className="bg-emerald-500 text-white text-[8px] font-black uppercase px-2 py-0.5 rounded tracking-[2px]">Elite Feedback</span>}
-                                         </div>
-                                         <p className="orders-feedback-text text-sm font-bold text-slate-800 italic leading-relaxed">
-                                            "{order.feedback || 'No textual audit provided'}"
-                                         </p>
+                            {/* ⭐ DETAILED PRODUCTION TRACE */}
+                             <tr className="bg-slate-50/30">
+                                <td colSpan={selectedCustomerId ? 6 : 7} className="px-12 py-8">
+                                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8 border-l-4 border-slate-900 pl-8">
+                                      <div className="space-y-6">
+                                         <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-[3px]">Payload Breakdown</h4>
+                                         {order.products.map((item, idx) => (
+                                           <div key={idx} className="flex flex-col gap-3 p-5 bg-white border border-slate-100 rounded-[28px] shadow-sm">
+                                              <div className="flex items-center justify-between">
+                                                 <p className="text-xs font-black text-slate-900 uppercase italic">{item.productName}</p>
+                                                 <span className="text-[10px] font-black px-2 py-0.5 bg-slate-900 text-white rounded uppercase">{item.variant.size}</span>
+                                              </div>
+                                              <div className="flex flex-wrap gap-2">
+                                                 {item.colors.map((c, i) => (
+                                                   <div key={i} className="flex items-center gap-1.5 px-2 py-1 bg-slate-50 rounded-full border border-slate-100">
+                                                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: c.hex }} />
+                                                      <span className="text-[8px] font-bold uppercase text-slate-500">{c.name}</span>
+                                                   </div>
+                                                 ))}
+                                              </div>
+                                              {item.plate && (
+                                                <div className="mt-1 flex items-center gap-2">
+                                                   <div className="p-1 bg-emerald-50 rounded text-emerald-600">
+                                                      <Download size={10} />
+                                                   </div>
+                                                   <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Plate: {item.plate.name}</p>
+                                                </div>
+                                              )}
+                                              {item.customRequirements && (
+                                                <div className="mt-3 p-4 bg-amber-50/50 border border-amber-100 rounded-2xl">
+                                                   <p className="text-[8px] font-black text-amber-600 uppercase tracking-widest mb-1">Production Requisition</p>
+                                                   <p className="text-[10px] font-bold text-slate-600 italic">"{item.customRequirements}"</p>
+                                                </div>
+                                              )}
+                                           </div>
+                                         ))}
                                       </div>
                                       
-                                      {order.complaint && (
-                                        <div className="md:w-1/3 bg-white/60 p-4 rounded-3xl border border-rose-100 shadow-sm relative overflow-hidden">
-                                           <div className="absolute top-0 right-0 p-2 opacity-10">
-                                              <AlertTriangle className="text-rose-500" size={32} />
-                                           </div>
-                                           <div className="flex items-center gap-2 mb-2">
-                                              <AlertTriangle className="text-rose-500" size={14} />
-                                              <span className="orders-complaint-warning text-[9px] font-black text-rose-600 uppercase tracking-widest">Dispute Signal Detected</span>
-                                           </div>
-                                           <p className="text-xs font-bold text-rose-900 leading-tight">
-                                              {order.complaint}
-                                           </p>
-                                        </div>
-                                      )}
+                                      <div className="space-y-6">
+                                         <div className="space-y-4">
+                                            <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-[3px]">Financial Synthesis</h4>
+                                            <div className="p-6 bg-slate-900 rounded-[32px] text-white">
+                                               <div className="flex items-center justify-between mb-4">
+                                                  <span className="text-[10px] font-black uppercase tracking-widest opacity-60">Gross Value</span>
+                                                  <span className="text-sm font-black italic">₱{order.total_amount.toLocaleString()}</span>
+                                               </div>
+                                               {order.discount && order.discount.total_discount_amount > 0 && (
+                                                  <div className="flex items-center justify-between text-emerald-400">
+                                                     <span className="text-[10px] font-black uppercase tracking-widest">Loyalty Discount Applied</span>
+                                                     <span className="text-sm font-black italic">-₱{order.discount.total_discount_amount.toLocaleString()}</span>
+                                                  </div>
+                                               )}
+                                            </div>
+                                         </div>
+
+                                         {(order.feedback || order.complaint || (order.rating || 0) > 0) && (
+                                            <div className="space-y-4">
+                                               <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-[3px]">Customer Audit Logic</h4>
+                                               
+                                               <div className="p-6 bg-emerald-50/50 border border-emerald-100 rounded-[32px]">
+                                                  <div className="flex items-center gap-2 mb-3">
+                                                     <RatingStars rating={order.rating || 0} />
+                                                     <span className="text-[9px] font-black text-emerald-600 uppercase tracking-widest ml-auto">Client Rating</span>
+                                                  </div>
+                                                  <p className="text-xs font-bold text-slate-700 italic">
+                                                     "{order.feedback || 'No textual feedback provided'}"
+                                                  </p>
+                                               </div>
+
+                                               {order.complaint && (
+                                                  <div className="p-6 bg-rose-50 border border-rose-100 rounded-[32px] relative overflow-hidden">
+                                                     <div className="absolute top-0 right-0 p-4 opacity-10">
+                                                        <AlertTriangle className="text-rose-600" size={40} />
+                                                     </div>
+                                                     <div className="flex items-center gap-2 mb-2">
+                                                        <AlertTriangle className="text-rose-600" size={14} />
+                                                        <span className="text-[9px] font-black text-rose-600 uppercase tracking-widest">Dispute Signal Detected</span>
+                                                     </div>
+                                                     <p className="text-xs font-bold text-rose-900 leading-relaxed italic">
+                                                        {order.complaint}
+                                                     </p>
+                                                  </div>
+                                               )}
+                                            </div>
+                                         )}
+                                      </div>
                                    </div>
                                 </td>
-                              </tr>
-                            )}
+                             </tr>
                           </React.Fragment>
                         );
                       })}

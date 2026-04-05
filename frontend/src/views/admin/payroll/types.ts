@@ -11,6 +11,17 @@ export interface AttendanceDay {
   computed_salary: number;
 }
 
+export interface ProductionLog {
+  log_id: string;
+  user_id: string;
+  user_name: string;
+  order_id: string;
+  product_name: string;
+  quantity: number;
+  category?: string;
+  completed_at: string;
+}
+
 export interface PayrollRecord {
   employee_id: string;
   name: string;
@@ -19,6 +30,7 @@ export interface PayrollRecord {
   ot_rate: number;
   attendance: AttendanceDay[];
   weekly_total: number;
+  logs?: ProductionLog[]; 
 }
 
 export interface WeeklySalaryData {

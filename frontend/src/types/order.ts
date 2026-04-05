@@ -11,24 +11,47 @@ export const ORDER_STATUS = {
 export type OrderStatus = typeof ORDER_STATUS[keyof typeof ORDER_STATUS];
 
 export interface OrderProduct {
-
+  id: string; // From CartItem.id
+  productId: string;
   productName: string;
+  productImage: string;
+  category: string;
   quantity: number;
-  variant?: {
+  variant: {
     unitPrice: number;
-    color?: string;
-    size?: string;
+    size: string;
+    id: string;
   };
+  colors: { name: string; hex: string }[];
+  plate: { name: string; setupFee: number; printPricePerUnit: number } | null;
+  customRequirements?: string;
 }
 
 export interface Order {
-  id: string;
+  order_id: string; // Unified with order.json
   user_id: string;
-  items: OrderProduct[];
+  products: OrderProduct[]; // Unified with order.json
   total_amount: number;
-  shipping_address: unknown;
-  payment_method: unknown;
-  delivery_method: unknown;
+  shipping_address: {
+    fullName: string;
+    addressLine1: string;
+    addressLine2?: string;
+    city: string;
+    state: string;
+    postalCode: string;
+    country: string;
+    phoneNumber: string;
+  };
+  payment_method: {
+    type: string;
+    provider: string;
+    transactionId?: string;
+  };
+  delivery_method: {
+    carrier: string;
+    serviceLevel: string;
+    estimatedDays: number;
+  };
   notes?: string;
   status: OrderStatus;
   created_at: string;

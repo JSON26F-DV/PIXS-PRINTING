@@ -33,9 +33,9 @@ const cn = (...classes: (string | boolean | undefined)[]) => classes.filter(Bool
 type FilterType = 'week' | 'month' | 'year';
 
 interface RawOrder {
-  id: string;
+  order_id: string; // Changed from id
   user_id: string;
-  items: { productId: string; productName: string; quantity: number; unitPrice: number }[];
+  products: { productId: string; productName: string; quantity: number; unitPrice: number }[]; // Changed from items
   total_amount: number;
   status: string;
   created_at: string;
@@ -156,13 +156,13 @@ const GeneralDashboard: React.FC = () => {
       ...SafeTerminal.array<RawOrder>(orderData as unknown as RawOrder[]).map((o: RawOrder): ItemBase => {
         revenuePoints.push({ date: o.created_at, value: Number(o.total_amount || 0) });
         return {
-          id: o.id,
+          id: o.order_id,
           customerName: userNameMap[o.user_id] || 'Anonymous',
           total: Number(o.total_amount || 0),
           status: o.status || 'Pending',
           type: 'Order',
           createdAt: o.created_at,
-          itemName: o.items?.[0]?.productName || 'Order'
+          itemName: o.products?.[0]?.productName || 'Order'
         };
       }),
       ...SafeTerminal.array<RawRequest>(requestScreenplateData as unknown as RawRequest[]).map((r: RawRequest): ItemBase => {

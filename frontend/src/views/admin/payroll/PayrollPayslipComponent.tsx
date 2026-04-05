@@ -77,6 +77,39 @@ export const PayrollPayslipComponent = forwardRef<HTMLDivElement, PayrollPayslip
         </table>
       </div>
 
+      {/* PRODUCTION LOG AUDIT SECTION */}
+      <div className="mb-16">
+        <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-4 px-4">Production Performance Ledger</p>
+        <div className="bg-slate-50/50 rounded-[32px] border border-slate-100 p-8">
+            <table className="w-full">
+                <thead>
+                    <tr className="border-b border-slate-200">
+                        <th className="pb-3 text-left text-[9px] font-black text-slate-400 uppercase tracking-widest">Asset Category</th>
+                        <th className="pb-3 text-left text-[9px] font-black text-slate-400 uppercase tracking-widest">Identity</th>
+                        <th className="pb-3 text-center text-[9px] font-black text-slate-400 uppercase tracking-widest">Quantity</th>
+                        <th className="pb-3 text-right text-[9px] font-black text-slate-400 uppercase tracking-widest">Timestamp</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {record.logs && record.logs.length > 0 ? record.logs.map((log, idx) => (
+                        <tr key={idx} className="border-b border-slate-100/50 last:border-0">
+                            <td className="py-4 text-[11px] font-black text-slate-900 uppercase italic tracking-tighter">{log.category || 'Production'}</td>
+                            <td className="py-4 text-[11px] font-bold text-slate-500 uppercase">{log.product_name} • {log.order_id}</td>
+                            <td className="py-4 text-center text-[11px] font-black text-slate-900">{log.quantity.toLocaleString()}</td>
+                            <td className="py-4 text-right text-[10px] font-bold text-slate-400">{format(new Date(log.completed_at), 'MM/dd HH:mm')}</td>
+                        </tr>
+                    )) : (
+                        <tr>
+                            <td colSpan={4} className="py-10 text-center text-[10px] font-bold text-slate-300 uppercase tracking-widest italic">
+                                No production tasks logged for this cycle
+                            </td>
+                        </tr>
+                    )}
+                </tbody>
+            </table>
+        </div>
+      </div>
+
       <div className="mt-20 pt-16 flex justify-between gap-24 px-4">
         <div className="flex-1 border-t-2 border-slate-200 pt-4">
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-[6px] mb-1.5 opacity-60">Entity Acknowledgment</p>

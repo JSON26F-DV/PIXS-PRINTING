@@ -10,6 +10,7 @@ import categoriesDataRaw from '../../data/categories.json';
 
 // Subcomponents
 import { ProductsSection } from './inventory-sections/ProductsSection';
+import { TechnicianAssignmentSection } from './inventory-sections/TechnicianAssignmentSection';
 import type { IProduct, ICategory } from './inventory-sections/types';
 import { SafeTerminal } from '../../utils/safeTerminal';
 import ErrorBoundary from '../../components/common/ErrorBoundary';
@@ -95,12 +96,15 @@ function ProductManagementContent() {
             </p>
           </div>
         ) : (
-          <ProductsSection 
-             products={products} 
-             categories={categories} 
-             setProducts={setProducts} 
-             setCategories={setCategories}
-          />
+          <>
+            <ProductsSection 
+               products={products} 
+               categories={categories} 
+               setProducts={setProducts} 
+               setCategories={setCategories}
+            />
+            <TechnicianAssignmentSection categories={categories} />
+          </>
         )}
       </main>
     </div>
