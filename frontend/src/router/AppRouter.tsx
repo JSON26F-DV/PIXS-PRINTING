@@ -1,6 +1,7 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import Storefront from '../views/customer/Homepage';
+import LandingPage from '../views/customer/LandingPage';
 import Login from '../views/auth/Login';
 import ProductDetailPage from '../views/product/ProductDetailPage';
 import AddToCartPage from '../pages/AddToCart/AddToCartPage';
@@ -43,9 +44,11 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode; allowedRoles: string
 };
 
 const AppRouter: React.FC = () => {
+  const { user } = useAuth();
+
   return (
     <Routes>
-      <Route path="/" element={<Storefront />} />
+      <Route path="/" element={user.isLoggedIn ? <Storefront /> : <LandingPage />} />
       <Route path="/login" element={<Login />} />
       <Route path="/product/:id" element={<ProductDetailPage />} />
       <Route path="/cart" element={<AddToCartPage />} />

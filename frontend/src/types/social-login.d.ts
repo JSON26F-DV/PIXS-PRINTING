@@ -14,6 +14,11 @@ declare module 'react-facebook-login/dist/facebook-login-render-props' {
         };
     }
 
+    export interface ReactFacebookFailureResponse {
+        status?: string;
+        error?: string;
+    }
+
     export interface ReactFacebookLoginProps {
         appId: string;
         callback: (userInfo: ReactFacebookLoginInfo) => void;
@@ -22,7 +27,7 @@ declare module 'react-facebook-login/dist/facebook-login-render-props' {
             isProcessing: boolean; 
             isSdkLoaded: boolean; 
         }) => JSX.Element;
-        onFailure?: (error: any) => void;
+        onFailure?: (error: ReactFacebookFailureResponse) => void;
         autoLoad?: boolean;
         fields?: string;
         scope?: string;
@@ -35,4 +40,20 @@ declare module 'react-facebook-login/dist/facebook-login-render-props' {
     }
 
     export default class FacebookLogin extends Component<ReactFacebookLoginProps> {}
+}
+
+declare module 'react-facebook-login' {
+    import { Component } from 'react';
+    import { ReactFacebookLoginProps, ReactFacebookLoginInfo } from 'react-facebook-login/dist/facebook-login-render-props';
+
+    export interface ReactFacebookLoginPropsWithButton extends Omit<ReactFacebookLoginProps, 'render'> {
+        textButton?: string;
+        typeButton?: string;
+        icon?: React.ReactNode;
+        cssClass?: string;
+        buttonStyle?: React.CSSProperties;
+    }
+
+    export default class FacebookLogin extends Component<ReactFacebookLoginPropsWithButton> {}
+    export { ReactFacebookLoginInfo };
 }

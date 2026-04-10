@@ -7,7 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { useNotifications } from '../context/NotificationContextInstance';
 import type { INotification } from '../types/notification';
-import type { User as AuthUser } from '../context/AuthContext';
+import type { User as AuthUser } from '../context/auth.types';
 import type { NavigateFunction } from 'react-router-dom';
 import productsData from '../data/products.json';
 import workflowData from '../data/workflow.json';

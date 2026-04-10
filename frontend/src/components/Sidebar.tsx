@@ -16,7 +16,8 @@ import {
   BarChart3,
   type LucideIcon
 } from 'lucide-react';
-import { useAuth, type RoleType } from '../context/AuthContext';
+import { useAuth } from '../context/AuthContext';
+import type { RoleType } from '../context/auth.types';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { useNavigate } from 'react-router-dom';

@@ -8,7 +8,7 @@ import {
   FiX,
 } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext';
-import type { User } from '../../context/AuthContext';
+import type { User } from '../../context/auth.types';
 import { NAV_ITEMS } from '../../pages/Settings/settingsNav';
 import type { SectionKey, NavItem } from '../../pages/Settings/settingsNav';
 

@@ -1,5 +1,6 @@
 import React from 'react';
-import { useAuth, type RoleType } from '../../context/AuthContext';
+import { useAuth } from '../../context/AuthContext';
+import type { RoleType } from '../../context/auth.types';
 import { Navigate } from 'react-router-dom';
 
 interface RoleGuardProps {
