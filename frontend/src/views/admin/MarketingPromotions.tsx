@@ -43,7 +43,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 // Data Sources
 import rawPromos from '../../data/marketing_promotions.json';
-import rawUsers from '../../data/user.json';
+import rawUsersData from '../../data/users.json';
 import rawProducts from '../../data/products.json';
 import rawOrders from '../../data/order.json';
 
@@ -365,7 +365,9 @@ const MarketingPromotions: React.FC = () => {
               </thead>
               <tbody className="divide-y divide-slate-50">
                 {filteredPromos.map(promo => {
-                  const targetUser = (rawUsers as UserNode[]).find(u => u.id === promo.assigned_user_id);
+                  const userData = rawUsersData as unknown as { employees: UserNode[], customers: UserNode[] };
+                  const allUsers = [...(userData.employees || []), ...(userData.customers || []).map(c => ({ ...c, role: 'customer' }))];
+                  const targetUser = allUsers.find(u => u.id === promo.assigned_user_id);
                   const targetProd = rawProducts.find(p => p.id === promo.product_id);
                   const usagePercent = (promo.used_count / promo.max_uses) * 100;
 
@@ -682,12 +684,15 @@ const MarketingPromotions: React.FC = () => {
                          <div className="space-y-3 animate-in slide-in-from-top-2">
                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-[3px] italic">Select User Entity</label>
                             <select 
-                              {...register('assigned_user_id')}
-                              className="w-full px-8 py-5 bg-slate-50 border border-slate-100 rounded-[24px] text-sm font-black text-slate-900 focus:outline-none focus:border-[#75EEA5] transition-all appearance-none italic"
-                            >
-                               <option value="">Search user.json...</option>
-                               {(rawUsers as UserNode[]).filter(u => u.role === 'customer').map(u => <option key={u.id} value={u.id}>{u.name} ({u.email})</option>)}
-                            </select>
+                               {...register('assigned_user_id')}
+                               className="w-full px-8 py-5 bg-slate-50 border border-slate-100 rounded-[24px] text-sm font-black text-slate-900 focus:outline-none focus:border-[#75EEA5] transition-all appearance-none italic"
+                             >
+                                <option value="">Search users.json...</option>
+                                {(() => {
+                                  const data = rawUsersData as unknown as { customers: { id: string, name: string, email: string }[] };
+                                  return (data.customers || []).map(u => <option key={u.id} value={u.id}>{u.name} ({u.email})</option>);
+                                })()}
+                             </select>
                          </div>
                        )}
 

@@ -28,7 +28,7 @@ import { useAuth } from '../../context/AuthContext';
 
 // Data Sources (Simulated relational structure)
 import rawOrders from '../../data/order.json';
-import rawUsers from '../../data/user.json';
+import rawUsersData from '../../data/users.json';
 
 // Utility for class merging
 function cn(...inputs: ClassValue[]) {
@@ -94,7 +94,12 @@ const Orders: React.FC = () => {
   const { user } = useAuth();
   // --- STATE ---
   const [orders, setOrders] = useState<Order[]>(rawOrders);
-  const [users] = useState<User[]>(rawUsers);
+  const [users] = useState<User[]>(() => {
+    const data = rawUsersData as unknown as { employees: User[], customers: User[] };
+    const employees = data.employees || [];
+    const customers = (data.customers || []).map(c => ({ ...c, role: 'customer' }));
+    return [...employees, ...customers];
+  });
   
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
   const [globalSearch, setGlobalSearch] = useState('');

@@ -5,7 +5,6 @@ import {
   Menu, 
   X, 
   User, 
-  Building2, 
   ShieldCheck, 
   Bell, 
   Settings, 
@@ -20,13 +19,12 @@ import { SafeTerminal } from '../../../utils/safeTerminal';
 
 // Section Components (To be created)
 import AdminSettingsProfile from './sections/AdminSettingsProfile';
-import AdminSettingsBusinessInfo from './sections/AdminSettingsBusinessInfo';
 import AdminSettingsSecurity from './sections/AdminSettingsSecurity';
 import AdminSettingsRoles from './sections/AdminSettingsRoles';
 import AdminSettingsNotifications from './sections/AdminSettingsNotifications';
 import AdminSettingsSystem from './sections/AdminSettingsSystem';
 
-export type AdminSectionKey = 'profile' | 'business' | 'security' | 'roles' | 'notifications' | 'system';
+export type AdminSectionKey = 'profile' | 'security' | 'roles' | 'notifications' | 'system';
 
 interface AdminNavItem {
   key: AdminSectionKey;
@@ -41,12 +39,6 @@ const ADMIN_NAV_ITEMS: AdminNavItem[] = [
     label: 'Admin Profile', 
     description: 'Personal identity and shift credentials',
     icon: User 
-  },
-  { 
-    key: 'business', 
-    label: 'Business Information', 
-    description: 'Company identity and contact nodes',
-    icon: Building2 
   },
   { 
     key: 'security', 
@@ -96,7 +88,6 @@ const AdminSettingsContent: React.FC = () => {
   const renderSection = () => {
     switch (activeSection) {
       case 'profile': return <AdminSettingsProfile />;
-      case 'business': return <AdminSettingsBusinessInfo />;
       case 'security': return <AdminSettingsSecurity />;
       case 'roles': return <AdminSettingsRoles />;
       case 'notifications': return <AdminSettingsNotifications />;

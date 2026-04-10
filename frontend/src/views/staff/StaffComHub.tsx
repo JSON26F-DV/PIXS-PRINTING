@@ -28,14 +28,14 @@ import ErrorBoundary from '../../components/common/ErrorBoundary';
 import { SafeTerminal } from '../../utils/safeTerminal';
 
 // Mock Data
-import initialUsers from '../../data/user.json';
+import initialUsersData from '../../data/users.json';
 import initialMessages from '../../data/messages.json';
 
 interface UserData {
   id: string;
   name: string;
   email: string;
-  role: 'admin' | 'staff' | 'customer';
+  role: 'admin' | 'staff' | 'technician' | 'welder' | 'customer';
   profile_picture?: string;
   status?: 'online' | 'offline';
 }
@@ -72,7 +72,12 @@ const StaffComHubContent: React.FC = () => {
   const { user: currentUser } = useAuth();
   
   const [loadError, setLoadError] = useState<boolean>(false);
-  const [users] = useState<UserData[]>(() => SafeTerminal.array(initialUsers) as UserData[]);
+  const [users] = useState<UserData[]>(() => {
+    const rawData = (initialUsersData as unknown) as { employees: UserData[], customers: UserData[] };
+    const employees = SafeTerminal.array(rawData.employees);
+    const customers = (SafeTerminal.array(rawData.customers) as UserData[]).map(u => ({ ...u, role: 'customer' as const }));
+    return [...employees, ...customers] as UserData[];
+  });
   const [messages, setMessages] = useState<MessageData[]>([]);
   const [isInitializing, setIsInitializing] = useState(true);
 

@@ -14,16 +14,18 @@ Premium Printing Solutions for businesses and individuals. This repository conta
 ## 🚀 Technology Stack
 
 ### Frontend
+
 - **Framework:** React + TypeScript
 - **Styling:** Vanilla CSS / Tailwind (Modern, industrial design)
 - **State Management:** Store-based architecture
 - **Animations:** Motion-driven UI (GSAP)
 
 ### Backend
+
 - **Framework:** Laravel 11
 - **Database:** PostgreSQL
 - **Real-time:** Integrated communication hub for staff and customers
-- **Security:** Laravel Fortify (Built-in authentication)
+- **Security:** 1
 
 ## 🛠️ Features
 
@@ -42,6 +44,7 @@ Premium Printing Solutions for businesses and individuals. This repository conta
 ## 🏁 Getting Started
 
 ### Development
+
 1. **Frontend:**
    ```bash
    cd frontend
@@ -57,4 +60,5 @@ Premium Printing Solutions for businesses and individuals. This repository conta
    ```
 
 ---
-*Built with passion by the PIXS Engineering Team.*
+
+_Built with passion by the PIXS Engineering Team._

@@ -4,8 +4,6 @@ import {
   Heart,
   Plus,
   Package,
-  Printer,
-  Cog,
   Zap,
   ChevronRight,
   Search,
@@ -1093,7 +1091,7 @@ const Homepage : React.FC = () => {
         </div>
       </section>
 
-      {/* 4. Industrial CTA Hub */}
+      {/* 4. Industrial CTA Hub
       <section className="px-10 pb-20 sm:px-16">
         <div className="group relative overflow-hidden rounded-[80px] bg-slate-900 p-20 shadow-[0_60px_100px_-30px_rgba(0,0,0,0.4)] md:p-32">
           <div className="bg-pixs-mint/5 group-hover:bg-pixs-mint/15 absolute top-0 right-0 -mt-96 -mr-96 h-[800px] w-[800px] rounded-full blur-[200px] transition-colors duration-1500" />
@@ -1140,7 +1138,7 @@ const Homepage : React.FC = () => {
             </div>
           </div>
         </div>
-      </section>
+      </section> */}
 
       {/* 5. PIXS Community Section — only shown to guests */}
       {!user.isLoggedIn && <PixsCommunitySection isLoggedIn={user.isLoggedIn} />}

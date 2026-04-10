@@ -1,51 +1,52 @@
-I need to convert a mock JSON file structure from a React frontend project into a properly normalized PostgreSQL Database Schema.
-
-Here is the context of each JSON file. It includes:
-1. What the JSON file is for and what tables it represents.
-2. The foreign key connections / relationships to other JSON entities.
-3. Which frontend files the JSON is connected to/imported in.
-4. A sample row of what to expect in the table.
+I need to convert a mock JSON file structure from a React frontend project into a properly normalized PostgreSQL Database Schema for a Laravel Backend.
 
 Please generate a complete PostgreSQL schema (CREATE TABLE statements, Primary Keys, Foreign Keys, JSONB where appropriate, and perfectly structured ENUM types based on the example values).
 
-### add_to_cart.json
-- **Purpose:** This file represents mock data for `add_to_cart`.
-- **Table:** This represents the `add_to_cart` table.
-- **Connected Files:** Not imported directly in any specific component yet, or dynamically loaded.
-- **Foreign Key Connections:**
-  - Found references that should be Foreign Keys: productId.
-- **Data Example:**
+Make sure to establish proper relations (e.g., Foreign Keys connecting `orders` to `customers`, `products` to `categories`, etc.). Ignore any data that seems like it should only be frontend state or configurations, focus on actual relational database architecture.
+
+Here are the JSON examples representing the core business entities:
+
+### users.json (Represents `employees` and `customers` tables)
 ```json
 {
-  "id": "prod_001__v_001__no-color__no-plate",
-  "productId": "prod_001",
-  "productName": "Matte Reusable Cup",
-  "productImage": "https://images.unsplash.com/photo-1550572017-eddf77227ae1?auto=format&fit=crop&q=80",
-  "category": "Cylindrical Hub",
-  "minOrder": 50,
-  "currentStock": 500,
-  "quantity": 100,
-  "variant": {
-    "id": "v_001",
-    "size": "Medium",
-    "width": "8cm",
-    "height": "12cm",
-    "unitPrice": 45,
-    "stock": 1000
-  },
-  "color": null,
-  "plate": null,
-  "createdAt": "2026-04-01T12:00:00Z"
+  "employees": [
+    {
+      "id": "EMP-001",
+      "first_name": "Jason",
+      "last_name": "G",
+      "email": "jason@pixs.com",
+      "role": "admin",
+      "status": "active",
+      "age": 28,
+      "gender": "male",
+      "company_name": "PIXS PRINTING SHOP",
+      "password": "hashed_password",
+      "date_created": "2024-01-15T08:00:00Z",
+      "last_login": "2026-03-28T10:30:00Z",
+      "daily_rate": 850,
+      "ot_rate": 150
+    }
+  ],
+  "customers": [
+    {
+      "id": "CUST-501",
+      "first_name": "Juan",
+      "last_name": "Dela Cruz",
+      "email": "juan@example.com",
+      "status": "active",
+      "age": 30,
+      "gender": "male",
+      "company_name": "Juan Printing",
+      "password": "hashed_password",
+      "date_created": "2026-03-28T10:30:00Z",
+      "last_login": "2026-03-28T10:30:00Z",
+      "discounts": []
+    }
+  ]
 }
 ```
 
 ### address_book.json
-- **Purpose:** This file represents mock data for `address_book`.
-- **Table:** This represents the `address_book` table.
-- **Connected Files (Imported In):** useCustomerAddressStore.ts, Transactions.tsx, Accounts.tsx, AddressSection.tsx
-- **Foreign Key Connections:**
-  - Found references that should be Foreign Keys: user_id.
-- **Data Example:**
 ```json
 {
   "id": "addr_001",
@@ -55,58 +56,154 @@ Please generate a complete PostgreSQL schema (CREATE TABLE statements, Primary K
   "region": "NCR",
   "province": "Metro Manila",
   "city": "Manila",
-  "barangay": "Barangay 123",
-  "street": "123 Taft Ave",
   "address": "123 Taft Ave, Manila",
   "postal_code": "1000",
-  "is_default": true,
-  "latitude": 14.5995,
-  "longitude": 120.9842
+  "is_default": true
 }
 ```
 
-### admin_settings.json
-- **Purpose:** This file represents mock data for `admin_settings`.
-- **Tables:** This represents multiple tables: notifications, system, roles
-- **Connected Files (Imported In):** AdminSettingsNotifications.tsx, AdminSettingsRoles.tsx, AdminSettingsSystem.tsx
-- **Foreign Key Connections:**
-- **Data Example:**
+### categories.json
 ```json
 {
-  "notifications": {
-    "new_order": true,
-    "new_message": true,
-    "low_stock": true,
-    "expiring_promo": true
-  },
-  "system": {
-    "currency": "\u20b1",
-    "tax_percentage": 12,
-    "delivery_fee": 50,
-    "auto_complete_orders": false,
-    "allow_discount_stacking": false
-  },
-  "roles": [
+  "id": "CT001",
+  "label": "Milktea Cup",
+  "image": "https://example.com/image.jpg"
+}
+```
+
+### products.json
+```json
+{
+  "id": "P001",
+  "name": "PPY Cup",
+  "category_id": "CT001",
+  "base_price": 2.85,
+  "raw_material_cost": 1.1,
+  "current_stock": 10000,
+  "min_threshold": 500,
+  "min_order": 100,
+  "is_need_screenplate": true,
+  "is_need_color": true,
+  "variants": [
     {
-      "name": "admin",
-      "permissions": {
-        "can_edit_inventory": true,
-        "can_view_payroll": true,
-        "can_delete_orders": true,
-        "can_manage_users": true
-      }
+      "variant_id": "V-PPY-12OZ",
+      "size": "12oz",
+      "price": 2.85,
+      "stock": 3000
     }
   ]
 }
 ```
 
+### screenplate.json
+```json
+{
+  "id": "SP-S-001",
+  "owner_id": "CUST-501",
+  "plate_name": "Standard Small Plate",
+  "base_setup_fee": 450,
+  "is_flatscreen": false,
+  "channels": 3,
+  "alignment": "Front",
+  "dimensions": "55mm x 45mm"
+}
+```
+
+### request_screenplate.json
+```json
+{
+  "request_id": "RSP-001",
+  "customer_id": "CUST-1092",
+  "product_id": "P001",
+  "variant": "16oz",
+  "color_count": 2,
+  "alignment": "Back to Back",
+  "calculated_total": 1400,
+  "status": "Pending",
+  "created_at": "2026-04-02T09:00:00.000Z"
+}
+```
+
+### order.json
+```json
+{
+  "order_id": "ORD-20260401-PN001",
+  "user_id": "CUST-501",
+  "total_amount": 7125,
+  "status": "PENDING",
+  "created_at": "2026-04-05T10:30:00Z",
+  "discount_id": "PROMO-001",
+  "products": [
+    {
+      "productId": "P001",
+      "variant_id": "V-PPY-12OZ",
+      "quantity": 2500,
+      "plate_id": "SP-S-001",
+      "colors": [{"name": "Deep Mint", "hex": "#75EEA5"}],
+      "customRequirements": "Logo upper third."
+    }
+  ]
+}
+```
+
+### add_to_cart.json (Represents `cart_items` table)
+```json
+{
+  "id": "prod_001__v_001",
+  "customer_id": "CUST-501",
+  "productId": "P001",
+  "variant_id": "V-PPY-12OZ",
+  "quantity": 100,
+  "plate_id": null
+}
+```
+
+### complaints.json
+```json
+{
+  "id": "C-1001",
+  "order_id": "ORD-5501",
+  "customer_id": "CUST-501",
+  "issue_type": "Faded Print",
+  "description": "Logo fading after one wash.",
+  "status": "Open",
+  "severity": "High",
+  "date": "2026-03-28T09:00:00Z"
+}
+```
+
+### marketing_promotions.json
+```json
+{
+  "id": "PROMO-001",
+  "title": "VIP Laguna Client",
+  "discount_type": "unit",
+  "discount_value": 1.5,
+  "target_type": "specific_user",
+  "assigned_user_id": "CUST-501",
+  "product_id": "P001",
+  "code": "LAGUNA300",
+  "max_uses": 1,
+  "used_count": 0,
+  "expires_at": "2026-06-01T00:00:00Z",
+  "status": "active"
+}
+```
+
+### messages.json
+```json
+{
+  "id": "msg_1",
+  "conversation_id": "EMP-001_CUST-501",
+  "sender_id": "EMP-001",
+  "receiver_id": "CUST-501",
+  "message": "Welcome to PIXS!",
+  "is_read": true,
+  "created_at": "2026-03-31T08:00:00Z"
+}
+```
+
 ### attendance.json
-- **Purpose:** This file represents mock data for `attendance`.
-- **Table:** This represents the `attendance` table.
-- **Connected Files (Imported In):** Payroll_backup.tsx
-- **Foreign Key Connections:**
-  - Found references that should be Foreign Keys: employee_id.
-- **Data Example:**
 ```json
 {
   "id": "ATT-001",
@@ -121,765 +218,53 @@ Please generate a complete PostgreSQL schema (CREATE TABLE statements, Primary K
 }
 ```
 
-### categories.json
-- **Purpose:** This file represents mock data for `categories`.
-- **Table:** This represents the `categories` table.
-- **Connected Files (Imported In):** Homepage.tsx, StockAnalytics.tsx, ProductManagement.tsx, DiscoveryModal.tsx
-- **Foreign Key Connections:**
-  - None directly identified.
-- **Data Example:**
+### salary.json (Represents `salaries` / `payroll` table)
 ```json
 {
-  "id": "CT001",
-  "label": "Milktea Cup",
-  "count": 6,
-  "image": "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?auto=format&fit=crop&q=80"
-}
-```
-
-### color.json
-- **Purpose:** This file represents mock data for `color`.
-- **Table:** This represents the `color` table.
-- **Connected Files (Imported In):** AddToCartPage.tsx, mockDataService.ts
-- **Foreign Key Connections:**
-  - None directly identified.
-- **Data Example:**
-```json
-{
-  "id": "C001",
-  "name": "Deep Mint",
-  "hex": "#75EEA5",
-  "type": "Standard"
-}
-```
-
-### complaints.json
-- **Purpose:** This file represents mock data for `complaints`.
-- **Table:** This represents the `complaints` table.
-- **Connected Files (Imported In):** NotificationContext.tsx
-- **Foreign Key Connections:**
-  - Found references that should be Foreign Keys: order_id, customer_id.
-- **Data Example:**
-```json
-{
-  "id": "C-1001",
-  "order_id": "ORD-5501",
-  "customer_id": "CUST-501",
-  "issue_type": "Faded Print",
-  "description": "The logo on the PP cups is fading after one wash. Seems like a curing issue.",
-  "status": "Open",
-  "severity": "High",
-  "date": "2026-03-28T09:00:00Z",
-  "photo_url": "https://placehold.co/400x300?text=Faded+Print+Example"
-}
-```
-
-### config.json
-- **Purpose:** This file represents mock data for `config`.
-- **Tables:** This represents multiple tables: shop, account, printing, payment, addressBook, policies, notifications, system
-- **Connected Files (Imported In):** AdminSettingsBusinessInfo.tsx
-- **Foreign Key Connections:**
-- **Data Example:**
-```json
-{
-  "shop": {
-    "name": "PIXS Printing Shop",
-    "tagline": "Premium Printing Solutions",
-    "logo": null,
-    "businessHours": {
-      "monday": {
-        "open": "08:00",
-        "close": "18:00",
-        "enabled": true
-      },
-      "tuesday": {
-        "open": "08:00",
-        "close": "18:00",
-        "enabled": true
-      },
-      "wednesday": {
-        "open": "08:00",
-        "close": "18:00",
-        "enabled": true
-      },
-      "thursday": {
-        "open": "08:00",
-        "close": "18:00",
-        "enabled": true
-      },
-      "friday": {
-        "open": "08:00",
-        "close": "18:00",
-        "enabled": true
-      },
-      "saturday": {
-        "open": "09:00",
-        "close": "14:00",
-        "enabled": true
-      },
-      "sunday": {
-        "open": "00:00",
-        "close": "00:00",
-        "enabled": false
-      }
-    }
-  },
-  "account": {
-    "name": "Jason",
-    "email": "jason@pixs.com",
-    "role": "admin",
-    "avatar": null,
-    "phone": "+63 912 345 6789"
-  },
-  "printing": {
-    "defaultMarkup": 30,
-    "screenPlateSetupFee": 150,
-    "rushFeePercentage": 50,
-    "minimumOrderAmount": 100,
-    "colorMatchTolerance": 95
-  },
-  "payment": {
-    "gcash": {
-      "number": "09123456789",
-      "name": "PIXS Printing",
-      "enabled": true
-    },
-    "maya": {
-      "number": "09123456789",
-      "name": "PIXS Printing",
-      "enabled": false
-    },
-    "bankTransfer": {
-      "bank": "BDO",
-      "accountNumber": "1234567890",
-      "accountName": "PIXS Printing Shop",
-      "enabled": false
-    },
-    "downpaymentPercentage": 50,
-    "requireDownpayment": true
-  },
-  "addressBook": {
-    "suppliers": [
-      {
-        "id": "SUP-001",
-        "name": "Premier Paper Supply",
-        "contact": "Maria Santos",
-        "phone": "+63 922 111 2222",
-        "email": "sales@premierpaper.ph",
-        "address": "123 Industrial Ave, Quezon City, Metro Manila",
-        "notes": "Primary supplier for A4 and A3 paper stocks"
-      },
-      {
-        "id": "SUP-002",
-        "name": "Ink Masters Co.",
-        "contact": "Roberto Cruz",
-        "phone": "+63 933 333 4444",
-        "email": "orders@inkmasters.ph",
-        "address": "456 Commerce St, Makati City, Metro Manila",
-        "notes": "Specialized in UV inks for outdoor printing"
-      }
-    ],
-    "branches": [
-      {
-        "id": "BR-001",
-        "name": "Main Branch",
-        "address": "789 Business Center, Ortigas, Pasig City",
-        "phone": "+63 2 8888 8888",
-        "isMain": true
-      }
-    ]
-  },
-  "policies": {
-    "returnRefund": "All custom-printed items are non-refundable once production has begun. For defective prints, please notify us within 24 hours of receipt with photo documentation. We will remake the affected items at no additional cost.\n\nEligibility for refunds applies only to:\n- Items with clear manufacturing defects\n- Orders cancelled before production starts\n- Incorrect items shipped due to our error",
-    "productionLeadTime": "Standard production takes 3-5 business days after artwork approval.\n\nRush orders (50% surcharge) are completed within 24-48 hours.\n\nLarge orders (500+ items) may require additional 2-3 business days.\n\nLead time begins after downpayment is received and artwork is approved.",
-    "dataPrivacy": "PIXS Printing Shop is committed to protecting your privacy.\n\nData Collection: We collect only necessary information for order processing and customer service.\n\nData Usage: Your information is used solely for order fulfillment and communication regarding your orders.\n\nData Protection: We implement appropriate security measures to protect your personal information.\n\nYour Rights: You may request access to, correction of, or deletion of your personal data by contacting us at privacy@pixs.ph"
-  },
-  "notifications": {
-    "lowStock": true,
-    "newComplaint": true,
-    "newMessage": true,
-    "orderCompleted": true,
-    "paymentReceived": false
-  },
-  "system": {
-    "theme": "light",
-    "autoBackup": false,
-    "backupFrequency": "daily",
-    "version": "4.0.0",
-    "lastBackup": null
-  }
-}
-```
-
-### delivery_methods.json
-- **Purpose:** This file represents mock data for `delivery_methods`.
-- **Table:** This represents the `delivery_methods` table.
-- **Connected Files (Imported In):** Transactions.tsx, DeliverySection.tsx
-- **Foreign Key Connections:**
-  - None directly identified.
-- **Data Example:**
-```json
-{
-  "id": "del_001",
-  "name": "Lalamove / Grab (Self-Book)",
-  "type": "courier",
-  "fee": 0,
-  "note": "Customer will book and pay the courier directly upon pickup."
-}
-```
-
-### inventory_logs.json
-- **Purpose:** This file represents mock data for `inventory_logs`.
-- **Table:** This represents the `logs` table.
-- **Connected Files (Imported In):** InventoryAnalyticsSection.tsx
-- **Foreign Key Connections:**
-  - In `logs`: Found references that should be Foreign Keys: user_id, product_id.
-- **Data Example:**
-```json
-{
-  "logs": [
-    {
-      "id": "INV-LOG-001",
-      "user_id": "EMP-005",
-      "user_name": "Inv Staff A",
-      "action": "UPDATE_STOCK",
-      "product_id": "PROD-001",
-      "product_name": "Milktea Cup",
-      "previous_value": 500,
-      "new_value": 550,
-      "timestamp": "2026-04-05T10:00:00Z",
-      "notes": "Manual adjustment (+50)"
-    }
-  ]
-}
-```
-
-### marketing_promotions.json
-- **Purpose:** This file represents mock data for `marketing_promotions`.
-- **Table:** This represents the `marketing_promotions` table.
-- **Connected Files (Imported In):** Transactions.tsx, MarketingPromotions.tsx
-- **Foreign Key Connections:**
-  - Found references that should be Foreign Keys: assigned_user_id, product_id.
-- **Data Example:**
-```json
-{
-  "id": "PROMO-001",
-  "title": "VIP Laguna Client",
-  "discount_type": "unit",
-  "discount_value": 1.5,
-  "target_type": "specific_user",
-  "assigned_user_id": "CUST-501",
-  "product_id": "P001",
-  "code": "LAGUNA300",
-  "max_uses": 1,
-  "used_count": 0,
-  "expires_at": "2026-06-01T00:00:00Z",
-  "status": "active",
-  "conditions": {
-    "minimum_quantity": 300
-  }
-}
-```
-
-### messages.json
-- **Purpose:** This file represents mock data for `messages`.
-- **Table:** This represents the `messages` table.
-- **Connected Files (Imported In):** MessengerPage.tsx, StaffComHub.tsx, NotificationContext.tsx
-- **Foreign Key Connections:**
-  - Found references that should be Foreign Keys: conversation_id, sender_id, receiver_id.
-- **Data Example:**
-```json
-{
-  "id": "msg_1",
-  "conversation_id": "EMP-001_CUST-501",
-  "participants": [
-    "EMP-001",
-    "CUST-501"
-  ],
-  "sender_id": "EMP-001",
-  "receiver_id": "CUST-501",
-  "message": "Welcome to PIXS Printing Shop! How can we help you with your production requirements today?",
-  "attachments": [],
-  "is_read": true,
-  "created_at": "2026-03-31T08:00:00Z"
-}
-```
-
-### order.json
-- **Purpose:** This file represents mock data for `order`.
-- **Table:** This represents the `order` table.
-- **Connected Files (Imported In):** OrderPage.tsx, Homepage.tsx, order.ts, LiveQueue.tsx, GeneralDashboard.tsx, MarketingPromotions.tsx, Orders.tsx, MyOrdersSection.tsx, DashboardLayout.tsx
-- **Foreign Key Connections:**
-  - Found references that should be Foreign Keys: order_id, user_id.
-- **Data Example:**
-```json
-{
-  "order_id": "ORD-20260401-PN001",
-  "user_id": "CUST-501",
-  "products": [
-    {
-      "id": "P001_V-PPY-12OZ_C001_SP-S-001",
-      "productId": "P001",
-      "productName": "PPY Cup",
-      "productImage": "https://images.unsplash.com/photo-1558618666-fcd25c85cd64",
-      "category": "Milktea Cup",
-      "quantity": 2500,
-      "variant": {
-        "id": "V-PPY-12OZ",
-        "size": "12oz",
-        "unitPrice": 2.85
-      },
-      "colors": [
-        {
-          "name": "Deep Mint",
-          "hex": "#75EEA5"
-        }
-      ],
-      "plate": {
-        "name": "Standard Small Plate",
-        "setupFee": 450,
-        "printPricePerUnit": 2.5
-      },
-      "customRequirements": "Please align logo to the upper third of the cup."
-    }
-  ],
-  "total_amount": 7125,
-  "status": "PENDING",
-  "created_at": "2026-04-05T10:30:00Z",
-  "discount": {
-    "discount_id": "PROMO-001",
-    "total_discount_amount": 3750
-  },
-  "feedback": "",
-  "complaint": "",
-  "rating": 0,
-  "admin_comment": null
-}
-```
-
-### payment.json
-- **Purpose:** This file represents mock data for `payment`.
-- **Table:** This represents the `payment` table.
-- **Connected Files (Imported In):** PaymentSection.tsx, Transactions.tsx
-- **Foreign Key Connections:**
-  - None directly identified.
-- **Data Example:**
-```json
-{
-  "id": "pay_001",
-  "type": "bank",
-  "bank_name": "BDO",
-  "masked_number": "**** 1234",
-  "is_default": true
-}
-```
-
-### production_logs.json
-- **Purpose:** This file represents mock data for `production_logs`.
-- **Table:** This represents the `logs` table.
-- **Connected Files (Imported In):** PayrollRow.tsx
-- **Foreign Key Connections:**
-  - In `logs`: Found references that should be Foreign Keys: log_id, user_id, order_id.
-- **Data Example:**
-```json
-{
-  "logs": [
-    {
-      "log_id": "LOG-001",
-      "user_id": "EMP-001",
-      "user_name": "Tech B",
-      "order_id": "ORD-12347",
-      "product_name": "Milktea Cup",
-      "quantity": 1000,
-      "completed_at": "2026-04-05T10:30:00Z"
-    }
-  ]
-}
-```
-
-### products.json
-- **Purpose:** This file represents mock data for `products`.
-- **Table:** This represents the `products` table.
-- **Connected Files (Imported In):** LiveQueue.tsx, ScreenplatePage.tsx, Topbar.tsx, AddToCartPage.tsx, Homepage.tsx, DashboardLayout.tsx, mockDataService.ts, DiscoveryModal.tsx, StockAnalytics.tsx, GeneralDashboard.tsx, ScreenplateManagement.tsx, ProductManagement.tsx, MarketingPromotions.tsx, TechnicianAssignmentSection.tsx
-- **Foreign Key Connections:**
-  - None directly identified.
-- **Data Example:**
-```json
-{
-  "id": "P001",
-  "name": "PPY Cup",
-  "category": "Milktea Cup",
-  "short_description": "Standard PP cup for milktea and cold drinks \u2014 affordable and food-grade.",
-  "long_description": "The PPY Cup is an everyday polypropylene cup built for high-volume milktea shops and cafes. Lightweight yet sturdy, it delivers consistent clarity and durability at a competitive price. Compatible with standard 90mm dome and flat lids.",
-  "best_for": "Milktea Shops, Coffee Houses, and Catering Events.",
-  "base_price": 2.85,
-  "raw_material_cost": 1.1,
-  "current_stock": 10000,
-  "min_threshold": 500,
-  "min_order": 100,
-  "main_image": "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?auto=format&fit=crop&q=80",
-  "gallery": [
-    "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?auto=format&fit=crop&q=80",
-    "https://images.unsplash.com/photo-1563805042-7684c019e1cb?auto=format&fit=crop&q=80",
-    "https://images.unsplash.com/photo-1541167760496-1628856ab772?auto=format&fit=crop&q=80"
-  ],
-  "print_method": "Screen Print / Offset",
-  "tags": [
-    "Budget-Friendly",
-    "Food Grade",
-    "High Volume"
-  ],
-  "is_need_screenplate": true,
-  "is_need_color": true,
-  "variants": [
-    {
-      "variant_id": "V-PPY-12OZ",
-      "size": "12oz",
-      "width": "90mm",
-      "height": "100mm",
-      "price": 2.85,
-      "stock": 3000
-    },
-    {
-      "variant_id": "V-PPY-16OZ",
-      "size": "16oz",
-      "width": "90mm",
-      "height": "122mm",
-      "price": 2.95,
-      "stock": 5000
-    },
-    {
-      "variant_id": "V-PPY-22OZ",
-      "size": "22oz",
-      "width": "90mm",
-      "height": "145mm",
-      "price": 3.25,
-      "stock": 2000
-    }
-  ]
-}
-```
-
-### request_screenplate.json
-- **Purpose:** This file represents mock data for `request_screenplate`.
-- **Table:** This represents the `request_screenplate` table.
-- **Connected Files (Imported In):** GeneralDashboard.tsx, DashboardLayout.tsx
-- **Foreign Key Connections:**
-  - Found references that should be Foreign Keys: request_id, customer_id, product_id.
-- **Data Example:**
-```json
-{
-  "request_id": "RSP-001",
-  "customer_id": "CUST-1092",
-  "product_id": "P001",
-  "variant": "16oz",
-  "color_count": 2,
-  "alignment": "Back to Back",
-  "reference_image": "/assets/placeholder-logo.png",
-  "comment": "Sample comment for alignment logic...",
-  "calculated_total": 1400,
-  "status": "Pending",
-  "created_at": "2026-04-02T09:00:00.000Z"
-}
-```
-
-### restock_logs.json
-- **Purpose:** This file represents mock data for `restock_logs`.
-- **Table:** This represents the `restock_logs` table.
-- **Connected Files (Imported In):** DashboardLayout.tsx, StockAnalytics.tsx, GeneralDashboard.tsx, InventoryAnalyticsSection.tsx
-- **Foreign Key Connections:**
-  - Found references that should be Foreign Keys: product_id.
-- **Data Example:**
-```json
-{
-  "id": "RL-001",
-  "product_id": "P001",
-  "product_name": "PPY Cup",
-  "qty_added": 500,
-  "cost": 1500.0,
-  "date": "2026-04-01T10:00:00Z",
-  "type": "RESTOCK",
-  "staff_name": "Jason",
-  "notes": "Bulk restock for April start."
-}
-```
-
-### salary.json
-- **Purpose:** This file represents mock data for `salary`.
-- **Table:** This represents the `salary` table.
-- **Connected Files (Imported In):** DashboardLayout.tsx, Attendance.tsx, GeneralDashboard.tsx, Payroll.tsx
-- **Foreign Key Connections:**
-  - Found references that should be Foreign Keys: employee_id.
-- **Data Example:**
-```json
-{
+  "id": "PAY-001",
   "employee_id": "EMP-001",
   "week_start": "2026-03-30",
-  "attendance": [
-    {
-      "date": "2026-03-30",
-      "status": "full",
-      "overtime_hours": 2,
-      "computed_salary": 1150
-    },
-    {
-      "date": "2026-03-31",
-      "status": "full",
-      "overtime_hours": 0,
-      "computed_salary": 850
-    },
-    {
-      "date": "2026-04-01",
-      "status": "half",
-      "overtime_hours": 1,
-      "computed_salary": 575,
-      "is_holiday": true
-    },
-    {
-      "date": "2026-04-02",
-      "status": "full",
-      "overtime_hours": 0,
-      "computed_salary": 850
-    },
-    {
-      "date": "2026-04-03",
-      "status": "full",
-      "overtime_hours": 3,
-      "computed_salary": 1300
-    },
-    {
-      "date": "2026-04-04",
-      "status": "absent",
-      "overtime_hours": 0,
-      "computed_salary": 0
-    },
-    {
-      "date": "2026-04-05",
-      "status": "absent",
-      "overtime_hours": 0,
-      "computed_salary": 0
-    }
-  ],
   "weekly_total": 4725
 }
 ```
 
-### screenplate.json
-- **Purpose:** This file represents mock data for `screenplate`.
-- **Table:** This represents the `screenplate` table.
-- **Connected Files (Imported In):** DashboardLayout.tsx, Homepage.tsx, AddToCartPage.tsx, mockDataService.ts, GeneralDashboard.tsx, ScreenplateManagement.tsx
-- **Foreign Key Connections:**
-  - Found references that should be Foreign Keys: owner_id.
-- **Data Example:**
+### restock_logs.json
 ```json
 {
-  "id": "SP-S-001",
-  "owner_id": "CUST-501",
-  "plate_name": "Standard Small Plate",
-  "base_setup_fee": 450,
-  "is_flatscreen": false,
-  "channels": 3,
-  "alignment": "Front",
-  "supported_alignments": [
-    "Front",
-    "Back-to-Back",
-    "Triple Logo"
-  ],
-  "dimensions": "55mm x 45mm",
-  "technical_info": "Industrial Mesh 120T for small diameters.",
-  "image": "https://images.unsplash.com/photo-1590422749897-47036da0b0ff?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-  "comment": "Industrial mesh for small profile prints.",
-  "compatibility": [
-    {
-      "product_id": "P001",
-      "allowed_variants": [
-        "12oz"
-      ],
-      "print_price_per_unit": {
-        "12oz": 2.5
-      }
-    },
-    {
-      "product_id": "P002",
-      "allowed_variants": [
-        "12oz"
-      ],
-      "print_price_per_unit": {
-        "12oz": 1.5
-      }
-    }
-  ],
-  "incompatible_products": [
-    "P016",
-    "P012"
-  ]
+  "id": "RL-001",
+  "product_id": "P001",
+  "qty_added": 500,
+  "cost": 1500.0,
+  "date": "2026-04-01T10:00:00Z",
+  "staff_id": "EMP-001",
+  "notes": "Bulk restock."
 }
 ```
 
-### settings_config.json
-- **Purpose:** This file represents mock data for `settings_config`.
-- **Table:** This represents the `business` table.
-- **Connected Files (Imported In):** AdminSettingsBusinessInfo.tsx
-- **Foreign Key Connections:**
-- **Data Example:**
+### production_logs.json
 ```json
 {
-  "business": {
-    "company_name": "PIXS PRINTING SHOP",
-    "company_logo": "https://i.pravatar.cc/300?img=11",
-    "business_address": "123 Industrial Ave, Quezon City, Philippines",
-    "contact_email": "support@pixs.com",
-    "support_phone": "+63 912 345 6789",
-    "business_hours": "Mon-Sat: 8:00 AM - 6:00 PM"
-  }
+  "log_id": "LOG-001",
+  "employee_id": "EMP-001",
+  "order_id": "ORD-12347",
+  "product_id": "P001",
+  "quantity": 1000,
+  "completed_at": "2026-04-05T10:30:00Z"
 }
 ```
 
-### user.json
-- **Purpose:** This file represents mock data for `user`.
-- **Table:** This represents the `user` table.
-- **Connected Files (Imported In):** StaffComHub.tsx, Orders.tsx, MarketingPromotions.tsx
-- **Foreign Key Connections:**
-  - None directly identified.
-- **Data Example:**
+### inventory_logs.json
 ```json
 {
-  "id": "EMP-001",
-  "name": "Jason G",
-  "email": "jason@pixs.com",
-  "role": "admin"
+  "id": "INV-LOG-001",
+  "employee_id": "EMP-005",
+  "action": "UPDATE_STOCK",
+  "product_id": "P001",
+  "previous_value": 500,
+  "new_value": 550,
+  "timestamp": "2026-04-05T10:00:00Z",
+  "notes": "Manual adjustment (+50)"
 }
 ```
 
-### users.json
-- **Purpose:** This file represents mock data for `users`.
-- **Tables:** This represents multiple tables: employees, customers
-- **Connected Files (Imported In):** LiveQueue.tsx, Topbar.tsx, GeneralDashboard.tsx, Payroll_backup.tsx, Accounts.tsx, Payroll.tsx, ScreenplateManagement.tsx, TechnicianAssignmentSection.tsx, useAccountInfo.ts
-- **Foreign Key Connections:**
-  - In `customers`: Found references that should be Foreign Keys: google_id, facebook_id.
-- **Data Example:**
-```json
-{
-  "employees": [
-    {
-      "id": "EMP-001",
-      "first_name": "Jason",
-      "last_name": "G",
-      "name": "Jason G",
-      "profile_picture": "https://i.pravatar.cc/300?img=11",
-      "email": "jason@pixs.com",
-      "role": "admin",
-      "status": "active",
-      "age": 28,
-      "gender": "male",
-      "contact_numbers": [
-        {
-          "number": "+63 912 345 6789",
-          "is_default": true
-        },
-        {
-          "number": "+63 917 200 1001",
-          "is_default": false
-        }
-      ],
-      "company_name": "PIXS PRINTING SHOP",
-      "password": "\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022",
-      "date_created": "2024-01-15T08:00:00Z",
-      "last_login": "2026-03-28T10:30:00Z",
-      "total_orders_value": 0,
-      "daily_rate": 850,
-      "ot_rate": 150
-    }
-  ],
-  "customers": [
-    {
-      "id": "CUST-501",
-      "first_name": "Juan",
-      "last_name": "Dela Cruz",
-      "name": "Juan Dela Cruz",
-      "profile_picture": "https://i.pravatar.cc/300?img=14",
-      "email": "juan@example.com",
-      "status": "active",
-      "age": 35,
-      "gender": "male",
-      "contact_numbers": [
-        {
-          "number": "+63 918 111 2233",
-          "is_default": true
-        },
-        {
-          "number": "+63 919 444 5566",
-          "is_default": false
-        }
-      ],
-      "company_name": "Juan's Sari-Sari",
-      "password": "1234",
-      "date_created": "2024-05-12T14:20:00Z",
-      "last_login": "2026-03-27T11:00:00Z",
-      "total_orders_value": 15450.5,
-      "orders": 12,
-      "google_id": null,
-      "facebook_id": null
-    }
-  ]
-}
-```
-
-### workflow.json
-- **Purpose:** This file represents mock data for `workflow`.
-- **Tables:** This represents multiple tables: cartOrders, productionQueue, disputes
-- **Connected Files (Imported In):** Topbar.tsx, NotificationContext.tsx, DisputeView.tsx
-- **Foreign Key Connections:**
-  - In `disputes`: Found references that should be Foreign Keys: order_id.
-- **Data Example:**
-```json
-{
-  "cartOrders": [
-    {
-      "id": "ORD-9001",
-      "customer": "Pila Central School",
-      "email": "pila.central@deped.gov.ph",
-      "product": "12oz PP Cup",
-      "qty": 500,
-      "unit_price": 5.5,
-      "total": 2750.0,
-      "artwork": "https://placehold.co/200",
-      "added_at": "2026-03-28T09:15:00Z",
-      "status": "pending_approval"
-    }
-  ],
-  "productionQueue": [
-    {
-      "id": "ORD-8265",
-      "customer": "Makati Co-working Space",
-      "product": "12oz PP Cup",
-      "qty": 300,
-      "approved_at": "2026-03-27T08:00:00Z",
-      "assigned_to": "Staff-A",
-      "status": "approved",
-      "is_printed": false
-    }
-  ],
-  "disputes": [
-    {
-      "id": "DSP-001",
-      "order_id": "ORD-8250",
-      "customer": "Manila Office Supply",
-      "issue_type": "Defective Print",
-      "description": "Color bleeding on 40% of the cups. Artwork design not properly aligned with cup curve.",
-      "photo_evidence": "https://placehold.co/400x300",
-      "reported_at": "2026-03-27T15:00:00Z",
-      "status": "Pending",
-      "resolution": null
-    }
-  ]
-}
-```
-
-
----
-**Requirements for PostgreSQL:**
-1. Please analyze the relationships (e.g. `user_id` means either an Employee or Customer from `users.json`, `product_id` connects to products, etc.).
-2. Generate all the ENUM types nicely (e.g. 'status', 'role', 'action', etc. looking at the sample data).
-3. Connect them as foreign keys properly.
-4. Output raw SQL or a very clean plan for the DB migrations.
+Notice that I have excluded frontend-specific static sets like `admin_settings`, `config`, `delivery_methods`, `workflow`, and `payment` as they do not constitute relational database tables requiring CRUD operations. Create the schema reflecting these relationships exactly.

@@ -25,16 +25,23 @@ const Login: React.FC<LoginProps> = ({ isOpen = true, onClose }) => {
   const [role, setRole] = useState<'admin' | 'staff' | 'inventory' | 'customer'>('admin');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
 
   const ROLE_REDIRECTS: Record<string, string> = {
     admin: '/admin/dashboard',
     staff: '/staff/overview',
     inventory: '/admin/dashboard',
-    customer: '/',
+    customer: '/homepage',
   };
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!agreedToTerms) {
+      alert("Please accept the Terms and Conditions of PIXS Printing Shop.");
+      return;
+    }
+
     setIsLoading(true);
 
     // Mock auth — swap for real API call when backend is ready
@@ -58,9 +65,7 @@ const Login: React.FC<LoginProps> = ({ isOpen = true, onClose }) => {
       if (role !== 'customer') {
          navigate(ROLE_REDIRECTS[role], { replace: true });
       } else {
-         // Auto reload for context flush, or just let context update UI naturally
-         // But for auth reset mock, reload clears transient mocks sometimes. We'll just let React state handle it.
-         if (!onClose) navigate(0);
+         navigate('/homepage', { replace: true });
       }
     }, 800);
   };
@@ -162,12 +167,26 @@ const Login: React.FC<LoginProps> = ({ isOpen = true, onClose }) => {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between py-2">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" className="w-4 h-4 rounded border-slate-300 text-pixs-mint focus:ring-pixs-mint shadow-sm" />
-                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Remember Node</span>
+              <div className="space-y-4 py-2">
+                <label className="flex items-center gap-3 cursor-pointer group">
+                  <input 
+                    type="checkbox" 
+                    checked={agreedToTerms}
+                    onChange={(e) => setAgreedToTerms(e.target.checked)}
+                    className="w-4 h-4 rounded border-slate-300 text-pixs-mint focus:ring-pixs-mint shadow-sm" 
+                  />
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 leading-tight">
+                    I accept the <span className="text-slate-900 underline underline-offset-4">Terms and Conditions</span> of PIXS Printing Shop and industrial data protocols.
+                  </span>
                 </label>
-                <div className="text-[10px] font-black uppercase tracking-widest text-pixs-mint hover:scale-105 transition-transform cursor-pointer">Forgot Key?</div>
+                
+                <div className="flex items-center justify-between">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" className="w-4 h-4 rounded border-slate-300 text-pixs-mint focus:ring-pixs-mint shadow-sm" />
+                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Remember Node</span>
+                  </label>
+                  <div className="text-[10px] font-black uppercase tracking-widest text-pixs-mint hover:scale-105 transition-transform cursor-pointer">Forgot Key?</div>
+                </div>
               </div>
 
               <div className="space-y-2">

@@ -2,7 +2,6 @@ import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import Storefront from '../views/customer/Homepage';
 import LandingPage from '../views/customer/LandingPage';
-import Login from '../views/auth/Login';
 import ProductDetailPage from '../views/product/ProductDetailPage';
 import AddToCartPage from '../pages/AddToCart/AddToCartPage';
 import SettingsPage from '../views/customer/SettingsPage';
@@ -37,19 +36,18 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode; allowedRoles: string
 
   if (isLoading) return <div className="h-screen w-screen flex items-center justify-center bg-white text-slate-900 font-black italic uppercase">Synchronizing...</div>;
   
-  if (!user.isLoggedIn) return <Navigate to="/login" replace />;
+  if (!user.isLoggedIn) return <Navigate to="/" replace />;
   if (!allowedRoles.includes(user.role)) return <Navigate to="/" replace />;
 
   return <>{children}</>;
 };
 
 const AppRouter: React.FC = () => {
-  const { user } = useAuth();
 
   return (
     <Routes>
-      <Route path="/" element={user.isLoggedIn ? <Storefront /> : <LandingPage />} />
-      <Route path="/login" element={<Login />} />
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/homepage" element={<Storefront />} />
       <Route path="/product/:id" element={<ProductDetailPage />} />
       <Route path="/cart" element={<AddToCartPage />} />
       <Route path="/settings" element={<SettingsPage />} />
