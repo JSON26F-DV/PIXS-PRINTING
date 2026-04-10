@@ -10,7 +10,7 @@ import type { INotification } from '../types/notification';
 import type { User as AuthUser } from '../context/auth.types';
 import type { NavigateFunction } from 'react-router-dom';
 import productsData from '../data/products.json';
-import workflowData from '../data/workflow.json';
+import ordersData from '../data/order.json';
 import usersData from '../data/users.json';
 import { SafeTerminal } from '../utils/safeTerminal';
 
@@ -21,13 +21,6 @@ interface IProduct {
   base_price: number;
 }
 
-interface IWorkflowOrder {
-  id: string;
-  product: string;
-  customer: string;
-  qty?: number;
-  status?: string;
-}
 
 interface IUserData {
   id: string;
@@ -35,11 +28,6 @@ interface IUserData {
   role?: string;
   type?: string;
   email: string;
-}
-
-interface RawWorkflow {
-  cartOrders: IWorkflowOrder[];
-  productionQueue: IWorkflowOrder[];
 }
 
 interface RawUsers {
@@ -130,20 +118,26 @@ const SmartSearch: React.FC<{
           });
         });
 
-      const allWorkflowOrders = [
-        ...SafeTerminal.array<IWorkflowOrder>((workflowData as unknown as RawWorkflow).cartOrders),
-        ...SafeTerminal.array<IWorkflowOrder>((workflowData as unknown as RawWorkflow).productionQueue)
-      ] as IWorkflowOrder[];
-
-      allWorkflowOrders
-        .filter(o => o.id.toLowerCase().includes(lowerQuery) || o.product.toLowerCase().includes(lowerQuery))
+      interface IOrderData {
+        order_id: string;
+        user_id: string;
+        status: string;
+        products?: { productName: string }[];
+      }
+      
+      const allOrders = ordersData as unknown as IOrderData[];
+      allOrders
+        .filter((o) => 
+          o.order_id.toLowerCase().includes(lowerQuery) || 
+          (o.products && o.products[0]?.productName.toLowerCase().includes(lowerQuery))
+        )
         .slice(0, 5)
-        .forEach(o => {
+        .forEach((o) => {
           searchResults.push({
-            id: `order-${o.id}`,
+            id: `order-${o.order_id}`,
             type: 'order',
-            title: `#${o.id} - ${o.product}`,
-            subtitle: `${o.customer} • ${o.status || 'Active'}`,
+            title: `#${o.order_id} - ${o.products?.[0]?.productName || 'Order'}`,
+            subtitle: `${o.user_id} • ${o.status || 'Active'}`,
             link: user.role === 'staff' ? 'history' : 'orders',
           });
         });

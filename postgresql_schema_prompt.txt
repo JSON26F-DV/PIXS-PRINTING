@@ -2,7 +2,7 @@ I need to convert a mock JSON file structure from a React frontend project into 
 
 Please generate a complete PostgreSQL schema (CREATE TABLE statements, Primary Keys, Foreign Keys, JSONB where appropriate, and perfectly structured ENUM types based on the example values).
 
-Make sure to establish proper relations (e.g., Foreign Keys connecting `orders` to `customers`, `products` to `categories`, etc.). Ignore any data that seems like it should only be frontend state or configurations, focus on actual relational database architecture.
+Make sure to establish proper relations (e.g., Foreign Keys connecting `orders` to `customers`, `products` to `categories`, etc.). Ignore any data that seems like it should only be frontend state or configurations, focus on actual relational database architecture. Do not create tables for anything that is purely an array list of string permissions or static frontend rules.
 
 Here are the JSON examples representing the core business entities:
 
@@ -158,20 +158,6 @@ Here are the JSON examples representing the core business entities:
 }
 ```
 
-### complaints.json
-```json
-{
-  "id": "C-1001",
-  "order_id": "ORD-5501",
-  "customer_id": "CUST-501",
-  "issue_type": "Faded Print",
-  "description": "Logo fading after one wash.",
-  "status": "Open",
-  "severity": "High",
-  "date": "2026-03-28T09:00:00Z"
-}
-```
-
 ### marketing_promotions.json
 ```json
 {
@@ -203,28 +189,29 @@ Here are the JSON examples representing the core business entities:
 }
 ```
 
-### attendance.json
+### attendance.json (Represents `attendance` granular logs)
 ```json
 {
   "id": "ATT-001",
   "employee_id": "EMP-001",
   "date": "2026-03-27",
-  "status": "Present",
-  "time_in": "08:00",
-  "time_out": "17:30",
-  "ot_hours": 0.5,
-  "is_half_day": false,
+  "status": "full",
+  "hours_worked": 8,
+  "late_minutes": 30,
+  "overtime_hours": 1,
+  "computed_salary": 968.75,
   "is_holiday": false
 }
 ```
 
-### salary.json (Represents `salaries` / `payroll` table)
+### salary.json (Represents `salaries` / `payroll` aggregated table by week)
 ```json
 {
   "id": "PAY-001",
   "employee_id": "EMP-001",
   "week_start": "2026-03-30",
-  "weekly_total": 4725
+  "weekly_total": 4575,
+  "weekly_hours_total": 45.5
 }
 ```
 
@@ -267,4 +254,4 @@ Here are the JSON examples representing the core business entities:
 }
 ```
 
-Notice that I have excluded frontend-specific static sets like `admin_settings`, `config`, `delivery_methods`, `workflow`, and `payment` as they do not constitute relational database tables requiring CRUD operations. Create the schema reflecting these relationships exactly.
+Notice that I have excluded frontend-specific static sets like `admin_settings`, `config`, `delivery_methods`, `workflow`, `complaints`, `payment`, and basic string array files (like pure roles list/permission arrays) as they do not constitute relational database tables requiring CRUD operations. Create the schema reflecting these relationships exactly.

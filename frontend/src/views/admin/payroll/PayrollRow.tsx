@@ -77,7 +77,7 @@ const PayrollRow: React.FC<PayrollRowProps> = ({ row, weekDates, holidays, onUpd
       {weekDates.map(dateStr => (
         <td key={dateStr} className="px-2 py-4">
           <PayrollCell 
-            dayData={row.attendance.find(a => a.date === dateStr) || { date: dateStr, status: 'absent', applied_rate: 0, attendance_percentage: 0, overtime_hours: 0, computed_salary: 0 }}
+            dayData={row.attendance.find(a => a.date === dateStr) || { date: dateStr, status: 'absent', applied_rate: 0, attendance_percentage: 0, overtime_hours: 0, late_minutes: 0, hours_worked: 0, computed_salary: 0 }}
             currentRate={row.current_rate}
             otRate={row.ot_rate}
             onUpdate={(updates) => onUpdateDay(row.employee_id, dateStr, updates)}
@@ -91,6 +91,9 @@ const PayrollRow: React.FC<PayrollRowProps> = ({ row, weekDates, holidays, onUpd
           <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">AGGREGATE WEEKLY</span>
           <span className="text-lg font-black text-slate-900 leading-none">
             ₱{row.weekly_total.toLocaleString()}
+          </span>
+          <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mt-1.5">
+            {row.attendance.reduce((sum, d) => sum + (d.hours_worked || 0), 0)} HRS TOTAL
           </span>
         </div>
       </td>

@@ -1,4 +1,5 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useRef } from 'react';
+import { useReactToPrint } from 'react-to-print';
 import { 
   format, 
   startOfWeek 
@@ -9,6 +10,7 @@ import _ from 'lodash';
 import { PayrollSystemHeader } from './PayrollSystemHeader';
 import PayrollCalendar from './PayrollCalendar';
 import PayrollAnalytics from './PayrollAnalytics';
+import { PayrollPayslipComponent } from './PayrollPayslipComponent';
 import { 
   type PayrollRecord, 
   type AttendanceDay, 
@@ -40,9 +42,9 @@ const Payroll: React.FC = () => {
   // Weekly Vault State (Simulated Persistent Store)
   const [weeklyVault, setWeeklyVault] = useState<Record<string, Record<string, AttendanceDay[]>>>(() => {
     const vault: Record<string, Record<string, AttendanceDay[]>> = {};
-    (initialSalaryData as WeeklySalaryData[]).forEach(s => {
+    ((initialSalaryData as unknown) as WeeklySalaryData[]).forEach(s => {
       if (!vault[s.week_start]) vault[s.week_start] = {};
-      vault[s.week_start][s.employee_id] = s.attendance;
+      vault[s.week_start][s.employee_id] = s.attendance as unknown as AttendanceDay[];
     });
     return vault;
   });
@@ -64,7 +66,7 @@ const Payroll: React.FC = () => {
   
   const payrollData = useMemo(() => {
     return (usersData.employees as UserDataEmployee[]).map(emp => {
-      const attendance = weeklyVault[currentWeekKey]?.[emp.id] || generateEmptyWeek(currentWeekStart);
+      const attendance = weeklyVault[currentWeekKey]?.[emp.id] || generateEmptyWeek(currentWeekStart, employeeRates[emp.id] || 850);
       const weeklyTotal = attendance.reduce((sum, d) => sum + d.computed_salary, 0);
       
       return {
@@ -101,7 +103,7 @@ const Payroll: React.FC = () => {
 
     setWeeklyVault(prev => {
       const week = prev[currentWeekKey] || {};
-      const empAttendance = week[empId] || generateEmptyWeek(currentWeekStart);
+      const empAttendance = week[empId] || generateEmptyWeek(currentWeekStart, employeeRates[empId] || 850);
       
       const newAttendance = empAttendance.map(day => {
         if (day.date === date) {
@@ -118,7 +120,7 @@ const Payroll: React.FC = () => {
         }
       };
     });
-  }, [currentWeekKey, currentWeekStart, isAdmin]);
+  }, [currentWeekKey, currentWeekStart, isAdmin, employeeRates]);
 
   const handleUpdateRate = useCallback((empId: string, rate: number) => {
     if (!isAdmin) return;
@@ -138,8 +140,8 @@ const Payroll: React.FC = () => {
           const week = { ...(updatedVault[currentWeekKey] || {}) };
           
           (usersData.employees as UserDataEmployee[]).forEach(emp => {
-            const att = week[emp.id] || generateEmptyWeek(currentWeekStart);
-            week[emp.id] = att.map(d => d.date === date ? { ...d, status: 'absent', attendance_percentage: 0, computed_salary: 0, overtime_hours: 0, applied_rate: 0 } : d);
+            const att = week[emp.id] || generateEmptyWeek(currentWeekStart, employeeRates[emp.id] || 850);
+            week[emp.id] = att.map(d => d.date === date ? { ...d, status: 'absent', attendance_percentage: 0, computed_salary: 0, overtime_hours: 0, applied_rate: 0, late_minutes: 0, hours_worked: 0 } : d);
           });
           
           updatedVault[currentWeekKey] = week;
@@ -148,7 +150,12 @@ const Payroll: React.FC = () => {
       }
       return newHolidays;
     });
-  }, [isAdmin, currentWeekKey, currentWeekStart]);
+  }, [isAdmin, currentWeekKey, currentWeekStart, employeeRates]);
+
+  const printAllRef = useRef<HTMLDivElement>(null);
+  const handlePrintAll = useReactToPrint({
+    contentRef: printAllRef,
+  });
 
   return (
     <div className="PayrollPage space-y-10 animate-in fade-in duration-700 max-w-[1700px] mx-auto px-6 lg:px-12 pb-24">
@@ -179,14 +186,52 @@ const Payroll: React.FC = () => {
             <h4 className="text-xl font-black text-white uppercase italic tracking-tighter italic">Enterprise Accounting Ledger</h4>
             <p className="text-[10px] font-black text-slate-500 uppercase tracking-[4px] mt-1 opacity-70">Unified Monthly Archive & Export Center</p>
          </div>
-         <div className="flex gap-4">
-            <button className="px-8 py-4 bg-white/5 border border-white/10 text-[10px] font-black text-white uppercase tracking-widest rounded-2xl hover:bg-white/10 transition-all opacity-50 cursor-not-allowed">
-               Generate PDF Pack
+         <div className="flex gap-4 relative z-10">
+            <button 
+               onClick={() => handlePrintAll()}
+               className="px-8 py-4 bg-white text-slate-900 border border-white/10 text-[10px] font-black uppercase tracking-widest rounded-2xl hover:scale-105 hover:bg-slate-50 transition-all shadow-xl"
+            >
+               Print All Payslips (2x2 Grid)
             </button>
             <button className="px-8 py-4 bg-[#75EEA5] text-slate-900 text-[10px] font-black uppercase tracking-widest rounded-2xl hover:scale-105 transition-all shadow-xl shadow-[#75EEA5]/20">
                Accounting Ledger Export
             </button>
          </div>
+      </div>
+
+      <div className="hidden">
+        <div ref={printAllRef} className="print-grid-container">
+           <style type="text/css" media="print">
+             {`
+               @page { size: A4; margin: 0; }
+               body { 
+                 margin: 0; 
+                 padding: 0; 
+                 -webkit-print-color-adjust: exact; 
+               }
+               .print-grid-container {
+                 display: grid;
+                 grid-template-columns: 1fr 1fr;
+                 width: 21cm;
+                 gap: 0;
+                 margin: 0;
+                 padding: 0;
+               }
+               .PayrollPayslipPrintable {
+                 page-break-inside: avoid;
+                 box-sizing: border-box;
+                 width: 10.5cm;
+                 height: 14.85cm;
+               }
+               .PayrollPayslipPrintable:nth-child(4n) {
+                 page-break-after: always;
+               }
+             `}
+           </style>
+           {filteredData.map(emp => (
+             <PayrollPayslipComponent key={emp.employee_id} record={emp} />
+           ))}
+        </div>
       </div>
     </div>
   );

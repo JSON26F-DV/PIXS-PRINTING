@@ -1,10 +1,8 @@
 import React, { useState, useEffect, type ReactNode, useCallback, useRef } from 'react';
 import { NotificationContext } from './NotificationContextInstance';
-import type { INotification, IComplaint, IOrder } from '../types/notification';
-import complaintsData from '../data/complaints.json';
+import type { INotification } from '../types/notification';
 import messagesData from '../data/messages.json';
-import workflowData from '../data/workflow.json';
-
+import ordersData from '../data/order.json';
 
 export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [notifications, setNotifications] = useState<INotification[]>([]);
@@ -14,19 +12,35 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
     const newNotifications: INotification[] = [];
     const lastCheck = lastCheckRef.current || new Date(0);
 
-    (complaintsData as IComplaint[]).forEach((complaint) => {
-      const complaintDate = new Date(complaint.date);
-      if (complaintDate > lastCheck) {
-        newNotifications.push({
-          id: `complaint-${complaint.id}`,
-          type: 'complaint',
-          title: `New Complaint: ${complaint.issue_type}`,
-          description: complaint.description.substring(0, 60) + '...',
-          timestamp: complaint.date,
-          isRead: false,
-          linkTo: '/complaints',
-          severity: (complaint.severity?.toLowerCase() || 'low') as 'low' | 'medium' | 'high',
-        });
+    // Generate Order Notifications directly from order.json
+    (ordersData as unknown[]).forEach((o: unknown) => {
+      const order = o as { status: string; created_at: string; order_id: string; products: unknown[] };
+      const orderDate = new Date(order.created_at);
+      
+      if (order.status === 'DELIVERED') {
+        if (orderDate > lastCheck) {
+          newNotifications.push({
+            id: `delivery-${order.order_id}`,
+            type: 'order_update',
+            title: `Order Delivered: ${order.order_id}`,
+            description: `Your order has been officially delivered to your facility.`,
+            timestamp: order.created_at,
+            isRead: false,
+            linkTo: '/order',
+          });
+        }
+      } else if (order.status === 'PROCESSING') {
+        if (orderDate > lastCheck) {
+          newNotifications.push({
+            id: `processing-${order.order_id}`,
+            type: 'order_update',
+            title: `Order Processing: ${order.order_id}`,
+            description: `Your order is currently in production.`,
+            timestamp: order.created_at,
+            isRead: false,
+            linkTo: '/order',
+          });
+        }
       }
     });
 
@@ -63,24 +77,6 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
     });
 
 
-    if (workflowData.productionQueue) {
-      (workflowData.productionQueue as IOrder[]).forEach((order) => {
-        if (order.status === 'ready_for_qc') {
-          const approvedAt = new Date(order.approved_at);
-          if (approvedAt > lastCheck) {
-            newNotifications.push({
-              id: `order-${order.id}`,
-              type: 'order_update',
-              title: `Order Ready for QC: ${order.id}`,
-              description: `${order.product} for ${order.customer} is ready for quality check`,
-              timestamp: order.approved_at,
-              isRead: false,
-              linkTo: '/workflow',
-            });
-          }
-        }
-      });
-    }
 
     return newNotifications;
   }, []);

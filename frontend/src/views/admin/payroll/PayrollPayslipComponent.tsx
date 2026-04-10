@@ -11,124 +11,104 @@ export const PayrollPayslipComponent = forwardRef<HTMLDivElement, PayrollPayslip
   const weekEnd = record.attendance[record.attendance.length - 1]?.date || '';
 
   return (
-    <div ref={ref} className="PayrollPayslipPrintable p-12 bg-white min-h-[800px] font-sans">
-      <div className="flex justify-between items-start border-b-[6px] border-slate-900 pb-10 mb-12">
+    <div ref={ref} className="PayrollPayslipPrintable bg-white w-full border-[1px] border-slate-900 border-dashed p-6 flex flex-col overflow-hidden relative">
+      <div className="flex justify-between items-center border-b-[2px] border-slate-900 pb-2 mb-2">
         <div>
-          <h1 className="text-4xl font-black text-slate-900 tracking-tighter uppercase italic">PIXS PRINTING SHOP</h1>
-          <p className="text-sm font-bold text-slate-400 mt-2 tracking-[4px] uppercase opacity-70">Unified Personnel Payroll Ledger</p>
+          <h1 className="text-lg font-black text-slate-900 tracking-tighter uppercase italic leading-none">PIXS PRINTING</h1>
+          <p className="text-[7px] font-bold text-slate-500 mt-0.5 tracking-[2px] uppercase">Official Payslip</p>
         </div>
         <div className="text-right">
-          <p className="text-lg font-black text-slate-900 uppercase">OFFICIAL PAYSLIP</p>
-          <p className="text-xs font-black text-slate-400 mt-1 uppercase tracking-widest">WID: {record.employee_id}</p>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-10 mb-16 px-4">
-        <div>
-          <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1">Entity Beneficiary</p>
-          <p className="text-2xl font-black text-slate-900 uppercase tracking-tight">{record.name}</p>
-          <p className="text-xs font-black text-blue-600 mt-1 uppercase tracking-widest">{record.role}</p>
-        </div>
-        <div className="text-right">
-          <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1">Fiscal Reference Cycle</p>
-          <p className="text-sm font-black text-slate-900 mt-1.5 uppercase">
-            {weekStart && format(new Date(weekStart), 'MMM dd, yyyy')} — {weekEnd && format(new Date(weekEnd), 'MMM dd, yyyy')}
+          <p className="text-[9px] font-black text-slate-900 uppercase leading-none">WID: {record.employee_id}</p>
+          <p className="text-[7px] font-bold text-slate-500 uppercase mt-0.5">
+            {weekStart && format(new Date(weekStart), 'MMM dd')} - {weekEnd && format(new Date(weekEnd), 'MMM dd, yy')}
           </p>
         </div>
       </div>
 
-      <div className="mb-16">
-        <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-4 px-4">Temporal Attendance Audit</p>
+      <div className="mb-2">
+        <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Beneficiary</p>
+        <div className="flex justify-between items-end">
+          <div>
+            <p className="text-lg font-black text-slate-900 uppercase tracking-tight leading-none">{record.name}</p>
+            <p className="text-[9px] font-black text-blue-600 uppercase mt-1">{record.role}</p>
+          </div>
+          <div className="text-right">
+            <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Base Daily Rate</p>
+            <p className="text-xs font-black text-slate-900">₱{record.current_rate.toLocaleString()}</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex-1 flex flex-col pt-1">
         <table className="w-full border-collapse">
           <thead>
-            <tr className="bg-slate-50 border-y border-slate-100">
-              <th className="p-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Date Node</th>
-              <th className="p-4 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest">Attendance Identity</th>
-              <th className="p-4 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest">Applied Rate</th>
-              <th className="p-4 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest">OT Duration</th>
-              <th className="p-4 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest">Financial Yield</th>
+            <tr className="border-y-[1px] border-slate-900">
+              <th className="py-1 text-left text-[7px] font-black text-slate-900 uppercase tracking-widest">Date</th>
+              <th className="py-1 text-center text-[7px] font-black text-slate-900 uppercase tracking-widest">Type</th>
+              <th className="py-1 text-center text-[7px] font-black text-slate-900 uppercase tracking-widest">Hrs</th>
+              <th className="py-1 text-center text-[7px] font-black text-slate-900 uppercase tracking-widest">Lat/OT</th>
+              <th className="py-1 text-right text-[7px] font-black text-slate-900 uppercase tracking-widest">Amt</th>
             </tr>
           </thead>
           <tbody>
-            {record.attendance.map((day) => (
-              <tr key={day.date} className="border-b border-slate-50">
-                <td className="p-4 text-[12px] font-black text-slate-900 uppercase tracking-tighter">
-                  {format(new Date(day.date), 'EEEE, MMM dd')}
-                </td>
-                <td className="p-4 text-center">
-                  <span className={`text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest ${day.status === 'full' ? 'bg-emerald-50 text-emerald-600' : day.status === 'half' ? 'bg-amber-50 text-amber-600' : 'bg-rose-50 text-rose-400'}`}>
-                    {day.status}
-                  </span>
-                </td>
-                <td className="p-4 text-center text-xs font-black text-slate-900">₱{(day.applied_rate || 0).toLocaleString()}</td>
-                <td className="p-4 text-center text-xs font-black text-slate-900">{day.overtime_hours} HRS</td>
-                <td className="p-4 text-right text-sm font-black text-slate-900">₱{day.computed_salary.toLocaleString()}</td>
-              </tr>
-            ))}
+            {record.attendance.map((day) => {
+              if (day.status === 'absent') return null; // hide absents to save space on receipt
+              return (
+                 <tr key={day.date} className="border-b border-slate-100">
+                   <td className="py-1 text-[8px] font-black text-slate-800 uppercase">
+                     {format(new Date(day.date), 'MM/dd')}
+                   </td>
+                   <td className="py-1 text-center text-[7px] font-black uppercase text-slate-500">
+                     {day.status}
+                   </td>
+                   <td className="py-1 text-center text-[8px] font-black text-slate-800">{day.hours_worked || 0}</td>
+                   <td className="py-1 text-center text-[7px] font-black">
+                     <span className="text-emerald-600 mr-1">+{day.overtime_hours}</span>
+                     <span className="text-rose-500">-{day.late_minutes}m</span>
+                   </td>
+                   <td className="py-1 text-right text-[9px] font-black text-slate-900">₱{day.computed_salary.toLocaleString()}</td>
+                 </tr>
+              )
+            })}
           </tbody>
-          <tfoot>
-            <tr className="bg-slate-900 h-20 shadow-2xl">
-              <td colSpan={4} className="p-4 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest">Matrix Aggregate Yield</td>
-              <td className="p-4 text-right text-[28px] font-black text-[#75EEA5] tracking-tighter pr-6 italic uppercase">
-                ₱{record.weekly_total.toLocaleString()}
-              </td>
-            </tr>
-          </tfoot>
         </table>
       </div>
 
-      {/* PRODUCTION LOG AUDIT SECTION */}
-      <div className="mb-16">
-        <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-4 px-4">Production Performance Ledger</p>
-        <div className="bg-slate-50/50 rounded-[32px] border border-slate-100 p-8">
-            <table className="w-full">
-                <thead>
-                    <tr className="border-b border-slate-200">
-                        <th className="pb-3 text-left text-[9px] font-black text-slate-400 uppercase tracking-widest">Asset Category</th>
-                        <th className="pb-3 text-left text-[9px] font-black text-slate-400 uppercase tracking-widest">Identity</th>
-                        <th className="pb-3 text-center text-[9px] font-black text-slate-400 uppercase tracking-widest">Quantity</th>
-                        <th className="pb-3 text-right text-[9px] font-black text-slate-400 uppercase tracking-widest">Timestamp</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {record.logs && record.logs.length > 0 ? record.logs.map((log, idx) => (
-                        <tr key={idx} className="border-b border-slate-100/50 last:border-0">
-                            <td className="py-4 text-[11px] font-black text-slate-900 uppercase italic tracking-tighter">{log.category || 'Production'}</td>
-                            <td className="py-4 text-[11px] font-bold text-slate-500 uppercase">{log.product_name} • {log.order_id}</td>
-                            <td className="py-4 text-center text-[11px] font-black text-slate-900">{log.quantity.toLocaleString()}</td>
-                            <td className="py-4 text-right text-[10px] font-bold text-slate-400">{format(new Date(log.completed_at), 'MM/dd HH:mm')}</td>
-                        </tr>
-                    )) : (
-                        <tr>
-                            <td colSpan={4} className="py-10 text-center text-[10px] font-bold text-slate-300 uppercase tracking-widest italic">
-                                No production tasks logged for this cycle
-                            </td>
-                        </tr>
-                    )}
-                </tbody>
-            </table>
-        </div>
-      </div>
-
-      <div className="mt-20 pt-16 flex justify-between gap-24 px-4">
-        <div className="flex-1 border-t-2 border-slate-200 pt-4">
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-[6px] mb-1.5 opacity-60">Entity Acknowledgment</p>
-          <div className="flex items-center gap-3">
-             <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-black text-slate-400">X</div>
-             <div className="h-0.5 flex-1 bg-slate-50" />
+      <div className="mt-auto">
+        <div className="border-t-[1px] border-slate-900 pt-2 flex justify-between items-end mb-2">
+          <div>
+            <p className="text-[7px] font-black text-slate-400 uppercase tracking-widest">Total Hours</p>
+            <p className="text-xs font-black text-slate-700 leading-none mt-0.5">{record.attendance.reduce((sum, d) => sum + (d.hours_worked || 0), 0)} HRS</p>
+          </div>
+          <div className="text-right">
+            <p className="text-[7px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Net Pay</p>
+            <p className="text-lg font-black text-[#75EEA5] drop-shadow-sm leading-none italic">
+              ₱{record.weekly_total.toLocaleString()}
+            </p>
           </div>
         </div>
-        <div className="flex-1 border-t-2 border-slate-200 pt-4 text-right">
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-[6px] mb-1.5 opacity-60">Financial Authorization</p>
-          <div className="flex items-center justify-end gap-3 italic font-black text-slate-900 text-sm">
-             PIXS COMMAND OS
-          </div>
-        </div>
-      </div>
 
-      <div className="mt-24 text-center">
-        <div className="inline-block px-10 py-3 bg-slate-50 rounded-2xl border border-slate-100">
-          <p className="text-[9px] font-black text-slate-300 uppercase tracking-[6px] italic">Automated Fiscal Node • PIXS Enterprise Hub</p>
+        {/* Professional Notes */}
+        <div className="bg-slate-50 px-2 py-1.5 rounded-lg border border-slate-100 mb-3">
+          <p className="text-[6px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Professional Notes</p>
+          <p className="text-[6px] font-medium text-slate-600 italic leading-tight">Please review thoroughly. By affixing your signature, you confirm the accuracy of the computed data.</p>
+        </div>
+        
+        {/* Signatures */}
+        <div className="flex justify-between items-center px-4 w-full">
+           <div className="flex flex-col items-center">
+              <div className="w-20 h-4 border-b border-slate-300 mb-1"></div>
+              <p className="text-[6px] font-black text-slate-400 uppercase tracking-widest">HR Auth</p>
+           </div>
+           
+           <div className="flex flex-col items-center">
+              <div className="w-20 h-4 border-b border-slate-300 mb-1"></div>
+              <p className="text-[6px] font-black text-slate-400 uppercase tracking-widest">Received By</p>
+           </div>
+        </div>
+
+        <div className="text-center mt-2 border-t border-slate-100 pt-1.5">
+          <p className="text-[5px] font-black text-slate-300 uppercase tracking-widest italic leading-none">PIXS HUB</p>
         </div>
       </div>
     </div>
