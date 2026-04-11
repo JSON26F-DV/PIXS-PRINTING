@@ -1,18 +1,6 @@
 import React from 'react';
-import addressData from '../../data/address_book.json';
 import { MapPin, Phone, User } from 'lucide-react';
-
-interface Address {
-  id: string;
-  full_name: string;
-  phone: string;
-  region: string;
-  city: string;
-  barangay: string;
-  street: string;
-  postal_code: string;
-  is_default: boolean;
-}
+import { useCustomerAddressStore } from '../../store/useCustomerAddressStore';
 
 interface AddressSectionProps {
   selectedId: string;
@@ -20,7 +8,7 @@ interface AddressSectionProps {
 }
 
 const AddressSection: React.FC<AddressSectionProps> = ({ selectedId, onSelect }) => {
-  const addresses = addressData as Address[];
+  const { addresses } = useCustomerAddressStore();
 
   return (
     <section className="AddressSection space-y-4">

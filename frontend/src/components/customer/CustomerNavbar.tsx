@@ -36,7 +36,14 @@ const CustomerNavbar: React.FC = () => {
   const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
 
-  const { addresses, defaultAddressId } = useCustomerAddressStore();
+  const { addresses, defaultAddressId, fetchAddresses } = useCustomerAddressStore();
+
+  React.useEffect(() => {
+    if (user) {
+      fetchAddresses();
+    }
+  }, [user, fetchAddresses]);
+
   const selectedAddress = useMemo(() => addresses.find(a => a.id === defaultAddressId), [addresses, defaultAddressId]);
   const addressText = selectedAddress 
     ? `${selectedAddress.city || ''}, ${selectedAddress.province || ''}`.trim() 
@@ -146,12 +153,12 @@ const CustomerNavbar: React.FC = () => {
                   >
                     Sign In
                   </button>
-                  <button 
-                    onClick={() => setAuthModal({ open: true, type: 'signup' })}
-                    className="px-8 py-4 bg-slate-900 text-white text-[10px] font-black rounded-3xl shadow-2xl hover:bg-slate-800 transition-all uppercase tracking-[4px] border border-white/10 italic"
+                  <Link 
+                    to="/register"
+                    className="px-8 py-4 bg-slate-900 text-white text-[10px] font-black rounded-3xl shadow-2xl hover:bg-slate-800 transition-all uppercase tracking-[4px] border border-white/10 italic flex items-center justify-center"
                   >
                     Join Now
-                  </button>
+                  </Link>
                 </div>
                 <div className="md:hidden flex items-center gap-2">
                   <button 
@@ -361,7 +368,7 @@ const CustomerNavbar: React.FC = () => {
                 <button className="w-full py-4 text-xs font-black text-slate-900 uppercase tracking-[4px] border-b border-slate-50 text-left italic">About Us</button>
                 <div className="pt-6 space-y-4 border-t border-slate-100">
                   <button onClick={() => { setAuthModal({ open: true, type: 'signin' }); setShowMobileMenu(false); }} className="w-full py-4 bg-slate-50 text-xs font-black text-slate-900 uppercase tracking-[4px] rounded-2xl text-center italic hover:bg-slate-100">Sign In</button>
-                  <button onClick={() => { setAuthModal({ open: true, type: 'signup' }); setShowMobileMenu(false); }} className="w-full py-4 bg-pixs-mint text-xs font-black text-slate-900 uppercase tracking-[4px] rounded-2xl text-center italic shadow-lg shadow-pixs-mint/20 hover:scale-105 transition-all">Join Now</button>
+                  <Link to="/register" onClick={() => setShowMobileMenu(false)} className="w-full py-4 bg-pixs-mint text-xs font-black text-slate-900 uppercase tracking-[4px] rounded-2xl text-center italic shadow-lg shadow-pixs-mint/20 hover:scale-105 transition-all flex items-center justify-center">Join Now</Link>
                 </div>
               </nav>
             </motion.div>

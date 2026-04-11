@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import axios from 'axios';
 import { 
   Lock, 
   Mail, 
@@ -11,6 +12,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import type { RoleType } from '../../context/auth.types';
 
 interface LoginProps {
   isOpen?: boolean;
@@ -20,54 +22,61 @@ interface LoginProps {
 const Login: React.FC<LoginProps> = ({ isOpen = true, onClose }) => {
   const navigate = useNavigate();
   const { login } = useAuth();
-  const [email, setEmail] = useState('jason@pixs.ph');
-  const [password, setPassword] = useState('topsecret123');
-  const [role, setRole] = useState<'admin' | 'staff' | 'inventory' | 'customer'>('admin');
+  const [email, setEmail] = useState('jason@pixs.com');
+  const [password, setPassword] = useState('password'); // Default password for testing
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const ROLE_REDIRECTS: Record<string, string> = {
-    admin: '/admin/dashboard',
-    staff: '/staff/overview',
-    inventory: '/admin/dashboard',
-    customer: '/homepage',
-  };
-
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!agreedToTerms) {
-      alert("Please accept the Terms and Conditions of PIXS Printing Shop.");
+      setError("Please accept the Terms and Conditions of PIXS Printing Shop.");
       return;
     }
 
     setIsLoading(true);
+    setError(null);
 
-    // Mock auth — swap for real API call when backend is ready
-    setTimeout(() => {
-      const mockIdMap: Record<string, string> = {
-        admin: 'EMP-001',
-        staff: 'EMP-002',
-        inventory: 'EMP-003',
-        customer: 'CUST-501'
-      };
-      
-      login({
-        id: mockIdMap[role],
-        name: role === 'admin' ? 'Jason Admin' : `Jason ${role.charAt(0).toUpperCase() + role.slice(1)}`,
-        role: role,
-      });
-      setIsLoading(false);
-      
-      if (onClose) onClose();
+    try {
+        const response = await axios.post('/login', { email, password });
+        const data = response.data;
 
-      if (role !== 'customer') {
-         navigate(ROLE_REDIRECTS[role], { replace: true });
-      } else {
-         navigate('/homepage', { replace: true });
-      }
-    }, 800);
+        // Successfully logged in
+        login({
+            name: email.split('@')[0],
+            role: (data.role as RoleType) || 'customer',
+        });
+
+        if (onClose) onClose();
+
+        // Redirect based on role returned from backend
+        if (data.redirect) {
+            window.location.href = data.redirect;
+        } else {
+            navigate(data.role === 'admin' ? '/admin' : '/homepage');
+        }
+
+    } catch (err: unknown) {
+        let message = 'An unexpected error occurred during system initialization.';
+        
+        if (axios.isAxiosError(err) && err.response && err.response.data) {
+            const data = err.response.data as { message?: string; role?: RoleType; redirect?: string };
+            if (err.response.status === 401 || err.response.status === 422) {
+                message = 'Wrong password or username';
+            } else {
+                message = data.message || message;
+            }
+        } else if (err instanceof Error) {
+            message = err.message;
+        }
+        
+        setError(message);
+    } finally {
+        setIsLoading(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -129,6 +138,12 @@ const Login: React.FC<LoginProps> = ({ isOpen = true, onClose }) => {
               <p className="text-slate-500 font-bold text-xs uppercase tracking-widest mt-2">Enter credentials to initialize shift.</p>
             </div>
 
+            {error && (
+                <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 text-red-700 text-[10px] font-black uppercase tracking-widest">
+                    {error}
+                </div>
+            )}
+
             <form onSubmit={handleLogin} className="space-y-6">
               <div className="space-y-2">
                 <label className="text-[10px] font-black uppercase tracking-[2px] text-slate-400">Identity Email</label>
@@ -139,7 +154,7 @@ const Login: React.FC<LoginProps> = ({ isOpen = true, onClose }) => {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 pl-12 pr-4 text-sm font-bold focus:outline-none focus:border-pixs-mint focus:ring-4 focus:ring-pixs-mint/5 placeholder:text-slate-300 transition-all cursor-text pointer-events-auto"
-                    placeholder="name@pixs.ph"
+                    placeholder="name@pixs.com"
                     required
                   />
                 </div>
@@ -186,26 +201,6 @@ const Login: React.FC<LoginProps> = ({ isOpen = true, onClose }) => {
                     <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Remember Node</span>
                   </label>
                   <div className="text-[10px] font-black uppercase tracking-widest text-pixs-mint hover:scale-105 transition-transform cursor-pointer">Forgot Key?</div>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-[2px] text-slate-400">Access Level</label>
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
-                  {(['admin', 'staff', 'inventory', 'customer'] as const).map((r) => (
-                    <button
-                      key={r}
-                      type="button"
-                      onClick={() => setRole(r)}
-                      className={`py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${
-                        role === r 
-                          ? "bg-pixs-mint border-pixs-mint text-slate-900 shadow-lg shadow-pixs-mint/20" 
-                          : "bg-slate-50 border-slate-100 text-slate-400 hover:border-slate-200"
-                      }`}
-                    >
-                      {r}
-                    </button>
-                  ))}
                 </div>
               </div>
 

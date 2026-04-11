@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { FiHelpCircle, FiSend, FiChevronDown, FiChevronUp, FiMessageSquare } from 'react-icons/fi';
 import { AnimatePresence, motion } from 'framer-motion';
+import axios from 'axios';
+import toast from 'react-hot-toast';
 
 interface FAQ {
   id: string;
@@ -68,6 +70,29 @@ const FAQItem: React.FC<{ faq: FAQ }> = ({ faq }) => {
 
 const HelpSupportSection: React.FC = () => {
   const [message, setMessage] = useState('');
+  const [isSending, setIsSending] = useState(false);
+
+  const handleSendMessage = async () => {
+    if (message.length < 10) {
+      toast.error('Message must be at least 10 characters');
+      return;
+    }
+
+    try {
+      setIsSending(true);
+      const response = await axios.post('/api/settings/support', { message });
+      toast.success(response.data.message);
+      setMessage('');
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err)) {
+        toast.error(err.response?.data?.message || 'Transmission failed');
+      } else {
+        toast.error('An unexpected error occurred');
+      }
+    } finally {
+      setIsSending(false);
+    }
+  };
 
   return (
     <section className="SettingsHelpSupport space-y-6">
@@ -95,12 +120,21 @@ const HelpSupportSection: React.FC = () => {
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           rows={4}
+          disabled={isSending}
           placeholder="Describe your issue or question..."
           className="w-full rounded-xl border border-slate-100 bg-slate-50 p-4 text-sm font-bold text-slate-800 italic placeholder-slate-300 resize-none focus:border-pixs-mint focus:outline-none transition-colors"
         />
-        <button className="flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-3 text-[10px] font-black tracking-widest text-white uppercase shadow-lg transition-all hover:scale-105 active:scale-95">
-          <FiSend size={13} />
-          Send Message
+        <button 
+          onClick={handleSendMessage}
+          disabled={isSending}
+          className="flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-3 text-[10px] font-black tracking-widest text-white uppercase shadow-lg transition-all hover:scale-105 active:scale-95 disabled:opacity-50"
+        >
+          {isSending ? 'Transmitting...' : (
+            <>
+              <FiSend size={13} />
+              Send Message
+            </>
+          )}
         </button>
       </div>
 

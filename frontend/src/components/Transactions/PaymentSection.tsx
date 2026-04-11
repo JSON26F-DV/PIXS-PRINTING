@@ -1,15 +1,6 @@
 import React from 'react';
-import paymentData from '../../data/payment.json';
 import { CreditCard, Wallet, Landmark, CheckCircle2 } from 'lucide-react';
-
-interface PaymentMethod {
-  id: string;
-  type: string;
-  bank_name?: string;
-  provider?: string;
-  masked_number: string;
-  is_default: boolean;
-}
+import { usePaymentMethodStore } from '../../store/usePaymentMethodStore';
 
 interface PaymentSectionProps {
   selectedId: string;
@@ -17,7 +8,7 @@ interface PaymentSectionProps {
 }
 
 const PaymentSection: React.FC<PaymentSectionProps> = ({ selectedId, onSelect }) => {
-  const paymentMethods = paymentData as PaymentMethod[];
+  const { methods: paymentMethods } = usePaymentMethodStore();
 
   const getIcon = (type: string) => {
     switch (type) {

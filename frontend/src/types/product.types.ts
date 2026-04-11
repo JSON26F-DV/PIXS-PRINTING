@@ -29,6 +29,20 @@ export interface IProduct {
   is_need_color: boolean;
   variants: IProductVariant[];
 }
+export interface ICategory {
+  id: string;
+  label: string;
+  count: number;
+  image: string;
+}
+
+export interface IFilters {
+  category: string;
+  price: string;
+  sort: string;
+  status: string;
+  screenplate: string;
+}
 
 // ─── Color Domain Types ───────────────────────────────────────────────────────
 

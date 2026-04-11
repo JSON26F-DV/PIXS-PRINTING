@@ -3,10 +3,12 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App'
 import axios from 'axios';
+import './bones/registry';
 
 // ── Global Axios Config (Laravel API) ─────────────────────────────────────────
-axios.defaults.baseURL = 'http://localhost:8000';
-axios.defaults.withCredentials = true;      // Required for Sanctum cookie auth
+// No baseURL — use relative paths so all requests pass through the Vite proxy
+// to Laravel at http://localhost:8000, keeping same-origin for session cookies.
+axios.defaults.withCredentials = true;      // Required for session cookie auth
 axios.defaults.headers.common['Accept'] = 'application/json';
 axios.defaults.headers.common['Content-Type'] = 'application/json';
 

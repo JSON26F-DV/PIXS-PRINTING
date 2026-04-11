@@ -3,27 +3,34 @@ import { FiTag, FiCopy, FiGift } from 'react-icons/fi';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx } from 'clsx';
 
-interface Voucher {
-  id: string;
-  code: string;
-  description: string;
-  expiry: string;
-  used: boolean;
-}
-
-const MOCK_VOUCHERS: Voucher[] = [
-  { id: 'v1', code: 'PIXS10OFF', description: '10% off on all printing orders', expiry: '2026-04-30', used: false },
-  { id: 'v2', code: 'WELCOME50', description: '₱50 off your first order', expiry: '2026-04-15', used: true },
-];
+import toast from 'react-hot-toast';
+import axios from 'axios';
+import { usePromotionStore } from '../../../store/usePromotionStore';
 
 const AwardsSection: React.FC = () => {
+  const { promotions: vouchers, isLoading, fetchPromotions, redeemPromotion } = usePromotionStore();
   const [redeemInput, setRedeemInput] = useState('');
-  const [vouchers] = useState<Voucher[]>(MOCK_VOUCHERS);
   const [copyId, setCopyId] = useState<string | null>(null);
 
-  const handleRedeem = () => {
-    // Placeholder — no backend
-    setRedeemInput('');
+  React.useEffect(() => {
+    fetchPromotions();
+  }, [fetchPromotions]);
+
+  const handleRedeem = async () => {
+    if (!redeemInput) return;
+    
+    try {
+      await redeemPromotion(redeemInput);
+      toast.success('Promo code applied successfully');
+      setRedeemInput('');
+      fetchPromotions(); // Refresh list
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err)) {
+        toast.error(err.response?.data?.message || 'Redemption failed');
+      } else {
+        toast.error('Redemption failed');
+      }
+    }
   };
 
   const handleCopy = (code: string, id: string) => {
@@ -31,6 +38,10 @@ const AwardsSection: React.FC = () => {
     setCopyId(id);
     setTimeout(() => setCopyId(null), 1500);
   };
+
+  if (isLoading && vouchers.length === 0) {
+    return <div className="flex h-64 items-center justify-center text-[10px] font-black uppercase tracking-[4px] text-slate-400 animate-pulse">Syncing Rewards Node...</div>;
+  }
 
   return (
     <section className="SettingsAwards space-y-6">
@@ -74,7 +85,7 @@ const AwardsSection: React.FC = () => {
               animate={{ opacity: 1, y: 0 }}
               className={clsx(
                 'flex flex-col gap-4 rounded-[20px] border p-5 transition-all sm:flex-row sm:items-center sm:justify-between',
-                v.used
+                v.status !== 'active'
                   ? 'border-slate-100 bg-slate-50 opacity-50'
                   : 'border-slate-100 bg-white shadow-sm hover:shadow-md',
               )}
@@ -82,26 +93,26 @@ const AwardsSection: React.FC = () => {
               <div className="flex items-center gap-4">
                 <div className={clsx(
                   'flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl',
-                  v.used ? 'bg-slate-200' : 'bg-pixs-mint/10',
+                  v.status !== 'active' ? 'bg-slate-200' : 'bg-pixs-mint/10',
                 )}>
-                  <FiGift size={20} className={v.used ? 'text-slate-400' : 'text-slate-800'} />
+                  <FiGift size={20} className={v.status !== 'active' ? 'text-slate-400' : 'text-slate-800'} />
                 </div>
                 <div>
                   <p className="text-sm font-black tracking-tighter text-slate-900 uppercase italic">
                     {v.code}
                   </p>
                   <p className="mt-0.5 text-[10px] font-bold text-slate-500">
-                    {v.description}
+                    {v.title} — {v.discount_type === 'percentage' ? `${v.discount_value}%` : `₱${v.discount_value}`} OFF
                   </p>
                   <p className="mt-0.5 text-[9px] font-black tracking-widest text-slate-400 uppercase">
-                    Expires {v.expiry}
+                    {v.expires_at ? `Expires ${new Date(v.expires_at).toLocaleDateString()}` : 'No Expiry'}
                   </p>
                 </div>
               </div>
               <div className="pl-16 sm:pl-0">
-                {v.used ? (
+                {v.status !== 'active' ? (
                   <span className="rounded-full bg-slate-100 px-3 py-1.5 text-[9px] font-black tracking-widest text-slate-400 uppercase">
-                    Used
+                    {v.status.toUpperCase()}
                   </span>
                 ) : (
                   <button

@@ -153,7 +153,7 @@ const AdminSettingsSecurity: React.FC = () => {
                                 {(() => {
                                    try {
                                       return format(new Date(log.timestamp), 'MMM dd, HH:mm');
-                                   } catch (e) {
+                                   } catch {
                                       return 'Invalid Date';
                                    }
                                 })()}

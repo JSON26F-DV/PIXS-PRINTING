@@ -13,14 +13,10 @@ import {
 import Select, { type SingleValue } from 'react-select';
 import { orderBy } from 'lodash';
 import { format } from 'date-fns';
-import { v4 as uuidv4 } from 'uuid';
 import toast from 'react-hot-toast';
 
-// Data Sources
-import rawOrders from '../../data/order.json';
+import axios from 'axios';
 import { type Order } from '../../types/order';
-import { useAuth } from '../../context/AuthContext';
-import usersData from '../../data/users.json';
 import allProducts from '../../data/products.json';
 
 // Types for staff execution tracking
@@ -29,11 +25,18 @@ interface ExecutionState {
   completedIds: string[]; // local list of orders finished in this session
 }
 
+interface StaffAssignment {
+  allowed_categories: string[];
+  allowed_products: string[];
+  is_admin: boolean;
+}
+
 const LiveQueue: React.FC = () => {
-  const { user } = useAuth();
   
+
   // --- STATE ---
   const [orders, setOrders] = useState<Order[]>([]);
+  const [assignment, setAssignment] = useState<StaffAssignment | null>(null);
   const [, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
@@ -59,26 +62,25 @@ const LiveQueue: React.FC = () => {
 
   // --- LOAD DATA ---
   useEffect(() => {
-    const fetchOrders = async () => {
+    const fetchQueueData = async () => {
       try {
         setLoading(true);
-        // Simulate fetch from JSON
-        const data = rawOrders as unknown as Order[];
+        const response = await axios.get('/api/staff/orders');
+        const { data, assignments } = response.data;
         
-        // Strict Filter: Only Processing
-        const processingOrders = data.filter(o => o.status?.toLowerCase() === 'processing');
-        
-        setOrders(processingOrders);
+        setOrders(data);
+        setAssignment(assignments);
         setError(null);
-      } catch (err) {
-        console.error("Failed to load production queue:", err);
+      } catch (err: unknown) {
+        const error = err as Error;
+        console.error("Failed to load production queue:", error.message);
         setError("Unable to retrieve processing orders.");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchOrders();
+    fetchQueueData();
   }, []);
 
   // --- LOGIC: FILTERING & SORTING ---
@@ -91,14 +93,11 @@ const LiveQueue: React.FC = () => {
   }, [orders]);
 
   const filteredOrders = useMemo(() => {
-    // 1. Get current employee assignment
-    const employeeData = usersData.employees.find(emp => emp.email === user?.email) as { 
-      allowed_categories?: string[],
-      allowed_products?: string[]
-    } | undefined;
-    
-    const allowedCategories = employeeData?.allowed_categories || [];
-    const allowedProducts = employeeData?.allowed_products || [];
+    if (!assignment) return [];
+
+    // 1. Assignments from backend
+    const allowedCategories = assignment.allowed_categories || [];
+    const allowedProducts = assignment.allowed_products || [];
 
     // 2. Map product names to categories
     const productCategoryMap: Record<string, string> = {};
@@ -106,10 +105,10 @@ const LiveQueue: React.FC = () => {
       productCategoryMap[p.name] = p.category;
     });
 
-    // 3. Apply category & product restriction only to non-admin users
+    // 3. Apply category & product restriction
     const filteredByCategory = orders.filter(o => !execution.completedIds.includes(o.order_id)).map(order => {
       // If admin, show all products
-      const isPrivileged = user?.role === 'admin';
+      const isPrivileged = assignment.is_admin;
       const noConstraints = allowedCategories.length === 0 && allowedProducts.length === 0;
       
       if (isPrivileged || noConstraints) return order;
@@ -166,7 +165,7 @@ const LiveQueue: React.FC = () => {
 
     // MANDATORY logic: Started orders float to top
     return orderBy(result, [(o) => execution.startedIds[o.order_id] ? 1 : 0], ['desc']);
-  }, [orders, searchQuery, userFilter, sortOption, execution, user?.email, user?.role]);
+  }, [orders, searchQuery, userFilter, sortOption, execution, assignment]);
 
   // Split into sections
   const activeOrders = filteredOrders.filter(o => !!execution.startedIds[o.order_id]);
@@ -187,41 +186,32 @@ const LiveQueue: React.FC = () => {
     });
   };
 
-  const handleMarkCompletion = (order: Order) => {
-    const timestamp = new Date().toISOString();
-    
-    // SAVE PRODUCTION LOG TO LOCALSTORAGE (SIMULATED JSON LOG)
-    const productionLogs = (() => {
-      try {
-        const saved = localStorage.getItem('pixs_production_logs');
-        return saved ? JSON.parse(saved) : [];
-      } catch { return []; }
-    })();
+  const handleMarkCompletion = async (order: Order) => {
+    try {
+      // Log each product production event to backend
+      await Promise.all(order.products.map(p => 
+        axios.post('/api/staff/log-production', {
+          order_id: order.order_id,
+          product_name: p.productName,
+          quantity: p.quantity,
+          category: p.category
+        })
+      ));
 
-    const newLogs = order.products.map(p => ({
-        log_id: `LOG-${uuidv4().slice(0, 8)}`,
-        user_id: user?.id || user?.email || 'unknown',
-        user_name: user?.name || 'Worker Node',
-        order_id: order.order_id,
-        product_name: p.productName,
-        quantity: p.quantity,
-        category: p.category, 
-        completed_at: timestamp
-    }));
+      // Persistence: Mark as completed in session
+      setExecution(prev => ({
+        ...prev,
+        completedIds: [...prev.completedIds, order.order_id]
+      }));
 
-    localStorage.setItem('pixs_production_logs', JSON.stringify([...productionLogs, ...newLogs]));
-
-    // Persistence: Mark as completed in session
-    setExecution(prev => ({
-      ...prev,
-      completedIds: [...prev.completedIds, order.order_id]
-    }));
-
-    toast.success(`Production Log persistent for ${order.order_id}`, {
-      icon: '🏛️',
-      duration: 5000,
-      style: { borderRadius: '16px', background: '#0F172A', color: '#fff' }
-    });
+      toast.success(`Production Log persistent for ${order.order_id}`, {
+        icon: '🏛️',
+        duration: 5000,
+        style: { borderRadius: '16px', background: '#0F172A', color: '#fff' }
+      });
+    } catch {
+      toast.error('Failed to log production completion.');
+    }
   };
 
   // --- FALLBACKS ---

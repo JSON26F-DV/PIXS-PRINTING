@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { AlertTriangle, CheckCircle, Clock, FileText, ChevronDown, ChevronUp, Plus, X } from 'lucide-react';
 import SplitText from '../../components/animations/SplitText';
-import workflowData from '../../data/workflow.json';
 
 const cn = (...classes: (string | undefined | null | false)[]) => classes.filter(Boolean).join(' ');
 
@@ -22,7 +21,7 @@ interface Dispute {
 }
 
 const DisputeView: React.FC = () => {
-  const [disputes, setDisputes] = useState<Dispute[]>(workflowData.disputes as Dispute[]);
+  const [disputes, setDisputes] = useState<Dispute[]>([]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [showNewTicket, setShowNewTicket] = useState(false);
   const [newTicket, setNewTicket] = useState<{

@@ -219,7 +219,11 @@ const AddressBookSection: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const { defaultAccount } = useAccountInfo();
-  const { addresses, addAddress, updateAddress, removeAddress, setDefaultAddress } = useCustomerAddressStore();
+  const { addresses, fetchAddresses, addAddress, updateAddress, removeAddress, setDefaultAddress, isLoading } = useCustomerAddressStore();
+
+  useEffect(() => {
+    fetchAddresses();
+  }, [fetchAddresses]);
 
   
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -466,7 +470,7 @@ const AddressBookSection: React.FC = () => {
     toast.success('Location applied from paste.');
   };
 
-  const onSave = handleSubmit((values) => {
+  const onSave = handleSubmit(async (values) => {
     const regions = getAllRegions();
     const regionName = regions.find((r) => r.psgcCode === regionCode)?.name ?? '';
     const provinceDetails = getProvincesByRegion(regionCode).find((p) => p.psgcCode === provinceCode);
@@ -509,19 +513,24 @@ const AddressBookSection: React.FC = () => {
       postal_code: values.postal_code || '',
     };
 
-    if (editingAddress) {
-      updateAddress(editingAddress.id, payload);
-      toast.success('Address updated.');
-    } else {
-      const next: CustomerAddress = {
-        id: `addr_${crypto.randomUUID()}`,
-        ...payload,
-        is_default: addresses.length === 0,
-      };
-      addAddress(next);
-      toast.success('Address saved.');
+    try {
+      if (editingAddress) {
+        await toast.promise(updateAddress(editingAddress.id, payload), {
+          loading: 'Updating address...',
+          success: 'Address updated.',
+          error: 'Failed to update address.'
+        });
+      } else {
+        await toast.promise(addAddress(payload), {
+          loading: 'Saving address...',
+          success: 'Address saved.',
+          error: 'Failed to save address.'
+        });
+      }
+      closeForm();
+    } catch (err) {
+      console.error(err);
     }
-    closeForm();
   });
 
   const handleDelete = async (id: string) => {
@@ -542,24 +551,36 @@ const AddressBookSection: React.FC = () => {
     });
 
     if (result.isConfirmed) {
-      removeAddress(id);
-      Swal.fire({
-        title: 'Deleted!',
-        text: 'Address has been removed.',
-        icon: 'success',
-        timer: 1500,
-        showConfirmButton: false,
-        customClass: {
-          popup: 'rounded-[32px]',
-        }
-      });
+      try {
+        await removeAddress(id);
+        Swal.fire({
+          title: 'Deleted!',
+          text: 'Address has been removed.',
+          icon: 'success',
+          timer: 1500,
+          showConfirmButton: false,
+          customClass: {
+            popup: 'rounded-[32px]',
+          }
+        });
+      } catch (err) {
+        toast.error('Failed to delete address.');
+      }
     }
   };
 
-  const handleSetDefault = (id: string) => {
-    setDefaultAddress(id);
-    toast.success('Default address updated.');
+  const handleSetDefault = async (id: string) => {
+    try {
+      await setDefaultAddress(id);
+      toast.success('Default address updated.');
+    } catch (err) {
+      toast.error('Failed to update default address.');
+    }
   };
+
+  if (isLoading && addresses.length === 0) {
+    return <div className="flex h-64 items-center justify-center text-xs font-black uppercase tracking-widest text-slate-400">Synchronizing nodes...</div>;
+  }
 
   return (
     <section className="SettingsAddressBook space-y-6">

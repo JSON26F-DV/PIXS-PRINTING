@@ -7,7 +7,7 @@ export const SafeTerminal = {
   /**
    * Ensures the input is an array, returns empty array if not.
    */
-  array: <T>(data: any): T[] => {
+  array: <T>(data: unknown): T[] => {
     try {
       return Array.isArray(data) ? data : [];
     } catch {
@@ -18,7 +18,7 @@ export const SafeTerminal = {
   /**
    * Ensures the input is a valid object, returns empty object if not.
    */
-  object: <T extends object>(data: any): T => {
+  object: <T extends object>(data: unknown): T => {
     try {
       return typeof data === "object" && data !== null && !Array.isArray(data) ? (data as T) : ({} as T);
     } catch {

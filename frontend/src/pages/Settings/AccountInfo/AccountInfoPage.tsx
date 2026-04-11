@@ -27,9 +27,17 @@ import { validateContact } from '../../../utils/contactValidation';
 import { profileSchema, passwordFormSchema, type ProfileFormValues, type PasswordFormValues } from './utils/validation';
 
 const AccountInfoPage: React.FC = () => {
-  const { defaultAccount, updateProfile, updatePassword, uploadProfilePicture } = useAccountInfo();
+  const { defaultAccount, updateProfile, updatePassword, uploadProfilePicture, isLoading } = useAccountInfo();
   const otp = useOTPVerification();
   const location = useLocation();
+
+  if (isLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-white">
+        <div className="text-[10px] font-black uppercase tracking-[4px] text-slate-400 animate-pulse">Synchronizing Identity Node...</div>
+      </div>
+    );
+  }
   
   // ─── States ──────────────────────────────────────────────────────────────
   const [profilePreview, setProfilePreview] = useState(defaultAccount.profilePicture);

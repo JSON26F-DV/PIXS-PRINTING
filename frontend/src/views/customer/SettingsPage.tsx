@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx } from 'clsx';
@@ -12,22 +12,25 @@ import type { User } from '../../context/auth.types';
 import { NAV_ITEMS } from '../../pages/Settings/settingsNav';
 import type { SectionKey, NavItem } from '../../pages/Settings/settingsNav';
 
-// Section Components
-import AccountInfoPage from '../../pages/Settings/AccountInfo/AccountInfoPage';
-import PaymentMethodsSection from '../../pages/Settings/PaymentMethods/PaymentMethodsSection';
-import AddressBookSection from '../../pages/Settings/AddressBook/AddressBookSection';
-import MyOrdersSection from '../../pages/Settings/MyOrders/MyOrdersSection';
-import AwardsSection from '../../pages/Settings/Awards/AwardsSection';
-import HelpSupportSection from '../../pages/Settings/HelpSupport/HelpSupportSection';
-import PoliciesSection from '../../pages/Settings/Policies/PoliciesSection';
-import LogoutSection from '../../pages/Settings/Logout/LogoutSection';
+// Lazy Loaded Sections
+const AccountInfoPage = lazy(() => import('../../pages/Settings/AccountInfo/AccountInfoPage'));
+const PaymentMethodsSection = lazy(() => import('../../pages/Settings/PaymentMethods/PaymentMethodsSection'));
+const AddressBookSection = lazy(() => import('../../pages/Settings/AddressBook/AddressBookSection'));
+const AwardsSection = lazy(() => import('../../pages/Settings/Awards/AwardsSection'));
+const HelpSupportSection = lazy(() => import('../../pages/Settings/HelpSupport/HelpSupportSection'));
+const PoliciesSection = lazy(() => import('../../pages/Settings/Policies/PoliciesSection'));
+const LogoutSection = lazy(() => import('../../pages/Settings/Logout/LogoutSection'));
 
+const SectionLoader = () => (
+  <div className="flex h-64 w-full items-center justify-center">
+    <div className="text-[10px] font-black uppercase tracking-[4px] text-slate-400 animate-pulse">Initializing Component...</div>
+  </div>
+);
 
 const SECTION_MAP: Record<SectionKey, React.ReactNode> = {
   account: <AccountInfoPage />,
   payment: <PaymentMethodsSection />,
   address: <AddressBookSection />,
-  orders: <MyOrdersSection />,
   awards: <AwardsSection />,
   help: <HelpSupportSection />,
   policies: <PoliciesSection />,
@@ -284,11 +287,15 @@ const SettingsPage: React.FC = () => {
                 {/* AccountInfoPage has its own layout wrapper; strip outer padding for it */}
                 {activeSection === 'account' ? (
                   <div className="rounded-[24px] border border-slate-100 bg-white shadow-sm overflow-hidden">
-                    {SECTION_MAP[activeSection]}
+                    <Suspense fallback={<SectionLoader />}>
+                      {SECTION_MAP[activeSection]}
+                    </Suspense>
                   </div>
                 ) : (
                   <div className="rounded-[24px] border border-slate-100 bg-white p-5 shadow-sm md:p-8">
-                    {SECTION_MAP[activeSection]}
+                    <Suspense fallback={<SectionLoader />}>
+                      {SECTION_MAP[activeSection]}
+                    </Suspense>
                   </div>
                 )}
               </motion.div>

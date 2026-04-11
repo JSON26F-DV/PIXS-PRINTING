@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import Footer from '../../components/Footer/Footer';
 import CustomerNavbar from '../../components/customer/CustomerNavbar';
 
@@ -24,6 +25,15 @@ const LandingPage: React.FC = () => {
             Synchronizing visitor identification node. <br/>
             Please authenticate to access full marketplace terminal.
           </p>
+
+          <div className="pt-4">
+            <Link 
+              to="/login"
+              className="inline-block px-12 py-4 bg-slate-900 text-white font-black uppercase italic tracking-[0.2em] rounded-full hover:bg-pixs-mint hover:text-slate-900 transition-all transform hover:scale-105 shadow-xl"
+            >
+              Sign In to Terminal
+            </Link>
+          </div>
         </div>
       </main>
 

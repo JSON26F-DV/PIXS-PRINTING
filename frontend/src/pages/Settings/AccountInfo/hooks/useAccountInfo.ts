@@ -1,23 +1,11 @@
-import { useMemo } from 'react';
-import usersData from '../../../../data/users.json';
+import { useMemo, useState, useEffect } from 'react';
+import axios from 'axios';
+import { useAuth } from '../../../../context/AuthContext';
 import type { ProfileFormValues, PasswordFormValues } from '../utils/validation';
 
-
-interface IContactNode {
+export interface IContactNode {
   number: string;
   is_default: boolean;
-}
-
-interface MockCustomer {
-  id: string;
-  name: string;
-  email: string;
-  contact_numbers: IContactNode[];
-  profile_picture?: string;
-}
-
-interface UsersDataShape {
-  customers: MockCustomer[];
 }
 
 export interface AccountInfo {
@@ -29,45 +17,88 @@ export interface AccountInfo {
 }
 
 export const useAccountInfo = () => {
-  const defaultAccount = useMemo<AccountInfo>(() => {
-    const payload = usersData as UsersDataShape;
-    const firstCustomer = payload.customers?.[0];
+  const { user } = useAuth();
+  const [account, setAccount] = useState<AccountInfo | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-    return {
-      id: firstCustomer?.id ?? 'CUST-LOCAL',
-      name: firstCustomer?.name ?? '',
-      email: firstCustomer?.email ?? '',
-      contacts: firstCustomer?.contact_numbers ?? [],
-      profilePicture: firstCustomer?.profile_picture ?? '',
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const response = await axios.get('/user');
+        const data = response.data;
+        setAccount({
+          id: data.id,
+          name: data.name,
+          email: data.email || '',
+          contacts: data.contacts || [], // This would need a migration/table if we want multiple
+          profilePicture: data.profile_picture || '',
+        });
+      } catch (err) {
+        console.error('Failed to fetch account info:', err);
+      } finally {
+        setIsLoading(false);
+      }
     };
+
+    fetchUserData();
   }, []);
 
-  const updateProfile = async (_values: ProfileFormValues): Promise<{ success: boolean }> => {
-    // ─── PHPMailer Pipeline Concept ──────────────────────────────────────────
-    // TODO: Verify if email has changed. If so, trigger a PHPMailer verification 
-    // code sequence before finalized update.
-    console.log('Finalizing profile update node:', _values);
-    return new Promise((resolve) => setTimeout(() => resolve({ success: true }), 1000));
+  const defaultAccount = useMemo<AccountInfo>(() => {
+    if (account) return account;
+    return {
+      id: user.id || '',
+      name: user.name || '',
+      email: user.email || '',
+      contacts: [],
+      profilePicture: '',
+    };
+  }, [account, user]);
+
+  const updateProfile = async (values: ProfileFormValues): Promise<{ success: boolean }> => {
+    try {
+      await axios.patch('/api/settings/profile', values);
+      setAccount(prev => prev ? { ...prev, ...values } : null);
+      return { success: true };
+    } catch (err) {
+      console.error(err);
+      return { success: false };
+    }
   };
 
-  const updatePassword = async (_values: PasswordFormValues): Promise<{ success: boolean }> => {
-    // ─── PHPMailer Password Alert Concept ────────────────────────────────────
-    // TODO: Use PHPMailer to send a security alert/confirmation email immediately 
-    // after a successful password update event.
-    console.log('Finalizing password configuration protocol:', _values.newPassword);
-    return new Promise((resolve) => setTimeout(() => resolve({ success: true }), 1500));
+  const updatePassword = async (values: PasswordFormValues): Promise<{ success: boolean }> => {
+    try {
+      await axios.patch('/api/settings/password', {
+        password: values.newPassword,
+        password_confirmation: values.confirmPassword
+      });
+      return { success: true };
+    } catch (err) {
+      console.error(err);
+      return { success: false };
+    }
   };
 
-  const uploadProfilePicture = async (_file: File): Promise<{ success: boolean; url?: string }> => {
-    // Mock upload Node
-    console.log('Uploading profile binary:', _file.name);
-    return new Promise((resolve) => setTimeout(() => resolve({ success: true, url: URL.createObjectURL(_file) }), 800));
+  const uploadProfilePicture = async (file: File): Promise<{ success: boolean; url?: string }> => {
+    try {
+      const formData = new FormData();
+      formData.append('profile_picture', file);
+      const response = await axios.post('/api/settings/profile-picture', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      const url = response.data.url;
+      setAccount(prev => prev ? { ...prev, profilePicture: url } : null);
+      return { success: true, url };
+    } catch (err) {
+      console.error(err);
+      return { success: false };
+    }
   };
 
   return {
     defaultAccount,
     updateProfile,
     updatePassword,
-    uploadProfilePicture
+    uploadProfilePicture,
+    isLoading
   };
 };

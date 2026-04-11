@@ -16,22 +16,17 @@ import { clsx } from 'clsx';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import toast from 'react-hot-toast';
 
 // ─── Payment Protocol Interfaces ─────────────────────────────────────────────
-type PaymentType = 'GCash' | 'PayMaya' | 'Chinabank' | 'BPI';
-
 interface PaymentMethod {
   id: string;
-  type: PaymentType;
-  accountNumber: string; // Stored masked (last 4) or full
-  accountName: string;
-  isDefault: boolean;
+  type: 'bank' | 'ewallet';
+  bank_name: string | null;
+  provider: string | null;
+  masked_number: string;
+  is_default: boolean;
 }
-
-const MOCK_PAYMENTS: PaymentMethod[] = [
-  { id: 'pay_1', type: 'GCash', accountNumber: '09171234567', accountName: 'Jason R.', isDefault: true },
-  { id: 'pay_2', type: 'BPI', accountNumber: '1234567890', accountName: 'Jason Rivera', isDefault: false },
-];
 
 // ─── Validation Node Schema ──────────────────────────────────────────────────
 const paymentSchema = z.object({
@@ -43,11 +38,13 @@ const paymentSchema = z.object({
 type PaymentFormValues = z.infer<typeof paymentSchema>;
 
 // ─── Helper: Icon Mapping ────────────────────────────────────────────────────
-const TYPE_ICONS: Record<PaymentType, React.ElementType> = {
+const TYPE_ICONS: Record<string, React.ElementType> = {
   'GCash': FiSmartphone,
   'PayMaya': FiSmartphone,
   'Chinabank': FiBriefcase,
   'BPI': FiBriefcase,
+  'bank': FiBriefcase,
+  'ewallet': FiSmartphone
 };
 
 // ─── Component: PaymentMethodCard ────────────────────────────────────────────
@@ -56,8 +53,8 @@ const PaymentMethodCard: React.FC<{
   onSetDefault: (id: string) => void;
   onRemove: (id: string) => void;
 }> = ({ method, onSetDefault, onRemove }) => {
-  const Icon = TYPE_ICONS[method.type];
-  const maskedNumber = method.accountNumber.slice(-4).padStart(method.accountNumber.length, '•').replace(/(.{4})/g, '$1 ').trim();
+  const displayType = method.provider || method.bank_name || method.type;
+  const Icon = TYPE_ICONS[displayType] || FiCreditCard;
 
   return (
     <motion.div
@@ -66,7 +63,7 @@ const PaymentMethodCard: React.FC<{
       exit={{ opacity: 0, x: -20 }}
       className={clsx(
         "PaymentMethodCard group relative flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 rounded-[24px] border transition-all duration-300",
-        method.isDefault 
+        method.is_default 
           ? "bg-slate-900 border-slate-900 shadow-xl shadow-slate-200" 
           : "bg-white border-slate-100 hover:border-slate-200 hover:shadow-md"
       )}
@@ -74,7 +71,7 @@ const PaymentMethodCard: React.FC<{
       <div className="flex items-center gap-5">
         <div className={clsx(
           "w-14 h-14 rounded-2xl flex items-center justify-center transition-colors duration-300",
-          method.isDefault ? "bg-white/10 text-pixs-mint" : "bg-slate-50 text-slate-400 group-hover:text-slate-900"
+          method.is_default ? "bg-white/10 text-pixs-mint" : "bg-slate-50 text-slate-400 group-hover:text-slate-900"
         )}>
           <Icon size={24} />
         </div>
@@ -82,25 +79,19 @@ const PaymentMethodCard: React.FC<{
           <div className="flex items-center gap-3">
             <h4 className={clsx(
               "PaymentType text-sm font-black uppercase tracking-widest italic",
-              method.isDefault ? "text-white" : "text-slate-900"
+              method.is_default ? "text-white" : "text-slate-900"
             )}>
-              {method.type}
+              {displayType}
             </h4>
-            {method.isDefault && (
+            {method.is_default && (
               <span className="px-2.5 py-0.5 bg-pixs-mint text-slate-900 text-[8px] font-black uppercase tracking-widest rounded-full">Primary Node</span>
             )}
           </div>
           <p className={clsx(
             "PaymentMaskedInfo mt-1 text-xs font-mono font-black tracking-tighter italic",
-            method.isDefault ? "text-slate-400" : "text-slate-500"
+            method.is_default ? "text-slate-400" : "text-slate-500"
           )}>
-            {maskedNumber}
-          </p>
-          <p className={clsx(
-            "mt-0.5 text-[10px] font-bold uppercase tracking-widest",
-            method.isDefault ? "text-slate-500" : "text-slate-300"
-          )}>
-            {method.accountName}
+            {method.masked_number}
           </p>
         </div>
       </div>
@@ -111,23 +102,23 @@ const PaymentMethodCard: React.FC<{
                 <input 
                     type="radio" 
                     name="default-payment"
-                    checked={method.isDefault}
+                    checked={method.is_default}
                     onChange={() => onSetDefault(method.id)}
                     className="DefaultPaymentSelector hidden"
                 />
                 <div className={clsx(
                     "w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all",
-                    method.isDefault 
+                    method.is_default 
                         ? "border-pixs-mint bg-pixs-mint shadow-[0_0_10px_#75EEA5]" 
                         : "border-slate-200 bg-white group-hover/selector:border-pixs-mint"
                 )}>
-                    {method.isDefault && <FiCheck className="text-slate-900" size={14} strokeWidth={4} />}
+                    {method.is_default && <FiCheck className="text-slate-900" size={14} strokeWidth={4} />}
                 </div>
                 <span className={clsx(
                     "text-[9px] font-black uppercase tracking-widest italic transition-colors",
-                    method.isDefault ? "text-pixs-mint" : "text-slate-400 group-hover/selector:text-slate-600"
+                    method.is_default ? "text-pixs-mint" : "text-slate-400 group-hover/selector:text-slate-600"
                 )}>
-                    {method.isDefault ? "Active" : "Set Default"}
+                    {method.is_default ? "Active" : "Set Default"}
                 </span>
             </label>
         </div>
@@ -144,8 +135,10 @@ const PaymentMethodCard: React.FC<{
 };
 
 // ─── Main Section: PaymentMethodsSection ─────────────────────────────────────
+import { usePaymentMethodStore } from '../../../store/usePaymentMethodStore';
+
 const PaymentMethodsSection: React.FC = () => {
-  const [methods, setMethods] = useState<PaymentMethod[]>(MOCK_PAYMENTS);
+  const { methods, isLoading, fetchMethods, addMethod, setDefault, removeMethod } = usePaymentMethodStore();
   const [isAdding, setIsAdding] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
@@ -157,36 +150,66 @@ const PaymentMethodsSection: React.FC = () => {
     formState: { errors, isValid }
   } = useForm<PaymentFormValues>({
     resolver: zodResolver(paymentSchema),
-    mode: 'onChange'
+    mode: 'onChange',
+    defaultValues: {
+        type: 'GCash',
+        accountName: '',
+        accountNumber: ''
+    }
   });
 
-  const handleSetDefault = (id: string) => {
-    setMethods(prev => prev.map(m => ({ ...m, isDefault: m.id === id })));
+  React.useEffect(() => {
+    fetchMethods();
+  }, [fetchMethods]);
+
+  const handleSetDefault = async (id: string) => {
+    try {
+      await setDefault(id);
+      toast.success('Primary node updated');
+    } catch {
+      toast.error('Failed to update primary node');
+    }
   };
 
   const handleRemove = (id: string) => {
     setConfirmDelete(id);
   };
 
-  const executeRemove = () => {
+  const executeRemove = async () => {
     if (confirmDelete) {
-      setMethods(prev => prev.filter(m => m.id !== confirmDelete));
-      setConfirmDelete(null);
+      try {
+        await removeMethod(confirmDelete);
+        setConfirmDelete(null);
+        toast.success('Node decommissioned');
+      } catch {
+        toast.error('Failed to decommission node');
+      }
     }
   };
 
-  const onAddMethod = (data: PaymentFormValues) => {
-    const newMethod: PaymentMethod = {
-      id: `pay_${crypto.randomUUID()}`,
-      type: data.type,
-      accountNumber: data.accountNumber,
-      accountName: data.accountName,
-      isDefault: methods.length === 0
+  const onAddMethod = async (data: PaymentFormValues) => {
+    const isEwallet = ['GCash', 'PayMaya'].includes(data.type);
+    
+    const payload = {
+      type: (isEwallet ? 'ewallet' : 'bank') as 'ewallet' | 'bank',
+      provider: isEwallet ? data.type : '',
+      bank_name: isEwallet ? '' : data.type,
+      masked_number: data.accountNumber.slice(-4).padStart(data.accountNumber.length, '•'),
     };
-    setMethods(prev => [...prev, newMethod]);
-    setIsAdding(false);
-    reset();
+
+    try {
+      await addMethod(payload);
+      setIsAdding(false);
+      reset();
+      toast.success('Payment method initialized');
+    } catch {
+      toast.error('Failed to initialize payment node');
+    }
   };
+
+  if (isLoading && methods.length === 0) {
+    return <div className="flex h-64 items-center justify-center text-[10px] font-black uppercase tracking-[4px] text-slate-400 animate-pulse">Syncing Financial Nodes...</div>;
+  }
 
   return (
     <div className="SettingsPaymentMethods space-y-12">
@@ -318,7 +341,7 @@ const PaymentMethodsSection: React.FC = () => {
             ))}
           </AnimatePresence>
 
-          {methods.length === 0 && (
+          {methods.length === 0 && !isLoading && (
             <motion.div 
                initial={{ opacity: 0 }}
                animate={{ opacity: 1 }}

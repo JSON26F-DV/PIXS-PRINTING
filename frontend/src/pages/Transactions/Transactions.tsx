@@ -15,13 +15,13 @@ import DeliverySection from '../../components/Transactions/DeliverySection';
 import ReceiptSection from '../../components/Transactions/ReceiptSection';
 import ExtraNotesSection from '../../components/Transactions/ExtraNotesSection';
 
-import addressData from '../../data/address_book.json';
-import paymentData from '../../data/payment.json';
+import { useCustomerAddressStore } from '../../store/useCustomerAddressStore';
+import { usePaymentMethodStore } from '../../store/usePaymentMethodStore';
+import { usePromotionStore } from '../../store/usePromotionStore';
 import deliveryData from '../../data/delivery_methods.json';
 import { ORDER_STATUS, type OrderStatus } from '../../types/order';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import marketingPromotions from '../../data/marketing_promotions.json';
 
 
 // Utility for class merging
@@ -60,6 +60,11 @@ const Transactions: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
+  
+  const { addresses, fetchAddresses } = useCustomerAddressStore();
+  const { methods: paymentMethods, fetchMethods: fetchPayments } = usePaymentMethodStore();
+  const { promotions, fetchPromotions } = usePromotionStore();
+
   const [isProcessing, setIsProcessing] = useState(false);
   
   // Selections
@@ -78,11 +83,9 @@ const Transactions: React.FC = () => {
 
   // Initial Data Load
   useEffect(() => {
-    const defaultAddr = addressData.find(a => a.is_default);
-    if (defaultAddr) setSelectedAddressId(defaultAddr.id);
-
-    const defaultPay = paymentData.find(p => p.is_default);
-    if (defaultPay) setSelectedPaymentId(defaultPay.id);
+    fetchAddresses();
+    fetchPayments();
+    fetchPromotions();
 
     // Load selected items from localStorage
     const isDirect = new URLSearchParams(location.search).get('direct') === 'true';
@@ -99,17 +102,32 @@ const Transactions: React.FC = () => {
         navigate('/cart');
       }
     }
-  }, [navigate, location.search]);
+  }, [navigate, location.search, fetchAddresses, fetchPayments, fetchPromotions]);
+
+  // Set defaults once data is loaded
+  useEffect(() => {
+    if (addresses.length > 0 && !selectedAddressId) {
+      const def = addresses.find(a => a.is_default) || addresses[0];
+      setSelectedAddressId(def.id);
+    }
+  }, [addresses, selectedAddressId]);
+
+  useEffect(() => {
+    if (paymentMethods.length > 0 && !selectedPaymentId) {
+      const def = paymentMethods.find(p => p.is_default) || paymentMethods[0];
+      setSelectedPaymentId(def.id);
+    }
+  }, [paymentMethods, selectedPaymentId]);
 
   // Sync Discount Logic
   const availableDiscounts = useMemo(() => {
-    return marketingPromotions.filter(promo => {
+    return promotions.filter(promo => {
       const isActive = promo.status === 'active';
       const isForUser = promo.target_type === 'all_users' || (promo.target_type === 'specific_user' && promo.assigned_user_id === user.id);
-      const isNotExpired = new Date(promo.expires_at) > new Date();
+      const isNotExpired = !promo.expires_at || new Date(promo.expires_at) > new Date();
       return isActive && isForUser && isNotExpired;
     });
-  }, [user.id]);
+  }, [promotions, user.id]);
 
   useEffect(() => {
     if (!selectedDiscountId) {
@@ -152,8 +170,8 @@ const Transactions: React.FC = () => {
 
     try {
       const orderId = `ORD-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${uuidv4().slice(0, 5).toUpperCase()}`;
-      const selectedAddress = addressData.find(a => a.id === selectedAddressId);
-      const selectedPayment = paymentData.find(p => p.id === selectedPaymentId);
+      const selectedAddr = addresses.find(a => a.id === selectedAddressId);
+      const selectedPay = paymentMethods.find(p => p.id === selectedPaymentId);
       const delMeta = deliveryData.find((d: { id: string }) => d.id === selectedDeliveryId);
 
       const orderData = {
@@ -168,8 +186,8 @@ const Transactions: React.FC = () => {
             printPricePerUnit: item.plate.printPricePerUnit 
           } : null
         })),
-        shipping_address: selectedAddress,
-        payment_method: selectedPayment,
+        shipping_address: selectedAddr,
+        payment_method: selectedPay,
         delivery_method: delMeta,
         notes: notes,
         status: ORDER_STATUS.PAYMENT_VERIFIED as OrderStatus,

@@ -11,6 +11,9 @@ import MessengerPage from '../pages/Messenger/MessengerPage';
 import ScreenplatePage from '../pages/Screenplate/ScreenplatePage';
 import DeletedAccount from '../views/auth/DeletedAccount';
 import OrderPage from '../pages/Order/OrderPage';
+import LoginPage from '../views/auth/LoginPage';
+import RegisterPage from '../views/auth/RegisterPage';
+import CustomerLayout from '../layouts/CustomerLayout';
 import { useAuth } from '../context/AuthContext';
 
 // Admin Layout & Views
@@ -47,23 +50,29 @@ const AppRouter: React.FC = () => {
   return (
     <Routes>
       <Route path="/" element={<LandingPage />} />
-      <Route path="/homepage" element={<Storefront />} />
-      <Route path="/product/:id" element={<ProductDetailPage />} />
-      <Route path="/cart" element={<AddToCartPage />} />
-      <Route path="/settings" element={<SettingsPage />} />
-      <Route path="/transactions" element={<Transactions />} />
-      <Route path="/order-success/:orderId" element={<OrderSuccess />} />
-      <Route path="/chat" element={<MessengerPage />} />
-      <Route path="/screenplate" element={<ScreenplatePage />} />
-      <Route path="/delete-account" element={<DeletedAccount />} />
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
+      
+      {/* Customer Routes with Navbar */}
       <Route 
-        path="/order" 
         element={
           <ProtectedRoute allowedRoles={['customer']}>
-            <OrderPage />
+            <CustomerLayout />
           </ProtectedRoute>
-        } 
-      />
+        }
+      >
+        <Route path="/homepage" element={<Storefront />} />
+        <Route path="/product/:id" element={<ProductDetailPage />} />
+        <Route path="/cart" element={<AddToCartPage />} />
+        <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/transactions" element={<Transactions />} />
+        <Route path="/order-success/:orderId" element={<OrderSuccess />} />
+        <Route path="/chat" element={<MessengerPage />} />
+        <Route path="/screenplate" element={<ScreenplatePage />} />
+        <Route path="/order" element={<OrderPage />} />
+      </Route>
+
+      <Route path="/delete-account" element={<DeletedAccount />} />
       
       {/* Admin Routes */}
       <Route 
