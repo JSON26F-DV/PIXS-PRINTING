@@ -1,6 +1,6 @@
-import React from 'react';
-import { Outlet } from 'react-router-dom';
-import CustomerNavbar from '../components/customer/CustomerNavbar';
+import React from 'react'
+import { Outlet } from 'react-router-dom'
+import CustomerNavbar from '../components/customer/CustomerNavbar'
 
 const CustomerLayout: React.FC = () => {
   return (
@@ -8,7 +8,7 @@ const CustomerLayout: React.FC = () => {
       <CustomerNavbar />
       <Outlet />
     </>
-  );
-};
+  )
+}
 
-export default CustomerLayout;
+export default CustomerLayout

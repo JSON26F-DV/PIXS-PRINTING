@@ -1,24 +1,24 @@
-import React from 'react';
-import { useAuth } from '../../context/AuthContext';
-import type { RoleType } from '../../context/auth.types';
-import { Navigate } from 'react-router-dom';
+import React from 'react'
+import { useAuth } from '../../context/AuthContext'
+import type { RoleType } from '../../context/auth.types'
+import { Navigate } from 'react-router-dom'
 
 interface RoleGuardProps {
-  children: React.ReactNode;
-  allowedRoles: RoleType[];
-  fallbackPath?: string;
+  children: React.ReactNode
+  allowedRoles: RoleType[]
+  fallbackPath?: string
 }
 
-export const RoleGuard: React.FC<RoleGuardProps> = ({ 
-  children, 
-  allowedRoles, 
-  fallbackPath = '/login' 
+export const RoleGuard: React.FC<RoleGuardProps> = ({
+  children,
+  allowedRoles,
+  fallbackPath = '/login',
 }) => {
-  const { user } = useAuth();
+  const { user } = useAuth()
 
   if (!user || !allowedRoles.includes(user.role)) {
-    return <Navigate to={fallbackPath} replace />;
+    return <Navigate to={fallbackPath} replace />
   }
 
-  return <>{children}</>;
-};
+  return <>{children}</>
+}

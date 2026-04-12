@@ -1,80 +1,106 @@
-import React from 'react';
-import { X, Package, CheckCircle2 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React from 'react'
+import { X, Package, CheckCircle2 } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
 
 interface NotificationModalProps {
-  isOpen: boolean;
-  onClose: () => void;
+  isOpen: boolean
+  onClose: () => void
 }
 
-const NotificationModal: React.FC<NotificationModalProps> = ({ isOpen, onClose }) => {
-  if (!isOpen) return null;
+const NotificationModal: React.FC<NotificationModalProps> = ({
+  isOpen,
+  onClose,
+}) => {
+  if (!isOpen) return null
 
   return (
     <AnimatePresence>
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-md flex items-start justify-end sm:p-6"
+        className="fixed inset-0 z-[100] flex items-start justify-end bg-slate-900/60 backdrop-blur-md sm:p-6"
         onClick={onClose}
       >
-        <motion.div 
+        <motion.div
           initial={{ x: '100%', opacity: 0, scale: 0.95 }}
           animate={{ x: 0, opacity: 1, scale: 1 }}
           exit={{ x: '100%', opacity: 0, scale: 0.95 }}
-          transition={{ type: "spring", damping: 25, stiffness: 200 }}
-          className="w-full h-full sm:w-[400px] sm:h-auto sm:max-h-[85vh] bg-white sm:rounded-[32px] shadow-2xl flex flex-col overflow-hidden"
-          onClick={e => e.stopPropagation()}
+          transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+          className="flex h-full w-full flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[85vh] sm:w-[400px] sm:rounded-[32px]"
+          onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50 z-10">
-             <div>
-                <h2 className="text-xl font-black italic tracking-tighter text-slate-900 uppercase">Alerts</h2>
-                <p className="text-[10px] font-bold uppercase tracking-[4px] text-slate-400 mt-1">System Notifications</p>
-             </div>
-             <button onClick={onClose} className="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-900 transition-colors">
-               <X size={18} />
-             </button>
+          <div className="z-10 flex items-center justify-between border-b border-slate-100 bg-slate-50 p-6">
+            <div>
+              <h2 className="text-xl font-black tracking-tighter text-slate-900 uppercase italic">
+                Alerts
+              </h2>
+              <p className="mt-1 text-[10px] font-bold tracking-[4px] text-slate-400 uppercase">
+                System Notifications
+              </p>
+            </div>
+            <button
+              onClick={onClose}
+              className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-900"
+            >
+              <X size={18} />
+            </button>
           </div>
 
           {/* Body */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
-             {/* Mock Active Order Alert */}
-             <div className="p-4 rounded-2xl bg-white border border-slate-100 shadow-sm flex gap-4 relative overflow-hidden group hover:border-pixs-mint/50 transition-colors cursor-pointer">
-                <div className="absolute top-0 right-0 w-20 h-20 bg-pixs-mint/5 rounded-bl-full -z-10 group-hover:bg-pixs-mint/10 transition-colors"></div>
-                <div className="w-10 h-10 rounded-xl bg-pixs-mint/20 text-pixs-mint flex items-center justify-center shrink-0">
-                   <Package size={18} />
-                </div>
-                <div>
-                   <h3 className="text-sm font-black text-slate-900 italic">Screenplate Request</h3>
-                   <p className="text-xs text-slate-500 mt-1">Your screenplate setup is being analyzed. We'll update the tracking in your orders.</p>
-                   <p className="text-[10px] font-bold uppercase tracking-[2px] text-pixs-mint mt-3 italic">Processing</p>
-                </div>
-             </div>
+          <div className="flex-1 space-y-4 overflow-y-auto p-4">
+            {/* Mock Active Order Alert */}
+            <div className="group hover:border-pixs-mint/50 relative flex cursor-pointer gap-4 overflow-hidden rounded-2xl border border-slate-100 bg-white p-4 shadow-sm transition-colors">
+              <div className="bg-pixs-mint/5 group-hover:bg-pixs-mint/10 absolute top-0 right-0 -z-10 h-20 w-20 rounded-bl-full transition-colors"></div>
+              <div className="bg-pixs-mint/20 text-pixs-mint flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
+                <Package size={18} />
+              </div>
+              <div>
+                <h3 className="text-sm font-black text-slate-900 italic">
+                  Screenplate Request
+                </h3>
+                <p className="mt-1 text-xs text-slate-500">
+                  Your screenplate setup is being analyzed. We'll update the
+                  tracking in your orders.
+                </p>
+                <p className="text-pixs-mint mt-3 text-[10px] font-bold tracking-[2px] uppercase italic">
+                  Processing
+                </p>
+              </div>
+            </div>
 
-             {/* Mock Completed Action */}
-             <div className="p-4 rounded-2xl bg-white border border-slate-100 shadow-sm flex gap-4 cursor-pointer hover:border-slate-300 transition-colors">
-                <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-500 flex items-center justify-center shrink-0">
-                   <CheckCircle2 size={18} />
-                </div>
-                <div>
-                   <h3 className="text-sm font-black text-slate-900 italic">Delivery Dropped</h3>
-                   <p className="text-xs text-slate-500 mt-1">Order #ORD-9892 was successfully completed by courier.</p>
-                   <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mt-3">2 Days Ago</p>
-                </div>
-             </div>
+            {/* Mock Completed Action */}
+            <div className="flex cursor-pointer gap-4 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm transition-colors hover:border-slate-300">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-500">
+                <CheckCircle2 size={18} />
+              </div>
+              <div>
+                <h3 className="text-sm font-black text-slate-900 italic">
+                  Delivery Dropped
+                </h3>
+                <p className="mt-1 text-xs text-slate-500">
+                  Order #ORD-9892 was successfully completed by courier.
+                </p>
+                <p className="mt-3 text-[10px] font-bold tracking-widest text-slate-400 uppercase">
+                  2 Days Ago
+                </p>
+              </div>
+            </div>
           </div>
 
-          <div className="p-4 border-t border-slate-100 bg-slate-50 z-10">
-             <button onClick={onClose} className="w-full py-4 rounded-2xl text-[10px] font-black uppercase tracking-[4px] bg-slate-900 text-white italic hover:scale-[1.02] active:scale-[0.98] transition-transform">
-               Close Panel
-             </button>
+          <div className="z-10 border-t border-slate-100 bg-slate-50 p-4">
+            <button
+              onClick={onClose}
+              className="w-full rounded-2xl bg-slate-900 py-4 text-[10px] font-black tracking-[4px] text-white uppercase italic transition-transform hover:scale-[1.02] active:scale-[0.98]"
+            >
+              Close Panel
+            </button>
           </div>
         </motion.div>
       </motion.div>
     </AnimatePresence>
-  );
-};
+  )
+}
 
-export default NotificationModal;
+export default NotificationModal

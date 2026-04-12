@@ -1,11 +1,11 @@
-import React, { useMemo } from 'react';
-import { motion } from 'framer-motion';
+import React, { useMemo } from 'react'
+import { motion } from 'framer-motion'
 
 interface SplitTextProps {
-  text: string;
-  className?: string;
-  delay?: number;
-  stagger?: number;
+  text: string
+  className?: string
+  delay?: number
+  stagger?: number
 }
 
 const SplitText: React.FC<SplitTextProps> = ({
@@ -14,7 +14,7 @@ const SplitText: React.FC<SplitTextProps> = ({
   delay = 0,
   stagger = 0.05,
 }) => {
-  const words = useMemo(() => text.split(' '), [text]);
+  const words = useMemo(() => text.split(' '), [text])
 
   return (
     <span className={className}>
@@ -39,7 +39,7 @@ const SplitText: React.FC<SplitTextProps> = ({
         </span>
       ))}
     </span>
-  );
-};
+  )
+}
 
-export default SplitText;
+export default SplitText

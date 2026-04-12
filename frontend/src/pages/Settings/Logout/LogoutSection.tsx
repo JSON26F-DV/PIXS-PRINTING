@@ -1,18 +1,18 @@
-import React, { useState } from 'react';
-import { FiLogOut, FiAlertTriangle } from 'react-icons/fi';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../../context/AuthContext';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState } from 'react'
+import { FiLogOut, FiAlertTriangle } from 'react-icons/fi'
+import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../../../context/AuthContext'
+import { motion, AnimatePresence } from 'framer-motion'
 
 const LogoutSection: React.FC = () => {
-  const { logout } = useAuth();
-  const navigate = useNavigate();
-  const [showConfirm, setShowConfirm] = useState(false);
+  const { logout } = useAuth()
+  const navigate = useNavigate()
+  const [showConfirm, setShowConfirm] = useState(false)
 
   const handleLogout = () => {
-    logout();
-    navigate('/');
-  };
+    logout()
+    navigate('/')
+  }
 
   return (
     <section className="SettingsLogout space-y-4">
@@ -26,7 +26,8 @@ const LogoutSection: React.FC = () => {
               Logout
             </p>
             <p className="mt-0.5 text-[10px] font-bold text-slate-500">
-              You will be signed out of your current session and returned to the homepage.
+              You will be signed out of your current session and returned to the
+              homepage.
             </p>
           </div>
         </div>
@@ -34,7 +35,7 @@ const LogoutSection: React.FC = () => {
         <div className="mt-5 flex items-center gap-3">
           <button
             onClick={() => setShowConfirm(true)}
-            className="flex items-center gap-2 rounded-xl bg-red-500 px-5 py-3 text-[10px] font-black tracking-widest text-white uppercase shadow-lg shadow-red-200 transition-all hover:bg-red-600 hover:scale-105 active:scale-95"
+            className="flex items-center gap-2 rounded-xl bg-red-500 px-5 py-3 text-[10px] font-black tracking-widest text-white uppercase shadow-lg shadow-red-200 transition-all hover:scale-105 hover:bg-red-600 active:scale-95"
           >
             <FiLogOut size={14} />
             Sign Out
@@ -57,7 +58,7 @@ const LogoutSection: React.FC = () => {
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="fixed left-1/2 top-1/2 z-[201] w-full max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-[32px] bg-white p-8 shadow-2xl"
+              className="fixed top-1/2 left-1/2 z-[201] w-full max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-[32px] bg-white p-8 shadow-2xl"
             >
               <div className="mb-6 flex flex-col items-center gap-4 text-center">
                 <div className="flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
@@ -91,7 +92,7 @@ const LogoutSection: React.FC = () => {
         )}
       </AnimatePresence>
     </section>
-  );
-};
+  )
+}
 
-export default LogoutSection;
+export default LogoutSection

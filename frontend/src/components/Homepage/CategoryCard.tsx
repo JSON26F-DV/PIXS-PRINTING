@@ -1,17 +1,21 @@
-import { memo } from 'react';
-import { motion } from 'framer-motion';
-import { LazyLoadImage } from 'react-lazy-load-image-component';
-import type { ScrollPosition } from 'react-lazy-load-image-component';
-import 'react-lazy-load-image-component/src/effects/blur.css';
-import type { ICategory } from '../../types/product.types';
+import { memo } from 'react'
+import { motion } from 'framer-motion'
+import { LazyLoadImage } from 'react-lazy-load-image-component'
+import type { ScrollPosition } from 'react-lazy-load-image-component'
+import 'react-lazy-load-image-component/src/effects/blur.css'
+import type { ICategory } from '../../types/product.types'
 
 export interface CategoryCardProps {
-  category: ICategory;
-  onClick: (id: string) => void;
-  scrollPosition: ScrollPosition;
+  category: ICategory
+  onClick: (id: string) => void
+  scrollPosition: ScrollPosition
 }
 
-const CategoryCard = memo(function CategoryCard({ category, onClick, scrollPosition }: CategoryCardProps) {
+const CategoryCard = memo(function CategoryCard({
+  category,
+  onClick,
+  scrollPosition,
+}: CategoryCardProps) {
   return (
     <motion.button
       onClick={() => onClick(category.id)}
@@ -36,7 +40,7 @@ const CategoryCard = memo(function CategoryCard({ category, onClick, scrollPosit
         </span>
       </div>
     </motion.button>
-  );
-});
+  )
+})
 
-export default CategoryCard;
+export default CategoryCard

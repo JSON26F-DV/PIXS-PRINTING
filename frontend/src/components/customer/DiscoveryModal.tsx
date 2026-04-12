@@ -1,200 +1,240 @@
-import React, { useState, useMemo, useEffect, useRef, useLayoutEffect } from 'react';
-import { 
-  Search, 
-  ArrowLeft,
-  Heart,
-  Plus,
-  Package,
-  X
-} from 'lucide-react';
-import gsap from 'gsap';
-import { Link } from 'react-router-dom';
-import productsData from '../../data/products.json';
-import categoriesData from '../../data/categories.json';
+import React, {
+  useState,
+  useMemo,
+  useEffect,
+  useRef,
+  useLayoutEffect,
+} from 'react'
+import { Search, ArrowLeft, Heart, Plus, Package, X } from 'lucide-react'
+import gsap from 'gsap'
+import { Link } from 'react-router-dom'
+import productsData from '../../data/products.json'
+import categoriesData from '../../data/categories.json'
 
 // --- Interfaces ---
 interface IProduct {
-  id: string;
-  name: string;
-  category: string;
-  base_price: number;
-  current_stock: number;
+  id: string
+  name: string
+  category: string
+  base_price: number
+  current_stock: number
 }
 
 interface ICategory {
-  id: string;
-  label: string;
-  count: number;
-  image: string;
+  id: string
+  label: string
+  count: number
+  image: string
 }
 
-const DiscoveryModal: React.FC<{ 
-  isOpen: boolean; 
-  onClose: () => void; 
-  initialCategory?: string | null;
+const DiscoveryModal: React.FC<{
+  isOpen: boolean
+  onClose: () => void
+  initialCategory?: string | null
 }> = ({ isOpen, onClose, initialCategory }) => {
-  const [query, setQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [shouldRender, setShouldRender] = useState(isOpen);
-  
-  const modalRef = useRef<HTMLDivElement>(null);
-  const overlayRef = useRef<HTMLDivElement>(null);
-  const gridRef = useRef<HTMLDivElement>(null);
+  const [query, setQuery] = useState('')
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
+  const [shouldRender, setShouldRender] = useState(isOpen)
 
-  const categories = categoriesData as ICategory[];
+  const modalRef = useRef<HTMLDivElement>(null)
+  const overlayRef = useRef<HTMLDivElement>(null)
+  const gridRef = useRef<HTMLDivElement>(null)
+
+  const categories = categoriesData as ICategory[]
 
   // 1. Strict Scroll Lock Persistence
   useEffect(() => {
     if (isOpen) {
-      document.body.style.overflow = 'hidden';
-      setTimeout(() => setShouldRender(true), 0);
+      document.body.style.overflow = 'hidden'
+      setTimeout(() => setShouldRender(true), 0)
     } else {
-      document.body.style.overflow = 'unset';
+      document.body.style.overflow = 'unset'
     }
-    return () => { document.body.style.overflow = 'unset'; };
-  }, [isOpen]);
+    return () => {
+      document.body.style.overflow = 'unset'
+    }
+  }, [isOpen])
 
   // 2. Initial Setup logic
   useEffect(() => {
     if (initialCategory) {
       setTimeout(() => {
-        setSelectedCategory(initialCategory);
-        setQuery(initialCategory);
-      }, 0);
+        setSelectedCategory(initialCategory)
+        setQuery(initialCategory)
+      }, 0)
     } else if (isOpen) {
       setTimeout(() => {
-        setSelectedCategory(null);
-        setQuery('');
-      }, 0);
+        setSelectedCategory(null)
+        setQuery('')
+      }, 0)
     }
-  }, [initialCategory, isOpen]);
+  }, [initialCategory, isOpen])
 
   // 3. GSAP Precision Motion
   useLayoutEffect(() => {
-    if (!shouldRender || !modalRef.current) return;
+    if (!shouldRender || !modalRef.current) return
 
     if (isOpen) {
-      const tl = gsap.timeline();
-      tl.fromTo(overlayRef.current, 
+      const tl = gsap.timeline()
+      tl.fromTo(
+        overlayRef.current,
         { opacity: 0 },
-        { opacity: 1, duration: 0.4, ease: "power2.out" }
-      );
-      tl.fromTo(modalRef.current, 
+        { opacity: 1, duration: 0.4, ease: 'power2.out' },
+      )
+      tl.fromTo(
+        modalRef.current,
         { yPercent: 100, opacity: 0 },
-        { yPercent: 0, opacity: 1, duration: 0.7, ease: "expo.out", force3D: true },
-        "-=0.3"
-      );
+        {
+          yPercent: 0,
+          opacity: 1,
+          duration: 0.7,
+          ease: 'expo.out',
+          force3D: true,
+        },
+        '-=0.3',
+      )
 
       if (gridRef.current) {
-        tl.fromTo(gridRef.current.children,
+        tl.fromTo(
+          gridRef.current.children,
           { y: 60, opacity: 0 },
-          { y: 0, opacity: 1, duration: 0.6, stagger: 0.08, ease: "power4.out" },
-          "-=0.5"
-        );
+          {
+            y: 0,
+            opacity: 1,
+            duration: 0.6,
+            stagger: 0.08,
+            ease: 'power4.out',
+          },
+          '-=0.5',
+        )
       }
     }
-  }, [isOpen, shouldRender]);
+  }, [isOpen, shouldRender])
 
   const handleClose = () => {
-    if (!modalRef.current) return;
-    
+    if (!modalRef.current) return
+
     const tl = gsap.timeline({
       onComplete: () => {
-        setShouldRender(false);
-        onClose();
-      }
-    });
+        setShouldRender(false)
+        onClose()
+      },
+    })
 
-    tl.to(modalRef.current, { yPercent: 100, opacity: 0, duration: 0.5, ease: "power4.in", force3D: true });
-    tl.to(overlayRef.current, { opacity: 0, duration: 0.3 }, "-=0.2");
-  };
+    tl.to(modalRef.current, {
+      yPercent: 100,
+      opacity: 0,
+      duration: 0.5,
+      ease: 'power4.in',
+      force3D: true,
+    })
+    tl.to(overlayRef.current, { opacity: 0, duration: 0.3 }, '-=0.2')
+  }
 
   const filteredResults = useMemo(() => {
-    if (!query && !selectedCategory) return [];
-    return (productsData as IProduct[]).filter(p => {
-      const matchQuery = p.name.toLowerCase().includes(query.toLowerCase()) || p.id.toLowerCase().includes(query.toLowerCase());
-      const matchCategory = !selectedCategory || p.category.includes(selectedCategory);
-      return matchQuery && matchCategory;
-    });
-  }, [query, selectedCategory]);
+    if (!query && !selectedCategory) return []
+    return (productsData as IProduct[]).filter((p) => {
+      const matchQuery =
+        p.name.toLowerCase().includes(query.toLowerCase()) ||
+        p.id.toLowerCase().includes(query.toLowerCase())
+      const matchCategory =
+        !selectedCategory || p.category.includes(selectedCategory)
+      return matchQuery && matchCategory
+    })
+  }, [query, selectedCategory])
 
-  if (!shouldRender) return null;
+  if (!shouldRender) return null
 
   return (
-    <div className="fixed inset-0 z-[100] h-screen w-screen overflow-hidden flex flex-col justify-end">
+    <div className="fixed inset-0 z-[100] flex h-screen w-screen flex-col justify-end overflow-hidden">
       {/* Search Modal Backdrop Backdrop */}
-      <div 
+      <div
         ref={overlayRef}
         onClick={handleClose}
-        className="absolute inset-0 bg-slate-900/60 backdrop-blur-xl pointer-events-auto"
+        className="pointer-events-auto absolute inset-0 bg-slate-900/60 backdrop-blur-xl"
       />
-      
+
       {/* Modal Container: Scroll Lock Active View */}
       <div
         ref={modalRef}
-        className="relative h-[92vh] w-full bg-white rounded-t-[52px] shadow-2xl flex flex-col overflow-hidden z-20"
+        className="relative z-20 flex h-[92vh] w-full flex-col overflow-hidden rounded-t-[52px] bg-white shadow-2xl"
       >
         {/* Persistent Search Header */}
-        <div className="sticky top-0 z-50 bg-white/80 backdrop-blur-md p-6 border-b border-slate-50 flex items-center gap-4">
-          <button 
+        <div className="sticky top-0 z-50 flex items-center gap-4 border-b border-slate-50 bg-white/80 p-6 backdrop-blur-md">
+          <button
             onClick={handleClose}
-            className="w-12 h-12 flex items-center justify-center bg-slate-50 text-slate-400 rounded-2xl hover:bg-slate-100 transition-all active:scale-90"
+            className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-50 text-slate-400 transition-all hover:bg-slate-100 active:scale-90"
           >
             <ArrowLeft size={22} />
           </button>
-          <div className="flex-1 relative group">
-            <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-pixs-mint transition-colors" size={20} />
-            <input 
+          <div className="group relative flex-1">
+            <Search
+              className="group-focus-within:text-pixs-mint absolute top-1/2 left-6 -translate-y-1/2 text-slate-300 transition-colors"
+              size={20}
+            />
+            <input
               autoFocus
-              type="text" 
+              type="text"
               value={query}
-              onChange={(e) => {setQuery(e.target.value); setSelectedCategory(null);}}
+              onChange={(e) => {
+                setQuery(e.target.value)
+                setSelectedCategory(null)
+              }}
               placeholder="SKU Code / Keyword Search Protocol"
-              className="w-full bg-slate-50 border border-slate-50 rounded-2xl py-5 pl-16 pr-14 text-sm font-black text-slate-900 focus:outline-none focus:border-pixs-mint focus:bg-white transition-all shadow-inner italic"
+              className="focus:border-pixs-mint w-full rounded-2xl border border-slate-50 bg-slate-50 py-5 pr-14 pl-16 text-sm font-black text-slate-900 italic shadow-inner transition-all focus:bg-white focus:outline-none"
             />
             {query && (
-               <button 
-                 onClick={() => {setQuery(''); setSelectedCategory(null);}}
-                 className="absolute right-6 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center hover:bg-slate-300"
-               >
-                 <X size={14} />
-               </button>
+              <button
+                onClick={() => {
+                  setQuery('')
+                  setSelectedCategory(null)
+                }}
+                className="absolute top-1/2 right-6 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-slate-200 text-slate-500 hover:bg-slate-300"
+              >
+                <X size={14} />
+              </button>
             )}
           </div>
         </div>
 
         {/* Discovery Hub - 2 COLUMN STRICT MODALITY */}
-        <div className="flex-1 overflow-y-auto p-6 md:p-12 space-y-12 custom-scrollbar pb-24">
-          
+        <div className="custom-scrollbar flex-1 space-y-12 overflow-y-auto p-6 pb-24 md:p-12">
           {!query && !selectedCategory && (
             <section className="w-full">
-              <h3 className="text-[10px] font-black uppercase tracking-[5px] text-slate-400 mb-10 px-2 italic">Product Classification Matrix</h3>
-              <div ref={gridRef} className="grid grid-cols-2 gap-4 md:gap-8 w-full">
+              <h3 className="mb-10 px-2 text-[10px] font-black tracking-[5px] text-slate-400 uppercase italic">
+                Product Classification Matrix
+              </h3>
+              <div
+                ref={gridRef}
+                className="grid w-full grid-cols-2 gap-4 md:gap-8"
+              >
                 {categories.map((cat) => (
                   <button
                     key={cat.id}
                     onClick={() => {
-                      setSelectedCategory(cat.id);
-                      setQuery(cat.label);
+                      setSelectedCategory(cat.id)
+                      setQuery(cat.label)
                     }}
-                    className="relative w-full aspect-square lg:aspect-[21/9] lg:h-64 rounded-[32px] md:rounded-[48px] overflow-hidden group shadow-xl bg-slate-100 border border-slate-100 hover:shadow-2xl hover:shadow-pixs-mint/20 transition-all duration-500"
+                    className="group hover:shadow-pixs-mint/20 relative aspect-square w-full overflow-hidden rounded-[32px] border border-slate-100 bg-slate-100 shadow-xl transition-all duration-500 hover:shadow-2xl md:rounded-[48px] lg:aspect-[21/9] lg:h-64"
                   >
-                     <img 
-                       src={cat.image} 
-                       alt={cat.label} 
-                       className="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" 
-                     />
-                     <div className="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/20 to-transparent group-hover:via-pixs-mint/40 transition-all duration-700" />
-                     
-                     <div className="absolute inset-0 p-8 flex flex-col justify-end items-start text-left">
-                        <span className="text-base md:text-3xl font-black text-white drop-shadow-2xl italic uppercase leading-none tracking-tighter mb-2">
-                           {cat.label}
+                    <img
+                      src={cat.image}
+                      alt={cat.label}
+                      className="absolute inset-0 h-full w-full object-cover transition-transform duration-1000 group-hover:scale-110"
+                    />
+                    <div className="group-hover:via-pixs-mint/40 absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/20 to-transparent transition-all duration-700" />
+
+                    <div className="absolute inset-0 flex flex-col items-start justify-end p-8 text-left">
+                      <span className="mb-2 text-base leading-none font-black tracking-tighter text-white uppercase italic drop-shadow-2xl md:text-3xl">
+                        {cat.label}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <div className="bg-pixs-mint h-1.5 w-1.5 animate-pulse rounded-full shadow-[0_0_8px_#75EEA5]" />
+                        <span className="text-[9px] font-bold tracking-widest text-white/50 uppercase transition-colors group-hover:text-white">
+                          Cluster: Ready
                         </span>
-                        <div className="flex items-center gap-2">
-                           <div className="w-1.5 h-1.5 bg-pixs-mint rounded-full animate-pulse shadow-[0_0_8px_#75EEA5]" />
-                           <span className="text-[9px] text-white/50 font-bold uppercase tracking-widest group-hover:text-white transition-colors">Cluster: Ready</span>
-                        </div>
-                     </div>
+                      </div>
+                    </div>
                   </button>
                 ))}
               </div>
@@ -203,44 +243,55 @@ const DiscoveryModal: React.FC<{
 
           {/* Results Projection */}
           {(query || selectedCategory) && (
-            <section className="space-y-8 animate-in slide-in-from-bottom-8 duration-700">
-               <div className="flex items-end justify-between border-b border-slate-50 pb-8">
-                  <div className="space-y-2">
-                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Projection Active</p>
-                     <h2 className="text-3xl font-black text-slate-900 italic tracking-tighter uppercase leading-none">Units Identified: {filteredResults.length}</h2>
-                  </div>
-                  <button 
-                    onClick={() => {setQuery(''); setSelectedCategory(null);}} 
-                    className="px-6 py-3 bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-pixs-mint transition-all"
-                  >
-                    Reset Protocol
-                  </button>
-               </div>
-              
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-10">
+            <section className="animate-in slide-in-from-bottom-8 space-y-8 duration-700">
+              <div className="flex items-end justify-between border-b border-slate-50 pb-8">
+                <div className="space-y-2">
+                  <p className="text-[10px] font-black tracking-widest text-slate-400 uppercase">
+                    Projection Active
+                  </p>
+                  <h2 className="text-3xl leading-none font-black tracking-tighter text-slate-900 uppercase italic">
+                    Units Identified: {filteredResults.length}
+                  </h2>
+                </div>
+                <button
+                  onClick={() => {
+                    setQuery('')
+                    setSelectedCategory(null)
+                  }}
+                  className="hover:bg-pixs-mint rounded-xl bg-slate-900 px-6 py-3 text-[10px] font-black tracking-widest text-white uppercase transition-all"
+                >
+                  Reset Protocol
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-10 lg:grid-cols-4">
                 {filteredResults.map((product) => (
                   <div
                     key={product.id}
-                    className="bg-white border border-slate-100 rounded-[32px] md:rounded-[44px] p-2 flex flex-col group transition-all hover:shadow-2xl hover:shadow-slate-200/50"
+                    className="group flex flex-col rounded-[32px] border border-slate-100 bg-white p-2 transition-all hover:shadow-2xl hover:shadow-slate-200/50 md:rounded-[44px]"
                   >
-                    <div className="relative aspect-square rounded-[24px] md:rounded-[36px] overflow-hidden bg-slate-50 mb-4 border border-slate-50 shadow-inner group-hover:bg-white transition-colors">
+                    <div className="relative mb-4 aspect-square overflow-hidden rounded-[24px] border border-slate-50 bg-slate-50 shadow-inner transition-colors group-hover:bg-white md:rounded-[36px]">
                       <div className="absolute inset-0 flex items-center justify-center">
-                        <Package className="w-12 h-12 text-slate-100 group-hover:text-pixs-mint/10 transition-colors" />
+                        <Package className="group-hover:text-pixs-mint/10 h-12 w-12 text-slate-100 transition-colors" />
                       </div>
-                      <button className="absolute top-4 right-4 w-10 h-10 rounded-2xl bg-white backdrop-blur-md flex items-center justify-center text-slate-200 hover:text-rose-500 transition-all shadow-sm active:scale-90 border border-slate-50">
+                      <button className="absolute top-4 right-4 flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-50 bg-white text-slate-200 shadow-sm backdrop-blur-md transition-all hover:text-rose-500 active:scale-90">
                         <Heart size={18} />
                       </button>
                     </div>
-                    <div className="px-4 pb-4 flex-1 flex flex-col">
-                      <span className="text-[8px] font-black text-slate-400 uppercase tracking-[2px] mb-2 block italic">{product.category}</span>
+                    <div className="flex flex-1 flex-col px-4 pb-4">
+                      <span className="mb-2 block text-[8px] font-black tracking-[2px] text-slate-400 uppercase italic">
+                        {product.category}
+                      </span>
                       <Link to={`/product/${product.id}`} onClick={onClose}>
-                        <h4 className="text-xs md:text-sm font-black text-slate-900 leading-tight mb-4 group-hover:text-pixs-mint transition-colors tracking-tighter uppercase italic truncate">
+                        <h4 className="group-hover:text-pixs-mint mb-4 truncate text-xs leading-tight font-black tracking-tighter text-slate-900 uppercase italic transition-colors md:text-sm">
                           {product.name}
                         </h4>
                       </Link>
-                      <div className="flex items-center justify-between mt-auto pt-4 border-t border-slate-50">
-                        <span className="text-sm md:text-xl font-black font-mono text-slate-900 italic tracking-tighter">₱{product.base_price.toLocaleString()}</span>
-                        <button className="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-slate-900 text-white flex items-center justify-center hover:bg-pixs-mint hover:text-slate-900 transition-all shadow-md active:scale-95 group-hover:rotate-12">
+                      <div className="mt-auto flex items-center justify-between border-t border-slate-50 pt-4">
+                        <span className="font-mono text-sm font-black tracking-tighter text-slate-900 italic md:text-xl">
+                          ₱{product.base_price.toLocaleString()}
+                        </span>
+                        <button className="hover:bg-pixs-mint flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-md transition-all group-hover:rotate-12 hover:text-slate-900 active:scale-95 md:h-12 md:w-12">
                           <Plus size={20} strokeWidth={3} />
                         </button>
                       </div>
@@ -250,18 +301,19 @@ const DiscoveryModal: React.FC<{
               </div>
 
               {filteredResults.length === 0 && (
-                 <div className="py-32 text-center text-slate-200 space-y-4">
-                    <Search size={64} className="mx-auto opacity-20" />
-                    <p className="text-[10px] font-black uppercase tracking-[8px]">Null Sequence Found</p>
-                 </div>
+                <div className="space-y-4 py-32 text-center text-slate-200">
+                  <Search size={64} className="mx-auto opacity-20" />
+                  <p className="text-[10px] font-black tracking-[8px] uppercase">
+                    Null Sequence Found
+                  </p>
+                </div>
               )}
             </section>
           )}
-
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default DiscoveryModal;
+export default DiscoveryModal

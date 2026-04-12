@@ -1,25 +1,25 @@
-import React from 'react';
-import { motion } from 'framer-motion';
-import { MessageSquare, Sparkles, Printer, Zap } from 'lucide-react';
+import React from 'react'
+import { motion } from 'framer-motion'
+import { MessageSquare, Sparkles, Printer, Zap } from 'lucide-react'
 
 const HeroSection: React.FC<{ onStart: () => void }> = ({ onStart }) => {
   return (
-    <div className="HeroSection h-full w-full flex items-center justify-center p-6 md:p-20 relative overflow-hidden bg-white">
+    <div className="HeroSection relative flex h-full w-full items-center justify-center overflow-hidden bg-white p-6 md:p-20">
       {/* Background CMYK Elements */}
-      <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-cyan-100/30 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2" />
-      <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-magenta-100/20 rounded-full blur-[80px] translate-y-1/2 -translate-x-1/4" />
-      <div className="absolute top-1/2 left-1/2 w-[500px] h-[500px] bg-pixs-mint/10 rounded-full blur-[120px] -translate-x-1/2 -translate-y-1/2" />
+      <div className="absolute top-0 right-0 h-[400px] w-[400px] translate-x-1/2 -translate-y-1/2 rounded-full bg-cyan-100/30 blur-[100px]" />
+      <div className="bg-magenta-100/20 absolute bottom-0 left-0 h-[300px] w-[300px] -translate-x-1/4 translate-y-1/2 rounded-full blur-[80px]" />
+      <div className="bg-pixs-mint/10 absolute top-1/2 left-1/2 h-[500px] w-[500px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-[120px]" />
 
-      <div className="max-w-3xl w-full text-center space-y-12 relative z-10">
+      <div className="relative z-10 w-full max-w-3xl space-y-12 text-center">
         <motion.div
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          transition={{ duration: 0.8, ease: "easeOut" }}
+          transition={{ duration: 0.8, ease: 'easeOut' }}
           className="flex justify-center"
         >
-          <div className="w-24 h-24 bg-slate-900 rounded-[32px] flex items-center justify-center shadow-2xl shadow-slate-900/20 relative rotate-12 group hover:rotate-0 transition-transform">
+          <div className="group relative flex h-24 w-24 rotate-12 items-center justify-center rounded-[32px] bg-slate-900 shadow-2xl shadow-slate-900/20 transition-transform hover:rotate-0">
             <Printer size={40} className="text-pixs-mint" />
-            <div className="absolute -top-2 -right-2 w-8 h-8 bg-pixs-mint rounded-full flex items-center justify-center shadow-lg">
+            <div className="bg-pixs-mint absolute -top-2 -right-2 flex h-8 w-8 items-center justify-center rounded-full shadow-lg">
               <Zap size={16} className="text-slate-900" />
             </div>
           </div>
@@ -30,11 +30,11 @@ const HeroSection: React.FC<{ onStart: () => void }> = ({ onStart }) => {
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.2, duration: 0.6 }}
-            className="text-5xl md:text-7xl font-black text-slate-900 tracking-tighter italic uppercase leading-none"
+            className="text-5xl leading-none font-black tracking-tighter text-slate-900 uppercase italic md:text-7xl"
           >
             Transforming Your <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-500 via-magenta-500 to-yellow-500">
-               Ideas Into Prints
+            <span className="via-magenta-500 bg-gradient-to-r from-cyan-500 to-yellow-500 bg-clip-text text-transparent">
+              Ideas Into Prints
             </span>
           </motion.h1>
 
@@ -42,7 +42,7 @@ const HeroSection: React.FC<{ onStart: () => void }> = ({ onStart }) => {
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.4, duration: 0.6 }}
-            className="text-slate-400 font-bold uppercase tracking-[4px] md:tracking-[8px] text-[10px] md:text-xs"
+            className="text-[10px] font-bold tracking-[4px] text-slate-400 uppercase md:text-xs md:tracking-[8px]"
           >
             Direct Administrative Channel · Powered by PIXS Printing Hub
           </motion.p>
@@ -52,26 +52,36 @@ const HeroSection: React.FC<{ onStart: () => void }> = ({ onStart }) => {
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.6, duration: 0.6 }}
-          className="flex flex-col md:flex-row items-center justify-center gap-4"
+          className="flex flex-col items-center justify-center gap-4 md:flex-row"
         >
           <button
             onClick={onStart}
-            className="px-10 py-5 bg-slate-900 text-white rounded-full font-black uppercase tracking-widest text-xs flex items-center gap-3 shadow-2xl shadow-slate-900/40 hover:bg-slate-800 hover:scale-[1.02] active:scale-95 transition-all group"
+            className="group flex items-center gap-3 rounded-full bg-slate-900 px-10 py-5 text-xs font-black tracking-widest text-white uppercase shadow-2xl shadow-slate-900/40 transition-all hover:scale-[1.02] hover:bg-slate-800 active:scale-95"
           >
-            Initialize Conversation <MessageSquare size={18} className="text-pixs-mint group-hover:rotate-12 transition-transform" />
+            Initialize Conversation{' '}
+            <MessageSquare
+              size={18}
+              className="text-pixs-mint transition-transform group-hover:rotate-12"
+            />
           </button>
-          
-          <div className="flex items-center gap-2 px-6 py-4 rounded-full border border-slate-100 text-slate-400 text-[10px] font-black uppercase tracking-widest italic">
-            <Sparkles size={14} className="text-yellow-400" /> Premium Quality Assured
+
+          <div className="flex items-center gap-2 rounded-full border border-slate-100 px-6 py-4 text-[10px] font-black tracking-widest text-slate-400 uppercase italic">
+            <Sparkles size={14} className="text-yellow-400" /> Premium Quality
+            Assured
           </div>
         </motion.div>
       </div>
 
       {/* Decorative Grid Node */}
-      <div className="absolute inset-0 z-0 opacity-[0.03] pointer-events-none" 
-           style={{ backgroundImage: 'radial-gradient(#000 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
+      <div
+        className="pointer-events-none absolute inset-0 z-0 opacity-[0.03]"
+        style={{
+          backgroundImage: 'radial-gradient(#000 1px, transparent 1px)',
+          backgroundSize: '32px 32px',
+        }}
+      />
     </div>
-  );
-};
+  )
+}
 
-export default HeroSection;
+export default HeroSection

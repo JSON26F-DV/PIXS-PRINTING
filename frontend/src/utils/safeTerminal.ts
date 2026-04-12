@@ -9,9 +9,9 @@ export const SafeTerminal = {
    */
   array: <T>(data: unknown): T[] => {
     try {
-      return Array.isArray(data) ? data : [];
+      return Array.isArray(data) ? data : []
     } catch {
-      return [];
+      return []
     }
   },
 
@@ -20,9 +20,11 @@ export const SafeTerminal = {
    */
   object: <T extends object>(data: unknown): T => {
     try {
-      return typeof data === "object" && data !== null && !Array.isArray(data) ? (data as T) : ({} as T);
+      return typeof data === 'object' && data !== null && !Array.isArray(data)
+        ? (data as T)
+        : ({} as T)
     } catch {
-      return {} as T;
+      return {} as T
     }
   },
 
@@ -31,17 +33,17 @@ export const SafeTerminal = {
    */
   parseJson: <T>(key: string, fallback: T): T => {
     try {
-      const saved = localStorage.getItem(key);
-      if (!saved) return fallback;
-      const parsed = JSON.parse(saved);
-      
+      const saved = localStorage.getItem(key)
+      if (!saved) return fallback
+      const parsed = JSON.parse(saved)
+
       // If fallback is an array, ensure parsed is an array
-      if (Array.isArray(fallback) && !Array.isArray(parsed)) return fallback;
-      
-      return parsed as T;
+      if (Array.isArray(fallback) && !Array.isArray(parsed)) return fallback
+
+      return parsed as T
     } catch (e) {
-      console.error(`Defensive Guard: Failed to parse ${key}`, e);
-      return fallback;
+      console.error(`Defensive Guard: Failed to parse ${key}`, e)
+      return fallback
     }
   },
 
@@ -49,7 +51,7 @@ export const SafeTerminal = {
    * String length limiter for defensive rendering.
    */
   limit: (str: string | undefined | null, length: number): string => {
-    if (!str) return "";
-    return str.length > length ? `${str.substring(0, length)}...` : str;
-  }
-};
+    if (!str) return ''
+    return str.length > length ? `${str.substring(0, length)}...` : str
+  },
+}

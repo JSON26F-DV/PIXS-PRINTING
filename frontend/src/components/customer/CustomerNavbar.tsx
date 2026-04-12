@@ -1,7 +1,7 @@
-import React, { useState, useMemo } from 'react';
-import { 
-  Search, 
-  MapPin, 
+import React, { useState, useMemo } from 'react'
+import {
+  Search,
+  MapPin,
   MessageCircle,
   Bell,
   Printer,
@@ -13,55 +13,63 @@ import {
   CheckCircle2,
   Circle,
   ChevronDown,
-  Package
-} from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Link, useLocation } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
-import { useDiscovery } from '../../context/DiscoveryContext';
-import AuthModal from './AuthModal';
-import DiscoveryModal from './DiscoveryModal';
-import AddressSelectModal from './AddressSelectModal';
-import NotificationModal from './NotificationModal';
-import NavbarActionButton from './NavbarActionButton';
-import { useCustomerAddressStore } from '../../store/useCustomerAddressStore';
-import { useCartStore } from '../../store/useCartStore';
-import { useNotificationStore } from '../../store/useNotificationStore';
+  Package,
+} from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Link, useLocation } from 'react-router-dom'
+import { useAuth } from '../../context/AuthContext'
+import { useDiscovery } from '../../context/DiscoveryContext'
+import AuthModal from './AuthModal'
+import DiscoveryModal from './DiscoveryModal'
+import AddressSelectModal from './AddressSelectModal'
+import NotificationModal from './NotificationModal'
+import NavbarActionButton from './NavbarActionButton'
+import { useCustomerAddressStore } from '../../store/useCustomerAddressStore'
+import { useCartStore } from '../../store/useCartStore'
+import { useNotificationStore } from '../../store/useNotificationStore'
 
 const CustomerNavbar: React.FC = () => {
-  const { user } = useAuth();
-  const { isDiscoveryOpen, initialCategory, openDiscovery, closeDiscovery } = useDiscovery();
-  const [authModal, setAuthModal] = useState<{ open: boolean; type: 'signin' | 'signup' }>({ open: false, type: 'signin' });
-  const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
-  const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false);
-  const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const { user } = useAuth()
+  const { isDiscoveryOpen, initialCategory, openDiscovery, closeDiscovery } =
+    useDiscovery()
+  const [authModal, setAuthModal] = useState<{
+    open: boolean
+    type: 'signin' | 'signup'
+  }>({ open: false, type: 'signin' })
+  const [isAddressModalOpen, setIsAddressModalOpen] = useState(false)
+  const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false)
+  const [showMobileMenu, setShowMobileMenu] = useState(false)
 
-  const { addresses, defaultAddressId, fetchAddresses } = useCustomerAddressStore();
+  const { addresses, defaultAddressId, fetchAddresses } =
+    useCustomerAddressStore()
 
   React.useEffect(() => {
     if (user) {
-      fetchAddresses();
+      fetchAddresses()
     }
-  }, [user, fetchAddresses]);
+  }, [user, fetchAddresses])
 
-  const selectedAddress = useMemo(() => addresses.find(a => a.id === defaultAddressId), [addresses, defaultAddressId]);
-  const addressText = selectedAddress 
-    ? `${selectedAddress.city || ''}, ${selectedAddress.province || ''}`.trim() 
-    : 'Select Delivery Address';
+  const selectedAddress = useMemo(
+    () => addresses.find((a) => a.id === defaultAddressId),
+    [addresses, defaultAddressId],
+  )
+  const addressText = selectedAddress
+    ? `${selectedAddress.city || ''}, ${selectedAddress.province || ''}`.trim()
+    : 'Select Delivery Address'
   const addressLineFull = selectedAddress
     ? `${selectedAddress.city}, ${selectedAddress.province} CP-${selectedAddress.postal_code}`
-    : 'Select Address';
-  
-  const { getCartCount } = useCartStore();
-  const { unreadCount } = useNotificationStore();
-  const location = useLocation();
-  const isActive = (path: string) => location.pathname === path;
+    : 'Select Address'
 
-  const plateStatus = "Ready";
-  const cartItemCount = getCartCount();
+  const { getCartCount } = useCartStore()
+  const { unreadCount } = useNotificationStore()
+  const location = useLocation()
+  const isActive = (path: string) => location.pathname === path
+
+  const plateStatus = 'Ready'
+  const cartItemCount = getCartCount()
 
   if (location.pathname.startsWith('/admin')) {
-    return null;
+    return null
   }
 
   return (
@@ -69,27 +77,31 @@ const CustomerNavbar: React.FC = () => {
       {/* ─────────────────────────────────────────── */}
       {/*  DESKTOP NAVBAR  (unchanged)               */}
       {/* ─────────────────────────────────────────── */}
-      <header className="CustomerNavbar hidden lg:flex sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-100 h-20 items-center px-6">
-        <div className="CustomerNavbarLayout max-w-[1440px] w-full mx-auto flex items-center justify-between gap-4 md:gap-12">
-          
+      <header className="CustomerNavbar sticky top-0 z-50 hidden h-20 items-center border-b border-slate-100 bg-white/80 px-6 backdrop-blur-md lg:flex">
+        <div className="CustomerNavbarLayout mx-auto flex w-full max-w-[1440px] items-center justify-between gap-4 md:gap-12">
           {/* Left: Industrial Logo & Address Hub */}
-          <div className="CustomerNavbarLeft flex items-center gap-8 shrink-0">
-            <Link to={user?.isLoggedIn ? "/homepage" : "/"} className="flex items-center gap-2 group cursor-pointer">
-              <div className="w-10 h-10 bg-pixs-mint flex items-center justify-center text-slate-900 font-black text-2xl rounded-2xl group-hover:scale-110 transition-transform shadow-lg shadow-pixs-mint/20">
+          <div className="CustomerNavbarLeft flex shrink-0 items-center gap-8">
+            <Link
+              to={user?.isLoggedIn ? '/homepage' : '/'}
+              className="group flex cursor-pointer items-center gap-2"
+            >
+              <div className="bg-pixs-mint shadow-pixs-mint/20 flex h-10 w-10 items-center justify-center rounded-2xl text-2xl font-black text-slate-900 shadow-lg transition-transform group-hover:scale-110">
                 P
               </div>
-              <h1 className="text-xl font-black text-slate-900 hidden lg:block tracking-tighter italic">PIXS <span className="text-slate-400">SHOP</span></h1>
+              <h1 className="hidden text-xl font-black tracking-tighter text-slate-900 italic lg:block">
+                PIXS <span className="text-slate-400">SHOP</span>
+              </h1>
             </Link>
 
             {user?.isLoggedIn && (
-              <button 
+              <button
                 onClick={() => setIsAddressModalOpen(true)}
-                className="CustomerNavbarAddressButton hidden lg:flex flex-col items-start px-4 py-2 hover:bg-slate-50 border border-transparent hover:border-slate-100 rounded-2xl transition-all"
+                className="CustomerNavbarAddressButton hidden flex-col items-start rounded-2xl border border-transparent px-4 py-2 transition-all hover:border-slate-100 hover:bg-slate-50 lg:flex"
               >
-                <span className="text-[10px] font-black uppercase tracking-[2px] text-slate-400 flex items-center gap-1.5 leading-none italic">
+                <span className="flex items-center gap-1.5 text-[10px] leading-none font-black tracking-[2px] text-slate-400 uppercase italic">
                   Deliver to <MapPin size={10} className="text-pixs-mint" />
                 </span>
-                <p className="text-xs font-bold text-slate-900 mt-1 truncate max-w-[140px] italic leading-none">
+                <p className="mt-1 max-w-[140px] truncate text-xs leading-none font-bold text-slate-900 italic">
                   {addressLineFull}
                 </p>
               </button>
@@ -97,73 +109,109 @@ const CustomerNavbar: React.FC = () => {
           </div>
 
           {/* Center: Search */}
-          <div className="CustomerNavbarCenter flex-1 max-w-2xl relative group flex justify-end md:justify-center">
-            <div className="CustomerNavbarSearch hidden md:block w-full relative">
-               <div className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-pixs-mint transition-colors" />
-               <button 
-                 onClick={() => openDiscovery()}
-                 className="CustomerNavbarSearchInput w-full bg-slate-50 border border-slate-100/50 hover:border-pixs-mint/30 hover:bg-white rounded-[24px] py-4 pl-16 pr-6 text-left shadow-inner transition-all group overflow-hidden"
-               >
-                 <span className="text-[10px] font-black text-slate-400 group-hover:text-slate-500 uppercase tracking-[4px] italic opacity-50">Search products, cups, eco bags...</span>
-               </button>
-               <button 
-                 onClick={() => openDiscovery()}
-                 className="CustomerNavbarSearchButton absolute right-2 top-1/2 -translate-y-1/2 h-10 w-10 flex items-center justify-center bg-slate-100 rounded-xl hover:bg-pixs-mint transition-colors"
-               >
-                 <Search size={18} className="text-slate-400 group-hover:text-slate-900" />
-               </button>
+          <div className="CustomerNavbarCenter group relative flex max-w-2xl flex-1 justify-end md:justify-center">
+            <div className="CustomerNavbarSearch relative hidden w-full md:block">
+              <div className="group-focus-within:text-pixs-mint absolute top-1/2 left-6 -translate-y-1/2 text-slate-300 transition-colors" />
+              <button
+                onClick={() => openDiscovery()}
+                className="CustomerNavbarSearchInput hover:border-pixs-mint/30 group w-full overflow-hidden rounded-[24px] border border-slate-100/50 bg-slate-50 py-4 pr-6 pl-16 text-left shadow-inner transition-all hover:bg-white"
+              >
+                <span className="text-[10px] font-black tracking-[4px] text-slate-400 uppercase italic opacity-50 group-hover:text-slate-500">
+                  Search products, cups, eco bags...
+                </span>
+              </button>
+              <button
+                onClick={() => openDiscovery()}
+                className="CustomerNavbarSearchButton hover:bg-pixs-mint absolute top-1/2 right-2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-xl bg-slate-100 transition-colors"
+              >
+                <Search
+                  size={18}
+                  className="text-slate-400 group-hover:text-slate-900"
+                />
+              </button>
             </div>
           </div>
 
           {/* Right: Identity Terminal */}
-          <div className="CustomerNavbarRight flex items-center gap-2 lg:gap-4 shrink-0">
+          <div className="CustomerNavbarRight flex shrink-0 items-center gap-2 lg:gap-4">
             {user && user.role === 'customer' ? (
               <div className="flex items-center gap-1 lg:gap-4">
-                <div className="hidden lg:flex flex-col items-center px-4">
-                  <div className="flex items-center gap-1.5 text-[9px] font-black text-slate-900 uppercase tracking-tighter italic opacity-80">
-                    {plateStatus === "Ready"
-                      ? <CheckCircle2 size={14} className="text-pixs-mint" />
-                      : <Circle size={14} className="text-slate-300 animate-pulse" />}
+                <div className="hidden flex-col items-center px-4 lg:flex">
+                  <div className="flex items-center gap-1.5 text-[9px] font-black tracking-tighter text-slate-900 uppercase italic opacity-80">
+                    {plateStatus === 'Ready' ? (
+                      <CheckCircle2 size={14} className="text-pixs-mint" />
+                    ) : (
+                      <Circle
+                        size={14}
+                        className="animate-pulse text-slate-300"
+                      />
+                    )}
                     Sync
                   </div>
                 </div>
-                <NavbarActionButton to="/cart" icon={ShoppingBag} label="Cart" badge={cartItemCount} />
-                <NavbarActionButton to="/screenplate" icon={Printer} label="Plate" className="hidden sm:flex" />
-                <NavbarActionButton to="/chat" icon={MessageCircle} label="Chat" />
-                <NavbarActionButton to="/order" icon={Package} label="Orders" className="nav-orders-button hidden sm:flex" />
-                <NavbarActionButton onClick={() => setIsNotificationModalOpen(true)} icon={Bell} label="Alert" badge={unreadCount} />
+                <NavbarActionButton
+                  to="/cart"
+                  icon={ShoppingBag}
+                  label="Cart"
+                  badge={cartItemCount}
+                />
+                <NavbarActionButton
+                  to="/screenplate"
+                  icon={Printer}
+                  label="Plate"
+                  className="hidden sm:flex"
+                />
+                <NavbarActionButton
+                  to="/chat"
+                  icon={MessageCircle}
+                  label="Chat"
+                />
+                <NavbarActionButton
+                  to="/order"
+                  icon={Package}
+                  label="Orders"
+                  className="nav-orders-button hidden sm:flex"
+                />
+                <NavbarActionButton
+                  onClick={() => setIsNotificationModalOpen(true)}
+                  icon={Bell}
+                  label="Alert"
+                  badge={unreadCount}
+                />
                 <div className="ProfileTerminal ml-2">
                   <Link
                     to="/settings"
-                    className="flex items-center gap-2 pl-1 pr-1 sm:pr-4 py-1 bg-slate-50 hover:bg-white border border-transparent hover:border-slate-100 rounded-full sm:rounded-[28px] transition-all group shadow-sm active:scale-95"
+                    className="group flex items-center gap-2 rounded-full border border-transparent bg-slate-50 py-1 pr-1 pl-1 shadow-sm transition-all hover:border-slate-100 hover:bg-white active:scale-95 sm:rounded-[28px] sm:pr-4"
                   >
-                    <div className="w-10 h-10 bg-slate-900 flex items-center justify-center text-pixs-mint font-black text-sm rounded-full border border-pixs-mint/20 shadow-lg shadow-pixs-mint/20 group-hover:scale-105 transition-transform">
+                    <div className="text-pixs-mint border-pixs-mint/20 shadow-pixs-mint/20 flex h-10 w-10 items-center justify-center rounded-full border bg-slate-900 text-sm font-black shadow-lg transition-transform group-hover:scale-105">
                       {user.name[0].toUpperCase()}
                     </div>
-                    <span className="hidden sm:block text-[10px] font-black uppercase tracking-widest text-slate-400 group-hover:text-slate-900 transition-colors italic">Profile</span>
+                    <span className="hidden text-[10px] font-black tracking-widest text-slate-400 uppercase italic transition-colors group-hover:text-slate-900 sm:block">
+                      Profile
+                    </span>
                   </Link>
                 </div>
               </div>
             ) : (
               <div className="flex items-center gap-2 sm:gap-4">
-                <div className="hidden md:flex items-center gap-4">
-                  <button 
+                <div className="hidden items-center gap-4 md:flex">
+                  <button
                     onClick={() => setAuthModal({ open: true, type: 'signin' })}
-                    className="px-6 py-3 text-[10px] font-black text-slate-500 hover:text-slate-900 transition-all uppercase tracking-[4px] italic"
+                    className="px-6 py-3 text-[10px] font-black tracking-[4px] text-slate-500 uppercase italic transition-all hover:text-slate-900"
                   >
                     Sign In
                   </button>
-                  <Link 
+                  <Link
                     to="/register"
-                    className="px-8 py-4 bg-slate-900 text-white text-[10px] font-black rounded-3xl shadow-2xl hover:bg-slate-800 transition-all uppercase tracking-[4px] border border-white/10 italic flex items-center justify-center"
+                    className="flex items-center justify-center rounded-3xl border border-white/10 bg-slate-900 px-8 py-4 text-[10px] font-black tracking-[4px] text-white uppercase italic shadow-2xl transition-all hover:bg-slate-800"
                   >
                     Join Now
                   </Link>
                 </div>
-                <div className="md:hidden flex items-center gap-2">
-                  <button 
+                <div className="flex items-center gap-2 md:hidden">
+                  <button
                     onClick={() => setAuthModal({ open: true, type: 'signin' })}
-                    className="px-5 py-2.5 bg-slate-50 text-slate-900 text-[10px] font-black rounded-2xl border border-slate-100 uppercase tracking-[3px] italic hover:bg-slate-100 transition-all active:scale-95"
+                    className="rounded-2xl border border-slate-100 bg-slate-50 px-5 py-2.5 text-[10px] font-black tracking-[3px] text-slate-900 uppercase italic transition-all hover:bg-slate-100 active:scale-95"
                   >
                     Sign In
                   </button>
@@ -178,39 +226,46 @@ const CustomerNavbar: React.FC = () => {
       {/*  MOBILE NAVBAR  (fully redesigned)         */}
       {/* ─────────────────────────────────────────── */}
       <div className="lg:hidden">
-
         {/* 🔝 TOP BAR — Foodpanda-style */}
-        <div className="mobile-navbar-top fixed top-0 left-0 right-0 bg-white/90 backdrop-blur-3xl shadow-[0_10px_40px_rgba(0,0,0,0.03)] z-50 flex flex-col rounded-b-[32px]">
-          
-          <div className="flex items-center justify-between px-4 h-16">
+        <div className="mobile-navbar-top fixed top-0 right-0 left-0 z-50 flex flex-col rounded-b-[32px] bg-white/90 shadow-[0_10px_40px_rgba(0,0,0,0.03)] backdrop-blur-3xl">
+          <div className="flex h-16 items-center justify-between px-4">
             {/* 📍 Left — Location Block (Authenticated Only) */}
             {user?.isLoggedIn ? (
               <button
                 onClick={() => setIsAddressModalOpen(true)}
-                className="location-wrapper flex items-center gap-3 overflow-hidden flex-1 mr-4 active:opacity-70 transition-opacity duration-150"
+                className="location-wrapper mr-4 flex flex-1 items-center gap-3 overflow-hidden transition-opacity duration-150 active:opacity-70"
               >
-                <div className="w-10 h-10 rounded-[12px] bg-slate-900 flex items-center justify-center shrink-0 shadow-lg shadow-slate-200">
-                  <MapPin size={16} className="text-pixs-mint" strokeWidth={3} />
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] bg-slate-900 shadow-lg shadow-slate-200">
+                  <MapPin
+                    size={16}
+                    className="text-pixs-mint"
+                    strokeWidth={3}
+                  />
                 </div>
-                <div className="overflow-hidden flex flex-col items-start leading-tight">
-                  <span className="text-[8px] font-black uppercase tracking-[3px] italic text-slate-400 leading-none mb-1 flex items-center gap-1">
-                    Arrival Node <ChevronDown size={10} className="opacity-70" />
+                <div className="flex flex-col items-start overflow-hidden leading-tight">
+                  <span className="mb-1 flex items-center gap-1 text-[8px] leading-none font-black tracking-[3px] text-slate-400 uppercase italic">
+                    Arrival Node{' '}
+                    <ChevronDown size={10} className="opacity-70" />
                   </span>
-                  <p className="location-text text-sm font-black italic tracking-tighter text-slate-900 truncate whitespace-nowrap overflow-hidden max-w-[55vw] leading-none">
+                  <p className="location-text max-w-[55vw] truncate overflow-hidden text-sm leading-none font-black tracking-tighter whitespace-nowrap text-slate-900 italic">
                     {addressText}
                   </p>
                 </div>
               </button>
             ) : (
-              <div className="flex-1 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-[12px] bg-slate-900 flex items-center justify-center shrink-0 shadow-lg shadow-slate-200 opacity-50">
-                  <Package size={16} className="text-pixs-mint" strokeWidth={2.5} />
+              <div className="flex flex-1 items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] bg-slate-900 opacity-50 shadow-lg shadow-slate-200">
+                  <Package
+                    size={16}
+                    className="text-pixs-mint"
+                    strokeWidth={2.5}
+                  />
                 </div>
                 <div className="flex flex-col items-start leading-tight">
-                  <span className="text-[8px] font-black uppercase tracking-[3px] italic text-slate-400 leading-none mb-1">
+                  <span className="mb-1 text-[8px] leading-none font-black tracking-[3px] text-slate-400 uppercase italic">
                     Status Node
                   </span>
-                  <p className="text-sm font-black italic tracking-tighter text-slate-900/40 leading-none">
+                  <p className="text-sm leading-none font-black tracking-tighter text-slate-900/40 italic">
                     Guest Mode
                   </p>
                 </div>
@@ -221,11 +276,11 @@ const CustomerNavbar: React.FC = () => {
               {/* 🔔 Alert Icon — Mobile Top */}
               <button
                 onClick={() => setIsNotificationModalOpen(true)}
-                className="alert-button relative shrink-0 w-11 h-11 bg-slate-50 border border-slate-100 flex items-center justify-center rounded-[14px] hover:bg-slate-100 active:scale-95 transition-all duration-150"
+                className="alert-button relative flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] border border-slate-100 bg-slate-50 transition-all duration-150 hover:bg-slate-100 active:scale-95"
               >
                 <Bell size={20} className="text-slate-900" strokeWidth={2.5} />
                 {unreadCount > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 bg-pixs-mint text-slate-900 border border-slate-900/5 text-[9px] font-black min-w-[18px] h-5 flex items-center justify-center rounded-full px-1 shadow-lg italic">
+                  <span className="bg-pixs-mint absolute -top-1.5 -right-1.5 flex h-5 min-w-[18px] items-center justify-center rounded-full border border-slate-900/5 px-1 text-[9px] font-black text-slate-900 italic shadow-lg">
                     {unreadCount > 9 ? '9+' : unreadCount}
                   </span>
                 )}
@@ -234,11 +289,15 @@ const CustomerNavbar: React.FC = () => {
               {/* 🛒 Right — Cart Icon */}
               <Link
                 to="/cart"
-                className="cart-button relative shrink-0 w-11 h-11 bg-slate-50 border border-slate-100 flex items-center justify-center rounded-[14px] hover:bg-slate-100 active:scale-95 transition-all duration-150"
+                className="cart-button relative flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] border border-slate-100 bg-slate-50 transition-all duration-150 hover:bg-slate-100 active:scale-95"
               >
-                <ShoppingCart size={20} className="text-slate-900" strokeWidth={2.5} />
+                <ShoppingCart
+                  size={20}
+                  className="text-slate-900"
+                  strokeWidth={2.5}
+                />
                 {cartItemCount > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 bg-pixs-mint text-slate-900 border border-slate-900/5 text-[9px] font-black min-w-[18px] h-5 flex items-center justify-center rounded-full px-1 shadow-lg italic">
+                  <span className="bg-pixs-mint absolute -top-1.5 -right-1.5 flex h-5 min-w-[18px] items-center justify-center rounded-full border border-slate-900/5 px-1 text-[9px] font-black text-slate-900 italic shadow-lg">
                     {cartItemCount > 99 ? '99+' : cartItemCount}
                   </span>
                 )}
@@ -248,84 +307,118 @@ const CustomerNavbar: React.FC = () => {
 
           {/* 🔍 Search Bar */}
           <div className="px-4 pb-4">
-            <button 
+            <button
               onClick={() => openDiscovery()}
-              className="w-full h-12 bg-white rounded-[16px] flex items-center px-5 gap-4 active:scale-[0.98] transition-transform border-2 border-slate-100 hover:border-pixs-mint shadow-inner"
+              className="hover:border-pixs-mint flex h-12 w-full items-center gap-4 rounded-[16px] border-2 border-slate-100 bg-white px-5 shadow-inner transition-transform active:scale-[0.98]"
             >
               <Search size={18} className="text-slate-300" strokeWidth={3} />
-              <span className="text-[10px] font-black tracking-[4px] uppercase italic bg-transparent flex-1 text-left opacity-30 text-slate-900">
+              <span className="flex-1 bg-transparent text-left text-[10px] font-black tracking-[4px] text-slate-900 uppercase italic opacity-30">
                 Search Data Matrix...
               </span>
             </button>
           </div>
-
         </div>
 
         {/* 🔻 BOTTOM NAV — visible only when logged in */}
         {user?.isLoggedIn && (
-          <div className="mobile-navbar-bottom fixed bottom-0 left-0 right-0 h-20 bg-white/90 backdrop-blur-3xl border-t border-slate-100 flex items-center justify-around z-50 px-2 pb-safe rounded-t-[32px] shadow-[0_-10px_40px_rgba(0,0,0,0.03)]">
-
-            <Link to="/homepage" className="nav-item flex flex-col items-center gap-1.5 active:scale-90 transition-all duration-150 px-3 py-2 w-16">
+          <div className="mobile-navbar-bottom pb-safe fixed right-0 bottom-0 left-0 z-50 flex h-20 items-center justify-around rounded-t-[32px] border-t border-slate-100 bg-white/90 px-2 shadow-[0_-10px_40px_rgba(0,0,0,0.03)] backdrop-blur-3xl">
+            <Link
+              to="/homepage"
+              className="nav-item flex w-16 flex-col items-center gap-1.5 px-3 py-2 transition-all duration-150 active:scale-90"
+            >
               <Home
                 size={22}
                 strokeWidth={isActive('/homepage') ? 3 : 2}
-                className={isActive('/homepage') ? 'text-slate-900' : 'text-slate-300'}
+                className={
+                  isActive('/homepage') ? 'text-slate-900' : 'text-slate-300'
+                }
               />
-              <span className={`text-[8px] font-black uppercase italic tracking-[2px] leading-none ${isActive('/homepage') ? 'text-slate-900' : 'text-slate-300 opacity-60'}`}>
+              <span
+                className={`text-[8px] leading-none font-black tracking-[2px] uppercase italic ${isActive('/homepage') ? 'text-slate-900' : 'text-slate-300 opacity-60'}`}
+              >
                 Home
               </span>
             </Link>
 
-            <Link to="/screenplate" className="nav-item flex flex-col items-center gap-1.5 active:scale-90 transition-all duration-150 px-3 py-2 w-16">
+            <Link
+              to="/screenplate"
+              className="nav-item flex w-16 flex-col items-center gap-1.5 px-3 py-2 transition-all duration-150 active:scale-90"
+            >
               <Printer
                 size={22}
                 strokeWidth={isActive('/screenplate') ? 3 : 2}
-                className={isActive('/screenplate') ? 'text-slate-900' : 'text-slate-300'}
+                className={
+                  isActive('/screenplate') ? 'text-slate-900' : 'text-slate-300'
+                }
               />
-              <span className={`text-[8px] font-black uppercase italic tracking-[2px] leading-none ${isActive('/screenplate') ? 'text-slate-900' : 'text-slate-300 opacity-60'}`}>
+              <span
+                className={`text-[8px] leading-none font-black tracking-[2px] uppercase italic ${isActive('/screenplate') ? 'text-slate-900' : 'text-slate-300 opacity-60'}`}
+              >
                 Plate
               </span>
             </Link>
 
-            <Link to="/chat" className="nav-item flex flex-col items-center gap-1.5 active:scale-90 transition-all duration-150 px-3 py-2 w-16">
+            <Link
+              to="/chat"
+              className="nav-item flex w-16 flex-col items-center gap-1.5 px-3 py-2 transition-all duration-150 active:scale-90"
+            >
               <MessageCircle
                 size={22}
                 strokeWidth={isActive('/chat') ? 3 : 2}
-                className={isActive('/chat') ? 'text-slate-900' : 'text-slate-300'}
+                className={
+                  isActive('/chat') ? 'text-slate-900' : 'text-slate-300'
+                }
               />
-              <span className={`text-[8px] font-black uppercase italic tracking-[2px] leading-none ${isActive('/chat') ? 'text-slate-900' : 'text-slate-300 opacity-60'}`}>
+              <span
+                className={`text-[8px] leading-none font-black tracking-[2px] uppercase italic ${isActive('/chat') ? 'text-slate-900' : 'text-slate-300 opacity-60'}`}
+              >
                 Chat
               </span>
             </Link>
 
-            <Link to="/order" className="nav-item flex flex-col items-center gap-1.5 active:scale-90 transition-all duration-150 px-3 py-2 w-16 nav-orders-button">
+            <Link
+              to="/order"
+              className="nav-item nav-orders-button flex w-16 flex-col items-center gap-1.5 px-3 py-2 transition-all duration-150 active:scale-90"
+            >
               <Package
                 size={22}
                 strokeWidth={isActive('/order') ? 3 : 2}
-                className={isActive('/order') ? 'text-slate-900' : 'text-slate-300'}
+                className={
+                  isActive('/order') ? 'text-slate-900' : 'text-slate-300'
+                }
               />
-              <span className={`text-[8px] font-black uppercase italic tracking-[2px] leading-none ${isActive('/order') ? 'text-slate-900' : 'text-slate-300 opacity-60'}`}>
+              <span
+                className={`text-[8px] leading-none font-black tracking-[2px] uppercase italic ${isActive('/order') ? 'text-slate-900' : 'text-slate-300 opacity-60'}`}
+              >
                 Orders
               </span>
             </Link>
 
-            <Link to="/settings" className="nav-item flex flex-col items-center gap-1.5 active:scale-90 transition-all duration-150 px-3 py-2 w-16">
+            <Link
+              to="/settings"
+              className="nav-item flex w-16 flex-col items-center gap-1.5 px-3 py-2 transition-all duration-150 active:scale-90"
+            >
               {user?.name ? (
-                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black shadow-lg ${isActive('/settings') ? 'bg-slate-900 text-pixs-mint' : 'bg-slate-100 text-slate-400'}`}>
+                <div
+                  className={`flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-black shadow-lg ${isActive('/settings') ? 'text-pixs-mint bg-slate-900' : 'bg-slate-100 text-slate-400'}`}
+                >
                   {user.name[0].toUpperCase()}
                 </div>
               ) : (
                 <User
                   size={22}
                   strokeWidth={isActive('/settings') ? 3 : 2}
-                  className={isActive('/settings') ? 'text-slate-900' : 'text-slate-300'}
+                  className={
+                    isActive('/settings') ? 'text-slate-900' : 'text-slate-300'
+                  }
                 />
               )}
-              <span className={`text-[8px] font-black uppercase italic tracking-[2px] leading-none ${isActive('/settings') ? 'text-slate-900' : 'text-slate-300 opacity-60'}`}>
+              <span
+                className={`text-[8px] leading-none font-black tracking-[2px] uppercase italic ${isActive('/settings') ? 'text-slate-900' : 'text-slate-300 opacity-60'}`}
+              >
                 Profile
               </span>
             </Link>
-
           </div>
         )}
       </div>
@@ -333,9 +426,9 @@ const CustomerNavbar: React.FC = () => {
       {/* ─────────────────────────────────────────── */}
       {/*  MODALS & OVERLAYS (unchanged)             */}
       {/* ─────────────────────────────────────────── */}
-      <DiscoveryModal 
-        isOpen={isDiscoveryOpen} 
-        onClose={() => closeDiscovery()} 
+      <DiscoveryModal
+        isOpen={isDiscoveryOpen}
+        onClose={() => closeDiscovery()}
         initialCategory={initialCategory}
       />
 
@@ -343,32 +436,57 @@ const CustomerNavbar: React.FC = () => {
       <AnimatePresence>
         {showMobileMenu && (
           <>
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setShowMobileMenu(false)}
-              className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[100]"
+              className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-md"
             />
-            <motion.div 
+            <motion.div
               initial={{ x: '100%', rotate: 5 }}
               animate={{ x: 0, rotate: 0 }}
               exit={{ x: '100%', rotate: 5 }}
-              className="fixed right-0 top-0 bottom-0 w-full max-w-[320px] bg-white z-[101] shadow-2xl p-10 flex flex-col rounded-l-[64px]"
+              className="fixed top-0 right-0 bottom-0 z-[101] flex w-full max-w-[320px] flex-col rounded-l-[64px] bg-white p-10 shadow-2xl"
             >
-              <div className="flex items-center justify-between mb-12">
-                <div className="w-10 h-10 bg-pixs-mint flex items-center justify-center text-slate-900 font-black text-2xl rounded-2xl">P</div>
-                <button onClick={() => setShowMobileMenu(false)} className="w-12 h-12 rounded-2xl bg-slate-50 text-slate-400 flex items-center justify-center active:scale-90 transition-all">
+              <div className="mb-12 flex items-center justify-between">
+                <div className="bg-pixs-mint flex h-10 w-10 items-center justify-center rounded-2xl text-2xl font-black text-slate-900">
+                  P
+                </div>
+                <button
+                  onClick={() => setShowMobileMenu(false)}
+                  className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-50 text-slate-400 transition-all active:scale-90"
+                >
                   <X size={24} />
                 </button>
               </div>
               <nav className="space-y-6">
-                <button className="w-full py-4 text-xs font-black text-slate-900 uppercase tracking-[4px] border-b border-slate-50 text-left italic">Home</button>
-                <button className="w-full py-4 text-xs font-black text-slate-900 uppercase tracking-[4px] border-b border-slate-50 text-left italic">Categories</button>
-                <button className="w-full py-4 text-xs font-black text-slate-900 uppercase tracking-[4px] border-b border-slate-50 text-left italic">About Us</button>
-                <div className="pt-6 space-y-4 border-t border-slate-100">
-                  <button onClick={() => { setAuthModal({ open: true, type: 'signin' }); setShowMobileMenu(false); }} className="w-full py-4 bg-slate-50 text-xs font-black text-slate-900 uppercase tracking-[4px] rounded-2xl text-center italic hover:bg-slate-100">Sign In</button>
-                  <Link to="/register" onClick={() => setShowMobileMenu(false)} className="w-full py-4 bg-pixs-mint text-xs font-black text-slate-900 uppercase tracking-[4px] rounded-2xl text-center italic shadow-lg shadow-pixs-mint/20 hover:scale-105 transition-all flex items-center justify-center">Join Now</Link>
+                <button className="w-full border-b border-slate-50 py-4 text-left text-xs font-black tracking-[4px] text-slate-900 uppercase italic">
+                  Home
+                </button>
+                <button className="w-full border-b border-slate-50 py-4 text-left text-xs font-black tracking-[4px] text-slate-900 uppercase italic">
+                  Categories
+                </button>
+                <button className="w-full border-b border-slate-50 py-4 text-left text-xs font-black tracking-[4px] text-slate-900 uppercase italic">
+                  About Us
+                </button>
+                <div className="space-y-4 border-t border-slate-100 pt-6">
+                  <button
+                    onClick={() => {
+                      setAuthModal({ open: true, type: 'signin' })
+                      setShowMobileMenu(false)
+                    }}
+                    className="w-full rounded-2xl bg-slate-50 py-4 text-center text-xs font-black tracking-[4px] text-slate-900 uppercase italic hover:bg-slate-100"
+                  >
+                    Sign In
+                  </button>
+                  <Link
+                    to="/register"
+                    onClick={() => setShowMobileMenu(false)}
+                    className="bg-pixs-mint shadow-pixs-mint/20 flex w-full items-center justify-center rounded-2xl py-4 text-center text-xs font-black tracking-[4px] text-slate-900 uppercase italic shadow-lg transition-all hover:scale-105"
+                  >
+                    Join Now
+                  </Link>
                 </div>
               </nav>
             </motion.div>
@@ -376,21 +494,21 @@ const CustomerNavbar: React.FC = () => {
         )}
       </AnimatePresence>
 
-      <AuthModal 
-        isOpen={authModal.open} 
-        onClose={() => setAuthModal({ ...authModal, open: false })} 
+      <AuthModal
+        isOpen={authModal.open}
+        onClose={() => setAuthModal({ ...authModal, open: false })}
         initialType={authModal.type}
       />
-      <AddressSelectModal 
-        isOpen={isAddressModalOpen} 
-        onClose={() => setIsAddressModalOpen(false)} 
+      <AddressSelectModal
+        isOpen={isAddressModalOpen}
+        onClose={() => setIsAddressModalOpen(false)}
       />
-      <NotificationModal 
-        isOpen={isNotificationModalOpen} 
-        onClose={() => setIsNotificationModalOpen(false)} 
+      <NotificationModal
+        isOpen={isNotificationModalOpen}
+        onClose={() => setIsNotificationModalOpen(false)}
       />
     </>
-  );
-};
+  )
+}
 
-export default CustomerNavbar;
+export default CustomerNavbar

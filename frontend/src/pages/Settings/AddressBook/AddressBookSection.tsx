@@ -1,537 +1,304 @@
-import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { FiPlus } from 'react-icons/fi';
-import type { SingleValue } from 'react-select';
-import Select from 'react-select';
-import axios from 'axios';
-import { z } from 'zod';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
-import toast from 'react-hot-toast';
-import Swal from 'sweetalert2';
-import { useSearchParams, useNavigate } from 'react-router-dom';
-import { useAccountInfo } from '../AccountInfo/hooks/useAccountInfo';
-import { useCustomerAddressStore } from '../../../store/useCustomerAddressStore';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
+import { FiPlus } from 'react-icons/fi'
+import type { SingleValue } from 'react-select'
+import Select from 'react-select'
+import axiosInstance from '../../../lib/axiosInstance'
+import { z } from 'zod'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { useForm } from 'react-hook-form'
+import toast from 'react-hot-toast'
+import Swal from 'sweetalert2'
+import { useSearchParams, useNavigate } from 'react-router-dom'
+import { useAccountInfo } from '../AccountInfo/hooks/useAccountInfo'
+import { useCustomerAddressStore } from '../../../store/useCustomerAddressStore'
 
 import {
-  getAllProvinces,
   getAllRegions,
   getBarangaysByMunicipality,
   getMunicipalitiesByProvince,
   getProvincesByRegion,
-} from '@aivangogh/ph-address';
-import type { CustomerAddress } from './types';
+} from '@aivangogh/ph-address'
+import type { CustomerAddress } from './types'
 
 const formSchema = z.object({
-  full_name: z.string().min(2, 'Name is required'),
-  phone: z.string().regex(/^(\+63|0)\s?9(\s?\d){9}$/, 'Enter a valid PH phone (e.g. +63 918 111 2233 or 0918...)'),
+  address_name: z.string().min(2, 'Label is required (e.g. Home, Office)'),
+  phone: z
+    .string()
+    .regex(
+      /^(\+63|0)\s?9(\s?\d){9}$/,
+      'Enter a valid PH phone (e.g. +63 918 111 2233 or 0918...)',
+    ),
   street: z.string().min(3, 'Address details are required'),
   postal_code: z.string().optional(),
-  notes: z.string().optional(),
-  mapPaste: z.string().optional(),
-});
+})
 
-type AddressFormValues = z.infer<typeof formSchema>;
+type AddressFormValues = z.infer<typeof formSchema>
 
-type SelectOption = { value: string; label: string };
-
-const normalize = (s: string) => s.trim().toLowerCase().replace(/\s+/g, ' ');
-
-function parseCoordinatesFromPaste(text: string): { lat: number; lng: number } | null {
-  const trimmed = text.trim();
-  const atMatch = trimmed.match(/@(-?\d+\.?\d*),(-?\d+\.?\d*)(?:,|$)/);
-  if (atMatch) return { lat: parseFloat(atMatch[1]), lng: parseFloat(atMatch[2]) };
-  const qMatch = trimmed.match(/[?&]q=(-?\d+\.?\d*),(-?\d+\.?\d*)/);
-  if (qMatch) return { lat: parseFloat(qMatch[1]), lng: parseFloat(qMatch[2]) };
-  const dMatch = trimmed.match(/!3d(-?\d+\.?\d*)!4d(-?\d+\.?\d*)/);
-  if (dMatch) return { lat: parseFloat(dMatch[1]), lng: parseFloat(dMatch[2]) };
-  const llMatch = trimmed.match(/[?&]ll=(-?\d+\.?\d*),(-?\d+\.?\d*)/);
-  if (llMatch) return { lat: parseFloat(llMatch[1]), lng: parseFloat(llMatch[2]) };
-  const comma = trimmed.match(/^(-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)$/);
-  if (comma) return { lat: parseFloat(comma[1]), lng: parseFloat(comma[2]) };
-  return null;
-}
-
-async function reverseGeocode(lat: number, lng: number) {
-  const { data } = await axios.get('https://nominatim.openstreetmap.org/reverse', {
-    params: { 
-      format: 'json', 
-      lat, 
-      lon: lng, 
-      addressdetails: 1,
-      extratags: 1 
-    },
-    headers: { 
-      'Accept-Language': 'en',
-      'User-Agent': 'PIXS-Printing-Shop-AddressSelector-Contact-jason-at-documents-pixs' 
-    },
-    timeout: 5000,
-  });
-  return data ?? {};
-}
-
-async function searchCenter(query: string) {
-  const { data } = await axios.get('https://nominatim.openstreetmap.org/search', {
-    params: { q: query, format: 'json', limit: 1, countrycodes: 'ph' },
-    headers: { 'Accept-Language': 'en' },
-  });
-  const first = data?.[0];
-  if (!first) return null;
-  return { lat: Number(first.lat), lng: Number(first.lon) };
-}
-
-function matchPhFromNominatim(addr: Record<string, string>) {
-  const provinces = getAllProvinces();
-  const stateStr = (addr.state || addr.province || '').toString();
-  const cityHint = (addr.city || addr.town || addr.municipality || addr.city_district || '').toString();
-  const sub = (addr.suburb || addr.village || addr.neighbourhood || addr.quarter || '').toString();
-
-  let province = provinces.find(
-    (p) =>
-      normalize(stateStr) === normalize(p.name) ||
-      normalize(stateStr).includes(normalize(p.name)) ||
-      normalize(p.name).includes(normalize(stateStr)),
-  );
-
-  if (!province && cityHint) {
-    for (const p of provinces) {
-      const muns = getMunicipalitiesByProvince(p.psgcCode);
-      const hit = muns.find(
-        (m) =>
-          normalize(cityHint).includes(normalize(m.name)) ||
-          normalize(m.name).includes(normalize(cityHint)),
-      );
-      if (hit) {
-        province = p;
-        break;
-      }
-    }
-  }
-
-  if (!province) return null;
-
-  const regions = getAllRegions();
-  const region = regions.find((r) => r.psgcCode === province!.regionCode) ?? null;
-  const municipalities = getMunicipalitiesByProvince(province.psgcCode);
-  let municipality =
-    municipalities.find(
-      (m) =>
-        normalize(cityHint) &&
-        (normalize(cityHint).includes(normalize(m.name)) || normalize(m.name).includes(normalize(cityHint))),
-    ) ?? null;
-
-  if (!municipality && municipalities.length === 1) municipality = municipalities[0];
-
-  let barangayCode = '';
-  let barangayName = '';
-  if (municipality) {
-    const barangays = getBarangaysByMunicipality(municipality.psgcCode);
-    const b = barangays.find(
-      (br) =>
-        sub &&
-        (normalize(sub).includes(normalize(br.name)) || normalize(br.name).includes(normalize(sub))),
-    );
-    if (b) {
-      barangayCode = b.psgcCode;
-      barangayName = b.name;
-    }
-  }
-
-  return {
-    regionCode: region?.psgcCode ?? '',
-    regionName: region?.name ?? '',
-    provinceCode: province.psgcCode,
-    provinceName: province.name,
-    municipalityCode: municipality?.psgcCode ?? '',
-    municipalityName: municipality?.name ?? '',
-    barangayCode,
-    barangayName,
-    postal_code: (addr.postcode || '').toString(),
-  };
-}
-
-const MaskedPhone: React.FC<{ phone: string }> = ({ phone }) => {
-  const clean = phone.replace(/\s+/g, '');
-  return <span>{clean.length < 4 ? clean : `${clean.slice(0, 4)}***${clean.slice(-3)}`}</span>;
-};
+type SelectOption = { value: string; label: string }
 
 const MapSelectorLazy = React.lazy(async () => {
-  const { MapContainer, Marker, TileLayer, useMap, useMapEvents } = await import('react-leaflet');
-  const L = await import('leaflet');
-  await import('leaflet/dist/leaflet.css');
-
+  const { MapContainer, Marker, TileLayer, useMap, useMapEvents } = await import('react-leaflet')
+  const L = await import('leaflet')
+  await import('leaflet/dist/leaflet.css')
   const markerIcon = L.icon({
     iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
     shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
     iconAnchor: [12, 41],
-  });
+  })
 
-  const MapCenterUpdater: React.FC<{ latitude: number; longitude: number }> = ({ latitude, longitude }) => {
-    const map = useMap();
+  interface MapProps {
+    center: { lat: number; lng: number } | null
+    onPositionChange: (pos: { lat: number; lng: number }) => void
+  }
+
+  const MapMarker = ({ center, onPositionChange }: MapProps) => {
+    const map = useMap()
     useEffect(() => {
-      map.setView([latitude, longitude], map.getZoom(), { animate: true });
-    }, [latitude, longitude, map]);
-    return null;
-  };
-
-  const MapMarker: React.FC<{
-    latitude: number;
-    longitude: number;
-    onChange: (lat: number, lng: number) => void;
-  }> = ({ latitude, longitude, onChange }) => {
+      if (center) map.setView(center, map.getZoom())
+    }, [center, map])
     useMapEvents({
       click(e) {
-        onChange(e.latlng.lat, e.latlng.lng);
+        onPositionChange(e.latlng)
       },
-    });
-    return (
-      <Marker
-        position={[latitude, longitude]}
-        icon={markerIcon}
-        draggable
-        eventHandlers={{
-          dragend: (e) => {
-            const ll = e.target.getLatLng();
-            onChange(ll.lat, ll.lng);
-          },
-        }}
-      />
-    );
-  };
+    })
+    return center ? <Marker position={center} icon={markerIcon} /> : null
+  }
 
-  const MapSelector: React.FC<{
-    latitude: number;
-    longitude: number;
-    onChange: (lat: number, lng: number) => void;
-  }> = ({ latitude, longitude, onChange }) => (
-    <div className="MapSelector relative z-0 overflow-hidden rounded-[24px] border border-slate-200">
-      <MapContainer center={[latitude, longitude]} zoom={13} className="h-[320px] w-full md:h-[380px] z-0">
-        <TileLayer attribution="&copy; OpenStreetMap contributors" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-        <MapCenterUpdater latitude={latitude} longitude={longitude} />
-        <MapMarker latitude={latitude} longitude={longitude} onChange={onChange} />
-      </MapContainer>
-    </div>
-  );
+  return {
+    default: function MapComponent({ center, onPositionChange }: MapProps) {
+      return (
+        <MapContainer
+          center={center || [14.5995, 120.9842]}
+          zoom={14}
+          className="h-full w-full rounded-2xl z-0"
+        >
+          <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+          <MapMarker center={center} onPositionChange={onPositionChange} />
+        </MapContainer>
+      )
+    },
+  }
+})
 
-  return { default: MapSelector };
-});
+const MaskedPhone: React.FC<{ phone: string }> = ({ phone }) => {
+  const clean = phone.replace(/\s+/g, '')
+  return (
+    <span>
+      {clean.length < 4 ? clean : `${clean.slice(0, 4)}***${clean.slice(-3)}`}
+    </span>
+  )
+}
 
 const AddressBookSection: React.FC = () => {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const navigate = useNavigate();
-  const { defaultAccount } = useAccountInfo();
-  const { addresses, fetchAddresses, addAddress, updateAddress, removeAddress, setDefaultAddress, isLoading } = useCustomerAddressStore();
+  const [searchParams, setSearchParams] = useSearchParams()
+  const navigate = useNavigate()
+  const { defaultAccount } = useAccountInfo()
+  const {
+    addresses,
+    fetchAddresses,
+    removeAddress,
+    setDefaultAddress,
+    isLoading,
+  } = useCustomerAddressStore()
 
   useEffect(() => {
-    fetchAddresses();
-  }, [fetchAddresses]);
+    fetchAddresses()
+  }, [fetchAddresses])
 
+  const [isFormOpen, setIsFormOpen] = useState(false)
+  const [editingAddress, setEditingAddress] = useState<CustomerAddress | null>(
+    null,
+  )
+
+  const [regionCode, setRegionCode] = useState('')
+  const [provinceCode, setProvinceCode] = useState('')
+  const [municipalityCode, setMunicipalityCode] = useState('')
+  const [barangayCode, setBarangayCode] = useState('')
+
+  const [selectionMode, setSelectionMode] = useState<'manual' | 'map'>('manual')
+  const [mapCenter, setMapCenter] = useState<{lat: number, lng: number} | null>(null)
   
-  const [isFormOpen, setIsFormOpen] = useState(false);
-  const [editingAddress, setEditingAddress] = useState<CustomerAddress | null>(null);
-
-  const [mapLat, setMapLat] = useState(14.5995);
-  const [mapLng, setMapLng] = useState(120.9842);
-  const [regionCode, setRegionCode] = useState('');
-  const [provinceCode, setProvinceCode] = useState('');
-  const [municipalityCode, setMunicipalityCode] = useState('');
-  const [barangayCode, setBarangayCode] = useState('');
-  const [selectionMode, setSelectionMode] = useState<'map' | 'manual'>('map');
-  const [, setGeocodingStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
-
-  const reverseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const formRef = useRef<HTMLFormElement>(null);
+  const formRef = useRef<HTMLFormElement>(null)
 
   const {
     register,
     handleSubmit,
     setValue,
-    getValues,
     reset,
     formState: { errors, isValid },
   } = useForm<AddressFormValues>({
     resolver: zodResolver(formSchema),
     mode: 'onChange',
     defaultValues: {
-      full_name: '',
+      address_name: '',
       phone: '',
       street: '',
       postal_code: '',
-      notes: '',
-      mapPaste: '',
     },
-  });
+  })
 
   const regionOptions = useMemo<SelectOption[]>(
     () => getAllRegions().map((r) => ({ value: r.psgcCode, label: r.name })),
     [],
-  );
+  )
   const provinceOptions = useMemo<SelectOption[]>(() => {
-    if (!regionCode) return [];
-    return getProvincesByRegion(regionCode).map((p) => ({ value: p.psgcCode, label: p.name }));
-  }, [regionCode]);
+    if (!regionCode) return []
+    return getProvincesByRegion(regionCode).map((p) => ({
+      value: p.psgcCode,
+      label: p.name,
+    }))
+  }, [regionCode])
   const cityOptions = useMemo<SelectOption[]>(() => {
-    if (!provinceCode) return [];
-    return getMunicipalitiesByProvince(provinceCode).map((m) => ({ value: m.psgcCode, label: m.name }));
-  }, [provinceCode]);
+    if (!provinceCode) return []
+    return getMunicipalitiesByProvince(provinceCode).map((m) => ({
+      value: m.psgcCode,
+      label: m.name,
+    }))
+  }, [provinceCode])
   const barangayOptions = useMemo<SelectOption[]>(() => {
-    if (!municipalityCode) return [];
-    return getBarangaysByMunicipality(municipalityCode).map((b) => ({ value: b.psgcCode, label: b.name }));
-  }, [municipalityCode]);
+    if (!municipalityCode) return []
+    return getBarangaysByMunicipality(municipalityCode).map((b) => ({
+      value: b.psgcCode,
+      label: b.name,
+    }))
+  }, [municipalityCode])
 
-  const applyMarkerAndGeocode = useCallback(
-    (lat: number, lng: number) => {
-      setMapLat(lat);
-      setMapLng(lng);
-      if (reverseTimer.current) clearTimeout(reverseTimer.current);
-      
-      setGeocodingStatus('loading');
-      setValue('street', `Pin dropped at ${lat.toFixed(6)}, ${lng.toFixed(6)}`, { shouldValidate: true });
+  const openEditForm = useCallback(
+    (address: CustomerAddress) => {
+      setEditingAddress(address)
+      reset({
+        address_name: address.adress_label || '',
+        phone: address.contact_number,
+        street: address.street || '',
+        postal_code: address.postal_code || '',
+      })
 
-      reverseTimer.current = setTimeout(async () => {
-        try {
-          const res = await reverseGeocode(lat, lng);
-          const addr = res.address ?? {};
-          const display = res.display_name ?? '';
-          
-          if (display) {
-            setValue('street', display, { shouldValidate: true });
-            setGeocodingStatus('success');
-          } else {
-            setGeocodingStatus('error');
-          }
+      setRegionCode(address.regionCode || '')
+      setProvinceCode(address.provinceCode || '')
+      setMunicipalityCode(address.municipalityCode || '')
+      setBarangayCode(address.barangayCode || '')
 
-          const matched = matchPhFromNominatim(addr as Record<string, string>);
-          if (matched) {
-            setRegionCode(matched.regionCode);
-            setProvinceCode(matched.provinceCode);
-            setMunicipalityCode(matched.municipalityCode);
-            setBarangayCode(matched.barangayCode);
-            if (matched.postal_code) setValue('postal_code', matched.postal_code);
-          }
-        } catch (error) {
-          console.error('Geocode Fallback Strategy:', error);
-          setGeocodingStatus('error');
-          setValue('street', `${lat.toFixed(6)}, ${lng.toFixed(6)}`, { shouldValidate: true });
-        }
-      }, 800);
+      setIsFormOpen(true)
+
+      setTimeout(() => {
+        formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }, 100)
     },
-    [setValue],
-  );
-
-  const handleMapChange = useCallback(
-    (lat: number, lng: number) => {
-      applyMarkerAndGeocode(lat, lng);
-    },
-    [applyMarkerAndGeocode],
-  );
-
-  const openEditForm = useCallback((address: CustomerAddress) => {
-    setEditingAddress(address);
-    reset({
-      full_name: address.full_name,
-      phone: address.phone,
-      street: address.street_local || address.street || address.address,
-      postal_code: address.postal_code || '',
-      notes: address.notes ?? '',
-      mapPaste: '',
-    });
-    setMapLat(address.latitude);
-    setMapLng(address.longitude);
-    setSelectionMode(address.regionCode ? 'manual' : 'map');
-    
-    setRegionCode(address.regionCode || '');
-    setProvinceCode(address.provinceCode || '');
-    setMunicipalityCode(address.municipalityCode || '');
-    setBarangayCode(address.barangayCode || '');
-    
-    setIsFormOpen(true);
-    
-    setTimeout(() => {
-      formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 100);
-  }, [reset]);
+    [reset],
+  )
 
   const openAddForm = useCallback(() => {
-    setEditingAddress(null);
+    setEditingAddress(null)
     reset({
-      full_name: '',
+      address_name: '',
       phone: '',
       street: '',
       postal_code: '',
-      notes: '',
-      mapPaste: '',
-    });
-    setRegionCode('');
-    setProvinceCode('');
-    setMunicipalityCode('');
-    setBarangayCode('');
-    setMapLat(14.5995);
-    setMapLng(120.9842);
-    setSelectionMode('map');
-    setIsFormOpen(true);
-    
+    })
+    setRegionCode('')
+    setProvinceCode('')
+    setMunicipalityCode('')
+    setBarangayCode('')
+    setIsFormOpen(true)
+
     setTimeout(() => {
-      formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 100);
-  }, [reset]);
+      formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 100)
+  }, [reset])
 
   useEffect(() => {
-    const editId = searchParams.get('edit');
-    const action = searchParams.get('action');
+    const editId = searchParams.get('edit')
+    const action = searchParams.get('action')
 
     if (editId) {
-      const addr = addresses.find(a => a.id === editId);
+      const addr = addresses.find((a) => a.id === editId)
       if (addr) {
-        // Use timeout to avoid synchronous setState inside effect warning
-        setTimeout(() => openEditForm(addr), 0);
+        setTimeout(() => openEditForm(addr), 0)
       }
     } else if (action === 'new') {
-      setTimeout(() => openAddForm(), 0);
+      setTimeout(() => openAddForm(), 0)
     }
-  }, [searchParams, addresses, openAddForm, openEditForm]);
+  }, [searchParams, addresses, openAddForm, openEditForm])
 
   const closeForm = () => {
-    setEditingAddress(null);
-    setIsFormOpen(false);
-    const newParams = new URLSearchParams(searchParams);
-    newParams.delete('edit');
-    newParams.delete('action');
-    setSearchParams(newParams);
-  };
+    setEditingAddress(null)
+    setIsFormOpen(false)
+    const newParams = new URLSearchParams(searchParams)
+    newParams.delete('edit')
+    newParams.delete('action')
+    setSearchParams(newParams)
+  }
 
-  const onDropdownRegion = async (opt: SingleValue<SelectOption>) => {
-    const v = opt?.value ?? '';
-    setRegionCode(v);
-    setProvinceCode('');
-    setMunicipalityCode('');
-    setBarangayCode('');
-    const region = getAllRegions().find((r) => r.psgcCode === v);
-    if (!region) return;
-    const center = await searchCenter(`${region.name}, Philippines`);
-    if (center) {
-      setMapLat(center.lat);
-      setMapLng(center.lng);
-    }
-  };
-
-  const onDropdownProvince = async (opt: SingleValue<SelectOption>) => {
-    const v = opt?.value ?? '';
-    setProvinceCode(v);
-    setMunicipalityCode('');
-    setBarangayCode('');
-    const provinces = getProvincesByRegion(regionCode);
-    const p = provinces.find((x) => x.psgcCode === v);
-    if (!p) return;
-    const center = await searchCenter(`${p.name}, Philippines`);
-    if (center) {
-      setMapLat(center.lat);
-      setMapLng(center.lng);
-    }
-  };
-
-  const onDropdownCity = async (opt: SingleValue<SelectOption>) => {
-    const v = opt?.value ?? '';
-    setMunicipalityCode(v);
-    setBarangayCode('');
-    const cities = getMunicipalitiesByProvince(provinceCode);
-    const c = cities.find((x) => x.psgcCode === v);
-    if (!c) return;
-    const center = await searchCenter(`${c.name}, Philippines`);
-    if (center) {
-      setMapLat(center.lat);
-      setMapLng(center.lng);
-    }
-  };
-
-  const onDropdownBarangay = async (opt: SingleValue<SelectOption>) => {
-    const v = opt?.value ?? '';
-    setBarangayCode(v);
-    const bars = getBarangaysByMunicipality(municipalityCode);
-    const b = bars.find((x) => x.psgcCode === v);
-    if (!b) return;
-    const prov = getProvincesByRegion(regionCode).find((p) => p.psgcCode === provinceCode);
-    const city = getMunicipalitiesByProvince(provinceCode).find((m) => m.psgcCode === municipalityCode);
-    const center = await searchCenter(`${b.name}, ${city?.name ?? ''}, ${prov?.name ?? ''}, Philippines`);
-    if (center) {
-      setMapLat(center.lat);
-      setMapLng(center.lng);
-    }
-  };
-
-  const applyPaste = () => {
-    const raw = getValues('mapPaste') ?? '';
-    const coords = parseCoordinatesFromPaste(raw);
-    if (!coords) {
-      toast.error('Paste a Google Maps link or lat,lng coordinates.');
-      return;
-    }
-    setValue('mapPaste', '');
-    handleMapChange(coords.lat, coords.lng);
-    toast.success('Location applied from paste.');
-  };
+  const onDropdownRegion = (opt: SingleValue<SelectOption>) => {
+    setRegionCode(opt?.value ?? '')
+    setProvinceCode('')
+    setMunicipalityCode('')
+    setBarangayCode('')
+  }
+  const onDropdownProvince = (opt: SingleValue<SelectOption>) => {
+    setProvinceCode(opt?.value ?? '')
+    setMunicipalityCode('')
+    setBarangayCode('')
+  }
+  const onDropdownCity = (opt: SingleValue<SelectOption>) => {
+    setMunicipalityCode(opt?.value ?? '')
+    setBarangayCode('')
+  }
+  const onDropdownBarangay = (opt: SingleValue<SelectOption>) => {
+    setBarangayCode(opt?.value ?? '')
+  }
 
   const onSave = handleSubmit(async (values) => {
-    const regions = getAllRegions();
-    const regionName = regions.find((r) => r.psgcCode === regionCode)?.name ?? '';
-    const provinceDetails = getProvincesByRegion(regionCode).find((p) => p.psgcCode === provinceCode);
-    const cityDetails = getMunicipalitiesByProvince(provinceCode).find((m) => m.psgcCode === municipalityCode);
+    const regions = getAllRegions()
+    const regionName = regionCode 
+      ? (regions.find((r) => r.psgcCode === regionCode)?.name ?? '')
+      : ''
+    const provinceDetails = provinceCode ? getProvincesByRegion(regionCode).find(
+      (p) => p.psgcCode === provinceCode,
+    ) : null
+    const cityDetails = municipalityCode ? getMunicipalitiesByProvince(provinceCode).find(
+      (m) => m.psgcCode === municipalityCode,
+    ) : null
     const barangayDetails = barangayCode
-      ? getBarangaysByMunicipality(municipalityCode).find((b) => b.psgcCode === barangayCode)
-      : null;
+      ? getBarangaysByMunicipality(municipalityCode).find(
+          (b) => b.psgcCode === barangayCode,
+        )
+      : null
 
-    let combinedAddress = '';
-    if (selectionMode === 'map') {
-      combinedAddress = values.street;
-    } else {
-      const parts = [
-        values.street,
-        barangayDetails?.name,
-        cityDetails?.name,
-        provinceDetails?.name,
-        regionName,
-        values.postal_code,
-      ].filter((p): p is string => Boolean(p) && typeof p === 'string');
-      combinedAddress = parts.join(', ');
-    }
-
-    const payload: Omit<CustomerAddress, 'id' | 'is_default'> = {
-      full_name: values.full_name,
-      phone: values.phone,
-      latitude: mapLat,
-      longitude: mapLng,
-      address: combinedAddress,
-      notes: values.notes,
+    const payload = {
+      adress_label: values.address_name,
+      contact_number: values.phone,
       street: values.street,
-      region: regionName,
-      province: provinceDetails?.name || '',
-      city: cityDetails?.name || '',
-      barangay: barangayDetails?.name || '',
-      regionCode: selectionMode === 'manual' ? regionCode : '',
-      provinceCode: selectionMode === 'manual' ? provinceCode : '',
-      municipalityCode: selectionMode === 'manual' ? municipalityCode : '',
-      barangayCode: selectionMode === 'manual' ? barangayCode : '',
-      postal_code: values.postal_code || '',
-    };
+      region: regionName || null,
+      province: provinceDetails?.name || null,
+      city: cityDetails?.name || null,
+      barangay: barangayDetails?.name || null,
+      postal_code: values.postal_code || null,
+    }
 
     try {
       if (editingAddress) {
-        await toast.promise(updateAddress(editingAddress.id, payload), {
-          loading: 'Updating address...',
-          success: 'Address updated.',
-          error: 'Failed to update address.'
-        });
+        toast.loading('Updating address...', { id: 'save-address' })
+        await axiosInstance.put(`/api/customer/addresses/${editingAddress.id}`, payload)
+        toast.success('Address updated.', { id: 'save-address' })
       } else {
-        await toast.promise(addAddress(payload), {
-          loading: 'Saving address...',
-          success: 'Address saved.',
-          error: 'Failed to save address.'
-        });
+        toast.loading('Saving address...', { id: 'save-address' })
+        await axiosInstance.post('/api/customer/addresses', payload)
+        toast.success('Address saved.', { id: 'save-address' })
       }
-      closeForm();
+      fetchAddresses()
+      closeForm()
     } catch (err) {
-      console.error(err);
+      toast.error('Failed to save address.', { id: 'save-address' })
+      console.error(err)
     }
-  });
+  })
 
   const handleDelete = async (id: string) => {
     const result = await Swal.fire({
@@ -544,15 +311,17 @@ const AddressBookSection: React.FC = () => {
       confirmButtonText: 'Yes, delete it',
       cancelButtonText: 'Cancel',
       customClass: {
-        confirmButton: 'rounded-xl font-black uppercase text-[10px] tracking-widest',
-        cancelButton: 'rounded-xl font-black uppercase text-[10px] tracking-widest text-slate-600',
+        confirmButton:
+          'rounded-xl font-black uppercase text-[10px] tracking-widest',
+        cancelButton:
+          'rounded-xl font-black uppercase text-[10px] tracking-widest text-slate-600',
         popup: 'rounded-[32px] border-none shadow-2xl',
-      }
-    });
+      },
+    })
 
     if (result.isConfirmed) {
       try {
-        await removeAddress(id);
+        await removeAddress(id)
         Swal.fire({
           title: 'Deleted!',
           text: 'Address has been removed.',
@@ -561,178 +330,350 @@ const AddressBookSection: React.FC = () => {
           showConfirmButton: false,
           customClass: {
             popup: 'rounded-[32px]',
-          }
-        });
-      } catch (err) {
-        toast.error('Failed to delete address.');
+          },
+        })
+      } catch {
+        toast.error('Failed to delete address.')
       }
     }
-  };
+  }
 
   const handleSetDefault = async (id: string) => {
     try {
-      await setDefaultAddress(id);
-      toast.success('Default address updated.');
-    } catch (err) {
-      toast.error('Failed to update default address.');
+      await setDefaultAddress(id)
+      toast.success('Default address updated.')
+    } catch {
+      toast.error('Failed to update default address.')
     }
-  };
+  }
 
   if (isLoading && addresses.length === 0) {
-    return <div className="flex h-64 items-center justify-center text-xs font-black uppercase tracking-widest text-slate-400">Synchronizing nodes...</div>;
+    return (
+      <div className="flex h-64 items-center justify-center text-xs font-black tracking-widest text-slate-400 uppercase">
+        Synchronizing nodes...
+      </div>
+    )
   }
 
   return (
     <section className="SettingsAddressBook space-y-6">
       <div className="flex items-center justify-between">
         <div className="space-y-1">
-          <h2 className="text-2xl font-black uppercase italic tracking-tighter text-slate-900">Address Book</h2>
-          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Shipping & delivery nodes</p>
+          <h2 className="text-2xl font-black tracking-tighter text-slate-900 uppercase italic">
+            Address Book
+          </h2>
+          <p className="text-[10px] font-black tracking-widest text-slate-400 uppercase">
+            Shipping & delivery nodes
+          </p>
         </div>
         <button
           type="button"
-          className="AddAddressButton bg-slate-900 text-white text-[10px] font-black rounded-3xl px-5 py-3 uppercase tracking-[4px] border border-white/10 italic shadow-2xl transition-all hover:scale-105 active:scale-95"
+          className="AddAddressButton rounded-3xl border border-white/10 bg-slate-900 px-5 py-3 text-[10px] font-black tracking-[4px] text-white uppercase italic shadow-2xl transition-all hover:scale-105 active:scale-95"
           onClick={openAddForm}
         >
-          <FiPlus className="inline mr-1" size={14} />
+          <FiPlus className="mr-1 inline" size={14} />
           Add Address
         </button>
       </div>
 
       {isFormOpen && (
-        <form ref={formRef} className="AddressForm space-y-5 rounded-[24px] border border-slate-100 bg-white p-5 shadow-sm md:p-8" onSubmit={onSave}>
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+        <form
+          ref={formRef}
+          className="AddressForm space-y-5 rounded-[24px] border border-slate-100 bg-white p-5 shadow-sm md:p-8"
+          onSubmit={onSave}
+        >
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
             <div>
-              <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Address Name</label>
-              <input className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" {...register('full_name')} />
-              {errors.full_name && <p className="text-xs text-rose-500">{errors.full_name.message}</p>}
+              <label className="text-[10px] font-black tracking-widest text-slate-500 uppercase">
+                Address Label (e.g. Home)
+              </label>
+              <input
+                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+                placeholder="Home, Office, etc."
+                {...register('address_name')}
+              />
+              {errors.address_name && (
+                <p className="text-xs text-rose-500">
+                  {errors.address_name.message}
+                </p>
+              )}
             </div>
-            <div className="AddressContactWrapper space-y-3">
-              <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Select Contact Number</label>
-              <select 
-                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold text-slate-800 focus:border-pixs-mint outline-none"
+            {/*
+            <div>
+              <label className="text-[10px] font-black tracking-widest text-slate-500 uppercase">
+                Recipient Name
+              </label>
+              <input
+                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+                placeholder="Full Name"
+                {...register('full_name')}
+              />
+              {errors.full_name && (
+                <p className="text-xs text-rose-500">
+                  {errors.full_name.message}
+                </p>
+              )}
+            </div>
+            */}
+            <div className="AddressContactWrapper space-y-2">
+              <label className="text-[10px] font-black tracking-widest text-slate-500 uppercase">
+                Select Contact Number
+              </label>
+              <select
+                className="focus:border-pixs-mint w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold text-slate-800 outline-none"
                 {...register('phone')}
                 onChange={(e) => {
-                   if (e.target.value === 'ADD_NEW') {
-                     navigate('/settings/account-info?scroll=contact-section&action=add-contact');
-                   } else {
-                     setValue('phone', e.target.value, { shouldValidate: true });
-                   }
+                  if (e.target.value === 'ADD_NEW') {
+                    navigate(
+                      '/settings/account-info?scroll=contact-section&action=add-contact',
+                    )
+                  } else {
+                    setValue('phone', e.target.value, { shouldValidate: true })
+                  }
                 }}
               >
-                 <option value="">Select a number...</option>
-                 {defaultAccount.contacts.map((c, i) => (
-                   <option key={i} value={c.number}>
-                     {c.number} {c.is_default ? '(Default)' : ''}
-                   </option>
-                 ))}
-                
+                <option value="">Select a number...</option>
+                {defaultAccount.contacts.map((c, i) => (
+                  <option key={i} value={c.number}>
+                    {c.number} {c.is_default ? '(Default)' : ''}
+                  </option>
+                ))}
+                <option
+                  value="ADD_NEW"
+                  className="font-black text-blue-600 uppercase"
+                >
+                  + Add New Number
+                </option>
               </select>
-              {errors.phone && <p className="text-[10px] font-black uppercase text-rose-500 italic px-1">{errors.phone.message}</p>}
+              {errors.phone && (
+                <p className="px-1 text-[10px] font-black text-rose-500 uppercase italic">
+                  {errors.phone.message}
+                </p>
+              )}
             </div>
-
           </div>
-          
-          <div className={`space-y-4 rounded-3xl border p-5 transition-all md:p-8 ${selectionMode === 'map' ? 'border-slate-900 bg-slate-50/50 shadow-inner' : 'border-slate-100 opacity-40 bg-white'}`}>
-            <label className="flex cursor-pointer items-center gap-3">
-              <input type="radio" name="selectionMode" checked={selectionMode === 'map'} onChange={() => setSelectionMode('map')} className="h-5 w-5 accent-slate-900" />
-              <span className="text-xs font-black uppercase tracking-[2px] text-slate-900">Pin Map / Google Link</span>
-            </label>
 
+          <div className="flex gap-4">
+            <button
+              type="button"
+              className={`flex-1 rounded-xl py-3 text-[10px] font-black uppercase transition-colors ${selectionMode === 'manual' ? 'bg-slate-900 border-transparent text-white shadow-lg' : 'bg-slate-100 border border-slate-200 text-slate-500 hover:bg-slate-200'}`}
+              onClick={() => setSelectionMode('manual')}
+            >
+              Manual Form
+            </button>
+            <button
+              type="button"
+              className={`flex-1 rounded-xl py-3 text-[10px] font-black uppercase transition-colors ${selectionMode === 'map' ? 'bg-slate-900 border-transparent text-white shadow-lg' : 'bg-slate-100 border border-slate-200 text-slate-500 hover:bg-slate-200'}`}
+              onClick={() => setSelectionMode('map')}
+            >
+              Pin on Map
+            </button>
+          </div>
+
+          <div
+            className="space-y-4 rounded-3xl border border-slate-900 bg-slate-50/50 p-5 shadow-inner transition-all md:p-8"
+          >
             {selectionMode === 'map' && (
-              <div className="space-y-5 pt-2 animate-in fade-in slide-in-from-top-2 duration-300">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Paste Google Maps link</label>
-                  <div className="flex flex-col gap-2 sm:flex-row">
-                    <input className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm" placeholder="https://maps.google.com/..." {...register('mapPaste')} />
-                    <button type="button" className="whitespace-nowrap rounded-xl bg-slate-900 px-5 py-2 text-[10px] font-black uppercase tracking-widest text-white" onClick={applyPaste}>Apply location</button>
-                  </div>
+              <div className="animate-in fade-in slide-in-from-top-2 space-y-4 pt-2">
+                <div className="h-[250px] w-full relative z-0 rounded-2xl border border-slate-200 bg-slate-50 p-1">
+                  <React.Suspense fallback={<div className="flex h-full items-center justify-center text-xs font-black uppercase tracking-widest text-slate-400">Loading Map...</div>}>
+                    <MapSelectorLazy
+                      center={mapCenter}
+                      onPositionChange={(pos: {lat: number, lng: number}) => {
+                        setMapCenter(pos)
+                        setValue('street', `${pos.lat}, ${pos.lng}`, { shouldValidate: true })
+                      }}
+                    />
+                  </React.Suspense>
                 </div>
-
-                <div className="MapWrapper overflow-hidden rounded-2xl border border-slate-200">
-                  <Suspense fallback={<div className="flex h-[320px] items-center justify-center bg-slate-100 text-xs font-black uppercase tracking-widest text-slate-400">Loading Map…</div>}>
-                    <MapSelectorLazy latitude={mapLat} longitude={mapLng} onChange={handleMapChange} />
-                  </Suspense>
-                </div>
-
-                <div className="col-span-full space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Address Info / Coordinates</label>
-                  <textarea className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm min-h-[100px] border-dashed" placeholder="Auto-filled from map..." {...register('street')} />
-                  {errors.street && <p className="text-xs text-rose-500">{errors.street.message}</p>}
+                <div>
+                  <label className="text-[10px] font-black tracking-widest text-slate-500 uppercase">
+                    Map Coordinates
+                  </label>
+                  <textarea
+                    className="min-h-[80px] w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-700"
+                    placeholder="Click on the map to capture coordinates..."
+                    {...register('street')}
+                  />
+                  {errors.street && (
+                     <p className="text-xs text-rose-500">{errors.street.message}</p>
+                  )}
                 </div>
               </div>
             )}
-          </div>
-
-          <div className={`space-y-4 rounded-3xl border p-5 transition-all md:p-8 ${selectionMode === 'manual' ? 'border-slate-900 bg-slate-50/50 shadow-inner' : 'border-slate-100 opacity-40 bg-white'}`}>
-             <label className="flex cursor-pointer items-center gap-3">
-              <input type="radio" name="selectionMode" checked={selectionMode === 'manual'} onChange={() => setSelectionMode('manual')} className="h-5 w-5 accent-slate-900" />
-              <span className="text-xs font-black uppercase tracking-[2px] text-slate-900">Manual Dropdowns</span>
-            </label>
 
             {selectionMode === 'manual' && (
-              <div className="space-y-5 pt-2 animate-in fade-in slide-in-from-top-2 duration-300">
+              <div className="animate-in fade-in slide-in-from-top-2 space-y-5 pt-2 duration-300">
                 <div className="DropdownSelector grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div>
-                    <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-slate-500">Region</p>
-                    <Select options={regionOptions} value={regionOptions.find((o) => o.value === regionCode) ?? null} onChange={onDropdownRegion} placeholder="Select region" />
+                    <p className="mb-2 text-[10px] font-black tracking-widest text-slate-500 uppercase">
+                      Region
+                    </p>
+                    <Select
+                      options={regionOptions}
+                      value={
+                        regionOptions.find((o) => o.value === regionCode) ??
+                        null
+                      }
+                      onChange={onDropdownRegion}
+                      menuPosition="fixed"
+                      placeholder="Select region"
+                    />
                   </div>
                   <div>
-                    <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-slate-500">Province</p>
-                    <Select options={provinceOptions} value={provinceOptions.find((o) => o.value === provinceCode) ?? null} onChange={onDropdownProvince} placeholder="Select province" isDisabled={!regionCode} />
+                    <p className="mb-2 text-[10px] font-black tracking-widest text-slate-500 uppercase">
+                      Province
+                    </p>
+                    <Select
+                      options={provinceOptions}
+                      value={
+                        provinceOptions.find((o) => o.value === provinceCode) ??
+                        null
+                      }
+                      onChange={onDropdownProvince}
+                      menuPosition="fixed"
+                      placeholder="Select province"
+                      isDisabled={!regionCode}
+                    />
                   </div>
                   <div>
-                    <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-slate-500">City</p>
-                    <Select options={cityOptions} value={cityOptions.find((o) => o.value === municipalityCode) ?? null} onChange={onDropdownCity} placeholder="Select city" isDisabled={!provinceCode} />
+                    <p className="mb-2 text-[10px] font-black tracking-widest text-slate-500 uppercase">
+                      City
+                    </p>
+                    <Select
+                      options={cityOptions}
+                      value={
+                        cityOptions.find((o) => o.value === municipalityCode) ??
+                        null
+                      }
+                      onChange={onDropdownCity}
+                      menuPosition="fixed"
+                      placeholder="Select city"
+                      isDisabled={!provinceCode}
+                    />
                   </div>
                   <div>
-                    <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-slate-500">Barangay</p>
-                    <Select options={barangayOptions} value={barangayOptions.find((o) => o.value === barangayCode) ?? null} onChange={onDropdownBarangay} placeholder="Select barangay" isDisabled={!municipalityCode} />
+                    <p className="mb-2 text-[10px] font-black tracking-widest text-slate-500 uppercase">
+                      Barangay
+                    </p>
+                    <Select
+                      options={barangayOptions}
+                      value={
+                        barangayOptions.find((o) => o.value === barangayCode) ??
+                        null
+                      }
+                      onChange={onDropdownBarangay}
+                      menuPosition="fixed"
+                      placeholder="Select barangay"
+                      isDisabled={!municipalityCode}
+                    />
                   </div>
                 </div>
                 <div>
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Street / House No.</label>
-                  <textarea className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm min-h-[80px]" {...register('street')} />
-                  {errors.street && <p className="text-xs text-rose-500">{errors.street.message}</p>}
+                  <label className="text-[10px] font-black tracking-widest text-slate-500 uppercase">
+                    Street / House No.
+                  </label>
+                  <textarea
+                    className="min-h-[80px] w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                    {...register('street')}
+                  />
+                  {errors.street && (
+                    <p className="text-xs text-rose-500">
+                      {errors.street.message}
+                    </p>
+                  )}
                 </div>
                 <div className="md:w-1/2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Postal Code</label>
-                  <input className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm" {...register('postal_code')} />
+                  <label className="text-[10px] font-black tracking-widest text-slate-500 uppercase">
+                    Postal Code
+                  </label>
+                  <input
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                    {...register('postal_code')}
+                  />
                 </div>
               </div>
             )}
           </div>
 
           <div className="flex justify-end gap-2 px-2">
-            <button type="button" className="rounded-xl border border-slate-200 px-6 py-3 text-[10px] font-black uppercase tracking-widest text-slate-600" onClick={closeForm}>Cancel</button>
-            <button type="submit" disabled={!isValid} className="rounded-xl bg-slate-900 px-8 py-3 text-[10px] font-black uppercase tracking-widest text-white disabled:opacity-50">Save Address</button>
+            <button
+              type="button"
+              className="rounded-xl border border-slate-200 px-6 py-3 text-[10px] font-black tracking-widest text-slate-600 uppercase"
+              onClick={closeForm}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={!isValid}
+              className="rounded-xl bg-slate-900 px-8 py-3 text-[10px] font-black tracking-widest text-white uppercase disabled:opacity-50"
+            >
+              Save Address
+            </button>
           </div>
         </form>
       )}
 
       <div className="space-y-3">
         {addresses.map((address) => (
-          <div key={address.id} className={`rounded-[24px] border p-6 transition-all ${address.is_default ? 'border-slate-900 bg-slate-50 shadow-inner' : 'border-slate-100 bg-white'}`}>
+          <div
+            key={address.id}
+            className={`rounded-[24px] border p-6 transition-all ${address.is_default ? 'border-slate-900 bg-slate-50 shadow-inner' : 'border-slate-100 bg-white'}`}
+          >
             <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
-                  <p className="text-sm font-black uppercase italic tracking-tighter text-slate-900">{address.full_name}</p>
-                  {address.is_default && <span className="rounded-full bg-slate-900 px-2 py-0.5 text-[8px] font-black uppercase tracking-widest text-white italic">Default</span>}
+                  <p className="text-sm font-black tracking-tighter text-slate-900 uppercase italic">
+                    {address.adress_label || 'Address'}
+                  </p>
+                  {address.is_default && (
+                    <span className="rounded-full bg-slate-900 px-2 py-0.5 text-[8px] font-black tracking-widest text-white uppercase italic">
+                      Default
+                    </span>
+                  )}
                 </div>
-                <p className="text-xs font-bold text-slate-500"><MaskedPhone phone={address.phone} /></p>
-                <p className="text-xs text-slate-400 font-medium line-clamp-2">{address.address}</p>
+                <p className="text-[10px] font-black tracking-widest text-slate-400 uppercase">
+                  Recipient: {address.adress_label}
+                </p>
+                <p className="text-xs font-bold text-slate-500">
+                  <MaskedPhone phone={address.contact_number} />
+                </p>
+                <p className="line-clamp-2 text-xs font-medium text-slate-400">
+                  {[address.street, address.barangay, address.city, address.province, address.region, address.postal_code].filter(Boolean).join(', ')}
+                </p>
               </div>
               <div className="flex flex-wrap gap-2">
-                <button type="button" className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-slate-600 hover:border-slate-900 transition-all italic" onClick={() => openEditForm(address)}>Edit</button>
-                <button type="button" className="rounded-xl border border-rose-100 bg-rose-50 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-rose-600 hover:bg-rose-100 transition-all italic" onClick={() => handleDelete(address.id)}>Delete</button>
-                {!address.is_default && <button type="button" className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-slate-900 hover:bg-slate-50 transition-all italic" onClick={() => handleSetDefault(address.id)}>Set Default</button>}
+                <button
+                  type="button"
+                  className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-[10px] font-black tracking-widest text-slate-600 uppercase italic transition-all hover:border-slate-900"
+                  onClick={() => openEditForm(address)}
+                >
+                  Edit
+                </button>
+                <button
+                  type="button"
+                  className="rounded-xl border border-rose-100 bg-rose-50 px-3 py-1.5 text-[10px] font-black tracking-widest text-rose-600 uppercase italic transition-all hover:bg-rose-100"
+                  onClick={() => handleDelete(address.id)}
+                >
+                  Delete
+                </button>
+                {!address.is_default && (
+                  <button
+                    type="button"
+                    className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-[10px] font-black tracking-widest text-slate-900 uppercase italic transition-all hover:bg-slate-50"
+                    onClick={() => handleSetDefault(address.id)}
+                  >
+                    Set Default
+                  </button>
+                )}
               </div>
             </div>
           </div>
         ))}
       </div>
     </section>
-  );
-};
+  )
+}
 
-export default AddressBookSection;
+export default AddressBookSection

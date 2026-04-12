@@ -1,14 +1,14 @@
-import React, { memo, useState, useRef, useEffect } from 'react';
-import { ChevronDown } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { clsx } from 'clsx';
+import React, { memo, useState, useRef, useEffect } from 'react'
+import { ChevronDown } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { clsx } from 'clsx'
 
 export interface FilterDropdownProps {
-  label: string;
-  icon: React.ElementType;
-  value: string;
-  options: string[];
-  onChange: (val: string) => void;
+  label: string
+  icon: React.ElementType
+  value: string
+  options: string[]
+  onChange: (val: string) => void
 }
 
 const FilterDropdown = memo(function FilterDropdown({
@@ -18,8 +18,8 @@ const FilterDropdown = memo(function FilterDropdown({
   options,
   onChange,
 }: FilterDropdownProps) {
-  const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [isOpen, setIsOpen] = useState(false)
+  const dropdownRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -27,18 +27,18 @@ const FilterDropdown = memo(function FilterDropdown({
         dropdownRef.current &&
         !dropdownRef.current.contains(e.target as Node)
       ) {
-        setIsOpen(false);
+        setIsOpen(false)
       }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   const isActive =
     value !== 'All' &&
     value !== 'All Prices' &&
     value !== 'All Status' &&
-    value !== 'Price: Low-High';
+    value !== 'Price: Low-High'
 
   return (
     <div ref={dropdownRef} className="relative min-w-[140px] flex-1">
@@ -81,8 +81,8 @@ const FilterDropdown = memo(function FilterDropdown({
               <button
                 key={opt}
                 onClick={() => {
-                  onChange(opt);
-                  setIsOpen(false);
+                  onChange(opt)
+                  setIsOpen(false)
                 }}
                 className={clsx(
                   'MarketplaceDropdownItem w-full rounded-xl px-4 py-3 text-left text-[10px] font-black tracking-widest uppercase transition-colors',
@@ -98,7 +98,7 @@ const FilterDropdown = memo(function FilterDropdown({
         )}
       </AnimatePresence>
     </div>
-  );
-});
+  )
+})
 
-export default FilterDropdown;
+export default FilterDropdown

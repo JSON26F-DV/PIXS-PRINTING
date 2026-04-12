@@ -1,8 +1,8 @@
-import React from 'react';
-import GeneralDashboard from './GeneralDashboard';
+import React from 'react'
+import GeneralDashboard from './GeneralDashboard'
 
 const AdminDashboard: React.FC = () => {
-  return <GeneralDashboard />;
-};
+  return <GeneralDashboard />
+}
 
-export default AdminDashboard;
+export default AdminDashboard

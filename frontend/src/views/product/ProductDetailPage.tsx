@@ -1,65 +1,83 @@
-import React, { useEffect, useState, useLayoutEffect } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, PackageCheck } from 'lucide-react';
+import React, { useEffect, useState, useLayoutEffect } from 'react'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
+import { ArrowLeft, PackageCheck } from 'lucide-react'
 
-import { clsx } from 'clsx';
-import { ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
-import gsap from 'gsap';
-import toast from 'react-hot-toast';
+import { clsx } from 'clsx'
+import { ToastContainer } from 'react-toastify'
+import 'react-toastify/dist/ReactToastify.css'
+import gsap from 'gsap'
+import toast from 'react-hot-toast'
 
 // Core Technical Implementation Dependencies
-import type { IProduct, IScreenPlate } from '../../types/product.types';
-import { fetchProductById, fetchCompatiblePlates } from './services/mockDataService';
-import { useProductDetail } from './hooks/useProductDetail';
-import { getStockStatus } from './utils/priceCalculator';
+import type { IProduct, IScreenPlate } from '../../types/product.types'
+import {
+  fetchProductById,
+  fetchCompatiblePlates,
+} from './services/mockDataService'
+import { useProductDetail } from './hooks/useProductDetail'
+import { getStockStatus } from './utils/priceCalculator'
 
 // Local Component Nodes
-import ImageGallery from './components/ImageGallery';
-import VariantSelector from './components/VariantSelector';
-import QuantityPicker from './components/QuantityPicker';
-import ColorPicker from './components/ColorPicker';
-import PlateSelector from './components/PlateSelector';
-import ProductInfoCard from './components/ProductInfoCard';
-import PriceCalculatorUI from './components/PriceCalculatorUI';
-import FullscreenGalleryModal from '../../components/common/FullscreenGalleryModal';
-import { mockCartService } from '../../pages/AddToCart/services/mockCartService';
-
+import ImageGallery from './components/ImageGallery'
+import VariantSelector from './components/VariantSelector'
+import QuantityPicker from './components/QuantityPicker'
+import ColorPicker from './components/ColorPicker'
+import PlateSelector from './components/PlateSelector'
+import ProductInfoCard from './components/ProductInfoCard'
+import PriceCalculatorUI from './components/PriceCalculatorUI'
+import FullscreenGalleryModal from '../../components/common/FullscreenGalleryModal'
+import { mockCartService } from '../../pages/AddToCart/services/mockCartService'
 
 // ─── Loading State UI Protocol ────────────────────────────────────────────────
 const Skeleton: React.FC<{ className?: string }> = ({ className }) => (
-  <div className={clsx('bg-slate-100 animate-pulse rounded-[44px]', className)} />
-);
+  <div
+    className={clsx('animate-pulse rounded-[44px] bg-slate-100', className)}
+  />
+)
 
 // ─── Product Detail Inner Configuration (Data Hydrated) ───────────────────────
-const ProductDetailInner: React.FC<{ product: IProduct; compatiblePlates: IScreenPlate[]; preselectedPlateName?: string | null }> = ({
-  product, compatiblePlates, preselectedPlateName
-}) => {
-  const navigate = useNavigate();
-  const stockStatus = getStockStatus(product.current_stock, product.min_threshold);
-  
+const ProductDetailInner: React.FC<{
+  product: IProduct
+  compatiblePlates: IScreenPlate[]
+  preselectedPlateName?: string | null
+}> = ({ product, compatiblePlates, preselectedPlateName }) => {
+  const navigate = useNavigate()
+  const stockStatus = getStockStatus(
+    product.current_stock,
+    product.min_threshold ?? 5,
+  )
+
+  const normalizedGallery = product.gallery;
+
   // Logic Engine Integration
-  const { state, actions, computed } = useProductDetail({ product, compatiblePlates, preselectedPlateName });
+  const { state, actions, computed } = useProductDetail({
+    product,
+    compatiblePlates,
+    preselectedPlateName,
+  })
 
   // Gallery Modal State Protocol
-  const [isGalleryOpen, setIsGalleryOpen] = useState(false);
-  const [galleryIndex, setGalleryIndex] = useState(0);
+  const [isGalleryOpen, setIsGalleryOpen] = useState(false)
+  const [galleryIndex, setGalleryIndex] = useState(0)
 
   // Cross-Table Logic Matrix: Identify compat variants based on selected screenplate
   const compatibleVariantSizes = React.useMemo(() => {
-    if (!state.selectedPlateId) return null;
-    const selectedPlate = compatiblePlates.find(p => p.id === state.selectedPlateId);
-    if (!selectedPlate) return null;
-    
-    const compatibility = selectedPlate.compatibility.find(cp => cp.product_id === product.id);
-    return compatibility?.allowed_variants || null;
-  }, [state.selectedPlateId, compatiblePlates, product.id]);
+    if (!state.selectedPlateId) return null
+    const selectedPlate = compatiblePlates.find(
+      (p) => p.id === state.selectedPlateId,
+    )
+    if (!selectedPlate) return null
 
+    const compatibility = selectedPlate.compatibility.find(
+      (cp) => cp.product_id === product.id,
+    )
+    return compatibility?.allowed_variants || null
+  }, [state.selectedPlateId, compatiblePlates, product.id])
 
   // Automatic Top-0 Scroll Protocol
   useLayoutEffect(() => {
-    window.scrollTo(0, 0);
-  }, [product.id]);
+    window.scrollTo(0, 0)
+  }, [product.id])
 
   useLayoutEffect(() => {
     const ctx = gsap.context(() => {
@@ -69,24 +87,24 @@ const ProductDetailInner: React.FC<{ product: IProduct; compatiblePlates: IScree
         stagger: 0.1,
         duration: 0.8,
         ease: 'power4.out',
-        clearProps: 'all'
-      });
-    });
-    return () => ctx.revert();
-  }, []);
+        clearProps: 'all',
+      })
+    })
+    return () => ctx.revert()
+  }, [])
 
   const handleAddToCart = () => {
-    const variant = computed.selectedVariant;
+    const variant = computed.selectedVariant
     if (!variant) {
-      toast.error('Please select a product variant.');
-      return;
+      toast.error('Please select a product variant.')
+      return
     }
 
     mockCartService.addCartItem({
       productId: product.id,
       productName: product.name,
       productImage: product.main_image,
-      category: product.category,
+      category: product.category_label,
       minOrder: product.min_order,
       currentStock: computed.stockForVariant,
       quantity: state.quantity,
@@ -108,36 +126,41 @@ const ProductDetailInner: React.FC<{ product: IProduct; compatiblePlates: IScree
         ? {
             id: computed.selectedPlate.id,
             name: computed.selectedPlate.plate_name,
-            type: computed.selectedPlate.is_flatscreen ? 'Flatscreen' : 'Cylindrical',
-            printPricePerUnit:
-              computed.selectedVariant 
-                ? (computed.selectedPlate.compatibility.find((cp) => cp.product_id === product.id)?.print_price_per_unit?.[computed.selectedVariant.size] ?? 0)
-                : 0,
+            type: computed.selectedPlate.is_flatscreen
+              ? 'Flatscreen'
+              : 'Cylindrical',
+            printPricePerUnit: computed.selectedVariant
+              ? (computed.selectedPlate.compatibility.find(
+                  (cp) => cp.product_id === product.id,
+                )?.print_price_per_unit?.[computed.selectedVariant.size] ?? 0)
+              : 0,
             setupFee: computed.selectedPlate.base_setup_fee,
             channels: computed.selectedPlate.channels,
-            printingInfo: computed.selectedPlate.technical_info || 'High-accuracy production node.',
+            printingInfo:
+              computed.selectedPlate.technical_info ||
+              'High-accuracy production node.',
             isOwned: state.ownedPlateIds.includes(computed.selectedPlate.id),
           }
         : null,
       customRequirements: state.customRequirements,
-    });
+    })
 
-    toast.success('Product added to cart.');
-    navigate('/addtocart');
-  };
+    toast.success('Product added to cart.')
+    navigate('/addtocart')
+  }
 
   const handleBuyNow = () => {
-    const variant = computed.selectedVariant;
+    const variant = computed.selectedVariant
     if (!variant) {
-      toast.error('Please select a product variant.');
-      return;
+      toast.error('Please select a product variant.')
+      return
     }
 
     const buyNowItem = {
       productId: product.id,
       productName: product.name,
       productImage: product.main_image,
-      category: product.category,
+      category: product.category_label,
       minOrder: product.min_order,
       currentStock: computed.stockForVariant,
       quantity: state.quantity,
@@ -159,53 +182,68 @@ const ProductDetailInner: React.FC<{ product: IProduct; compatiblePlates: IScree
         ? {
             id: computed.selectedPlate.id,
             name: computed.selectedPlate.plate_name,
-            type: computed.selectedPlate.is_flatscreen ? 'Flatscreen' : 'Cylindrical',
-            printPricePerUnit:
-              computed.selectedVariant 
-                ? (computed.selectedPlate.compatibility.find((cp) => cp.product_id === product.id)?.print_price_per_unit?.[computed.selectedVariant.size] ?? 0)
-                : 0,
+            type: computed.selectedPlate.is_flatscreen
+              ? 'Flatscreen'
+              : 'Cylindrical',
+            printPricePerUnit: computed.selectedVariant
+              ? (computed.selectedPlate.compatibility.find(
+                  (cp) => cp.product_id === product.id,
+                )?.print_price_per_unit?.[computed.selectedVariant.size] ?? 0)
+              : 0,
             setupFee: computed.selectedPlate.base_setup_fee,
             channels: computed.selectedPlate.channels,
-            printingInfo: computed.selectedPlate.technical_info || 'High-accuracy production node.',
+            printingInfo:
+              computed.selectedPlate.technical_info ||
+              'High-accuracy production node.',
             isOwned: state.ownedPlateIds.includes(computed.selectedPlate.id),
           }
         : null,
       customRequirements: state.customRequirements,
-    };
+    }
 
-    localStorage.setItem('pixs_buy_now_v1', JSON.stringify([buyNowItem]));
-    navigate('/transactions?direct=true');
-  };
+    localStorage.setItem('pixs_buy_now_v1', JSON.stringify([buyNowItem]))
+    navigate('/transactions?direct=true')
+  }
 
   return (
     <div className="min-h-screen bg-white pb-32">
       <ToastContainer position="bottom-right" theme="dark" hideProgressBar />
 
       {/* Persistent Breadcrumb Architecture */}
-      <div className="sticky top-24 z-30 bg-white/60 backdrop-blur-3xl border-b border-slate-50 px-6 md:px-16 py-5">
-        <div className="max-w-[1400px] mx-auto flex items-center justify-between">
+      <div className="sticky top-24 z-30 border-b border-slate-50 bg-white/60 px-6 py-5 backdrop-blur-3xl md:px-16">
+        <div className="mx-auto flex max-w-[1400px] items-center justify-between">
           <div className="flex items-center gap-4">
             <button
               onClick={() => navigate(-1)}
-              className="group flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-slate-900 transition-all active:scale-95"
+              className="group flex items-center gap-2 text-[10px] font-black tracking-widest text-slate-400 uppercase transition-all hover:text-slate-900 active:scale-95"
             >
-              <ArrowLeft size={16} className="transition-transform group-hover:-translate-x-1" /> BACK TO MARKET
-            </button> 
-            <div className="h-4 w-px bg-slate-100 mx-2" />
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest italic">{product.category}</span>
+              <ArrowLeft
+                size={16}
+                className="transition-transform group-hover:-translate-x-1"
+              />{' '}
+              BACK TO MARKET
+            </button>
+            <div className="mx-2 h-4 w-px bg-slate-100" />
+            <span className="text-[10px] font-black tracking-widest text-slate-400 uppercase italic">
+              {product.category_label}
+            </span>
           </div>
           <button
             onClick={handleBuyNow}
             disabled={!computed.canAddToCart}
             className={clsx(
-              'px-6 py-2 rounded-full flex items-center justify-center gap-4 transition-all duration-500 relative overflow-hidden group active:scale-[0.98]',
-              computed.canAddToCart 
-                ? 'bg-slate-900 text-white shadow-xl hover:scale-[1.01]' 
-                : 'bg-slate-100 text-slate-300 cursor-not-allowed grayscale opacity-60'
+              'group relative flex items-center justify-center gap-4 overflow-hidden rounded-full px-6 py-2 transition-all duration-500 active:scale-[0.98]',
+              computed.canAddToCart
+                ? 'bg-slate-900 text-white shadow-xl hover:scale-[1.01]'
+                : 'cursor-not-allowed bg-slate-100 text-slate-300 opacity-60 grayscale',
             )}
           >
-            <span className="text-[10px] font-black uppercase italic tracking-tighter">
-              {computed.canAddToCart ? 'BUY NOW' : computed.isOutOfStock ? 'OUT OF STOCK' : 'Protocol Locked'}
+            <span className="text-[10px] font-black tracking-tighter uppercase italic">
+              {computed.canAddToCart
+                ? 'BUY NOW'
+                : computed.isOutOfStock
+                  ? 'OUT OF STOCK'
+                  : 'Protocol Locked'}
             </span>
             <PackageCheck size={14} strokeWidth={3} />
           </button>
@@ -213,43 +251,56 @@ const ProductDetailInner: React.FC<{ product: IProduct; compatiblePlates: IScree
       </div>
 
       {/* Master Content Logic Area */}
-      <div className="max-w-[1400px] mx-auto px-6 md:px-16 pt-12">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 xl:gap-32 items-start">
-
+      <div className="mx-auto max-w-[1400px] px-6 pt-12 md:px-16">
+        <div className="grid grid-cols-1 items-start gap-20 lg:grid-cols-2 xl:gap-32">
           {/* ── Left Projection Space: Image Gallery ──────────────────────────── */}
-          <div className="lg:sticky lg:top-56 stagger-item">
+          <div className="stagger-item lg:sticky lg:top-56">
             <ImageGallery
               mainImage={product.main_image}
-              gallery={product.gallery}
+              gallery={normalizedGallery}
               productName={product.name}
               onImageClick={(idx) => {
-                setGalleryIndex(idx);
-                setIsGalleryOpen(true);
+                setGalleryIndex(idx)
+                setIsGalleryOpen(true)
               }}
             />
           </div>
 
-
           {/* ── Right Control Space: Order Configuration ──────────────────────── */}
           <div className="space-y-12">
-            
             {/* Semantic Identity Identification */}
             <div className="stagger-item">
-              <div className="flex items-center gap-3 mb-4">
-                 <span className="px-3 py-1.5 bg-slate-900 text-white text-[9px] font-black uppercase tracking-widest rounded-lg">SKU · {product.id}</span>
-                 <div className={clsx('flex items-center gap-1.5', stockStatus.color)}>
-                    <div className={clsx('w-1.5 h-1.5 rounded-full animate-pulse', stockStatus.dot)} />
-                    <span className="text-[9px] font-black uppercase tracking-widest">{stockStatus.label}</span>
-                 </div>
+              <div className="mb-4 flex items-center gap-3">
+                <span className="rounded-lg bg-slate-900 px-3 py-1.5 text-[9px] font-black tracking-widest text-white uppercase">
+                  SKU · {product.id}
+                </span>
+                <div
+                  className={clsx(
+                    'flex items-center gap-1.5',
+                    stockStatus.color,
+                  )}
+                >
+                  <div
+                    className={clsx(
+                      'h-1.5 w-1.5 animate-pulse rounded-full',
+                      stockStatus.dot,
+                    )}
+                  />
+                  <span className="text-[9px] font-black tracking-widest uppercase">
+                    {stockStatus.label}
+                  </span>
+                </div>
               </div>
-              <h1 className="text-5xl md:text-7xl font-black text-slate-900 tracking-tighter italic uppercase leading-none mb-6">
+              <h1 className="mb-6 text-5xl leading-none font-black tracking-tighter text-slate-900 uppercase italic md:text-7xl">
                 {product.name}
               </h1>
-              <p className="text-base text-slate-500 font-bold leading-relaxed pr-10">{product.long_description}</p>
+              <p className="pr-10 text-base leading-relaxed font-bold text-slate-500">
+                {product.long_description}
+              </p>
             </div>
 
             {/* Matrix Divider Protocol */}
-            <div className="h-px bg-slate-50 stagger-item" />
+            <div className="stagger-item h-px bg-slate-50" />
 
             {/* Selection Node: Variant Identification */}
             <div className="stagger-item">
@@ -257,11 +308,10 @@ const ProductDetailInner: React.FC<{ product: IProduct; compatiblePlates: IScree
                 variants={product.variants}
                 selectedVariantId={state.selectedVariantId}
                 onSelect={actions.setSelectedVariantId}
-                minThreshold={product.min_threshold}
+                minThreshold={product.min_threshold ?? 5}
                 compatibleVariantSizes={compatibleVariantSizes}
               />
             </div>
-
 
             {/* Selection Node: Master Color Inventory (Condition Protocol) */}
             {product.is_need_color && (
@@ -299,25 +349,26 @@ const ProductDetailInner: React.FC<{ product: IProduct; compatiblePlates: IScree
 
             {/* Selection Node: Custom Production Requisition */}
             <div className="stagger-item space-y-4">
-               <div>
-                  <h3 className="text-[10px] font-black uppercase text-slate-400 tracking-[3px] mb-2 flex items-center gap-2">
-                     <PackageCheck size={14} className="text-slate-900" />
-                     Production Requisition Node
-                  </h3>
-                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-relaxed">
-                     Specify custom printing instructions, logo placements, or specialized material requirements for this item.
-                  </p>
-               </div>
-               <textarea 
-                 value={state.customRequirements}
-                 onChange={(e) => actions.setCustomRequirements(e.target.value)}
-                 placeholder="Terminal Input: Enter custom specifications..."
-                 className="w-full h-32 bg-slate-50 border border-slate-100 rounded-[24px] p-6 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 placeholder:text-slate-300 resize-none transition-all"
-               />
+              <div>
+                <h3 className="mb-2 flex items-center gap-2 text-[10px] font-black tracking-[3px] text-slate-400 uppercase">
+                  <PackageCheck size={14} className="text-slate-900" />
+                  Production Requisition Node
+                </h3>
+                <p className="text-[9px] leading-relaxed font-bold tracking-widest text-slate-400 uppercase">
+                  Specify custom printing instructions, logo placements, or
+                  specialized material requirements for this item.
+                </p>
+              </div>
+              <textarea
+                value={state.customRequirements}
+                onChange={(e) => actions.setCustomRequirements(e.target.value)}
+                placeholder="Terminal Input: Enter custom specifications..."
+                className="h-32 w-full resize-none rounded-[24px] border border-slate-100 bg-slate-50 p-6 text-xs font-bold text-slate-900 transition-all placeholder:text-slate-300 focus:ring-2 focus:ring-slate-900/10 focus:outline-none"
+              />
             </div>
 
             {/* Dynamic Finalization Logic: Price Calculation UI (Inclusive Protocol) */}
-            <div className="stagger-item pt-8 border-t-4 border-slate-50">
+            <div className="stagger-item border-t-4 border-slate-50 pt-8">
               <PriceCalculatorUI
                 breakdown={computed.priceBreakdown}
                 canAddToCart={computed.canAddToCart}
@@ -335,62 +386,69 @@ const ProductDetailInner: React.FC<{ product: IProduct; compatiblePlates: IScree
 
             {/* Detailed Technical Nodes Table */}
             <div className="stagger-item pt-12">
-               <ProductInfoCard 
-                 product={product} 
-                 selectedVariant={computed.selectedVariant} 
-               />
+              <ProductInfoCard
+                product={product}
+                selectedVariant={computed.selectedVariant}
+              />
             </div>
-
           </div>
         </div>
       </div>
 
       {/* Cinematic Fullscreen Viewing Hub */}
-      <FullscreenGalleryModal 
+      <FullscreenGalleryModal
         isOpen={isGalleryOpen}
         onClose={() => setIsGalleryOpen(false)}
-        images={[product.main_image, ...product.gallery]}
+        images={[product.main_image, ...normalizedGallery]}
         initialIndex={galleryIndex}
         productName={product.name}
       />
     </div>
-
-  );
-};
+  )
+}
 
 // ─── Component Entry Hook (Lifecycle Logic) ──────────────────────────────────
 const ProductDetailPage: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
-  
-  const [product, setProduct] = useState<IProduct | null>(null);
-  const [plates, setPlates] = useState<IScreenPlate[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [notFound, setNotFound] = useState(false);
+  const { id } = useParams<{ id: string }>()
+
+  const [product, setProduct] = useState<IProduct | null>(null)
+  const [plates, setPlates] = useState<IScreenPlate[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [notFound, setNotFound] = useState(false)
 
   useEffect(() => {
-    if (!id) return;
-    let isMounted = true;
+    if (!id) return
+    let isMounted = true
 
     Promise.all([fetchProductById(id), fetchCompatiblePlates(id)])
       .then(([prod, pls]) => {
-        if (!isMounted) return;
-        if (!prod) { setNotFound(true); } 
-        else { setProduct(prod); setPlates(pls); }
-        setIsLoading(false);
+        if (!isMounted) return
+        if (!prod) {
+          setNotFound(true)
+        } else {
+          setProduct(prod)
+          setPlates(pls)
+        }
+        setIsLoading(false)
       })
-      .catch(() => { if (isMounted) setNotFound(true); setIsLoading(false); });
+      .catch(() => {
+        if (isMounted) setNotFound(true)
+        setIsLoading(false)
+      })
 
-    return () => { isMounted = false; };
-  }, [id]);
+    return () => {
+      isMounted = false
+    }
+  }, [id])
 
-  const location = useLocation();
-  const searchParams = new URLSearchParams(location.search);
-  const plateName = searchParams.get('plate');
+  const location = useLocation()
+  const searchParams = new URLSearchParams(location.search)
+  const plateName = searchParams.get('plate')
 
   if (isLoading) {
     return (
       <div className="min-h-screen bg-white pt-32">
-        <div className="max-w-[1400px] mx-auto px-6 md:px-16 grid grid-cols-1 lg:grid-cols-2 gap-24">
+        <div className="mx-auto grid max-w-[1400px] grid-cols-1 gap-24 px-6 md:px-16 lg:grid-cols-2">
           <Skeleton className="aspect-[3/4]" />
           <div className="space-y-8">
             <Skeleton className="h-24 w-full" />
@@ -400,20 +458,37 @@ const ProductDetailPage: React.FC = () => {
           </div>
         </div>
       </div>
-    );
+    )
   }
 
   if (notFound || !product) {
     return (
-      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-8 text-center italic space-y-6">
-        <h1 className="text-7xl font-black text-slate-200 uppercase tracking-tighter">NULL DATA</h1>
-        <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">The requested production node does not exist in the system architecture.</p>
-        <button onClick={() => window.history.back()} className="px-10 py-4 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-widest text-[10px]">Return To Market</button>
+      <div className="flex min-h-screen flex-col items-center justify-center space-y-6 bg-slate-50 p-8 text-center italic">
+        <h1 className="text-7xl font-black tracking-tighter text-slate-200 uppercase">
+          NULL DATA
+        </h1>
+        <p className="text-xs font-bold tracking-widest text-slate-400 uppercase">
+          The requested production node does not exist in the system
+          architecture.
+        </p>
+        <button
+          onClick={() => window.history.back()}
+          className="rounded-2xl bg-slate-900 px-10 py-4 text-[10px] font-black tracking-widest text-white uppercase"
+        >
+          Return To Market
+        </button>
       </div>
-    );
+    )
   }
 
-  return <ProductDetailInner key={product.id} product={product} compatiblePlates={plates} preselectedPlateName={plateName} />;
-};
+  return (
+    <ProductDetailInner
+      key={product.id}
+      product={product}
+      compatiblePlates={plates}
+      preselectedPlateName={plateName}
+    />
+  )
+}
 
-export default ProductDetailPage;
+export default ProductDetailPage

@@ -1,50 +1,62 @@
-import React, { useState, useRef, lazy, Suspense } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import { clsx } from 'clsx';
-import {
-  FiArrowLeft,
-  FiMenu,
-  FiX,
-} from 'react-icons/fi';
-import { useAuth } from '../../context/AuthContext';
-import type { User } from '../../context/auth.types';
-import { NAV_ITEMS } from '../../pages/Settings/settingsNav';
-import type { SectionKey, NavItem } from '../../pages/Settings/settingsNav';
+import React, { useState, useRef, lazy, Suspense } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { motion, AnimatePresence } from 'framer-motion'
+import { clsx } from 'clsx'
+import { FiArrowLeft, FiMenu, FiX } from 'react-icons/fi'
+import { useAuth } from '../../context/AuthContext'
+import type { User } from '../../context/auth.types'
+import { NAV_ITEMS } from '../../pages/Settings/settingsNav'
+import type { SectionKey, NavItem } from '../../pages/Settings/settingsNav'
 
 // Lazy Loaded Sections
-const AccountInfoPage = lazy(() => import('../../pages/Settings/AccountInfo/AccountInfoPage'));
-const PaymentMethodsSection = lazy(() => import('../../pages/Settings/PaymentMethods/PaymentMethodsSection'));
-const AddressBookSection = lazy(() => import('../../pages/Settings/AddressBook/AddressBookSection'));
-const AwardsSection = lazy(() => import('../../pages/Settings/Awards/AwardsSection'));
-const HelpSupportSection = lazy(() => import('../../pages/Settings/HelpSupport/HelpSupportSection'));
-const PoliciesSection = lazy(() => import('../../pages/Settings/Policies/PoliciesSection'));
-const LogoutSection = lazy(() => import('../../pages/Settings/Logout/LogoutSection'));
+const AccountInfoPage = lazy(
+  () => import('../../pages/Settings/AccountInfo/AccountInfoPage'),
+)
+const PaymentMethodsSection = lazy(
+  () => import('../../pages/Settings/PaymentMethods/PaymentMethodsSection'),
+)
+const AddressBookSection = lazy(
+  () => import('../../pages/Settings/AddressBook/AddressBookSection'),
+)
+const AwardsSection = lazy(
+  () => import('../../pages/Settings/Awards/AwardsSection'),
+)
+const HelpSupportSection = lazy(
+  () => import('../../pages/Settings/HelpSupport/HelpSupportSection'),
+)
+const PoliciesSection = lazy(
+  () => import('../../pages/Settings/Policies/PoliciesSection'),
+)
+const LogoutSection = lazy(
+  () => import('../../pages/Settings/Logout/LogoutSection'),
+)
 
 const SectionLoader = () => (
   <div className="flex h-64 w-full items-center justify-center">
-    <div className="text-[10px] font-black uppercase tracking-[4px] text-slate-400 animate-pulse">Initializing Component...</div>
+    <div className="animate-pulse text-[10px] font-black tracking-[4px] text-slate-400 uppercase">
+      Initializing Component...
+    </div>
   </div>
-);
+)
 
-const SECTION_MAP: Record<SectionKey, React.ReactNode> = {
+const SECTION_MAP: Partial<Record<SectionKey, React.ReactNode>> = {
   account: <AccountInfoPage />,
-  payment: <PaymentMethodsSection />,
   address: <AddressBookSection />,
+  payment: <PaymentMethodsSection />,
   awards: <AwardsSection />,
   help: <HelpSupportSection />,
   policies: <PoliciesSection />,
   logout: <LogoutSection />,
-};
+}
 
 // ── Sidebar Nav Item ──────────────────────────────────────────────
 const SideNavItem: React.FC<{
-  item: NavItem;
-  isActive: boolean;
-  onClick: () => void;
+  item: NavItem
+  isActive: boolean
+  onClick: () => void
 }> = ({ item, isActive, onClick }) => {
-  const Icon = item.icon;
-  const isDanger = item.key === 'logout';
+  const Icon = item.icon
+  const isDanger = item.key === 'logout'
 
   return (
     <button
@@ -56,8 +68,8 @@ const SideNavItem: React.FC<{
             ? 'bg-red-500 text-white shadow-lg shadow-red-200'
             : 'bg-slate-900 text-white shadow-lg'
           : isDanger
-          ? 'text-red-400 hover:bg-red-50 hover:text-red-500'
-          : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800',
+            ? 'text-red-400 hover:bg-red-50 hover:text-red-500'
+            : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800',
       )}
     >
       <div
@@ -68,8 +80,8 @@ const SideNavItem: React.FC<{
               ? 'bg-white/20'
               : 'bg-white/10'
             : isDanger
-            ? 'bg-red-50 group-hover:bg-red-100'
-            : 'bg-slate-100 group-hover:bg-white',
+              ? 'bg-red-50 group-hover:bg-red-100'
+              : 'bg-slate-100 group-hover:bg-white',
         )}
       >
         <Icon
@@ -80,8 +92,8 @@ const SideNavItem: React.FC<{
                 ? 'text-white'
                 : 'text-pixs-mint'
               : isDanger
-              ? 'text-red-400'
-              : 'text-slate-400 group-hover:text-slate-700',
+                ? 'text-red-400'
+                : 'text-slate-400 group-hover:text-slate-700',
           )}
         />
       </div>
@@ -89,31 +101,35 @@ const SideNavItem: React.FC<{
         <p
           className={clsx(
             'truncate text-[11px] font-black tracking-widest uppercase italic',
-            isActive ? 'text-white' : isDanger ? 'text-red-400' : 'text-slate-700',
+            isActive
+              ? 'text-white'
+              : isDanger
+                ? 'text-red-400'
+                : 'text-slate-700',
           )}
         >
           {item.label}
         </p>
       </div>
       {isActive && !isDanger && (
-        <div className="h-1.5 w-1.5 rounded-full bg-pixs-mint animate-pulse" />
+        <div className="bg-pixs-mint h-1.5 w-1.5 animate-pulse rounded-full" />
       )}
     </button>
-  );
-};
+  )
+}
 
 // ── Sidebar Content (standalone so it doesn't re-create on each render) ──
 const SidebarContent: React.FC<{
-  user: User | null;
-  activeSection: SectionKey;
-  onSelect: (key: SectionKey) => void;
+  user: User | null
+  activeSection: SectionKey
+  onSelect: (key: SectionKey) => void
 }> = ({ user, activeSection, onSelect }) => (
   <div className="flex h-full flex-col">
     {/* Profile Card */}
     <div className="mb-6 rounded-[24px] border border-slate-100 bg-white p-5 shadow-sm">
       <div className="flex items-center gap-4">
-        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-slate-900 shadow-lg shadow-pixs-mint/10 border border-pixs-mint/20">
-          <span className="text-xl font-black text-pixs-mint">
+        <div className="shadow-pixs-mint/10 border-pixs-mint/20 flex h-14 w-14 shrink-0 items-center justify-center rounded-full border bg-slate-900 shadow-lg">
+          <span className="text-pixs-mint text-xl font-black">
             {user?.name?.[0]?.toUpperCase() ?? 'G'}
           </span>
         </div>
@@ -124,7 +140,7 @@ const SidebarContent: React.FC<{
           <p className="mt-0.5 truncate text-[9px] font-bold tracking-widest text-slate-400 uppercase">
             {user?.email ?? 'Not logged in'}
           </p>
-          <span className="mt-1 inline-block rounded-full bg-pixs-mint/10 px-2 py-0.5 text-[8px] font-black tracking-widest text-slate-700 uppercase">
+          <span className="bg-pixs-mint/10 mt-1 inline-block rounded-full px-2 py-0.5 text-[8px] font-black tracking-widest text-slate-700 uppercase">
             {user?.role ?? 'Guest'}
           </span>
         </div>
@@ -143,44 +159,44 @@ const SidebarContent: React.FC<{
       ))}
     </nav>
   </div>
-);
+)
 
 // ── Main SettingsPage ──────────────────────────────────────────────
 const SettingsPage: React.FC = () => {
-  const navigate = useNavigate();
-  const { user, isLoading } = useAuth();
-  const [activeSection, setActiveSection] = useState<SectionKey>('account');
-  const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const contentRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate()
+  const { user, isLoading } = useAuth()
+  const [activeSection, setActiveSection] = useState<SectionKey>('account')
+  const [mobileNavOpen, setMobileNavOpen] = useState(false)
+  const contentRef = useRef<HTMLDivElement>(null)
 
   if (isLoading) {
     return (
       <div className="flex h-screen items-center justify-center bg-white">
-        <div className="text-[10px] font-black uppercase tracking-[4px] text-slate-400 animate-pulse">
+        <div className="animate-pulse text-[10px] font-black tracking-[4px] text-slate-400 uppercase">
           Synchronizing Identity Node...
         </div>
       </div>
-    );
+    )
   }
 
   if (!user.isLoggedIn) {
-    return null; // AppRouter handles redirect
+    return null // AppRouter handles redirect
   }
 
-  const activeItem = NAV_ITEMS.find((n) => n.key === activeSection)!;
+  const activeItem = NAV_ITEMS.find((n) => n.key === activeSection)!
 
   const handleSectionChange = (key: SectionKey) => {
-    setActiveSection(key);
-    setMobileNavOpen(false);
+    setActiveSection(key)
+    setMobileNavOpen(false)
     if (contentRef.current) {
-      contentRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+      contentRef.current.scrollTo({ top: 0, behavior: 'smooth' })
     }
-  };
+  }
 
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Sticky Top Bar */}
-      <div className="sticky top-32 lg:top-20 z-30 border-b border-slate-100 bg-white/90 backdrop-blur-md">
+      <div className="sticky top-32 z-30 border-b border-slate-100 bg-white/90 backdrop-blur-md lg:top-20">
         <div className="mx-auto flex h-14 max-w-[1440px] items-center justify-between gap-4 px-4 md:px-8">
           {/* Back Button */}
           <button
@@ -230,20 +246,20 @@ const SettingsPage: React.FC = () => {
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-              className="fixed left-0 top-0 bottom-0 z-[111] w-[300px] overflow-y-auto bg-slate-50 p-5 shadow-2xl lg:hidden"
+              className="fixed top-0 bottom-0 left-0 z-[111] w-[300px] overflow-y-auto bg-slate-50 p-5 shadow-2xl lg:hidden"
             >
               <div className="mb-6 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-pixs-mint text-sm font-black text-slate-900 shadow-md">
+                  <div className="bg-pixs-mint flex h-8 w-8 items-center justify-center rounded-xl text-sm font-black text-slate-900 shadow-md">
                     P
                   </div>
-                  <span className="text-sm font-black italic text-slate-900 tracking-tighter">
+                  <span className="text-sm font-black tracking-tighter text-slate-900 italic">
                     PIXS <span className="text-slate-400">SETTINGS</span>
                   </span>
                 </div>
                 <button
                   onClick={() => setMobileNavOpen(false)}
-                  className="flex h-9 w-9 items-center justify-center rounded-xl bg-white border border-slate-100 text-slate-400 active:scale-90"
+                  className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-100 bg-white text-slate-400 active:scale-90"
                 >
                   <FiX size={16} />
                 </button>
@@ -300,15 +316,15 @@ const SettingsPage: React.FC = () => {
               >
                 {/* AccountInfoPage has its own layout wrapper; strip outer padding for it */}
                 {activeSection === 'account' ? (
-                  <div className="rounded-[24px] border border-slate-100 bg-white shadow-sm overflow-hidden">
+                  <div className="overflow-hidden rounded-[24px] border border-slate-100 bg-white shadow-sm">
                     <Suspense fallback={<SectionLoader />}>
-                      {SECTION_MAP[activeSection]}
+                      {SECTION_MAP[activeSection] || null}
                     </Suspense>
                   </div>
                 ) : (
                   <div className="rounded-[24px] border border-slate-100 bg-white p-5 shadow-sm md:p-8">
                     <Suspense fallback={<SectionLoader />}>
-                      {SECTION_MAP[activeSection]}
+                      {SECTION_MAP[activeSection] || null}
                     </Suspense>
                   </div>
                 )}
@@ -318,7 +334,7 @@ const SettingsPage: React.FC = () => {
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default SettingsPage;
+export default SettingsPage

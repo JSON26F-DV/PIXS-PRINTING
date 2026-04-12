@@ -1,7 +1,7 @@
-import { useEffect } from 'react';
-import Lenis from '@studio-freight/lenis';
+import { useEffect } from 'react'
+import Lenis from '@studio-freight/lenis'
 
-let lenisInstance: Lenis | null = null;
+let lenisInstance: Lenis | null = null
 
 /**
  * Initialises a singleton Lenis smooth-scroll instance and drives it
@@ -10,7 +10,7 @@ let lenisInstance: Lenis | null = null;
  */
 export function useLenis(): void {
   useEffect(() => {
-    if (lenisInstance) return;
+    if (lenisInstance) return
 
     lenisInstance = new Lenis({
       duration: 1.2,
@@ -18,21 +18,21 @@ export function useLenis(): void {
       smoothWheel: true,
       // Prevent Lenis from hijacking mobile touch momentum
       touchMultiplier: 1.5,
-    });
+    })
 
-    let rafId: number;
+    let rafId: number
 
     function raf(time: number) {
-      lenisInstance?.raf(time);
-      rafId = requestAnimationFrame(raf);
+      lenisInstance?.raf(time)
+      rafId = requestAnimationFrame(raf)
     }
 
-    rafId = requestAnimationFrame(raf);
+    rafId = requestAnimationFrame(raf)
 
     return () => {
-      cancelAnimationFrame(rafId);
-      lenisInstance?.destroy();
-      lenisInstance = null;
-    };
-  }, []);
+      cancelAnimationFrame(rafId)
+      lenisInstance?.destroy()
+      lenisInstance = null
+    }
+  }, [])
 }

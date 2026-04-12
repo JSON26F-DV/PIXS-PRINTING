@@ -1,11 +1,14 @@
-import React from 'react';
+import React from 'react'
 
 interface CartSummaryProps {
-  totalItems: number;
-  grandTotal: number;
+  totalItems: number
+  grandTotal: number
 }
 
-const CartSummary: React.FC<CartSummaryProps> = ({ totalItems, grandTotal }) => {
+const CartSummary: React.FC<CartSummaryProps> = ({
+  totalItems,
+  grandTotal,
+}) => {
   return (
     <aside className="CartTotalSection sticky top-28 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
       <h2 className="text-lg font-semibold text-slate-900">Order Summary</h2>
@@ -16,7 +19,13 @@ const CartSummary: React.FC<CartSummaryProps> = ({ totalItems, grandTotal }) => 
         </div>
         <div className="flex items-center justify-between border-t border-slate-200 pt-2 text-base font-semibold text-slate-900">
           <span>Grand Total</span>
-          <span>PHP {grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+          <span>
+            PHP{' '}
+            {grandTotal.toLocaleString(undefined, {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })}
+          </span>
         </div>
       </div>
       <button
@@ -26,7 +35,7 @@ const CartSummary: React.FC<CartSummaryProps> = ({ totalItems, grandTotal }) => 
         Proceed to Checkout
       </button>
     </aside>
-  );
-};
+  )
+}
 
-export default CartSummary;
+export default CartSummary
