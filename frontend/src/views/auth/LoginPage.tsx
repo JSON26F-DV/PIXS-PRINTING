@@ -1,8 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
-import type { RoleType } from '../../context/auth.types';
 import CustomerNavbar from '../../components/customer/CustomerNavbar';
 import Footer from '../../components/Footer/Footer';
 
@@ -13,7 +10,7 @@ const LoginPage: React.FC = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     
     const { login } = useAuth();
-    const navigate = useNavigate();
+
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -21,48 +18,13 @@ const LoginPage: React.FC = () => {
         setError(null);
 
         try {
-            const response = await axios.post('/login', { email, password });
-            const data = response.data;
-
-            // Successfully logged in
-            if (data.status === 'success') {
-                if (data.role === 'banned') {
-                    login({
-                        name: email.split('@')[0],
-                        role: 'banned',
-                        user_type: 'deleted'
-                    });
-                    navigate('/delete-account');
-                } else if (data.user) {
-                    login({
-                        id: data.user.id,
-                        name: data.user.name,
-                        role: data.user.role as RoleType,
-                        user_type: data.user.user_type
-                    });
-                    
-                    if (data.redirect) {
-                        navigate(data.redirect);
-                    } else {
-                        navigate(data.user.role === 'customer' ? '/homepage' : '/admin/dashboard');
-                    }
-                }
-            }
-
+            await login(email, password);
+            // Navigation is handled inside AuthContext.login()
         } catch (err: unknown) {
             let message = 'An unexpected error occurred during login.';
-            
-            if (axios.isAxiosError(err) && err.response && err.response.data) {
-                const data = err.response.data as { message?: string };
-                if (err.response.status === 401 || err.response.status === 422) {
-                    message = 'Invalid credentials provided.';
-                } else {
-                    message = data.message || message;
-                }
-            } else if (err instanceof Error) {
+            if (err instanceof Error) {
                 message = err.message;
             }
-            
             setError(message);
         } finally {
             setIsSubmitting(false);

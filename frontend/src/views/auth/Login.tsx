@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import axios from 'axios';
 import { 
   Lock, 
   Mail, 
@@ -10,9 +9,7 @@ import {
   X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import type { RoleType } from '../../context/auth.types';
 
 interface LoginProps {
   isOpen?: boolean;
@@ -20,62 +17,36 @@ interface LoginProps {
 }
 
 const Login: React.FC<LoginProps> = ({ isOpen = true, onClose }) => {
-  const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, error: authError, isLoading } = useAuth();
   const [email, setEmail] = useState('jason@pixs.com');
-  const [password, setPassword] = useState('password'); // Default password for testing
+  const [password, setPassword] = useState('password');
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [localError, setLocalError] = useState<string | null>(null);
+
+  const displayError = localError || authError;
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!agreedToTerms) {
-      setError("Please accept the Terms and Conditions of PIXS Printing Shop.");
+      setLocalError("Please accept the Terms and Conditions of PIXS Printing Shop.");
       return;
     }
 
-    setIsLoading(true);
-    setError(null);
+    setLocalError(null);
 
     try {
-        const response = await axios.post('/login', { email, password });
-        const data = response.data;
-
-        // Successfully logged in
-        login({
-            name: email.split('@')[0],
-            role: (data.role as RoleType) || 'customer',
-        });
-
-        if (onClose) onClose();
-
-        // Redirect based on role returned from backend
-        if (data.redirect) {
-            window.location.href = data.redirect;
-        } else {
-            navigate(data.role === 'admin' ? '/admin' : '/homepage');
-        }
-
-    } catch (err: unknown) {
-        let message = 'An unexpected error occurred during system initialization.';
-        
-        if (axios.isAxiosError(err) && err.response && err.response.data) {
-            const data = err.response.data as { message?: string; role?: RoleType; redirect?: string };
-            if (err.response.status === 401 || err.response.status === 422) {
-                message = 'Wrong password or username';
-            } else {
-                message = data.message || message;
-            }
-        } else if (err instanceof Error) {
-            message = err.message;
-        }
-        
-        setError(message);
-    } finally {
-        setIsLoading(false);
+      // AuthContext.login() handles:
+      //  - POST /api/auth/login
+      //  - Token storage in localStorage
+      //  - User state update
+      //  - Role-based navigation (customer → /homepage, admin → /admin/dashboard, etc.)
+      //  - Banned account detection → /delete-account
+      await login(email, password);
+      if (onClose) onClose();
+    } catch {
+      // AuthContext sets its own error state; nothing else needed here
     }
   };
 
@@ -138,9 +109,9 @@ const Login: React.FC<LoginProps> = ({ isOpen = true, onClose }) => {
               <p className="text-slate-500 font-bold text-xs uppercase tracking-widest mt-2">Enter credentials to initialize shift.</p>
             </div>
 
-            {error && (
+            {displayError && (
                 <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 text-red-700 text-[10px] font-black uppercase tracking-widest">
-                    {error}
+                    {displayError}
                 </div>
             )}
 

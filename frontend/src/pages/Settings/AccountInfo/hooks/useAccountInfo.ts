@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from 'react';
-import axios from 'axios';
+import axiosInstance from '../../../../lib/axiosInstance';
 import { useAuth } from '../../../../context/AuthContext';
 import type { ProfileFormValues, PasswordFormValues } from '../utils/validation';
 
@@ -24,13 +24,13 @@ export const useAccountInfo = () => {
   useEffect(() => {
     const fetchUserData = async () => {
       try {
-        const response = await axios.get('/user');
+        const response = await axiosInstance.get('/api/customer/profile');
         const data = response.data;
         setAccount({
           id: data.id,
           name: data.name,
           email: data.email || '',
-          contacts: data.contacts || [], // This would need a migration/table if we want multiple
+          contacts: data.contacts || [],
           profilePicture: data.profile_picture || '',
         });
       } catch (err) {
@@ -50,13 +50,21 @@ export const useAccountInfo = () => {
       name: user.name || '',
       email: user.email || '',
       contacts: [],
-      profilePicture: '',
+      profilePicture: user.profile_picture || '',
     };
   }, [account, user]);
 
   const updateProfile = async (values: ProfileFormValues): Promise<{ success: boolean }> => {
     try {
-      await axios.patch('/api/settings/profile', values);
+      // Split name back to first/last if needed or handle as is
+      const [firstName, ...lastNameParts] = values.name.split(' ');
+      const lastName = lastNameParts.join(' ');
+      
+      await axiosInstance.patch('/api/customer/profile', {
+        first_name: firstName,
+        last_name: lastName,
+        email: values.email
+      });
       setAccount(prev => prev ? { ...prev, ...values } : null);
       return { success: true };
     } catch (err) {

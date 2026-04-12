@@ -26,12 +26,15 @@ import { calculatePasswordStrength, getStrengthLabel } from '../../../utils/pass
 import { validateContact } from '../../../utils/contactValidation';
 import { profileSchema, passwordFormSchema, type ProfileFormValues, type PasswordFormValues } from './utils/validation';
 
+import { useAuth } from '../../../context/AuthContext';
+
 const AccountInfoPage: React.FC = () => {
   const { defaultAccount, updateProfile, updatePassword, uploadProfilePicture, isLoading } = useAccountInfo();
+  const { isLoading: authLoading } = useAuth();
   const otp = useOTPVerification();
   const location = useLocation();
 
-  if (isLoading) {
+  if (isLoading || authLoading) {
     return (
       <div className="flex h-screen items-center justify-center bg-white">
         <div className="text-[10px] font-black uppercase tracking-[4px] text-slate-400 animate-pulse">Synchronizing Identity Node...</div>

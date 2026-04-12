@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import axios from 'axios';
+import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import { 
   User, 
   Mail, 
@@ -40,9 +40,8 @@ interface RegistrationState {
   daily_rate: number;
   ot_rate: number;
 }
-
 const RegisterPage: React.FC = () => {
-    const navigate = useNavigate();
+    const { register, loading: isSubmitting, error } = useAuth();
     const [formData, setFormData] = useState<RegistrationState>({
         account_type: 'customer',
         first_name: '',
@@ -59,18 +58,7 @@ const RegisterPage: React.FC = () => {
     });
 
     const [showPassword, setShowPassword] = useState(false);
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const [passwordsMatch, setPasswordsMatch] = useState(true);
-
-    // Real-time password validation logic
-    useEffect(() => {
-        if (formData.password_confirmation && formData.password !== formData.password_confirmation) {
-            setPasswordsMatch(false);
-        } else {
-            setPasswordsMatch(true);
-        }
-    }, [formData.password, formData.password_confirmation]);
+    const passwordsMatch = !formData.password_confirmation || formData.password === formData.password_confirmation;
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
@@ -87,48 +75,17 @@ const RegisterPage: React.FC = () => {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         
-        if (!passwordsMatch) {
-            setError("Security Protocol Violation: Passwords do not match.");
+        if (formData.password !== formData.password_confirmation) {
             return;
         }
-
-        setIsSubmitting(true);
-        setError(null);
 
         // Prepare payload based on account type
         const payload = {
             ...formData,
-            status: 'active', // Default status for new registrations
-            // UUID is handled by backend as per migration $table->uuid('id')
+            status: 'active',
         };
 
-        try {
-            await axios.post('/register', payload);
-
-            // Successfully registered
-            // Redirect to login or auto-login depending on backend implementation
-            navigate('/login');
-            
-        } catch (err: unknown) {
-            let message = 'An unexpected error occurred during system enrollment.';
-            
-            if (axios.isAxiosError(err) && err.response && err.response.data) {
-                const data = err.response.data as { message?: string; errors?: Record<string, string[]> };
-                // Use standardized error message or validation errors
-                message = data.message || message;
-                
-                if (data.errors) {
-                    const validationErrors = Object.values(data.errors).flat().join(' ');
-                    message = `${message}: ${validationErrors}`;
-                }
-            } else if (err instanceof Error) {
-                message = err.message;
-            }
-            
-            setError(message);
-        } finally {
-            setIsSubmitting(false);
-        }
+        await register(payload);
     };
 
     return (

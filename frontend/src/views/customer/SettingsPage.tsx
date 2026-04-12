@@ -148,10 +148,24 @@ const SidebarContent: React.FC<{
 // ── Main SettingsPage ──────────────────────────────────────────────
 const SettingsPage: React.FC = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
   const [activeSection, setActiveSection] = useState<SectionKey>('account');
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
+
+  if (isLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-white">
+        <div className="text-[10px] font-black uppercase tracking-[4px] text-slate-400 animate-pulse">
+          Synchronizing Identity Node...
+        </div>
+      </div>
+    );
+  }
+
+  if (!user.isLoggedIn) {
+    return null; // AppRouter handles redirect
+  }
 
   const activeItem = NAV_ITEMS.find((n) => n.key === activeSection)!;
 
