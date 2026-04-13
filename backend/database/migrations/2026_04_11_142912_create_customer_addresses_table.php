@@ -14,18 +14,15 @@ return new class extends Migration
         Schema::create('customer_addresses', function (Blueprint $table) {
             $table->string('id', 20)->primary();
             $table->string('customer_id', 20)->index('customer_id');
-            $table->string('full_name');
-            $table->string('phone', 30)->nullable();
+            $table->string('adress_label', 255);
+            $table->string('contact_number', 30);
             $table->string('region', 100)->nullable();
             $table->string('province', 100)->nullable();
             $table->string('city', 100)->nullable();
             $table->string('barangay', 100)->nullable();
-            $table->string('street')->nullable();
-            $table->string('address', 500)->nullable();
+            $table->string('street', 255)->nullable();
             $table->string('postal_code', 10)->nullable();
             $table->boolean('is_default')->default(false);
-            $table->decimal('latitude', 10, 7)->nullable();
-            $table->decimal('longitude', 10, 7)->nullable();
         });
     }
 

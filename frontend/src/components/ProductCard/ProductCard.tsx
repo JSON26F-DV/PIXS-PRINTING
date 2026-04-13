@@ -36,6 +36,11 @@ const ProductCard: React.FC<ProductCardProps> = ({
         <img
           src={product.main_image}
           alt={product.name}
+          loading="lazy"
+          decoding="async"
+          onError={(e) => {
+            (e.target as HTMLImageElement).src = '/assets/fallback-product.png'
+          }}
           className="ProductCardImage h-full w-full object-cover transition-transform duration-1000 group-hover:scale-110"
         />
 
@@ -54,7 +59,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
         <div
           className={clsx(
             'absolute bottom-2 left-2 flex items-center gap-1.5 rounded-lg border border-white/10 px-2 py-1 text-[8px] font-black tracking-widest uppercase shadow-2xl md:bottom-6 md:left-6 md:gap-2.5 md:rounded-xl md:px-4 md:py-2 md:text-[9px]',
-            product.current_stock > 50
+            (product.current_stock ?? 0) > 50
               ? 'bg-slate-900 text-white'
               : 'bg-rose-500 text-white',
           )}
@@ -62,10 +67,10 @@ const ProductCard: React.FC<ProductCardProps> = ({
           <div
             className={clsx(
               'h-1.5 w-1.5 animate-pulse rounded-full md:h-2 md:w-2',
-              product.current_stock > 50 ? 'bg-pixs-mint' : 'bg-white',
+              (product.current_stock ?? 0) > 50 ? 'bg-pixs-mint' : 'bg-white',
             )}
           />
-          {product.current_stock.toLocaleString()}{' '}
+          {(product.current_stock ?? 0).toLocaleString()}{' '}
           <span className="hidden md:inline">Units Available</span>
         </div>
       </div>
@@ -95,7 +100,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
                   ).toLocaleString()}
                 </span>
                 <span className="font-mono text-[10px] leading-none font-black tracking-tighter text-slate-900 italic md:text-lg">
-                  ₱{product.base_price.toLocaleString()}/pc
+                  ₱{(product.base_price ?? 0).toLocaleString()}/pc
                 </span>
               </>
             ) : (
@@ -116,4 +121,4 @@ const ProductCard: React.FC<ProductCardProps> = ({
   );
 };
 
-export default ProductCard;
+export default React.memo(ProductCard);

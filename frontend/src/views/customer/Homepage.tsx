@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   Heart,
   Package,
@@ -10,17 +10,13 @@ import {
   Banknote,
   ArrowUpDown,
   Activity,
-  ChevronDown,
   RotateCcw,
   ArrowRight,
   X,
-  Mail,
-  ShieldCheck,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { clsx } from 'clsx'
-import { GoogleLogin } from '@react-oauth/google';
-import FacebookLogin from 'react-facebook-login/dist/facebook-login-render-props';
+
 import { useAuth } from '../../context/AuthContext'
 import { useDiscovery } from '../../context/DiscoveryContext'
 import { useCategories } from '../../hooks/useCategories'
@@ -31,9 +27,11 @@ import { useDebounce } from '../../hooks/useDebounce'
 import { SearchBar } from './SearchBar'
 import { STORAGE_KEYS } from '../../constants/storageKeys'
 import Footer from '../../components/Footer/Footer'
-import { FaFacebookF } from 'react-icons/fa';
+
 import CategoryCard from '../../components/CategoryCard/CategoryCard'
 import ProductCard from '../../components/ProductCard/ProductCard'
+import FilterDropdown from '../../components/FilterDropdown/FilterDropdown'
+import LoginModal from '../../components/LoginModal/LoginModal'
 
 // --- Interfaces ---
 // Reusing central types from product.types.ts
@@ -61,209 +59,26 @@ interface IFeaturedBusiness {
 }
 
 // --- Helper Components ---
-const FilterDropdown: React.FC<{
-  label: string
-  icon: React.ElementType
-  value: string | null
-  options: { label: string; value: string | null }[] | string[]
-  onChange: (val: string | null) => void
-}> = ({ label, icon: Icon, value, options, onChange }) => {
-  const [isOpen, setIsOpen] = useState(false)
-  const dropdownRef = useRef<HTMLDivElement>(null)
 
-  const getLabel = (val: string | null) => {
-    if (typeof options[0] === 'string') return val;
-    const opt = (options as { label: string; value: string | null }[]).find(o => o.value === val);
-    return opt ? opt.label : label;
-  }
 
-  const getVal = (opt: string | { label: string; value: string | null }) => typeof opt === 'string' ? opt : opt.value;
-  const getDisplay = (opt: string | { label: string; value: string | null }) => typeof opt === 'string' ? opt : opt.label;
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(e.target as Node)
-      ) {
-        setIsOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
-
-  const isActive =
-    value !== 'All' &&
-    value !== 'All Prices' &&
-    value !== 'All Status' &&
-    value !== 'Price: Low-High'
-
-  return (
-    <div ref={dropdownRef} className="relative min-w-[140px] flex-1">
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className={clsx(
-          'MarketplaceDropdownButton flex w-full items-center justify-between rounded-2xl border px-5 py-3.5 text-[10px] font-black tracking-widest uppercase transition-all',
-          isActive
-            ? 'border-pixs-mint text-pixs-mint shadow-pixs-mint/5 bg-white shadow-lg'
-            : 'border-slate-100 bg-white text-slate-400 hover:border-slate-200',
-        )}
-      >
-        <div className="flex items-center gap-2.5">
-          <Icon
-            size={14}
-            className={clsx(isActive ? 'text-pixs-mint' : 'text-slate-300')}
-          />
-          <span className="truncate">
-            {value === null || value === 'All' || (typeof value === 'string' && value.includes('All')) ? label : getLabel(value)}
-          </span>
-        </div>
-        <ChevronDown
-          size={14}
-          className={clsx(
-            'transition-transform duration-300',
-            isOpen && 'rotate-180',
-          )}
-        />
-      </button>
-
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: 10, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 10, scale: 0.95 }}
-            className="MarketplaceDropdownMenu custom-scrollbar absolute top-full right-0 left-0 z-[100] mt-2 max-h-64 overflow-y-auto rounded-[24px] border border-slate-100 bg-white p-2 shadow-2xl"
-          >
-            {options.map((opt) => {
-              const optVal = getVal(opt);
-              const optDisplay = getDisplay(opt);
-              return (
-                <button
-                  key={optDisplay}
-                  onClick={() => {
-                    onChange(optVal)
-                    setIsOpen(false)
-                  }}
-                  className={clsx(
-                    'MarketplaceDropdownItem w-full rounded-xl px-4 py-3 text-left text-[10px] font-black tracking-widest uppercase transition-colors',
-                    value === optVal
-                      ? 'bg-pixs-mint text-slate-900'
-                      : 'text-slate-500 hover:bg-slate-50',
-                  )}
-                >
-                  {optDisplay}
-                </button>
-              );
-            })}
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  )
-}
-
-const LoginModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen, onClose }) => {
-  const [agreed, setAgreed] = useState(false);
-  const { login } = useAuth();
-
-  if (!isOpen) return null;
-
-  return (
-    <AnimatePresence>
-      <motion.div 
-        key="login-modal-overlay"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[1000] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-md"
-      >
-        <motion.div 
-          initial={{ scale: 0.9, opacity: 0, y: 20 }}
-          animate={{ scale: 1, opacity: 1, y: 0 }}
-          exit={{ scale: 0.9, opacity: 0, y: 20 }}
-          className="bg-white w-full max-w-md rounded-[40px] p-10 shadow-2xl relative overflow-hidden flex flex-col items-center text-center"
-        >
-          {/* Background Decor */}
-          <div className="absolute top-0 right-0 w-32 h-32 bg-pixs-mint/10 rounded-full -mr-16 -mt-16 blur-2xl" />
-          
-          <button 
-            onClick={onClose}
-            className="absolute top-6 right-6 p-2 rounded-full hover:bg-slate-50 transition-colors text-slate-400 hover:text-slate-900"
-          >
-            <X size={20} />
-          </button>
-
-          <div className="w-16 h-16 bg-slate-900 rounded-2xl flex items-center justify-center mb-8 shadow-xl shadow-slate-200">
-            <ShieldCheck className="text-pixs-mint" size={32} />
-          </div>
-
-          <h3 className="text-3xl font-black text-slate-900 uppercase italic tracking-tighter mb-2">Production Portal</h3>
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-8">Identify your terminal credentials</p>
-
-          <div className="w-full space-y-4 mb-8">
-            <div className="flex justify-center">
-              <GoogleLogin
-                onSuccess={(credentialResponse) => {
-                  console.log(credentialResponse);
-                  login({ id: 'CUST-SOC-001', name: 'Social User', role: 'customer' });
-                  onClose();
-                }}
-                onError={() => console.log('Login Failed')}
-              />
-            </div>
-
-            <FacebookLogin
-              appId="YOUR_FACEBOOK_APP_ID"
-              callback={(response) => {
-                console.log(response);
-                login({ id: 'CUST-SOC-002', name: 'Facebook User', role: 'customer' });
-                onClose();
-              }}
-              render={(renderProps) => (
-                <button 
-                  onClick={renderProps.onClick}
-                  className="w-full flex items-center justify-center gap-3 py-4 bg-[#1877F2] text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:brightness-110 transition-all"
-                >
-                  <FaFacebookF size={16} fill="white" /> Sign in with Facebook
-                </button>
-              )}
-            />
-
-            <Link to="/login" className="w-full flex items-center justify-center gap-3 py-4 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-slate-900/20">
-              <Mail size={16} /> Credential Login
-            </Link>
-          </div>
-
-          <div className="flex flex-col gap-4 w-full">
-            <label className="flex items-center gap-3 cursor-pointer group">
-              <input 
-                type="checkbox" 
-                checked={agreed} 
-                onChange={(e) => setAgreed(e.target.checked)}
-                className="w-4 h-4 rounded border-slate-200 text-pixs-mint focus:ring-pixs-mint"
-              />
-              <span className="text-[9px] font-bold text-slate-500 uppercase text-left leading-tight">
-                I agree to the <span className="text-slate-900 underline underline-offset-2">Terms of Service</span> and industrial data protocols.
-              </span>
-            </label>
-
-            <button className="text-[9px] font-black text-slate-400 uppercase tracking-widest hover:text-pixs-mint transition-colors self-center">
-              Forgot Access Credentials?
-            </button>
-          </div>
-        </motion.div>
-      </motion.div>
-    </AnimatePresence>
-  );
-};
+const HERO_IMAGES = [
+  {
+    url: 'https://images.unsplash.com/photo-1550572017-eddf77227ae1?auto=format&fit=crop&q=80',
+    title: 'Professional Printing for Every Surface',
+    subtitle: 'From cylindrical cups to flat boxes, we print it all.',
+  },
+  {
+    url: 'https://images.unsplash.com/photo-1626785774573-4b799315345d?auto=format&fit=crop&q=80',
+    title: 'Global Milktea Packaging Node',
+    subtitle: 'Bulk orders starting at 500pcs with premium ink quality.',
+  },
+] as const
 
 const communityLogos: ILogo[] = [
   { name: 'Brew & Co.', type: 'Café', logo: 'https://images.unsplash.com/photo-1542181961-9590d0c79ca9?auto=format&fit=crop&q=80&w=200&h=200' },
   { name: 'Aesthetic Studios', type: 'Creative Agency', logo: 'https://images.unsplash.com/photo-1560159906-8d14d23253b7?auto=format&fit=crop&q=80&w=200&h=200' },
   { name: 'Urban Threads', type: 'Clothing Brand', logo: 'https://images.unsplash.com/photo-1528698827591-e19ccd7bc23d?auto=format&fit=crop&q=80&w=200&h=200' },
-  { name: 'Lokal Market', type: 'Retail', logo: 'https://images.unsplash.com/photo-1534452203293-494d7ddbf7e0?auto=format&fit=crop&q=80&w=200&h=200' },
+  { name: 'Lokal Market', type: 'Retail', logo: 'https://images.unsplash.com/photo-153452203293-494d7ddbf7e0?auto=format&fit=crop&q=80&w=200&h=200' },
   { name: 'NextGen Tech', type: 'Startup', logo: 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&q=80&w=200&h=200' },
   { name: 'Daily Grind', type: 'Roastery', logo: 'https://images.unsplash.com/photo-1511920170033-f8396924c348?auto=format&fit=crop&q=80&w=200&h=200' },
 ];
@@ -335,7 +150,15 @@ const PixsCommunitySection: React.FC<{ isLoggedIn: boolean }> = ({ isLoggedIn })
           {communityLogos.map((brand, idx) => (
             <div key={idx} className="pixs-partner-card group flex flex-col items-center justify-center p-6 md:p-8 bg-white border border-slate-100 rounded-[28px] hover:shadow-2xl hover:shadow-slate-200/50 transition-all duration-500 hover:-translate-y-2 cursor-pointer relative overflow-hidden">
                <div className="w-12 h-12 md:w-16 md:h-16 rounded-full overflow-hidden mb-4 border border-slate-50 grayscale opacity-70 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-500">
-                 <img src={brand.logo} alt={brand.name} className="pixs-partner-logo w-full h-full object-cover" />
+                 <img 
+                   src={brand.logo} 
+                   alt={brand.name} 
+                   loading="lazy"
+                   onError={(e) => {
+                     (e.target as HTMLImageElement).src = '/assets/fallback-logo.png'
+                   }}
+                   className="pixs-partner-logo w-full h-full object-cover" 
+                 />
                </div>
                <span className="text-[10px] md:text-xs font-black text-slate-900 uppercase tracking-tight text-center">{brand.name}</span>
                <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-1 text-center">{brand.type}</span>
@@ -419,20 +242,24 @@ const Homepage : React.FC = () => {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
 
   const [currentHeroIndex, setCurrentHeroIndex] = useState(0)
-  const [favorites, setFavorites] = useState<string[]>(() => {
-    // Initializing from terminal storage
-    const saved = localStorage.getItem('pixs_favorites')
-    return saved ? JSON.parse(saved) : []
-  })
   const { openDiscovery } = useDiscovery()
+  const [favorites, setFavorites] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('pixs_favorites')
+      return saved ? (JSON.parse(saved) as string[]) : []
+    } catch {
+      localStorage.removeItem('pixs_favorites')
+      return []
+    }
+  })
 
-  const checkAuthAndRun = (action: () => void) => {
+  const checkAuthAndRun = useCallback((action: () => void) => {
     if (!user.isLoggedIn) {
       setIsLoginModalOpen(true);
       return;
     }
     action();
-  };
+  }, [user.isLoggedIn]);
 
   // ─── Protocol Reset Protocol ───────────────────────────────────────────
   useEffect(() => {
@@ -494,12 +321,19 @@ const Homepage : React.FC = () => {
   const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200)
   
   useEffect(() => {
+    let rafId: number
     const handleResize = () => {
-      setWindowWidth(window.innerWidth)
-      setCurrentPage(1)
+      cancelAnimationFrame(rafId)
+      rafId = requestAnimationFrame(() => {
+        setWindowWidth(window.innerWidth)
+        setCurrentPage(1)
+      })
     }
     window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
+    return () => {
+      window.removeEventListener('resize', handleResize)
+      cancelAnimationFrame(rafId)
+    }
   }, [])
 
   const itemsPerPage = windowWidth < 768 ? 10 : 20
@@ -511,9 +345,10 @@ const Homepage : React.FC = () => {
   else if (filters.price === '₱500-₱1k') { price_min = 500; price_max = 1000; }
   else if (filters.price === '₱1k+') { price_min = 1000; }
 
+  const safeSearch = debouncedSearch.replace(/[^a-zA-Z0-9\s\-_.]/g, '').trim();
   const { products, totalPages, isLoading: prodLoading, error: prodError } = useProducts({
     category: filters.category,
-    search: (debouncedSearch.length >= 3 || debouncedSearch === '') ? debouncedSearch : '',
+    search: (safeSearch.length >= 3 || safeSearch === '') ? safeSearch : '',
     price_min,
     price_max,
     sort: filters.sort,
@@ -524,24 +359,11 @@ const Homepage : React.FC = () => {
     per_page: itemsPerPage
   })
 
-  const heroImages = [
-    {
-      url: 'https://images.unsplash.com/photo-1550572017-eddf77227ae1?auto=format&fit=crop&q=80',
-      title: 'Professional Printing for Every Surface',
-      subtitle: 'From cylindrical cups to flat boxes, we print it all.',
-    },
-    {
-      url: 'https://images.unsplash.com/photo-1626785774573-4b799315345d?auto=format&fit=crop&q=80',
-      title: 'Global Milktea Packaging Node',
-      subtitle: 'Bulk orders starting at 500pcs with premium ink quality.',
-    },
-  ]
-
-  const quickCategories = categories.slice(0, 4)
+  const quickCategories = (categories ?? []).slice(0, 4)
 
   const categoriesOptions = [
     'All',
-    ...categories.map((c) => c.label),
+    ...(categories ?? []).map((c) => c.label),
   ]
   const priceRanges = [
     'All Prices',
@@ -554,19 +376,44 @@ const Homepage : React.FC = () => {
   const statusOptions = ['All Status', 'In Stock', 'Low Stock', 'Out of Stock']
   const plateOptions = [
     { label: 'All Plates', value: null },
-    ...screenplates.map((p) => ({ label: p.plate_name, value: p.id })),
+    ...(screenplates ?? []).map((p) => ({ label: p.plate_name, value: p.id })),
   ]
 
   const paginatedProducts = products;
 
+  const handleCategoryChange = useCallback((v: string | null) => {
+    if (v) setFilters(prev => ({ ...prev, category: v }))
+    setCurrentPage(1)
+  }, [])
+
+  const handlePriceChange = useCallback((v: string | null) => {
+    if (v) setFilters(prev => ({ ...prev, price: v }))
+    setCurrentPage(1)
+  }, [])
+
+  const handleSortChange = useCallback((v: string | null) => {
+    if (v) setFilters(prev => ({ ...prev, sort: v }))
+    setCurrentPage(1)
+  }, [])
+
+  const handleStatusChange = useCallback((v: string | null) => {
+    if (v) setFilters(prev => ({ ...prev, status: v }))
+    setCurrentPage(1)
+  }, [])
+
+  const handlePlateChange = useCallback((val: string | null) => {
+    setFilters(prev => ({ ...prev, screenplate_id: val }))
+    setCurrentPage(1)
+  }, [])
+
   useEffect(() => {
     const timer = setInterval(() => {
-      setCurrentHeroIndex((prev) => (prev + 1) % heroImages.length)
+      setCurrentHeroIndex((prev: number) => (prev + 1) % HERO_IMAGES.length)
     }, 5000)
     return () => clearInterval(timer)
-  }, [heroImages.length])
+  }, [])
 
-  const resetFilters = () => {
+  const resetFilters = useCallback(() => {
     setFilters({
       category: 'All',
       price: 'All Prices',
@@ -578,7 +425,7 @@ const Homepage : React.FC = () => {
     setShowMostSold(false)
     setShowFavoritesOnly(false)
     setCurrentPage(1)
-  }
+  }, [])
 
   const handlePageChange = (newPage: number) => {
     checkAuthAndRun(() => {
@@ -593,14 +440,17 @@ const Homepage : React.FC = () => {
     });
   }
 
-  const toggleFavorite = (id: string) => {
+  const toggleFavorite = useCallback((id: string) => {
     setFavorites((prev) => {
        const updated = prev.includes(id) ? prev.filter((f) => f !== id) : [...prev, id]
-       // Commit to terminal storage
-       localStorage.setItem('pixs_favorites', JSON.stringify(updated))
+       try {
+         localStorage.setItem('pixs_favorites', JSON.stringify(updated))
+       } catch {
+         console.warn('[Favorites] Could not persist to localStorage')
+       }
        return updated
     })
-  }
+  }, [])
 
   return (
     <div className="animate-in fade-in space-y-24 pb-20 duration-1000">
@@ -618,7 +468,7 @@ const Homepage : React.FC = () => {
             <div
               className="absolute inset-0 bg-cover bg-center"
               style={{
-                backgroundImage: `url(${heroImages[currentHeroIndex].url})`,
+                backgroundImage: `url(${HERO_IMAGES[currentHeroIndex].url})`,
               }}
             />
             <div className="absolute inset-0 bg-gradient-to-b from-slate-900/60 via-slate-900/10 to-slate-900/80" />
@@ -640,7 +490,7 @@ const Homepage : React.FC = () => {
               <div className="bg-pixs-mint/40 h-0.5 w-24" />
             </div>
             <h1 className="mb-12 text-7xl leading-[0.8] font-black tracking-tighter text-white italic md:text-9xl">
-              {heroImages[currentHeroIndex].title.split(' ').map((word, i) => (
+              {HERO_IMAGES[currentHeroIndex].title.split(' ').map((word, i) => (
                 <span
                   key={i}
                   className={
@@ -672,7 +522,7 @@ const Homepage : React.FC = () => {
 
         {/* Hero Indicators */}
         <div className="absolute top-1/2 right-16 z-30 flex -translate-y-1/2 flex-col gap-6">
-          {heroImages.map((_, i) => (
+          {HERO_IMAGES.map((_, i) => (
             <button
               key={i}
               onClick={() => setCurrentHeroIndex(i)}
@@ -825,50 +675,35 @@ const Homepage : React.FC = () => {
                 icon={Layers}
                 value={filters.category}
                 options={categoriesOptions}
-                onChange={(v) => {
-                  if (v) setFilters({ ...filters, category: v })
-                  setCurrentPage(1)
-                }}
+                onChange={handleCategoryChange}
               />
               <FilterDropdown
                 label="Rate Range"
                 icon={Banknote}
                 value={filters.price}
                 options={priceRanges}
-                onChange={(v) => {
-                  if (v) setFilters({ ...filters, price: v })
-                  setCurrentPage(1)
-                }}
+                onChange={handlePriceChange}
               />
               <FilterDropdown
                 label="Sort Protocol"
                 icon={ArrowUpDown}
                 value={filters.sort}
                 options={sortOptions}
-                onChange={(v) => {
-                  if (v) setFilters({ ...filters, sort: v })
-                  setCurrentPage(1)
-                }}
+                onChange={handleSortChange}
               />
               <FilterDropdown
                 label="Active Status"
                 icon={Activity}
                 value={filters.status}
                 options={statusOptions}
-                onChange={(v) => {
-                  if (v) setFilters({ ...filters, status: v })
-                  setCurrentPage(1)
-                }}
+                onChange={handleStatusChange}
               />
               <FilterDropdown
                 label="Owned Plate"
                 icon={Layers}
                 value={filters.screenplate_id}
                 options={plateOptions}
-                onChange={(val) => {
-                  setFilters({ ...filters, screenplate_id: val })
-                  setCurrentPage(1)
-                }}
+                onChange={handlePlateChange}
               />
             </div>
           </div>
@@ -918,8 +753,10 @@ const Homepage : React.FC = () => {
                   }}
                   onClick={() => {
                     checkAuthAndRun(() => {
-                        const plateParam = filters.screenplate_id ? `?plate=${filters.screenplate_id}` : '';
-                        navigate(`/product/${product.id}${plateParam}`);
+                        const plateParam = filters.screenplate_id 
+                          ? `?plate=${encodeURIComponent(filters.screenplate_id)}` 
+                          : '';
+                        navigate(`/product/${encodeURIComponent(product.id)}${plateParam}`);
                     });
                   }}
                 />

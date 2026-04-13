@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
@@ -23,6 +24,7 @@ class Customer extends Authenticatable
      * @var bool
      */
     public $incrementing = false;
+
     public $timestamps = false;
 
     /**
@@ -72,14 +74,24 @@ class Customer extends Authenticatable
         'facebook_id',
     ];
 
-    public function contacts(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function contacts(): HasMany
     {
         return $this->hasMany(CustomerContactNumber::class);
     }
 
-    public function addresses(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function addresses(): HasMany
     {
         return $this->hasMany(CustomerAddress::class);
+    }
+
+    public function discounts(): HasMany
+    {
+        return $this->hasMany(CustomerDiscount::class);
+    }
+
+    public function paymentMethods(): HasMany
+    {
+        return $this->hasMany(CustomerPaymentMethod::class);
     }
 
     /**

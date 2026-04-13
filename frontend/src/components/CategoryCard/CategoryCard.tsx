@@ -18,6 +18,11 @@ const CategoryCard: React.FC<CategoryCardProps> = ({ cat, onClick }) => (
       <img
         src={cat.image}
         alt={cat.label}
+        loading="lazy"
+        decoding="async"
+        onError={(e) => {
+          (e.target as HTMLImageElement).src = '/assets/fallback-logo.png'
+        }}
         className="h-full w-full object-cover transition-transform duration-1000 group-hover:scale-125 group-hover:rotate-3"
       />
       <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent transition-all duration-700 group-hover:from-pixs-mint/80" />
@@ -27,10 +32,10 @@ const CategoryCard: React.FC<CategoryCardProps> = ({ cat, onClick }) => (
         {cat.label}
       </span>
       <span className="text-[9px] font-bold tracking-widest text-white/60 uppercase mt-1">
-        {cat.count} Products
+        {(cat.count ?? 0).toLocaleString()} Products
       </span>
     </div>
   </motion.button>
 );
 
-export default CategoryCard;
+export default React.memo(CategoryCard);
