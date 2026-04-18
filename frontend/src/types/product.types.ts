@@ -26,6 +26,8 @@ export interface IProduct {
   variants: IProductVariant[]
   tags: string[]
   gallery: string[]
+  ratings?: number
+  total_sold?: number
   // Legacy fields for backward compatibility if needed, but primary focus is DB shape
   long_description?: string
   best_for?: string
@@ -37,7 +39,7 @@ export interface ICategory {
   id: string
   label: string
   count: number
-  image: string
+  image: string | null
 }
 
 export interface IFilters {

@@ -210,7 +210,9 @@ const PaymentMethodsSection: React.FC = () => {
   const executeRemove = async () => {
     if (confirmDelete) {
       try {
-        await axiosInstance.delete(`/api/customer/payment-methods/${confirmDelete}`)
+        await axiosInstance.delete(
+          `/api/customer/payment-methods/${confirmDelete}`,
+        )
         setMethods((prev) => prev.filter((m) => m.id !== confirmDelete))
         setConfirmDelete(null)
         toast.success('Node decommissioned')
@@ -233,11 +235,16 @@ const PaymentMethodsSection: React.FC = () => {
     }
 
     try {
-      const resp = await axiosInstance.post('/api/customer/payment-methods', payload)
+      const resp = await axiosInstance.post(
+        '/api/customer/payment-methods',
+        payload,
+      )
       const newMethod = resp.data.data
       setMethods((prev) => [
         newMethod,
-        ...prev.map((m) => (newMethod.is_default ? { ...m, is_default: false } : m)),
+        ...prev.map((m) =>
+          newMethod.is_default ? { ...m, is_default: false } : m,
+        ),
       ])
       setIsAdding(false)
       reset()

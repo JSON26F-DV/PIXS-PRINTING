@@ -77,26 +77,48 @@ const CustomerNavbar: React.FC = () => {
       {/* ─────────────────────────────────────────── */}
       {/*  DESKTOP NAVBAR  (unchanged)               */}
       {/* ─────────────────────────────────────────── */}
-      <header className="CustomerNavbar sticky top-0 z-50 hidden h-20 items-center border-b border-slate-100 bg-white/80 px-6 backdrop-blur-md lg:flex">
-        <div className="CustomerNavbarLayout mx-auto flex w-full max-w-[1440px] items-center justify-between gap-4 md:gap-12">
+      <header className="CustomerNavbar fixed top-0 left-0 z-50 hidden h-20 w-full items-center border-b border-slate-100 bg-white/80 px-4 backdrop-blur-md min-[1441px]:px-12 md:flex md:px-8">
+        <div className="CustomerNavbarLayout mx-auto flex w-full max-w-[1440px] items-center justify-between gap-2 min-[1441px]:gap-8 md:gap-4">
           {/* Left: Industrial Logo & Address Hub */}
-          <div className="CustomerNavbarLeft flex shrink-0 items-center gap-8">
+          <div className="CustomerNavbarLeft flex shrink-0 items-center gap-3 min-[1441px]:gap-8">
             <Link
               to={user?.isLoggedIn ? '/homepage' : '/'}
-              className="group flex cursor-pointer items-center gap-2"
+              className="group mr-2 flex cursor-pointer items-center gap-2 min-[1441px]:mr-0"
             >
               <div className="bg-pixs-mint shadow-pixs-mint/20 flex h-10 w-10 items-center justify-center rounded-2xl text-2xl font-black text-slate-900 shadow-lg transition-transform group-hover:scale-110">
                 P
               </div>
-              <h1 className="hidden text-xl font-black tracking-tighter text-slate-900 italic lg:block">
+              <h1 className="text-xl font-black tracking-tighter text-slate-900 italic min-[1441px]:block">
                 PIXS <span className="text-slate-400">SHOP</span>
               </h1>
             </Link>
 
+            {/* Tablet-only Search and Address Icons */}
+            <div className="hidden items-center gap-2 min-[1441px]:hidden md:flex">
+              <button
+                onClick={() => openDiscovery()}
+                className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-50 text-slate-400 transition-colors hover:bg-slate-100"
+              >
+                <Search size={18} strokeWidth={2.5} />
+              </button>
+              {user?.isLoggedIn && (
+                <button
+                  onClick={() => setIsAddressModalOpen(true)}
+                  className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-50 text-slate-400 transition-colors hover:bg-slate-100"
+                >
+                  <MapPin
+                    size={18}
+                    className="text-pixs-mint"
+                    strokeWidth={2.5}
+                  />
+                </button>
+              )}
+            </div>
+
             {user?.isLoggedIn && (
               <button
                 onClick={() => setIsAddressModalOpen(true)}
-                className="CustomerNavbarAddressButton hidden flex-col items-start rounded-2xl border border-transparent px-4 py-2 transition-all hover:border-slate-100 hover:bg-slate-50 lg:flex"
+                className="CustomerNavbarAddressButton hidden flex-col items-start rounded-2xl border border-transparent px-4 py-2 transition-all hover:border-slate-100 hover:bg-slate-50 min-[1441px]:flex"
               >
                 <span className="flex items-center gap-1.5 text-[10px] leading-none font-black tracking-[2px] text-slate-400 uppercase italic">
                   Deliver to <MapPin size={10} className="text-pixs-mint" />
@@ -108,15 +130,15 @@ const CustomerNavbar: React.FC = () => {
             )}
           </div>
 
-          {/* Center: Search */}
-          <div className="CustomerNavbarCenter group relative flex max-w-2xl flex-1 justify-end md:justify-center">
-            <div className="CustomerNavbarSearch relative hidden w-full md:block">
+          {/* Center: Search (Desktop Only) */}
+          <div className="CustomerNavbarCenter group relative hidden max-w-2xl flex-1 justify-center min-[1441px]:flex">
+            <div className="CustomerNavbarSearch relative w-full">
               <div className="group-focus-within:text-pixs-mint absolute top-1/2 left-6 -translate-y-1/2 text-slate-300 transition-colors" />
               <button
                 onClick={() => openDiscovery()}
                 className="CustomerNavbarSearchInput hover:border-pixs-mint/30 group w-full overflow-hidden rounded-[24px] border border-slate-100/50 bg-slate-50 py-4 pr-6 pl-16 text-left shadow-inner transition-all hover:bg-white"
               >
-                <span className="text-[10px] font-black tracking-[4px] text-slate-400 uppercase italic opacity-50 group-hover:text-slate-500">
+                <span className="max-w-[120px] overflow-hidden text-[10px] font-black tracking-[4px] text-ellipsis whitespace-nowrap text-slate-400 uppercase italic opacity-50 group-hover:text-slate-500 min-[1441px]:max-w-none">
                   Search products, cups, eco bags...
                 </span>
               </button>
@@ -133,10 +155,10 @@ const CustomerNavbar: React.FC = () => {
           </div>
 
           {/* Right: Identity Terminal */}
-          <div className="CustomerNavbarRight flex shrink-0 items-center gap-2 lg:gap-4">
+          <div className="CustomerNavbarRight flex shrink-0 items-center gap-2 min-[1441px]:gap-4">
             {user && user.role === 'customer' ? (
-              <div className="flex items-center gap-1 lg:gap-4">
-                <div className="hidden flex-col items-center px-4 lg:flex">
+              <div className="flex items-center gap-1 min-[1441px]:gap-4">
+                <div className="hidden flex-col items-center px-4 min-[1441px]:flex">
                   <div className="flex items-center gap-1.5 text-[9px] font-black tracking-tighter text-slate-900 uppercase italic opacity-80">
                     {plateStatus === 'Ready' ? (
                       <CheckCircle2 size={14} className="text-pixs-mint" />
@@ -225,9 +247,9 @@ const CustomerNavbar: React.FC = () => {
       {/* ─────────────────────────────────────────── */}
       {/*  MOBILE NAVBAR  (fully redesigned)         */}
       {/* ─────────────────────────────────────────── */}
-      <div className="lg:hidden">
+      <div className="md:hidden">
         {/* 🔝 TOP BAR — Foodpanda-style */}
-        <div className="mobile-navbar-top fixed top-0 right-0 left-0 z-50 flex flex-col rounded-b-[32px] bg-white/90 shadow-[0_10px_40px_rgba(0,0,0,0.03)] backdrop-blur-3xl">
+        <div className="mobile-navbar-top fixed top-0 right-0 left-0 z-50 flex flex-col bg-white/90 shadow-[0_10px_40px_rgba(0,0,0,0.03)] backdrop-blur-3xl">
           <div className="flex h-16 items-center justify-between px-4">
             {/* 📍 Left — Location Block (Authenticated Only) */}
             {user?.isLoggedIn ? (

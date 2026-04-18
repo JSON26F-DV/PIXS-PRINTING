@@ -21,13 +21,16 @@ export function useDiscoveryCategories(isOpen: boolean) {
     const fetchCategories = async () => {
       try {
         const token = localStorage.getItem('pixs_token')
-        const res = await fetch(`${import.meta.env.VITE_API_URL}/api/categories`, {
-          signal: controller.signal,
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token && { Authorization: `Bearer ${token}` }),
+        const res = await fetch(
+          `${import.meta.env.VITE_API_URL}/api/categories`,
+          {
+            signal: controller.signal,
+            headers: {
+              'Content-Type': 'application/json',
+              ...(token && { Authorization: `Bearer ${token}` }),
+            },
           },
-        })
+        )
 
         if (res.status === 401) {
           localStorage.removeItem('pixs_token')

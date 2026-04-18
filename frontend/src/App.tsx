@@ -16,11 +16,9 @@ function App() {
       <AuthProvider>
         <NotificationProvider>
           <DiscoveryProvider>
-            <div className="min-h-screen bg-white pb-16 lg:pt-0 lg:pb-0">
+            <div className="AppRoot relative isolate flex min-h-screen w-full flex-col overflow-x-hidden bg-white">
               <Toaster position="top-right" />
-              <main>
-                <AppRouter />
-              </main>
+              <AppRouter />
             </div>
           </DiscoveryProvider>
         </NotificationProvider>

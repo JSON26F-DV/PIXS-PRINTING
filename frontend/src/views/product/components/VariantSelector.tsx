@@ -7,6 +7,7 @@ interface VariantSelectorProps {
   selectedVariantId: string | null
   onSelect: (variantId: string) => void
   minThreshold: number
+  minOrder: number
   compatibleVariantSizes?: string[] | null
 }
 
@@ -20,6 +21,7 @@ const VariantSelector: React.FC<VariantSelectorProps> = ({
   selectedVariantId,
   onSelect,
   minThreshold,
+  minOrder,
   compatibleVariantSizes,
 }) => {
   return (
@@ -30,7 +32,7 @@ const VariantSelector: React.FC<VariantSelectorProps> = ({
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
         {variants.map((v) => {
           const isLowStock = v.stock > 0 && v.stock <= minThreshold
-          const isOutOfStock = v.stock === 0
+          const isOutOfStock = v.stock < minOrder
           const isCompatible =
             !compatibleVariantSizes || compatibleVariantSizes.includes(v.size)
           const isDisabled = isOutOfStock || !isCompatible
@@ -57,14 +59,14 @@ const VariantSelector: React.FC<VariantSelectorProps> = ({
                 ₱{v.price.toLocaleString()}
               </span>
 
-              {isLowStock && (
+              {isLowStock && !isOutOfStock && (
                 <span className="mt-1 animate-pulse text-[7px] font-black tracking-widest text-amber-500 uppercase">
                   Low Node Inventory
                 </span>
               )}
               {isOutOfStock && (
                 <span className="mt-1 text-[7px] font-black tracking-widest text-rose-500 uppercase">
-                  Null Inventory
+                  Out of Stock
                 </span>
               )}
               {!isCompatible && !isOutOfStock && (

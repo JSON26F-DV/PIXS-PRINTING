@@ -10,10 +10,8 @@ import toast from 'react-hot-toast'
 
 // Core Technical Implementation Dependencies
 import type { IProduct, IScreenPlate } from '../../types/product.types'
-import {
-  fetchProductById,
-  fetchCompatiblePlates,
-} from './services/mockDataService'
+import { getProductById, getCustomerScreenplates } from '../../api/products.api'
+import { addToCart } from '../../api/cart.api'
 import { useProductDetail } from './hooks/useProductDetail'
 import { getStockStatus } from './utils/priceCalculator'
 
@@ -26,7 +24,6 @@ import PlateSelector from './components/PlateSelector'
 import ProductInfoCard from './components/ProductInfoCard'
 import PriceCalculatorUI from './components/PriceCalculatorUI'
 import FullscreenGalleryModal from '../../components/common/FullscreenGalleryModal'
-import { mockCartService } from '../../pages/AddToCart/services/mockCartService'
 
 // ─── Loading State UI Protocol ────────────────────────────────────────────────
 const Skeleton: React.FC<{ className?: string }> = ({ className }) => (
@@ -47,7 +44,7 @@ const ProductDetailInner: React.FC<{
     product.min_threshold ?? 5,
   )
 
-  const normalizedGallery = product.gallery;
+  const normalizedGallery = product.gallery
 
   // Logic Engine Integration
   const { state, actions, computed } = useProductDetail({
@@ -93,60 +90,51 @@ const ProductDetailInner: React.FC<{
     return () => ctx.revert()
   }, [])
 
-  const handleAddToCart = () => {
+  const handleAddToCart = async () => {
     const variant = computed.selectedVariant
     if (!variant) {
       toast.error('Please select a product variant.')
       return
     }
 
-    mockCartService.addCartItem({
-      productId: product.id,
-      productName: product.name,
-      productImage: product.main_image,
-      category: product.category_label,
-      minOrder: product.min_order,
-      currentStock: computed.stockForVariant,
-      quantity: state.quantity,
-      variant: {
-        id: variant.variant_id,
-        size: variant.size,
-        width: variant.width,
-        height: variant.height,
-        unitPrice: variant.price,
-        stock: variant.stock,
-      },
-      colors: computed.selectedColors.map((c) => ({
-        id: c.id,
-        name: c.name,
-        hex: c.hex,
-        type: c.type,
-      })),
-      plate: computed.selectedPlate
-        ? {
-            id: computed.selectedPlate.id,
-            name: computed.selectedPlate.plate_name,
-            type: computed.selectedPlate.is_flatscreen
-              ? 'Flatscreen'
-              : 'Cylindrical',
-            printPricePerUnit: computed.selectedVariant
-              ? (computed.selectedPlate.compatibility.find(
-                  (cp) => cp.product_id === product.id,
-                )?.print_price_per_unit?.[computed.selectedVariant.size] ?? 0)
-              : 0,
-            setupFee: computed.selectedPlate.base_setup_fee,
-            channels: computed.selectedPlate.channels,
-            printingInfo:
-              computed.selectedPlate.technical_info ||
-              'High-accuracy production node.',
-            isOwned: state.ownedPlateIds.includes(computed.selectedPlate.id),
-          }
-        : null,
-      customRequirements: state.customRequirements,
-    })
+    // Cart ID Format: {product_id}__{variant_id}__{color_id_joined}__{screenplate_id}
+    const colorIdPart =
+      computed.selectedColors
+        .map((c) => c.id)
+        .sort()
+        .join('-') || 'no-color'
+    const compositeId = `${product.id}__${variant.variant_id}__${colorIdPart}__${computed.selectedPlate?.id ?? 'no-plate'}`
 
-    toast.success('Product added to cart.')
-    navigate('/addtocart')
+    try {
+      await addToCart({
+        id: compositeId,
+        product_id: product.id,
+        variant_id: variant.variant_id,
+        screenplate_id: computed.selectedPlate?.id || null,
+        quantity: state.quantity,
+        unit_price: variant.price,
+        plate_price: computed.selectedVariant
+          ? (computed.selectedPlate?.compatibility?.find(
+              (cp: {
+                product_id: string
+                print_price_per_unit: Record<string, number>
+              }) => cp.product_id === product.id,
+            )?.print_price_per_unit?.[computed.selectedVariant.size] ?? 0)
+          : 0,
+        colors: computed.selectedColors.map((c, index) => ({
+          id: c.id,
+          channel_label:
+            index === 0 ? 'Primary' : index === 1 ? 'Secondary' : 'Accent',
+          channel_order: index,
+        })),
+      })
+
+      toast.success('Product added to cart.')
+      navigate('/addtocart')
+    } catch (error) {
+      console.error('Failed to add to cart:', error)
+      toast.error('Failed to add product to cart.')
+    }
   }
 
   const handleBuyNow = () => {
@@ -309,6 +297,7 @@ const ProductDetailInner: React.FC<{
                 selectedVariantId={state.selectedVariantId}
                 onSelect={actions.setSelectedVariantId}
                 minThreshold={product.min_threshold ?? 5}
+                minOrder={product.min_order}
                 compatibleVariantSizes={compatibleVariantSizes}
               />
             </div>
@@ -420,18 +409,19 @@ const ProductDetailPage: React.FC = () => {
     if (!id) return
     let isMounted = true
 
-    Promise.all([fetchProductById(id), fetchCompatiblePlates(id)])
-      .then(([prod, pls]) => {
+    Promise.all([getProductById(id), getCustomerScreenplates()])
+      .then(([prodRes, plsRes]) => {
         if (!isMounted) return
-        if (!prod) {
+        if (!prodRes || prodRes.status === 'error') {
           setNotFound(true)
         } else {
-          setProduct(prod)
-          setPlates(pls)
+          setProduct(prodRes.data)
+          setPlates(plsRes.data || [])
         }
         setIsLoading(false)
       })
-      .catch(() => {
+      .catch((err) => {
+        console.error('Fetch error:', err)
         if (isMounted) setNotFound(true)
         setIsLoading(false)
       })

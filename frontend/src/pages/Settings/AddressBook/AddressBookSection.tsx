@@ -1,10 +1,4 @@
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { FiPlus } from 'react-icons/fi'
 import type { SingleValue } from 'react-select'
 import Select from 'react-select'
@@ -43,7 +37,8 @@ type AddressFormValues = z.infer<typeof formSchema>
 type SelectOption = { value: string; label: string }
 
 const MapSelectorLazy = React.lazy(async () => {
-  const { MapContainer, Marker, TileLayer, useMap, useMapEvents } = await import('react-leaflet')
+  const { MapContainer, Marker, TileLayer, useMap, useMapEvents } =
+    await import('react-leaflet')
   const L = await import('leaflet')
   await import('leaflet/dist/leaflet.css')
   const markerIcon = L.icon({
@@ -76,7 +71,7 @@ const MapSelectorLazy = React.lazy(async () => {
         <MapContainer
           center={center || [14.5995, 120.9842]}
           zoom={14}
-          className="h-full w-full rounded-2xl z-0"
+          className="z-0 h-full w-full rounded-2xl"
         >
           <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
           <MapMarker center={center} onPositionChange={onPositionChange} />
@@ -122,8 +117,11 @@ const AddressBookSection: React.FC = () => {
   const [barangayCode, setBarangayCode] = useState('')
 
   const [selectionMode, setSelectionMode] = useState<'manual' | 'map'>('manual')
-  const [mapCenter, setMapCenter] = useState<{lat: number, lng: number} | null>(null)
-  
+  const [mapCenter, setMapCenter] = useState<{
+    lat: number
+    lng: number
+  } | null>(null)
+
   const formRef = useRef<HTMLFormElement>(null)
 
   const {
@@ -256,15 +254,19 @@ const AddressBookSection: React.FC = () => {
 
   const onSave = handleSubmit(async (values) => {
     const regions = getAllRegions()
-    const regionName = regionCode 
+    const regionName = regionCode
       ? (regions.find((r) => r.psgcCode === regionCode)?.name ?? '')
       : ''
-    const provinceDetails = provinceCode ? getProvincesByRegion(regionCode).find(
-      (p) => p.psgcCode === provinceCode,
-    ) : null
-    const cityDetails = municipalityCode ? getMunicipalitiesByProvince(provinceCode).find(
-      (m) => m.psgcCode === municipalityCode,
-    ) : null
+    const provinceDetails = provinceCode
+      ? getProvincesByRegion(regionCode).find(
+          (p) => p.psgcCode === provinceCode,
+        )
+      : null
+    const cityDetails = municipalityCode
+      ? getMunicipalitiesByProvince(provinceCode).find(
+          (m) => m.psgcCode === municipalityCode,
+        )
+      : null
     const barangayDetails = barangayCode
       ? getBarangaysByMunicipality(municipalityCode).find(
           (b) => b.psgcCode === barangayCode,
@@ -285,7 +287,10 @@ const AddressBookSection: React.FC = () => {
     try {
       if (editingAddress) {
         toast.loading('Updating address...', { id: 'save-address' })
-        await axiosInstance.put(`/api/customer/addresses/${editingAddress.id}`, payload)
+        await axiosInstance.put(
+          `/api/customer/addresses/${editingAddress.id}`,
+          payload,
+        )
         toast.success('Address updated.', { id: 'save-address' })
       } else {
         toast.loading('Saving address...', { id: 'save-address' })
@@ -456,32 +461,38 @@ const AddressBookSection: React.FC = () => {
           <div className="flex gap-4">
             <button
               type="button"
-              className={`flex-1 rounded-xl py-3 text-[10px] font-black uppercase transition-colors ${selectionMode === 'manual' ? 'bg-slate-900 border-transparent text-white shadow-lg' : 'bg-slate-100 border border-slate-200 text-slate-500 hover:bg-slate-200'}`}
+              className={`flex-1 rounded-xl py-3 text-[10px] font-black uppercase transition-colors ${selectionMode === 'manual' ? 'border-transparent bg-slate-900 text-white shadow-lg' : 'border border-slate-200 bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
               onClick={() => setSelectionMode('manual')}
             >
               Manual Form
             </button>
             <button
               type="button"
-              className={`flex-1 rounded-xl py-3 text-[10px] font-black uppercase transition-colors ${selectionMode === 'map' ? 'bg-slate-900 border-transparent text-white shadow-lg' : 'bg-slate-100 border border-slate-200 text-slate-500 hover:bg-slate-200'}`}
+              className={`flex-1 rounded-xl py-3 text-[10px] font-black uppercase transition-colors ${selectionMode === 'map' ? 'border-transparent bg-slate-900 text-white shadow-lg' : 'border border-slate-200 bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
               onClick={() => setSelectionMode('map')}
             >
               Pin on Map
             </button>
           </div>
 
-          <div
-            className="space-y-4 rounded-3xl border border-slate-900 bg-slate-50/50 p-5 shadow-inner transition-all md:p-8"
-          >
+          <div className="space-y-4 rounded-3xl border border-slate-900 bg-slate-50/50 p-5 shadow-inner transition-all md:p-8">
             {selectionMode === 'map' && (
               <div className="animate-in fade-in slide-in-from-top-2 space-y-4 pt-2">
-                <div className="h-[250px] w-full relative z-0 rounded-2xl border border-slate-200 bg-slate-50 p-1">
-                  <React.Suspense fallback={<div className="flex h-full items-center justify-center text-xs font-black uppercase tracking-widest text-slate-400">Loading Map...</div>}>
+                <div className="relative z-0 h-[250px] w-full rounded-2xl border border-slate-200 bg-slate-50 p-1">
+                  <React.Suspense
+                    fallback={
+                      <div className="flex h-full items-center justify-center text-xs font-black tracking-widest text-slate-400 uppercase">
+                        Loading Map...
+                      </div>
+                    }
+                  >
                     <MapSelectorLazy
                       center={mapCenter}
-                      onPositionChange={(pos: {lat: number, lng: number}) => {
+                      onPositionChange={(pos: { lat: number; lng: number }) => {
                         setMapCenter(pos)
-                        setValue('street', `${pos.lat}, ${pos.lng}`, { shouldValidate: true })
+                        setValue('street', `${pos.lat}, ${pos.lng}`, {
+                          shouldValidate: true,
+                        })
                       }}
                     />
                   </React.Suspense>
@@ -496,7 +507,9 @@ const AddressBookSection: React.FC = () => {
                     {...register('street')}
                   />
                   {errors.street && (
-                     <p className="text-xs text-rose-500">{errors.street.message}</p>
+                    <p className="text-xs text-rose-500">
+                      {errors.street.message}
+                    </p>
                   )}
                 </div>
               </div>
@@ -640,7 +653,16 @@ const AddressBookSection: React.FC = () => {
                   <MaskedPhone phone={address.contact_number} />
                 </p>
                 <p className="line-clamp-2 text-xs font-medium text-slate-400">
-                  {[address.street, address.barangay, address.city, address.province, address.region, address.postal_code].filter(Boolean).join(', ')}
+                  {[
+                    address.street,
+                    address.barangay,
+                    address.city,
+                    address.province,
+                    address.region,
+                    address.postal_code,
+                  ]
+                    .filter(Boolean)
+                    .join(', ')}
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">

@@ -115,9 +115,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({})
   const navigate = useNavigate()
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleAuthSuccess = useCallback(
-    (data: any) => {
+    (data: { token: string; user: any; account_type: string }) => {
       localStorage.setItem('pixs_token', data.token)
       axiosInstance.defaults.headers.common['Authorization'] =
         `Bearer ${data.token}`

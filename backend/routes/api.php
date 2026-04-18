@@ -2,9 +2,14 @@
 
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Auth\RegisterController;
+use App\Http\Controllers\CartController;
+use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\ColorController;
 use App\Http\Controllers\Customer\CustomerController;
-use App\Http\Controllers\User\UserController;
+use App\Http\Controllers\Customer\CustomerScreenplateController;
+use App\Http\Controllers\MessageController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\User\UserController;
 use Illuminate\Support\Facades\Route;
 
 // Public Auth Routes
@@ -55,11 +60,14 @@ Route::middleware(['auth:sanctum', 'role:customer'])->prefix('customer')->group(
     // Promotions / Awards
     Route::get('/awards', [CustomerController::class, 'promotions']);
     Route::post('/awards/redeem', [CustomerController::class, 'redeemPromotion']);
+
+    // Screenplates (owner rows in `screenplates`)
+    Route::get('/screenplates', [CustomerScreenplateController::class, 'index']);
 });
 
 // Messaging
 Route::middleware('auth:sanctum')->group(function () {
-    Route::post('/messages/send', [\App\Http\Controllers\MessageController::class, 'store']);
+    Route::post('/messages/send', [MessageController::class, 'store']);
 });
 
 // Example of role-protected route
@@ -67,9 +75,19 @@ Route::middleware(['auth:sanctum', 'role:admin'])->get('/admin/test', function (
     return response()->json(['message' => 'Admin access granted']);
 });
 
+// Cart Routes
+Route::middleware(['auth:sanctum', 'role:customer'])->prefix('cart')->group(function () {
+    Route::get('/', [CartController::class, 'index']);
+    Route::post('/', [CartController::class, 'store']);
+    Route::patch('/{id}', [CartController::class, 'update']);
+    Route::delete('/{id}', [CartController::class, 'destroy']);
+});
+
 Route::middleware(['throttle:api'])->group(function () {
-    Route::get('/categories', [\App\Http\Controllers\CategoryController::class, 'index']);
+    Route::get('/categories', [CategoryController::class, 'index']);
     Route::get('/products', [ProductController::class, 'index'])->middleware('throttle:search');
     Route::get('/products/search', [ProductController::class, 'search'])->middleware(['auth:sanctum', 'throttle:search']);
     Route::get('/products/sold-counts', [ProductController::class, 'soldCounts']);
+    Route::get('/products/{id}', [ProductController::class, 'show']);
+    Route::get('/colors', [ColorController::class, 'index']);
 });

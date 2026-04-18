@@ -115,7 +115,6 @@ const SmartSearch: React.FC<{
             link: item.id,
           })
         })
-
       ;(productsData as IProduct[])
         .filter(
           (p) =>
@@ -158,7 +157,6 @@ const SmartSearch: React.FC<{
             link: user.role === 'staff' ? 'history' : 'orders',
           })
         })
-
       ;(
         [
           ...SafeTerminal.array<IUserData>(

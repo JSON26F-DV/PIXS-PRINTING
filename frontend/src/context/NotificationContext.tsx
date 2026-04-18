@@ -56,7 +56,6 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({
         }
       }
     })
-
     ;(messagesData as unknown[]).forEach((m: unknown) => {
       interface MsgData {
         id: string

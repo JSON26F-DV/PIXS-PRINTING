@@ -3,11 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\Product;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Auth;
 
 class ProductController extends Controller
 {
@@ -15,12 +15,12 @@ class ProductController extends Controller
     {
         try {
             $isLoggedIn = Auth::guard('sanctum')->check();
-            
+
             $query = Product::query()
                 ->with([
                     'variants',
                     'tags',
-                    'gallery' => fn($q) => $q->orderBy('sort_order'),
+                    'gallery' => fn ($q) => $q->orderBy('sort_order'),
                 ])
                 ->join('categories', 'products.category_id', '=', 'categories.id')
                 ->select([
@@ -30,11 +30,13 @@ class ProductController extends Controller
                     'products.base_price',
                     'products.current_stock',
                     'products.main_image',
+                    'products.ratings',
+                    'products.total_sold',
                     'products.min_order',
                     'products.is_need_screenplate',
                     'products.is_need_color',
                     'products.category_id',
-                    'categories.label as category_label'
+                    'categories.label as category_label',
                 ]);
 
             // Filter: Category
@@ -45,12 +47,12 @@ class ProductController extends Controller
             // Filter: Search (debounced, min 3 chars)
             if ($request->filled('search')) {
                 $search = $request->search;
-                $query->where(function($q) use ($search) {
+                $query->where(function ($q) use ($search) {
                     $q->where('products.name', 'LIKE', "%{$search}%")
-                      ->orWhere('products.short_description', 'LIKE', "%{$search}%")
-                      ->orWhereHas('tags', function($t) use ($search) {
-                          $t->where('tag', 'LIKE', "%{$search}%");
-                      });
+                        ->orWhere('products.short_description', 'LIKE', "%{$search}%")
+                        ->orWhereHas('tags', function ($t) use ($search) {
+                            $t->where('tag', 'LIKE', "%{$search}%");
+                        });
                 });
             }
 
@@ -60,6 +62,11 @@ class ProductController extends Controller
             }
             if ($request->filled('price_max')) {
                 $query->where('products.base_price', '<=', $request->price_max);
+            }
+
+            // Filter: Ratings
+            if ($request->filled('min_rating')) {
+                $query->where('products.ratings', '>=', $request->min_rating);
             }
 
             // Filter: Status
@@ -74,13 +81,17 @@ class ProductController extends Controller
                 }
             }
 
+            if ($request->boolean('in_stock_only')) {
+                $query->where('products.current_stock', '>', 0);
+            }
+
             // Filter: Screenplate Compatibility (JOIN screenplate_compatibility)
             if ($request->filled('screenplate_id')) {
                 $query->whereExists(function ($q) use ($request) {
                     $q->select(DB::raw(1))
-                      ->from('screenplate_compatibility')
-                      ->whereColumn('screenplate_compatibility.product_id', 'products.id')
-                      ->where('screenplate_compatibility.screenplate_id', $request->screenplate_id);
+                        ->from('screenplate_compatibility')
+                        ->whereColumn('screenplate_compatibility.product_id', 'products.id')
+                        ->where('screenplate_compatibility.screenplate_id', $request->screenplate_id);
                 });
             }
 
@@ -88,15 +99,15 @@ class ProductController extends Controller
             $sort = $request->sort;
             if ($request->boolean('most_sold')) {
                 $query->leftJoin('order_items', 'products.id', '=', 'order_items.product_id')
-                      ->leftJoin('orders', 'orders.id', '=', 'order_items.order_id')
-                      ->selectRaw('SUM(CASE WHEN orders.status = "DELIVERED" THEN order_items.quantity ELSE 0 END) as total_sold')
-                      ->groupBy([
-                          'products.id', 'products.name', 'products.short_description', 
-                          'products.base_price', 'products.current_stock', 'products.main_image', 
-                          'products.min_order', 'products.is_need_screenplate', 'products.is_need_color', 
-                          'products.category_id', 'categories.label'
-                      ])
-                      ->orderBy('total_sold', 'DESC');
+                    ->leftJoin('orders', 'orders.id', '=', 'order_items.order_id')
+                    ->selectRaw('SUM(CASE WHEN orders.status = "DELIVERED" THEN order_items.quantity ELSE 0 END) as total_sold')
+                    ->groupBy([
+                        'products.id', 'products.name', 'products.short_description',
+                        'products.base_price', 'products.current_stock', 'products.main_image',
+                        'products.min_order', 'products.is_need_screenplate', 'products.is_need_color',
+                        'products.category_id', 'categories.label',
+                    ])
+                    ->orderBy('total_sold', 'DESC');
             } elseif ($sort === 'Price: Low-High') {
                 $query->orderBy('products.base_price', 'ASC');
             } elseif ($sort === 'Price: High-Low') {
@@ -117,24 +128,29 @@ class ProductController extends Controller
             // Post-process to hide base_price for guests and format data
             $paginated->getCollection()->transform(function ($product) use ($isLoggedIn) {
                 $data = [
-                    'id'                  => $product->id,
-                    'name'                => $product->name,
-                    'short_description'   => $product->short_description,
-                    'main_image'          => $product->main_image,
-                    'current_stock'       => (int) $product->current_stock,
+                    'id' => $product->id,
+                    'name' => $product->name,
+                    'short_description' => $product->short_description,
+                    'main_image' => $product->main_image,
+                    'ratings' => (float) $product->ratings,
+                    'total_sold' => (int) $product->total_sold,
+                    'current_stock' => (int) $product->current_stock,
                     'is_need_screenplate' => (bool) $product->is_need_screenplate,
-                    'is_need_color'       => (bool) $product->is_need_color,
-                    'category_id'         => $product->category_id,
-                    'category_label'      => $product->category_label,
-                    'min_order'           => (int) $product->min_order,
-                    'tags'                => $product->tags->pluck('tag')->toArray(),
-                    'variants'            => $product->variants->map(fn($v) => [
+                    'is_need_color' => (bool) $product->is_need_color,
+                    'category_id' => $product->category_id,
+                    'category_label' => $product->category_label,
+                    'min_order' => (int) $product->min_order,
+                    'tags' => $product->tags->pluck('tag')->toArray(),
+                    'variants' => $product->variants->map(fn ($v) => [
                         'variant_id' => $v->variant_id,
-                        'label'      => $v->label ?? $v->variant_id,
-                        'price'      => $isLoggedIn ? (float) $v->price : null,
-                        'stock'      => (int) $v->stock,
+                        'label' => $v->label ?? $v->variant_id,
+                        'size' => $v->size,
+                        'width' => $v->width,
+                        'height' => $v->height,
+                        'price' => $isLoggedIn ? (float) $v->price : null,
+                        'stock' => (int) $v->stock,
                     ])->toArray(),
-                    'gallery'             => $product->gallery->pluck('image_url')->toArray(),
+                    'gallery' => $product->gallery->pluck('image_url')->toArray(),
                 ];
 
                 if ($isLoggedIn) {
@@ -151,13 +167,73 @@ class ProductController extends Controller
         } catch (\Throwable $e) {
             Log::error('ProductController@index failed', [
                 'message' => $e->getMessage(),
-                'trace'   => $e->getTraceAsString(),
+                'trace' => $e->getTraceAsString(),
             ]);
 
             return response()->json([
-                'status'  => 'error',
+                'status' => 'error',
                 'message' => 'Failed to load products.',
             ], 500);
+        }
+    }
+
+    public function show(string $id): JsonResponse
+    {
+        try {
+            $isLoggedIn = Auth::guard('sanctum')->check();
+
+            $product = Product::with([
+                'variants',
+                'tags',
+                'gallery' => fn ($q) => $q->orderBy('sort_order'),
+                'category',
+            ])->findOrFail($id);
+
+            $data = [
+                'id' => $product->id,
+                'name' => $product->name,
+                'short_description' => $product->short_description,
+                'long_description' => $product->long_description,
+                'main_image' => $product->main_image,
+                'ratings' => (float) $product->ratings,
+                'total_sold' => (int) $product->total_sold,
+                'current_stock' => (int) $product->current_stock,
+                'is_need_screenplate' => (bool) $product->is_need_screenplate,
+                'is_need_color' => (bool) $product->is_need_color,
+                'category_id' => $product->category_id,
+                'category_label' => $product->category->label ?? '',
+                'min_order' => (int) $product->min_order,
+                'min_threshold' => (int) $product->min_threshold,
+                'tags' => $product->tags->pluck('tag')->toArray(),
+                'variants' => $product->variants->map(fn ($v) => [
+                    'variant_id' => $v->variant_id,
+                    'label' => $v->label ?? $v->variant_id,
+                    'size' => $v->size,
+                    'width' => $v->width,
+                    'height' => $v->height,
+                    'price' => $isLoggedIn ? (float) $v->price : null,
+                    'stock' => (int) $v->stock,
+                ])->toArray(),
+                'gallery' => $product->gallery->pluck('image_url')->toArray(),
+            ];
+
+            if ($isLoggedIn) {
+                $data['base_price'] = (float) $product->base_price;
+            } else {
+                $data['base_price'] = 0;
+            }
+
+            return response()->json([
+                'status' => 'success',
+                'data' => $data,
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('ProductController@show failed', ['message' => $e->getMessage()]);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Product not found.',
+            ], 404);
         }
     }
 
@@ -173,7 +249,7 @@ class ProductController extends Controller
 
             return response()->json([
                 'status' => 'success',
-                'data'   => $counts,
+                'data' => $counts,
             ]);
         } catch (\Throwable $e) {
             Log::error('ProductController@soldCounts failed', [
@@ -181,7 +257,7 @@ class ProductController extends Controller
             ]);
 
             return response()->json([
-                'status'  => 'error',
+                'status' => 'error',
                 'message' => 'Failed to load sold counts.',
             ], 500);
         }
@@ -205,26 +281,26 @@ class ProductController extends Controller
                         WHERE product_id = products.id 
                         AND sort_order = 0 
                         LIMIT 1
-                    ) as main_image')
+                    ) as main_image'),
                 ])
-                ->join('categories', 'products.category_id', '=', 'categories.id')
-                ->when($categoryId, fn($q) => $q->where('products.category_id', $categoryId))
-                ->when($searchTerm, fn($q) => $q->where(function ($sub) use ($searchTerm) {
-                    $sub->where('products.name', 'LIKE', "%{$searchTerm}%")
-                        ->orWhere('products.id', 'LIKE', "%{$searchTerm}%")
-                        ->orWhere('products.short_description', 'LIKE', "%{$searchTerm}%")
-                        ->orWhereHas('tags', fn($t) => $t->where('tag', 'LIKE', "%{$searchTerm}%"));
-                }))
-                ->orderBy('products.name')
-                ->limit(50)
-                ->get();
+                    ->join('categories', 'products.category_id', '=', 'categories.id')
+                    ->when($categoryId, fn ($q) => $q->where('products.category_id', $categoryId))
+                    ->when($searchTerm, fn ($q) => $q->where(function ($sub) use ($searchTerm) {
+                        $sub->where('products.name', 'LIKE', "%{$searchTerm}%")
+                            ->orWhere('products.id', 'LIKE', "%{$searchTerm}%")
+                            ->orWhere('products.short_description', 'LIKE', "%{$searchTerm}%")
+                            ->orWhereHas('tags', fn ($t) => $t->where('tag', 'LIKE', "%{$searchTerm}%"));
+                    }))
+                    ->orderBy('products.name')
+                    ->limit(50)
+                    ->get();
             });
 
             return response()->json(['data' => $results]);
         } catch (\Throwable $e) {
             Log::error('ProductController@search failed', [
                 'message' => $e->getMessage(),
-                'trace'   => $e->getTraceAsString(),
+                'trace' => $e->getTraceAsString(),
             ]);
 
             return response()->json(['message' => 'Search failed.'], 500);

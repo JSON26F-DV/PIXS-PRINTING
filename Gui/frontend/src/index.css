@@ -1,0 +1,43 @@
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:ital,wght@0,400;0,700;1,900&family=IBM+Plex+Mono:wght@400;500;700&display=swap');
+
+:root {
+  --pixs-mint: #75eea5;
+  --pixs-dark: #0f172a;
+  --pixs-surface: #f8fafc;
+  color-scheme: light;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: #ffffff;
+  font-family: 'Barlow Condensed', sans-serif;
+}
+
+#root {
+  min-height: 100dvh;
+}
+
+@keyframes filterInlineDrop {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.filter-inline-drop {
+  animation: filterInlineDrop 200ms ease-in-out both;
+}

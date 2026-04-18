@@ -18,7 +18,9 @@ export const fetchProductById = async (
   id: string,
 ): Promise<IProduct | null> => {
   await delay(SIMULATED_DELAY_MS)
-  const product = ((productsData as unknown) as IProduct[]).find((p) => p.id === id)
+  const product = (productsData as unknown as IProduct[]).find(
+    (p) => p.id === id,
+  )
   return product ?? null
 }
 

@@ -13,11 +13,14 @@ export function useLenis(): void {
     if (lenisInstance) return
 
     lenisInstance = new Lenis({
-      duration: 1.2,
-      easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      duration: 1.0,
+      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      orientation: 'vertical',
+      gestureOrientation: 'vertical',
       smoothWheel: true,
-      // Prevent Lenis from hijacking mobile touch momentum
-      touchMultiplier: 1.5,
+      wheelMultiplier: 1.1,
+      touchMultiplier: 2,
+      lerp: 0.1,
     })
 
     let rafId: number

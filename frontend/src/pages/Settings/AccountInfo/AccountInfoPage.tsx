@@ -171,7 +171,7 @@ const AccountInfoPage: React.FC = () => {
     setIsAddingContact(false)
     const backup = [...contacts]
     setContacts([...contacts, { number: newContact, is_default: false }])
-    
+
     // API Call
     storeContact(newContact).then((res: { success: boolean }) => {
       if (res.success) {
@@ -195,7 +195,12 @@ const AccountInfoPage: React.FC = () => {
     }
   }
 
-  if (isLoading || authLoading || !user?.isLoggedIn || user?.role !== 'customer') {
+  if (
+    isLoading ||
+    authLoading ||
+    !user?.isLoggedIn ||
+    user?.role !== 'customer'
+  ) {
     return (
       <div className="flex h-screen items-center justify-center bg-white">
         <div className="animate-pulse text-[10px] font-black tracking-[4px] text-slate-400 uppercase">

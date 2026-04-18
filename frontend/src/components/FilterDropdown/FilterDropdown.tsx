@@ -11,19 +11,29 @@ interface FilterDropdownProps {
   onChange: (val: string | null) => void
 }
 
-const FilterDropdown: React.FC<FilterDropdownProps> = ({ label, icon: Icon, value, options, onChange }) => {
+const FilterDropdown: React.FC<FilterDropdownProps> = ({
+  label,
+  icon: Icon,
+  value,
+  options,
+  onChange,
+}) => {
   const [isOpen, setIsOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   const getLabel = (val: string | null) => {
-    if (options.length === 0) return label;
-    if (typeof options[0] === 'string') return val;
-    const opt = (options as { label: string; value: string | null }[]).find(o => o.value === val);
-    return opt ? opt.label : label;
+    if (options.length === 0) return label
+    if (typeof options[0] === 'string') return val
+    const opt = (options as { label: string; value: string | null }[]).find(
+      (o) => o.value === val,
+    )
+    return opt ? opt.label : label
   }
 
-  const getVal = (opt: string | { label: string; value: string | null }) => typeof opt === 'string' ? opt : opt.value;
-  const getDisplay = (opt: string | { label: string; value: string | null }) => typeof opt === 'string' ? opt : opt.label;
+  const getVal = (opt: string | { label: string; value: string | null }) =>
+    typeof opt === 'string' ? opt : opt.value
+  const getDisplay = (opt: string | { label: string; value: string | null }) =>
+    typeof opt === 'string' ? opt : opt.label
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -45,7 +55,7 @@ const FilterDropdown: React.FC<FilterDropdownProps> = ({ label, icon: Icon, valu
     value !== 'Price: Low-High'
 
   return (
-    <div ref={dropdownRef} className="relative min-w-[140px] flex-1">
+    <div ref={dropdownRef} className="relative min-w-[180px] flex-1">
       <button
         onClick={() => setIsOpen(!isOpen)}
         className={clsx(
@@ -61,7 +71,11 @@ const FilterDropdown: React.FC<FilterDropdownProps> = ({ label, icon: Icon, valu
             className={clsx(isActive ? 'text-pixs-mint' : 'text-slate-300')}
           />
           <span className="truncate">
-            {value === null || value === 'All' || (typeof value === 'string' && value.includes('All')) ? label : getLabel(value)}
+            {value === null ||
+            value === 'All' ||
+            (typeof value === 'string' && value.includes('All'))
+              ? label
+              : getLabel(value)}
           </span>
         </div>
         <ChevronDown
@@ -82,8 +96,8 @@ const FilterDropdown: React.FC<FilterDropdownProps> = ({ label, icon: Icon, valu
             className="MarketplaceDropdownMenu custom-scrollbar absolute top-full right-0 left-0 z-[100] mt-2 max-h-64 overflow-y-auto rounded-[24px] border border-slate-100 bg-white p-2 shadow-2xl"
           >
             {options.map((opt) => {
-              const optVal = getVal(opt);
-              const optDisplay = getDisplay(opt);
+              const optVal = getVal(opt)
+              const optDisplay = getDisplay(opt)
               return (
                 <button
                   key={optDisplay}
@@ -100,7 +114,7 @@ const FilterDropdown: React.FC<FilterDropdownProps> = ({ label, icon: Icon, valu
                 >
                   {optDisplay}
                 </button>
-              );
+              )
             })}
           </motion.div>
         )}

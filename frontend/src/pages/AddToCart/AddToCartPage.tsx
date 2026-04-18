@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   ArrowLeft,
@@ -9,9 +9,11 @@ import {
   CheckCircle2,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
-import colorData from '../../data/color.json'
-import productsData from '../../data/products.json'
-import screenplateData from '../../data/screenplate.json'
+import {
+  getColors,
+  getProducts,
+  getCustomerScreenplates,
+} from '../../api/products.api'
 import { useCart } from './hooks/useCart'
 import type { CartColorInfo } from '../../types/cart'
 import type { IProduct, IScreenPlate } from '../../types/product.types'
@@ -26,13 +28,47 @@ const AddToCartPage: React.FC = () => {
     updatePlatePrice,
     removeItem,
     getItemTotal,
+    isLoading: isCartLoading,
   } = useCart()
-  const colors = colorData as CartColorInfo[]
-  const products = (productsData as unknown) as IProduct[]
 
-  const [selectedItemIds, setSelectedItemIds] = useState<string[]>(() =>
-    items.map((i) => i.id),
-  )
+  const [colors, setColors] = useState<CartColorInfo[]>([])
+  const [products, setProducts] = useState<IProduct[]>([])
+  const [screenplates, setScreenplates] = useState<IScreenPlate[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [colorsRes, productsRes, screenplatesRes] = await Promise.all([
+          getColors(),
+          getProducts(),
+          getCustomerScreenplates(),
+        ])
+        setColors(colorsRes.data)
+        // Products endpoint might be paginated based on ProductController@index
+        setProducts(
+          Array.isArray(productsRes.data)
+            ? productsRes.data
+            : productsRes.data.data || [],
+        )
+        setScreenplates(screenplatesRes.data)
+      } catch (error) {
+        console.error('Failed to fetch data:', error)
+        toast.error('Failed to load required data.')
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    fetchData()
+  }, [])
+
+  const [selectedItemIds, setSelectedItemIds] = useState<string[]>([])
+
+  useEffect(() => {
+    if (!isCartLoading && items.length > 0 && selectedItemIds.length === 0) {
+      setSelectedItemIds(items.map((i) => i.id))
+    }
+  }, [items, isCartLoading])
 
   const toggleSelection = (id: string) => {
     setSelectedItemIds((prev) =>
@@ -93,7 +129,6 @@ const AddToCartPage: React.FC = () => {
     }
 
     updateColors(item.id, nextColors)
-    toast.success('Configuration updated.')
   }
 
   const handleVariantChange = (
@@ -107,11 +142,9 @@ const AddToCartPage: React.FC = () => {
 
     const targetItem = items.find((i) => i.id === itemId)
     if (targetItem?.plate) {
-      const plate = (screenplateData as IScreenPlate[]).find(
-        (p) => p.id === targetItem.plate?.id,
-      )
-      const compatibility = plate?.compatibility.find(
-        (cp) => cp.product_id === productId,
+      const plate = screenplates.find((p) => p.id === targetItem.plate?.id)
+      const compatibility = (plate as any)?.compatibility?.find(
+        (cp: any) => cp.product_id === productId,
       )
       const newPrice = compatibility?.print_price_per_unit?.[variant.size] ?? 0
       updatePlatePrice(itemId, newPrice)
@@ -120,12 +153,19 @@ const AddToCartPage: React.FC = () => {
     updateVariant(itemId, {
       id: variant.variant_id,
       size: variant.size,
-      width: variant.width,
-      height: variant.height,
+      width: (variant as any).width || '',
+      height: (variant as any).height || '',
       unitPrice: variant.price,
       stock: variant.stock,
     })
-    toast.success('Product variant updated.')
+  }
+
+  if (isLoading || isCartLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-50">
+        <div className="border-pixs-mint h-12 w-12 animate-spin rounded-full border-4 border-t-transparent"></div>
+      </div>
+    )
   }
 
   return (

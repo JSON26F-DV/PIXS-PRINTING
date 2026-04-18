@@ -1,16 +1,19 @@
-import React from 'react';
-import { Heart, Plus } from 'lucide-react';
-import { motion } from 'framer-motion';
-import { clsx } from 'clsx';
-import type { IProduct } from '../../types/product.types';
-import { useAuth } from '../../context/AuthContext';
+import React, { useMemo } from 'react'
+import { Heart, Plus } from 'lucide-react'
+import { motion } from 'framer-motion'
+import { clsx } from 'clsx'
+import type { IProduct } from '../../types/product.types'
+import { useAuth } from '../../context/AuthContext'
+
+import ProductImage from '../ProductImage/ProductImage'
+import StarRating from '../customer/homepage/StarRating'
 
 interface ProductCardProps {
-  product: IProduct;
-  soldCount: number;
-  isFav: boolean;
-  onFavClick: (e: React.MouseEvent) => void;
-  onClick: () => void;
+  product: IProduct
+  soldCount: number
+  isFav: boolean
+  onFavClick: (e: React.MouseEvent) => void
+  onClick: () => void
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({
@@ -20,33 +23,73 @@ const ProductCard: React.FC<ProductCardProps> = ({
   onFavClick,
   onClick,
 }) => {
-  const { user } = useAuth();
-  const isLoggedIn = user?.isLoggedIn;
+  const { user } = useAuth()
+  const isOutOfStock = (product.current_stock ?? 0) < (product.min_order ?? 1)
+  const isLoggedIn = user?.isLoggedIn
+
+  const imageSrc = useMemo(() => {
+    if (!product.main_image) return null
+    if (
+      product.main_image.startsWith('http') ||
+      product.main_image.startsWith('data:')
+    ) {
+      return product.main_image
+    }
+    // Assumes local names in public/images/products/ (e.g., "cup-1")
+    return `/images/products/${product.main_image}`
+  }, [product.main_image])
+
+  const handleCardClick = () => {
+    if (!isOutOfStock) {
+      onClick()
+    }
+  }
 
   return (
     <motion.div
-      layout
       initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: 20 }}
-      onClick={onClick}
-      className="HomepageProductCard ProductCardWrapper group relative cursor-pointer rounded-[32px] border border-slate-100 bg-white p-2 transition-all md:rounded-[44px] md:p-2.5 hover:-translate-y-3"
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: '-50px' }}
+      onClick={handleCardClick}
+      className={clsx(
+        'HomepageProductCard ProductCardWrapper group relative rounded-[32px] border border-slate-100 bg-white p-2 transition-all md:rounded-[44px] md:p-2.5',
+        isOutOfStock ? 'cursor-not-allowed opacity-60' : 'cursor-pointer',
+      )}
     >
       <div className="relative flex aspect-square items-center justify-center overflow-hidden rounded-[24px] border border-slate-50 bg-slate-50 shadow-inner transition-colors duration-500 group-hover:bg-white md:rounded-[36px]">
-        <img
-          src={product.main_image}
-          alt={product.name}
-          loading="lazy"
-          decoding="async"
-          onError={(e) => {
-            (e.target as HTMLImageElement).src = '/assets/fallback-product.png'
-          }}
-          className="ProductCardImage h-full w-full object-cover transition-transform duration-1000 group-hover:scale-110"
-        />
+        <div
+          className={clsx(
+            'h-full w-full transition-all duration-700',
+            isOutOfStock && 'opacity-50 grayscale',
+          )}
+        >
+          <ProductImage
+            src={imageSrc}
+            alt={product.name}
+            className="transition-transform duration-1000"
+            skeletonClassName="rounded-[24px] md:rounded-[36px]"
+          />
+        </div>
+
+        {isOutOfStock && (
+          <div className="absolute inset-0 z-30 flex items-center justify-center bg-white/10 backdrop-blur-[2px]">
+            <div className="rounded-2xl bg-slate-900 px-6 py-3 shadow-2xl">
+              <span className="text-[10px] font-black tracking-[4px] text-white uppercase italic">
+                Sold Out
+              </span>
+            </div>
+          </div>
+        )}
 
         <button
-          onClick={onFavClick}
-          className="absolute top-3 right-3 z-20 flex h-8 w-8 items-center justify-center rounded-xl border border-white bg-white/90 shadow-lg backdrop-blur-xl transition-all md:top-6 md:right-6 md:h-12 md:w-12 md:rounded-[22px]"
+          onClick={(e) => {
+            e.stopPropagation()
+            if (!isOutOfStock) onFavClick(e)
+          }}
+          className={clsx(
+            'absolute top-3 right-3 z-20 flex h-8 w-8 items-center justify-center rounded-xl border border-white bg-white/90 shadow-lg backdrop-blur-xl transition-all md:top-6 md:right-6 md:h-12 md:w-12 md:rounded-[22px]',
+            isOutOfStock && 'opacity-50 grayscale',
+          )}
         >
           <Heart
             size={20}
@@ -59,33 +102,57 @@ const ProductCard: React.FC<ProductCardProps> = ({
         <div
           className={clsx(
             'absolute bottom-2 left-2 flex items-center gap-1.5 rounded-lg border border-white/10 px-2 py-1 text-[8px] font-black tracking-widest uppercase shadow-2xl md:bottom-6 md:left-6 md:gap-2.5 md:rounded-xl md:px-4 md:py-2 md:text-[9px]',
-            (product.current_stock ?? 0) > 50
-              ? 'bg-slate-900 text-white'
-              : 'bg-rose-500 text-white',
+            isOutOfStock
+              ? 'bg-slate-400 text-white'
+              : (product.current_stock ?? 0) > 50
+                ? 'bg-slate-900 text-white'
+                : 'bg-rose-500 text-white',
           )}
         >
           <div
             className={clsx(
               'h-1.5 w-1.5 animate-pulse rounded-full md:h-2 md:w-2',
-              (product.current_stock ?? 0) > 50 ? 'bg-pixs-mint' : 'bg-white',
+              isOutOfStock
+                ? 'bg-white/50'
+                : (product.current_stock ?? 0) > 50
+                  ? 'bg-pixs-mint'
+                  : 'bg-white',
             )}
           />
           {(product.current_stock ?? 0).toLocaleString()}{' '}
-          <span className="hidden md:inline">Units Available</span>
+          <span className="hidden md:inline">
+            {isOutOfStock ? 'Units Remaining' : 'Units Available'}
+          </span>
         </div>
       </div>
 
       <div className="ProductCardContent p-3 pb-2 md:p-6 md:pb-4">
         <div className="mb-2 flex items-center justify-between">
-          <h4 className="ProductCardName group-hover:text-pixs-mint flex-1 truncate text-[11px] leading-tight font-black tracking-tight text-slate-900 uppercase italic transition-colors md:text-lg">
+          <h4
+            className={clsx(
+              'ProductCardName flex-1 truncate text-[11px] leading-tight font-black tracking-tight uppercase italic transition-colors md:text-lg',
+              isOutOfStock
+                ? 'text-slate-400'
+                : 'group-hover:text-pixs-mint text-slate-900',
+            )}
+          >
             {product.name}
           </h4>
           <span className="rounded-full bg-slate-50 px-2 py-0.5 text-[8px] font-black text-slate-400 md:text-[9px]">
-            {soldCount.toLocaleString()}+ sold
+            {(product.total_sold ?? soldCount).toLocaleString()}+ sold
           </span>
         </div>
 
-        <p className="ProductCardShortDescription mb-4 line-clamp-2 text-[8px] font-bold tracking-widest text-slate-300 uppercase italic opacity-60 md:text-[9px]">
+        <div className={clsx('mb-4', isOutOfStock && 'opacity-50 grayscale')}>
+          <StarRating rating={product.ratings ?? 0} />
+        </div>
+
+        <p
+          className={clsx(
+            'ProductCardShortDescription mb-4 line-clamp-2 text-[8px] font-bold tracking-widest uppercase italic md:text-[9px]',
+            isOutOfStock ? 'text-slate-300/40' : 'text-slate-300 opacity-60',
+          )}
+        >
           {product.short_description}
         </p>
 
@@ -93,13 +160,23 @@ const ProductCard: React.FC<ProductCardProps> = ({
           <div className="flex flex-col">
             {isLoggedIn ? (
               <>
-                <span className="text-[9px] font-black tracking-tighter text-rose-500 md:text-sm">
+                <span
+                  className={clsx(
+                    'text-[9px] font-black tracking-tighter md:text-sm',
+                    isOutOfStock ? 'text-slate-300' : 'text-rose-500',
+                  )}
+                >
                   Min: ₱
                   {(
                     (product.base_price || 0) * (product.min_order || 1)
                   ).toLocaleString()}
                 </span>
-                <span className="font-mono text-[10px] leading-none font-black tracking-tighter text-slate-900 italic md:text-lg">
+                <span
+                  className={clsx(
+                    'font-mono text-[10px] leading-none font-black tracking-tighter italic md:text-lg',
+                    isOutOfStock ? 'text-slate-400' : 'text-slate-900',
+                  )}
+                >
                   ₱{(product.base_price ?? 0).toLocaleString()}/pc
                 </span>
               </>
@@ -112,13 +189,21 @@ const ProductCard: React.FC<ProductCardProps> = ({
               </div>
             )}
           </div>
-          <button className="hover:bg-pixs-mint hover:border-pixs-mint flex h-8 w-8 items-center justify-center rounded-xl border border-slate-100 bg-slate-50 text-slate-900 shadow-lg transition-all group-hover:rotate-12 active:scale-95 md:h-12 md:w-12 md:rounded-2xl">
+          <button
+            disabled={isOutOfStock}
+            className={clsx(
+              'flex h-8 w-8 items-center justify-center rounded-xl border shadow-lg transition-all md:h-12 md:w-12 md:rounded-2xl',
+              isOutOfStock
+                ? 'border-slate-50 bg-slate-50 text-slate-200'
+                : 'hover:bg-pixs-mint hover:border-pixs-mint border-slate-100 bg-slate-50 text-slate-900 group-hover:rotate-12 active:scale-95',
+            )}
+          >
             <Plus size={18} strokeWidth={3} />
           </button>
         </div>
       </div>
     </motion.div>
-  );
-};
+  )
+}
 
-export default React.memo(ProductCard);
+export default React.memo(ProductCard)

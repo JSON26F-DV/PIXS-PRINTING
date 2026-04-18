@@ -62,7 +62,9 @@ export const useAccountInfo = () => {
       first_name: user.first_name || '',
       last_name: user.last_name || '',
       email: user.email || '',
-      company_name: ((user as unknown) as Record<string, unknown>).company_name as string || '',
+      company_name:
+        ((user as unknown as Record<string, unknown>).company_name as string) ||
+        '',
       contacts: [],
       profilePicture: user.profile_picture || '',
       default_contact: '',
@@ -124,7 +126,9 @@ export const useAccountInfo = () => {
     }
   }
 
-  const storeContact = async (number: string): Promise<{ success: boolean }> => {
+  const storeContact = async (
+    number: string,
+  ): Promise<{ success: boolean }> => {
     try {
       await axiosInstance.post('/api/customer/contacts', { number })
       setAccount((prev) => {
@@ -140,9 +144,13 @@ export const useAccountInfo = () => {
     }
   }
 
-  const setDefaultContact = async (number: string): Promise<{ success: boolean }> => {
+  const setDefaultContact = async (
+    number: string,
+  ): Promise<{ success: boolean }> => {
     try {
-      await axiosInstance.post(`/api/customer/contacts/${encodeURIComponent(number)}/default`)
+      await axiosInstance.post(
+        `/api/customer/contacts/${encodeURIComponent(number)}/default`,
+      )
       setAccount((prev) => {
         if (!prev) return prev
         const updated = prev.contacts.map((c) => ({

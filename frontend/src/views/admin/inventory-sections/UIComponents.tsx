@@ -3,7 +3,11 @@ import { Plus, Upload, Trash2, Camera, AlertCircle } from 'lucide-react'
 import { type LucideIcon } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useDropzone } from 'react-dropzone'
-import type { FieldError } from 'react-hook-form'
+import type {
+  FieldError,
+  UseFormRegister,
+  RegisterOptions,
+} from 'react-hook-form'
 
 const cn = (...classes: (string | boolean | undefined)[]) =>
   classes.filter(Boolean).join(' ')
@@ -69,7 +73,7 @@ export const SectionTitle: React.FC<{ title: string; subtitle?: string }> = ({
 )
 
 // INPUT FIELD - PROFESSIONAL STYLE
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 export const InputField = ({
   label,
   name,
@@ -84,10 +88,10 @@ export const InputField = ({
   label: string
   name?: string
   type?: string
-  register?: any
+  register?: UseFormRegister<Record<string, unknown>>
   error?: FieldError
   placeholder?: string
-  rules?: any
+  rules?: RegisterOptions
   value?: string | number
   onChange?: (val: string) => void
 }) => {
@@ -128,7 +132,7 @@ export const InputField = ({
 }
 
 // TEXT AREA - PROFESSIONAL STYLE
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 export const TextArea = ({
   label,
   name,
@@ -141,10 +145,10 @@ export const TextArea = ({
 }: {
   label: string
   name?: string
-  register?: any
+  register?: UseFormRegister<Record<string, unknown>>
   error?: FieldError
   placeholder?: string
-  rules?: any
+  rules?: RegisterOptions
   value?: string
   onChange?: (val: string) => void
 }) => {

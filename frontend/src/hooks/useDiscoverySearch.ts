@@ -11,13 +11,17 @@ export interface IDiscoveryProduct {
   category_label: string
   base_price: number
   current_stock: number
+  min_order: number
   main_image: string | null
 }
 
 /**
  * Hook to search/filter products for the DiscoveryModal results grid.
  */
-export function useDiscoverySearch({ query, categoryId }: DiscoverySearchParams) {
+export function useDiscoverySearch({
+  query,
+  categoryId,
+}: DiscoverySearchParams) {
   const [results, setResults] = useState<IDiscoveryProduct[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -39,7 +43,9 @@ export function useDiscoverySearch({ query, categoryId }: DiscoverySearchParams)
       try {
         const token = localStorage.getItem('pixs_token')
         const safeQuery = query.replace(/[^a-zA-Z0-9\s\-_.₱]/g, '').trim()
-        const safeCategoryId = CAT_ID_REGEX.test(categoryId ?? '') ? categoryId : null
+        const safeCategoryId = CAT_ID_REGEX.test(categoryId ?? '')
+          ? categoryId
+          : null
 
         const params = new URLSearchParams()
         if (safeQuery.length >= 3) params.append('q', safeQuery)
@@ -53,7 +59,7 @@ export function useDiscoverySearch({ query, categoryId }: DiscoverySearchParams)
               'Content-Type': 'application/json',
               ...(token && { Authorization: `Bearer ${token}` }),
             },
-          }
+          },
         )
 
         if (res.status === 401) {

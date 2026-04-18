@@ -120,13 +120,17 @@ const AwardsSection: React.FC = () => {
                   <div
                     className={clsx(
                       'flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl',
-                      v.status !== 'active' ? 'bg-slate-200' : 'bg-pixs-mint/10',
+                      v.status !== 'active'
+                        ? 'bg-slate-200'
+                        : 'bg-pixs-mint/10',
                     )}
                   >
                     <FiGift
                       size={20}
                       className={
-                        v.status !== 'active' ? 'text-slate-400' : 'text-slate-800'
+                        v.status !== 'active'
+                          ? 'text-slate-400'
+                          : 'text-slate-800'
                       }
                     />
                   </div>
