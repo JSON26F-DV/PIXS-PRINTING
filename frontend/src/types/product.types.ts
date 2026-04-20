@@ -67,6 +67,11 @@ export interface IScreenPlateCompatibility {
   print_price_per_unit?: Record<string, number>
 }
 
+export interface IScreenPlateIncompatibility {
+  product_id: string
+  variant_ids: string[]
+}
+
 export interface IScreenPlate {
   id: string
   owner_id: string
@@ -81,7 +86,7 @@ export interface IScreenPlate {
   comment?: string
   technical_info?: string
   compatibility: IScreenPlateCompatibility[]
-  incompatible_products: string[]
+  incompatibility?: IScreenPlateIncompatibility[]
 }
 
 // ─── Order Configuration ──────────────────────────────────────────────────────

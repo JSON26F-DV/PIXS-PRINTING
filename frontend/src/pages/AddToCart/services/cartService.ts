@@ -1,17 +1,54 @@
 import {
   getCart,
-  addToCart,
   updateCartItem,
   removeFromCart,
 } from '../../../api/cart.api'
 import type {
   CartItem,
   CartColorInfo,
-  CartPlateInfo,
   CartVariantInfo,
 } from '../../../types/cart'
+import type { IProduct } from '../../../types/product.types'
 
-const mapBackendToFrontend = (item: any): CartItem => {
+const mapBackendToFrontend = (item: {
+  id: string
+  product_id: string
+  product?: {
+    name: string
+    main_image: string
+    category_label: string
+    min_order: number
+    current_stock: number
+  }
+  quantity: number
+  variant_id: string
+  unit_price: string
+  variant?: {
+    size?: string
+    label?: string
+    width?: string
+    height?: string
+    stock?: number
+  }
+  colors?: Array<{
+    color_id: string
+    color?: {
+      name: string
+      hex: string
+      type?: string
+    }
+  }>
+  screenplate?: {
+    plate_name: string
+    is_flatscreen: boolean
+    channels: number
+    base_setup_fee: string
+    technical_info?: string
+  }
+  screenplate_id: string
+  plate_price: string
+  created_at: string
+}): CartItem => {
   return {
     id: item.id,
     productId: item.product_id,
@@ -29,11 +66,11 @@ const mapBackendToFrontend = (item: any): CartItem => {
       unitPrice: parseFloat(item.unit_price),
       stock: item.variant?.stock || 0,
     },
-    colors: (item.colors || []).map((c: any) => ({
+    colors: (item.colors || []).map((c) => ({
       id: c.color_id,
       name: c.color?.name || '',
       hex: c.color?.hex || '',
-      type: c.color?.type || 'Standard',
+      type: (c.color?.type as 'Standard' | 'Premium') || 'Standard',
     })),
     plate: item.screenplate
       ? {
@@ -49,6 +86,7 @@ const mapBackendToFrontend = (item: any): CartItem => {
       : null,
     customRequirements: '',
     createdAt: item.created_at,
+    fullProduct: item.product as unknown as IProduct,
   }
 }
 

@@ -38,9 +38,9 @@ const PaymentSection: React.FC<PaymentSectionProps> = ({
           <div
             key={pay.id}
             onClick={() => onSelect(pay.id)}
-            className={`PaymentCard group relative cursor-pointer rounded-2xl border p-5 transition-all active:scale-[0.98] ${
+            className={`PaymentCard group relative cursor-pointer rounded-2xl border p-4 transition-all active:scale-[0.98] ${
               selectedId === pay.id
-                ? 'border-pixs-mint shadow-pixs-mint/5 bg-white shadow-lg'
+                ? 'border-pixs-mint bg-white shadow-lg'
                 : 'border-slate-100 bg-slate-50/50 hover:border-slate-200'
             }`}
           >

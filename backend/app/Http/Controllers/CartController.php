@@ -23,7 +23,13 @@ class CartController extends Controller
         }
 
         try {
-            $items = CartItem::with(['colors.color', 'product', 'variant', 'screenplate'])
+            $items = CartItem::with([
+                'colors.color', 
+                'product.variants', 
+                'variant', 
+                'screenplate.compatibility',
+                'screenplate.incompatibility'
+            ])
                 ->where('customer_id', $user->id)
                 ->get();
 
@@ -91,7 +97,7 @@ class CartController extends Controller
                 return response()->json([
                     'status' => 'success',
                     'message' => 'Cart updated',
-                    'data' => $cartItem->load('colors.color'),
+                    'data' => $cartItem->load(['colors.color', 'product.variants', 'variant', 'screenplate.compatibility', 'screenplate.incompatibility']),
                 ]);
             });
         } catch (\Throwable $e) {
@@ -139,7 +145,7 @@ class CartController extends Controller
                 return response()->json([
                     'status' => 'success',
                     'message' => 'Item updated',
-                    'data' => $cartItem->load('colors.color'),
+                    'data' => $cartItem->load(['colors.color', 'product.variants', 'variant', 'screenplate.compatibility', 'screenplate.incompatibility']),
                 ]);
             });
         } catch (\Throwable $e) {

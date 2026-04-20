@@ -23,7 +23,7 @@ class CustomerScreenplateController extends Controller
         }
 
         try {
-            $plates = Screenplate::with('compatibility')
+            $plates = Screenplate::with(['compatibility', 'incompatibility'])
                 ->where('owner_id', $user->id)
                 ->orderBy('plate_name')
                 ->get();
@@ -54,6 +54,13 @@ class CustomerScreenplateController extends Controller
                     ];
                 })->values();
 
+                $incomp = $plate->incompatibility->groupBy('product_id')->map(function ($items, $productId) {
+                    return [
+                        'product_id' => $productId,
+                        'variant_ids' => $items->pluck('variant_id')->filter()->values()->toArray(),
+                    ];
+                })->values();
+
                 return [
                     'id' => $plate->id,
                     'owner_id' => $plate->owner_id,
@@ -68,6 +75,7 @@ class CustomerScreenplateController extends Controller
                     'comment' => $plate->comment,
                     'technical_info' => $plate->technical_info,
                     'compatibility' => $comp,
+                    'incompatibility' => $incomp,
                 ];
             });
 

@@ -66,7 +66,7 @@ const QuickCategoryRow: React.FC<QuickCategoryRowProps> = ({
               {item.isMore ? (
                 <>
                   <div className="hidden h-full md:block">
-                    <CategoryCard category={item as any} isMore />
+                    <CategoryCard category={item as ICategory} isMore />
                   </div>
                   {/* Mobile View All: Shorter height, spans 2 columns */}
                   <div className="flex h-16 items-center justify-center rounded-[20px] border border-slate-900 bg-slate-900 transition-all active:scale-[0.98] md:hidden">

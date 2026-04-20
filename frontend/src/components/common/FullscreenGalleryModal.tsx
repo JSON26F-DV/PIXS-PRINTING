@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, ChevronLeft, ChevronRight, Download, Maximize2 } from 'lucide-react'
 import { clsx } from 'clsx'
+import BoxFallback from './BoxFallback'
 
 interface FullscreenGalleryModalProps {
   isOpen: boolean
@@ -20,6 +21,11 @@ const FullscreenGalleryModal: React.FC<FullscreenGalleryModalProps> = ({
 }) => {
   const [currentIndex, setCurrentIndex] = useState(initialIndex)
   const [prevIsOpen, setPrevIsOpen] = useState(isOpen)
+  const [imageErrors, setImageErrors] = useState<Record<number, boolean>>({})
+
+  const handleImageError = (index: number) => {
+    setImageErrors((prev) => ({ ...prev, [index]: true }))
+  }
 
   // High-Fidelity Sync: Reset index during render when the modal opens
   if (isOpen && !prevIsOpen) {
@@ -110,11 +116,16 @@ const FullscreenGalleryModal: React.FC<FullscreenGalleryModalProps> = ({
               transition={{ duration: 0.5, ease: 'circOut' }}
               className="relative flex h-full w-full items-center justify-center"
             >
-              <img
-                src={images[currentIndex]}
-                alt={`${productName} view ${currentIndex + 1}`}
-                className="max-h-[85vh] max-w-full rounded-2xl border border-white/5 object-contain shadow-[0_0_80px_rgba(0,0,0,0.5)]"
-              />
+              {images[currentIndex] && !imageErrors[currentIndex] ? (
+                <img
+                  src={images[currentIndex]}
+                  alt={`${productName} view ${currentIndex + 1}`}
+                  className="max-h-[85vh] max-w-full rounded-2xl border border-white/5 object-contain shadow-[0_0_80px_rgba(0,0,0,0.5)]"
+                  onError={() => handleImageError(currentIndex)}
+                />
+              ) : (
+                <BoxFallback className="flex h-[50vh] w-[50vh] items-center justify-center rounded-2xl bg-white/5" />
+              )}
             </motion.div>
           </AnimatePresence>
 
@@ -156,10 +167,15 @@ const FullscreenGalleryModal: React.FC<FullscreenGalleryModalProps> = ({
                   : 'border-white/5 bg-white/5 hover:border-white/20',
               )}
             >
-              <img
-                src={img}
-                className="h-full w-full rounded-lg object-cover"
-              />
+              {img && !imageErrors[i] ? (
+                <img
+                  src={img}
+                  className="h-full w-full rounded-lg object-cover"
+                  onError={() => handleImageError(i)}
+                />
+              ) : (
+                <BoxFallback className="flex h-full w-full items-center justify-center rounded-lg bg-white/5" iconClassName="h-8 w-8 opacity-20" />
+              )}
               {currentIndex === i && (
                 <div className="bg-pixs-mint/10 absolute inset-0 flex items-center justify-center">
                   <Maximize2 size={16} className="text-white drop-shadow-lg" />

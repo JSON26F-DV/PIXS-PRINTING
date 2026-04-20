@@ -88,7 +88,7 @@ export const InputField = ({
   label: string
   name?: string
   type?: string
-  register?: UseFormRegister<Record<string, unknown>>
+  register?: UseFormRegister<any>
   error?: FieldError
   placeholder?: string
   rules?: RegisterOptions
@@ -145,7 +145,7 @@ export const TextArea = ({
 }: {
   label: string
   name?: string
-  register?: UseFormRegister<Record<string, unknown>>
+  register?: UseFormRegister<any>
   error?: FieldError
   placeholder?: string
   rules?: RegisterOptions

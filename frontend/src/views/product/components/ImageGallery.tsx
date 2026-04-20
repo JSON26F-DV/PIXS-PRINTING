@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { clsx } from 'clsx'
 import { Search, ChevronLeft, ChevronRight, Eye } from 'lucide-react'
+import BoxFallback from '../../../components/common/BoxFallback'
 
 interface ImageGalleryProps {
   mainImage: string
@@ -21,10 +22,15 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
 }) => {
   const images = [mainImage, ...gallery]
   const [activeIndex, setActiveIndex] = useState(0)
+  const [imageErrors, setImageErrors] = useState<Record<number, boolean>>({})
 
   const next = () => setActiveIndex((prev) => (prev + 1) % images.length)
   const prev = () =>
     setActiveIndex((prev) => (prev - 1 + images.length) % images.length)
+
+  const handleImageError = (index: number) => {
+    setImageErrors((prev) => ({ ...prev, [index]: true }))
+  }
 
   return (
     <div className="space-y-6">
@@ -34,11 +40,16 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
         onClick={() => onImageClick?.(activeIndex)}
       >
         <div className="relative h-full w-full overflow-hidden rounded-[40px] bg-slate-50">
-          <img
-            src={images[activeIndex]}
-            alt={`${productName} View ${activeIndex + 1}`}
-            className="h-full w-full object-cover transition-all duration-1000 group-hover:scale-110"
-          />
+          {images[activeIndex] && !imageErrors[activeIndex] ? (
+            <img
+              src={images[activeIndex]}
+              alt={`${productName} View ${activeIndex + 1}`}
+              className="h-full w-full object-cover transition-all duration-1000 group-hover:scale-110"
+              onError={() => handleImageError(activeIndex)}
+            />
+          ) : (
+            <BoxFallback />
+          )}
 
           <div className="absolute inset-0 flex items-center justify-center bg-slate-900/5 opacity-0 transition-opacity group-hover:opacity-100">
             <div className="scale-50 rounded-full bg-white/80 p-4 shadow-2xl backdrop-blur-md transition-transform duration-500 group-hover:scale-100">
@@ -84,11 +95,16 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
                 : 'border-slate-50 bg-slate-50 hover:border-slate-200 hover:bg-white',
             )}
           >
-            <img
-              src={img}
-              alt={`${productName} thumbnail ${idx + 1}`}
-              className="h-full w-full rounded-2xl object-cover"
-            />
+            {img && !imageErrors[idx] ? (
+              <img
+                src={img}
+                alt={`${productName} thumbnail ${idx + 1}`}
+                className="h-full w-full rounded-2xl object-cover"
+                onError={() => handleImageError(idx)}
+              />
+            ) : (
+              <BoxFallback className="flex h-full w-full items-center justify-center rounded-2xl bg-slate-100" />
+            )}
           </button>
         ))}
       </div>

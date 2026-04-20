@@ -1,7 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { v4 as uuidv4 } from 'uuid'
-import { z } from 'zod'
 import {
   ShieldCheck,
   ArrowLeft,
@@ -10,12 +8,14 @@ import {
   Loader2,
   Gift,
   Ticket,
+  Truck,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
-import CryptoJS from 'crypto-js'
-import { useAuth } from '../../context/AuthContext'
-import AbortConfirmModal from '../../components/Transactions/AbortConfirmModal'
+// import { useAuth } from '../../context/AuthContext'
 import type { CartItem } from '../../types/cart'
+import AbortConfirmModal from '../../components/Transactions/AbortConfirmModal'
+import PurchaseSuccessModal from '../../components/Transactions/PurchaseSuccessModal'
+import { orderApi } from '../../api/orders.api'
 
 import AddressSection from '../../components/Transactions/AddressSection'
 import PaymentSection from '../../components/Transactions/PaymentSection'
@@ -25,9 +25,8 @@ import ExtraNotesSection from '../../components/Transactions/ExtraNotesSection'
 
 import { useCustomerAddressStore } from '../../store/useCustomerAddressStore'
 import { usePaymentMethodStore } from '../../store/usePaymentMethodStore'
-import { usePromotionStore } from '../../store/usePromotionStore'
-import deliveryData from '../../data/delivery_methods.json'
-import { ORDER_STATUS, type OrderStatus } from '../../types/order'
+// import { usePromotionStore, type Promotion } from '../../store/usePromotionStore'
+import axiosInstance from '../../lib/axiosInstance'
 import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 
@@ -36,48 +35,76 @@ function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-// --- Zod Validation Schema ---
-const OrderSchema = z.object({
-  order_id: z.string(),
-  user_id: z.string(),
-  products: z.array(z.unknown()).min(1, 'Cart cannot be empty'),
-  shipping_address: z.object({
-    id: z.string(),
-    full_name: z.string(),
-    phone: z.string(),
-    city: z.string(),
-  }),
-  payment_method: z.object({
-    id: z.string(),
-    type: z.string(),
-    masked_number: z.string(),
-  }),
-  delivery_method: z.object({
-    id: z.string(),
-    name: z.string(),
-    fee: z.number(),
-  }),
-  notes: z.string().optional(),
-  status: z.enum(Object.values(ORDER_STATUS) as [string, ...string[]]),
-  created_at: z.string(),
-  payment_hash: z.string(),
-})
+export interface IOrderData {
+  order_id: string
+  user_id: string
+  total_amount: number
+  total_discount_amount: number
+  discount_id: string | null
+  delivery_method: {
+    id: string
+    name: string
+    fee: number
+  }
+  notes?: string
+  shipping_address: {
+    id: string
+    full_name: string
+    phone: string
+    city: string
+    street: string
+    barangay: string
+  }
+  payment_method: {
+    id: string
+    type: string
+    masked_number: string
+  }
+  products: {
+    product_id: string
+    variant_id: string
+    screenplate_id: string | null
+    product_name: string
+    product_image: string
+    quantity: number
+    unit_price: number
+    plate_setup_fee: number
+    plate_print_price: number
+    custom_requirements?: string
+    colors: { name: string; hex: string }[]
+  }[]
+}
+
+export interface IDeliveryMethod {
+  id: string
+  fee: number
+  name?: string
+  type?: string
+}
+
+export interface IDiscount {
+  id: string
+  title: string
+  discount_type: string
+  discount_value: number
+}
 
 const Transactions: React.FC = () => {
   const navigate = useNavigate()
   const location = useLocation()
-  const { user } = useAuth()
+  // const { user } = useAuth()
 
   const { addresses, fetchAddresses } = useCustomerAddressStore()
   const { methods: paymentMethods, fetchMethods: fetchPayments } =
     usePaymentMethodStore()
-  const { promotions, fetchPromotions } = usePromotionStore()
-
+  // const { promotions, fetchPromotions } = usePromotionStore()
+  
   const [isProcessing, setIsProcessing] = useState(false)
 
   // Selections
   const [selectedAddressId, setSelectedAddressId] = useState('')
   const [selectedPaymentId, setSelectedPaymentId] = useState('')
+  const [deliveryData, setDeliveryData] = useState<IDeliveryMethod[]>([])
   const [selectedDeliveryId, setSelectedDeliveryId] = useState('')
   const [deliveryFee, setDeliveryFee] = useState(0)
   const [notes, setNotes] = useState('')
@@ -85,17 +112,36 @@ const Transactions: React.FC = () => {
   const [isAbortModalOpen, setIsAbortModalOpen] = useState(false)
   const [checkoutItems, setCheckoutItems] = useState<CartItem[]>([])
 
-  // Discount System
-  const [selectedDiscountId, setSelectedDiscountId] = useState<string | null>(
-    null,
-  )
-  const [discountAmount, setDiscountAmount] = useState(0)
+  // Discount System (Disabled)
+  const [selectedDiscountId, setSelectedDiscountId] = useState<string | null>(null)
+  const [discountAmount] = useState(0)
+ 
+  // Order Submission State
+  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false)
+  const [lastOrderId, setLastOrderId] = useState('')
+  const [lastOrderTotal, setLastOrderTotal] = useState(0)
+
 
   // Initial Data Load
   useEffect(() => {
+    const fetchDeliveryData = async () => {
+      try {
+        const res = await axiosInstance.get('/api/delivery-methods')
+        setDeliveryData(res.data)
+        const def = res.data.find((d: IDeliveryMethod) => d.id === 'del_001') || res.data[0]
+        if (def) {
+          setSelectedDeliveryId(def.id)
+          setDeliveryFee(Number(def.fee || 0))
+        }
+      } catch (err) {
+        console.error('Failed to fetch delivery methods:', err)
+      }
+    }
+
     fetchAddresses()
     fetchPayments()
-    fetchPromotions()
+    // fetchPromotions()
+    fetchDeliveryData()
 
     // Load selected items from localStorage
     const isDirect =
@@ -118,7 +164,7 @@ const Transactions: React.FC = () => {
     location.search,
     fetchAddresses,
     fetchPayments,
-    fetchPromotions,
+    // fetchPromotions,
   ])
 
   // Set defaults once data is loaded
@@ -136,48 +182,7 @@ const Transactions: React.FC = () => {
     }
   }, [paymentMethods, selectedPaymentId])
 
-  // Sync Discount Logic
-  const availableDiscounts = useMemo(() => {
-    return promotions.filter((promo) => {
-      const isActive = promo.status === 'active'
-      const isForUser =
-        promo.target_type === 'all_users' ||
-        (promo.target_type === 'specific_user' &&
-          promo.assigned_user_id === user.id)
-      const isNotExpired =
-        !promo.expires_at || new Date(promo.expires_at) > new Date()
-      return isActive && isForUser && isNotExpired
-    })
-  }, [promotions, user.id])
-
-  useEffect(() => {
-    if (!selectedDiscountId) {
-      setDiscountAmount(0)
-      return
-    }
-
-    const discount = availableDiscounts.find((d) => d.id === selectedDiscountId)
-    if (!discount) return
-
-    let amount = 0
-    const subtotal = checkoutItems.reduce(
-      (acc, item) => acc + item.quantity * (item.variant?.unitPrice || 0),
-      0,
-    )
-
-    if (discount.discount_type === 'percentage') {
-      amount = subtotal * (discount.discount_value / 100)
-    } else if (discount.discount_type === 'unit') {
-      const targetItem = checkoutItems.find(
-        (i) => i.productId === discount.product_id,
-      )
-      if (targetItem) {
-        amount = targetItem.quantity * discount.discount_value
-      }
-    }
-
-    setDiscountAmount(amount)
-  }, [selectedDiscountId, checkoutItems, availableDiscounts])
+  const availableDiscounts: IDiscount[] = []
 
   const handleAbortSequence = () => {
     localStorage.removeItem('pixs_checkout_node')
@@ -187,124 +192,121 @@ const Transactions: React.FC = () => {
   const isFormValid =
     selectedAddressId && selectedPaymentId && selectedDeliveryId
 
-  const handlePlaceOrder = async () => {
+  const handlePurchase = async () => {
     if (!isFormValid) {
-      toast.error(
-        'Please complete all sections to proceed with the transaction.',
-      )
+      toast.error('Please complete all sections to proceed.')
       return
+    }
+
+    const selectedAddr = addresses.find((a) => a.id === selectedAddressId)
+    const selectedPay = paymentMethods.find((p) => p.id === selectedPaymentId)
+    const delMeta = deliveryData.find((d: { id: string }) => d.id === selectedDeliveryId)
+
+    if (!selectedAddr || !selectedAddr.contact_number) {
+        toast.error('Shipping contact information is incomplete.')
+        return
     }
 
     setIsProcessing(true)
 
-    try {
-      const orderId = `ORD-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${uuidv4().slice(0, 5).toUpperCase()}`
-      const selectedAddr = addresses.find((a) => a.id === selectedAddressId)
-      const selectedPay = paymentMethods.find((p) => p.id === selectedPaymentId)
-      const delMeta = deliveryData.find(
-        (d: { id: string }) => d.id === selectedDeliveryId,
-      )
+    const payload = {
+      cart_item_ids: checkoutItems.map(i => i.id),
+      address_id: selectedAddr.id,
+      payment_method_id: selectedPay!.id,
+      delivery_method_id: delMeta?.id || selectedDeliveryId,
+      production_notes: notes
+    };
 
-      const orderData = {
-        order_id: orderId,
-        user_id: user.id || 'GUEST',
-        products: checkoutItems.map((item) => ({
-          ...item,
-          colors: item.colors.map((c) => ({ name: c.name, hex: c.hex })),
-          plate: item.plate
-            ? {
-                name: item.plate.name,
-                setupFee: item.plate.setupFee,
-                printPricePerUnit: item.plate.printPricePerUnit,
-              }
-            : null,
-        })),
-        shipping_address: selectedAddr,
-        payment_method: selectedPay,
-        delivery_method: delMeta,
-        notes: notes,
-        status: ORDER_STATUS.PAYMENT_VERIFIED as OrderStatus,
-        created_at: new Date().toISOString(),
-        payment_hash: CryptoJS.SHA256(selectedPaymentId + orderId).toString(),
-        discount: {
-          discount_id: selectedDiscountId,
-          total_discount_amount: discountAmount,
-        },
+    try {
+      const response = await orderApi.createOrder(payload)
+
+      // The backend creates order, order items, and deletes the cart items. 
+      // We can trigger an event or just remove checkout_nodes so it refreshes.
+      const currentCartRaw = localStorage.getItem('pixs_cart_v1')
+      if (currentCartRaw) {
+        try {
+          const currentCart: CartItem[] = JSON.parse(currentCartRaw)
+          const purchasedIds = checkoutItems.map((i) => i.id)
+          const remainingCart = currentCart.filter((i) => !purchasedIds.includes(i.id))
+          localStorage.setItem('pixs_cart_v1', JSON.stringify(remainingCart))
+          window.dispatchEvent(new Event('storage')) // Trigger cross-tab sync if necessary
+        } catch {
+          // silently ignore parse errors
+        }
       }
 
-      OrderSchema.parse(orderData)
-      await new Promise((resolve) => setTimeout(resolve, 2500))
-
-      const existingOrders = JSON.parse(
-        localStorage.getItem('pixs_orders_v1') || '[]',
-      )
-      localStorage.setItem(
-        'pixs_orders_v1',
-        JSON.stringify([orderData, ...existingOrders]),
-      )
-
-      localStorage.removeItem('pixs_cart_v1')
+      localStorage.removeItem('pixs_checkout_node')
       localStorage.removeItem('pixs_buy_now_v1')
+      
+      const orderDataResponse = response.data;
+      setLastOrderId(orderDataResponse?.id || 'ORD-NEW')
+      setLastOrderTotal(orderDataResponse?.total_amount || 0)
+      
+      if ('vibrate' in navigator) {
+        navigator.vibrate([100, 50, 100, 50, 200])
+      }
 
-      toast.success('Order sequence initialized successfully!')
-      navigate(`/order-success/${orderId}`)
-    } catch (error: unknown) {
-      const errorMessage =
-        error instanceof Error ? error.message : 'Industrial terminal error.'
-      console.error('Order Validation Failed:', error)
-      toast.error(errorMessage)
+      setIsSuccessModalOpen(true)
+      toast.success('Order placed successfully!')
+      
+      setTimeout(() => {
+        navigate('/orders')
+      }, 3000)
+    } catch (err) {
+      console.error('Purchase Error:', err)
+      const errorResponse = err as { errors?: { message: string }[]; response?: { data?: { message?: string } } };
+      const msg = errorResponse.errors?.[0]?.message || errorResponse.response?.data?.message || 'Failed to place order.'
+      toast.error(msg)
     } finally {
       setIsProcessing(false)
     }
   }
 
   return (
-    <div className="TransactionsPage min-h-screen bg-slate-50 pt-16 pb-40">
+    <div className="TransactionsPage min-h-screen bg-slate-50 pt-8 pb-32 mt-7 md:mt-20">
       <div className="TransactionsContainer mx-auto max-w-[1400px] px-6 lg:px-16">
         <div className="mb-8">
           <button
             onClick={() => setIsAbortModalOpen(true)}
-            className="flex items-center gap-2 text-[10px] font-black tracking-[4px] text-slate-400 uppercase italic transition-colors hover:text-slate-900"
+            className="flex items-center gap-2 text-[10px] font-black tracking-[4px] text-slate-400 border border-slate-200 bg-white px-5 py-2 rounded-full uppercase italic transition-colors hover:text-slate-900"
           >
             <ArrowLeft size={16} />
-            Return to Cart Hub
+            Back to Cart
           </button>
         </div>
 
-        <div className="mb-16 flex flex-col items-center justify-between gap-6 border-b border-slate-100 pb-12 lg:flex-row">
+        <div className="mb-8 flex flex-col items-center justify-between gap-6 border-b border-slate-100 pb-6 lg:flex-row">
           <div className="space-y-3">
             <div className="flex items-center gap-3">
               <span className="text-pixs-mint rounded-full bg-slate-900 px-3 py-1 text-[9px] font-black tracking-[4px] uppercase italic">
-                Node Transaction V.1
+                Checkout
               </span>
               <div className="h-0.5 w-12 bg-slate-200" />
             </div>
             <h1 className="text-5xl leading-none font-black tracking-tighter text-slate-900 uppercase italic lg:text-7xl">
-              Checkout.
+              Order Details.
             </h1>
             <p className="max-w-[400px] text-xs leading-relaxed font-bold tracking-widest text-slate-400 uppercase">
-              FINAL PRODUCTION VERIFICATION HUB. PLEASE ENSURE ALL DATA POINTS
-              ARE SYNCED.
+              Please review all information before confirming your order.
             </p>
           </div>
 
           <div className="flex flex-col items-end gap-3">
-            <div className="flex items-center gap-3 text-[10px] font-black tracking-widest text-slate-900 uppercase italic opacity-60">
+            <div className="flex items-center gap-3 text-[10px] font-black tracking-widest text-slate-900 uppercase italic">
               <ShieldCheck size={14} className="text-pixs-mint" />
-              SECURE ACCESS PROTOCOL ACTIVE
+              Secure Checkout
             </div>
             <button
               onClick={() => setIsAbortModalOpen(true)}
-              className="flex items-center gap-2 text-[10px] font-black tracking-[3px] text-slate-400 uppercase italic transition-colors hover:text-slate-900"
+              className="flex items-center gap-2 text-[10px] font-black tracking-[3px] text-rose-500 uppercase italic transition-colors hover:text-rose-600"
             >
-              <ArrowLeft size={14} />
-              Cart Reversal Node
+              Cancel Transaction
             </button>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-12 lg:grid-cols-[1fr_420px] lg:gap-20">
-          <div className="TransactionsLeft space-y-16">
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_420px] lg:gap-12">
+          <div className="TransactionsLeft space-y-10">
             <AddressSection
               selectedId={selectedAddressId}
               onSelect={setSelectedAddressId}
@@ -320,6 +322,7 @@ const Transactions: React.FC = () => {
             <div className="h-px w-full bg-slate-100" />
 
             <DeliverySection
+              methods={deliveryData as unknown as Array<{ id: string; name: string; type: string; fee: number; note?: string }>}
               selectedId={selectedDeliveryId}
               onSelect={(id, fee) => {
                 setSelectedDeliveryId(id)
@@ -329,19 +332,15 @@ const Transactions: React.FC = () => {
 
             <div className="h-px w-full bg-slate-100" />
 
-            <div className="LogisticNotice space-y-3 rounded-[32px] border border-amber-100 bg-amber-50/50 p-8">
+            <div className="LogisticNotice space-y-3 rounded-[32px] border border-amber-100 bg-amber-50/50 p-4 transition-all">
               <div className="flex items-center gap-3 text-amber-600">
-                <AlertCircle size={20} />
-                <h3 className="text-sm font-black tracking-tighter uppercase italic">
-                  Logistic Liability Disclaimer Node
-                </h3>
+                <Truck size={18} className="text-pixs-mint" />
+                <h2 className="text-lg font-black tracking-tighter text-slate-900 uppercase italic">
+                  Delivery Method
+                </h2>
               </div>
               <p className="text-[10px] leading-relaxed font-black tracking-widest text-slate-500 uppercase italic">
-                PIXS PRINTING SHOP IS NOT AFFILIATED WITH THIRD-PARTY COURIER
-                SERVICES. SHIPPING FEES ARE EXCLUDED FROM THE GRAND TOTAL AND
-                MUST BE SETTLED DIRECTLY BY THE CUSTOMER UPON PICKUP OR RECEIPT.
-                OUR RESPONSIBILITY ENDS ONCE THE ORDER IS HANDED OVER TO YOUR
-                CHOSEN LOGISTICS TERMINAL.
+                PIXS IS NOT AFFILIATED WITH THIRD-PARTY COURIERS. SHIPPING FEES ARE PAID DIRECTLY TO THE COURIER UPON RECEIPT.
               </p>
             </div>
 
@@ -349,15 +348,15 @@ const Transactions: React.FC = () => {
 
             <div className="h-px w-full bg-slate-100" />
 
-            {/* 🎁 LOYALTY VOUCHER HUB */}
-            <div className="LoyaltySection space-y-8">
+            {/* 🎁 LOYALTY VOUCHER HUB  (Temporarily Disabled) */}
+            <div className="hidden LoyaltySection space-y-8">
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-xl leading-none font-black tracking-tighter text-slate-900 uppercase italic">
                     Available Vouchers
                   </h2>
                   <p className="mt-1 text-[10px] font-black tracking-[4px] text-slate-400 uppercase italic opacity-80">
-                    PIXS_LOYALTY_VAULT
+                    LOYALTY PROGRAM
                   </p>
                 </div>
                 <Gift className="text-pixs-mint animate-bounce" size={24} />
@@ -365,7 +364,7 @@ const Transactions: React.FC = () => {
 
               {availableDiscounts.length > 0 ? (
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  {availableDiscounts.map((discount) => (
+                  {availableDiscounts.map((discount: IDiscount) => (
                     <div
                       key={discount.id}
                       onClick={() =>
@@ -376,7 +375,7 @@ const Transactions: React.FC = () => {
                         )
                       }
                       className={cn(
-                        'group relative flex cursor-pointer items-center gap-4 rounded-[28px] border p-6 transition-all',
+                        'group relative flex cursor-pointer items-center gap-4 rounded-[28px] border p-4 transition-all',
                         selectedDiscountId === discount.id
                           ? 'scale-[1.02] border-slate-900 bg-slate-900 shadow-2xl'
                           : 'hover:border-pixs-mint border-slate-100 bg-white hover:bg-slate-50',
@@ -427,10 +426,10 @@ const Transactions: React.FC = () => {
                   ))}
                 </div>
               ) : (
-                <div className="flex flex-col items-center justify-center rounded-[32px] border-2 border-dashed border-slate-100 p-8 text-center opacity-40">
+                <div className="flex flex-col items-center justify-center rounded-[32px] border-2 border-dashed border-slate-100 p-4 text-center opacity-40">
                   <AlertCircle size={32} className="mb-2 text-slate-300" />
                   <p className="text-[10px] font-black tracking-widest text-slate-400 uppercase">
-                    No active loyalty vouchers detected.
+                    No active vouchers available.
                   </p>
                 </div>
               )}
@@ -438,7 +437,7 @@ const Transactions: React.FC = () => {
           </div>
 
           <div className="TransactionsRight space-y-8">
-            <div className="sticky top-32">
+            <div className="sticky top-0 md:top-24">
               <ReceiptSection
                 items={checkoutItems}
                 deliveryFee={deliveryFee}
@@ -448,7 +447,7 @@ const Transactions: React.FC = () => {
               <div className="mt-8 space-y-4">
                 <button
                   disabled={!isFormValid || isProcessing}
-                  onClick={handlePlaceOrder}
+                  onClick={handlePurchase}
                   className={`PlaceOrderButton relative flex w-full items-center justify-center gap-3 overflow-hidden rounded-[32px] py-6 text-sm font-black tracking-[6px] uppercase italic shadow-2xl transition-all active:scale-95 ${
                     isFormValid && !isProcessing
                       ? 'bg-slate-900 text-white hover:bg-slate-800'
@@ -471,7 +470,7 @@ const Transactions: React.FC = () => {
                           isFormValid ? 'text-pixs-mint' : 'text-slate-300'
                         }
                       />
-                      Authorize Production
+                      Purchase Now
                     </>
                   )}
                 </button>
@@ -479,13 +478,12 @@ const Transactions: React.FC = () => {
                 {!isFormValid && !isProcessing && (
                   <div className="flex animate-pulse items-center justify-center gap-2 text-[10px] font-black tracking-widest text-rose-500 uppercase italic opacity-80">
                     <AlertCircle size={12} />
-                    Configuration Requirements Incomplete
+                    Please complete all sections
                   </div>
                 )}
 
                 <p className="text-center text-[9px] leading-relaxed font-bold tracking-widest text-slate-400 uppercase italic opacity-60">
-                  BY AUTHORIZING THIS SEQUENCE, YOU AGREE TO OUR INDUSTRIAL
-                  TERMS OF SERVICE AND REFUND POLICY NODES.
+                  By confirming, you agree to our Terms of Service.
                 </p>
               </div>
             </div>
@@ -497,6 +495,13 @@ const Transactions: React.FC = () => {
         isOpen={isAbortModalOpen}
         onClose={() => setIsAbortModalOpen(false)}
         onConfirm={handleAbortSequence}
+      />
+
+      <PurchaseSuccessModal
+        isOpen={isSuccessModalOpen}
+        orderId={lastOrderId}
+        totalAmount={lastOrderTotal}
+        onClose={() => navigate('/orders')}
       />
     </div>
   )

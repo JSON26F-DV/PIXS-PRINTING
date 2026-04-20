@@ -196,7 +196,7 @@ const SettingsPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Sticky Top Bar */}
-      <div className="sticky top-32 z-30 border-b border-slate-100 bg-white/90 backdrop-blur-md lg:top-20">
+      <div className="sticky top-0 z-30 border-b border-slate-100 bg-white/90 backdrop-blur-md lg:top-20">
         <div className="mx-auto flex h-14 max-w-[1440px] items-center justify-between gap-4 px-4 md:px-8">
           {/* Back Button */}
           <button
@@ -205,7 +205,7 @@ const SettingsPage: React.FC = () => {
           >
             <FiArrowLeft size={14} />
             <span className="hidden sm:inline">Back to Marketplace</span>
-            <span className="sm:hidden">Back</span>
+            {/* <span className="sm:hidden"></span> */}
           </button>
 
           {/* Breadcrumb */}
@@ -279,7 +279,7 @@ const SettingsPage: React.FC = () => {
         <div className="flex gap-6 lg:gap-8">
           {/* Desktop Sidebar */}
           <aside className="hidden w-64 shrink-0 lg:block xl:w-72">
-            <div className="sticky top-36">
+            <div className="sticky top-24">
               <SidebarContent
                 user={user}
                 activeSection={activeSection}

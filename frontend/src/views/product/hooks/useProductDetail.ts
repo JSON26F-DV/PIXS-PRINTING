@@ -9,7 +9,7 @@ import {
   calculatePrice,
   calculatePriceWithPlate,
 } from '../utils/priceCalculator'
-import { checkOwnedPlates, fetchColors } from '../services/mockDataService'
+import { getColors } from '../../../api/products.api'
 
 interface UseProductDetailProps {
   product: IProduct
@@ -120,17 +120,16 @@ export const useProductDetail = ({
     return ''
   })
   const [colors, setColors] = useState<IColor[]>([])
-  const [ownedPlateIds, setOwnedPlateIds] = useState<string[]>([])
   const [isLoadingMetadata, setIsLoadingMetadata] = useState(true)
 
   useEffect(() => {
-    Promise.all([fetchColors(), checkOwnedPlates()]).then(([clr, owned]) => {
+    getColors().then((res) => {
+      const clr = res.data || []
       setColors(clr)
-      setOwnedPlateIds(owned)
 
       // Verification Protocol: Ensure selected metadata nodes still exist in current fetch
       setSelectedColorIds((prev) =>
-        prev.filter((id) => clr.some((c) => c.id === id)),
+        prev.filter((id) => clr.some((c: IColor) => c.id === id)),
       )
 
       // Protocol: Auto-select initial color node if requirement identified and NO saved draft exists
@@ -169,10 +168,92 @@ export const useProductDetail = ({
     STORAGE_KEY,
   ])
 
+  // Filter Protocol: Only show plates that are COMPATIBLE with this specific product
   const selectablePlates = useMemo(
-    () => compatiblePlates.filter((plate) => ownedPlateIds.includes(plate.id)),
-    [compatiblePlates, ownedPlateIds],
+    () => compatiblePlates.filter((plate) => {
+      // NOTE: compatiblePlates are already owned by the customer (fetched via /api/customer/screenplates)
+      return plate.compatibility.some(cp => cp.product_id === product.id)
+    }),
+    [compatiblePlates, product.id],
   )
+
+  // Identify plates that are specifically INCOMPATIBLE with the selected variant
+  const incompatiblePlateIds = useMemo(() => {
+    if (!selectedVariantId) return []
+    const variant = product.variants.find(v => v.variant_id === selectedVariantId)
+    if (!variant) return []
+
+    // Use the screenplate_incompatible logic if available or derived from compatibility missing
+    return selectablePlates
+      .filter(plate => {
+        // If there's an explicit incompatibility list
+        const incomp = plate.incompatibility?.find(i => i.product_id === product.id)
+        if (incomp) {
+          // If variant_ids is empty, the entire product is incompatible with this plate
+          if (incomp.variant_ids.length === 0) return true
+          return incomp.variant_ids.includes(variant.variant_id) || incomp.variant_ids.includes(variant.size)
+        }
+
+        // Check if THIS specific variant matches any in the compatibility allow-list
+        const comp = plate.compatibility.find(c => c.product_id === product.id)
+        if (!comp) return true // Should not happen due to selectablePlates filter
+
+        // If allowed_variants is empty or contains 'ALL', it's compatible with everything
+        if (!comp.allowed_variants || comp.allowed_variants.length === 0 || comp.allowed_variants.includes('ALL')) {
+           return false 
+        }
+
+        // If not in the allow-list, it's incompatible
+        return !comp.allowed_variants.includes(variant.variant_id) && !comp.allowed_variants.includes(variant.size)
+      })
+      .map(p => p.id)
+  }, [selectablePlates, selectedVariantId, product.id, product.variants])
+
+  // New: Variant-level compatibility map for the selected plate
+  const variantCompatibilityMap = useMemo(() => {
+    const map: Record<string, { isCompatible: boolean; reason?: string }> = {}
+    
+    product.variants.forEach(v => {
+      // If no plate selected, all variants are compatible by default (no plate requirements yet)
+      if (!selectedPlateId) {
+        map[v.variant_id] = { isCompatible: true }
+        return
+      }
+
+      const plate = selectablePlates.find(p => p.id === selectedPlateId)
+      if (!plate) {
+        map[v.variant_id] = { isCompatible: true }
+        return
+      }
+
+      const comp = plate.compatibility.find(c => c.product_id === product.id)
+      const incomp = plate.incompatibility?.find(i => i.product_id === product.id)
+
+      const isAllowed = comp && (
+        comp.allowed_variants.includes(v.variant_id) || 
+        comp.allowed_variants.includes(v.size) || 
+        comp.allowed_variants.includes('ALL')
+      )
+
+      const isDenied = incomp && (
+        incomp.variant_ids.length === 0 || // Empty variant_ids means whole product is denied
+        incomp.variant_ids.includes(v.variant_id) || 
+        incomp.variant_ids.includes(v.size)
+      )
+      
+      // Rule 4: INCOMPATIBLE takes priority
+      if (isDenied) {
+        map[v.variant_id] = { isCompatible: false, reason: 'Not Compatible' }
+      } else if (isAllowed) {
+        map[v.variant_id] = { isCompatible: true }
+      } else {
+        // Rule 2.3: Not listed in compatibility -> Not Compatible
+        map[v.variant_id] = { isCompatible: false, reason: 'Not Compatible' }
+      }
+    })
+    
+    return map
+  }, [product.variants, product.id, selectedPlateId, selectablePlates])
 
   const selectedVariant = useMemo(() => {
     if (product.variants.length === 0) {
@@ -245,7 +326,9 @@ export const useProductDetail = ({
     !isOutOfStock &&
     (product.variants.length === 0 || selectedVariantId !== '') &&
     hasRequiredColor &&
-    hasRequiredPlate
+    hasRequiredPlate &&
+    (!selectedPlateId || !incompatiblePlateIds.includes(selectedPlateId)) &&
+    (!selectedVariantId || (variantCompatibilityMap[selectedVariantId]?.isCompatible !== false))
 
   const handlePlateChange = (plateId: string | null) => {
     setSelectedPlateId(plateId)
@@ -282,8 +365,9 @@ export const useProductDetail = ({
       selectedPlateId,
       selectedPosition,
       colors,
-      ownedPlateIds,
       selectablePlates,
+      incompatiblePlateIds,
+      variantCompatibilityMap,
       isLoadingMetadata,
       customRequirements,
     },

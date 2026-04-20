@@ -45,7 +45,7 @@ import type {
 const HERO_SLIDES = [
   {
     src: hero1,
-    title: 'Industrial Print. Zero Compromise.',
+    title: 'Industrial Print.',
     sub: 'Custom cup printing for brands that demand precision.',
   },
   {
@@ -230,7 +230,7 @@ const Homepage: React.FC = () => {
   )
 
   return (
-    <div className="flex min-h-screen flex-col items-center bg-white">
+    <div className="flex min-h-screen flex-col items-center bg-white mt-0 md:mt-20">
       {/* Hero Section - Matching OrderPage Spaciousness */}
       <section
         className="relative w-full overflow-hidden pb-10"
@@ -328,7 +328,7 @@ const Homepage: React.FC = () => {
                     animate={{ height: 'auto', opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
                     transition={{ duration: 0.3, ease: 'easeInOut' }}
-                    className="sticky top-[80px] z-30 -mx-4 flex flex-col items-center justify-between gap-6 overflow-hidden bg-slate-50/80 px-8 py-2 backdrop-blur-sm xl:flex-row xl:bg-transparent"
+                    className="sticky top-[80px] z-[1001] -mx-4 flex flex-col items-center justify-between gap-6 bg-slate-50/80 px-8 py-2 backdrop-blur-sm xl:flex-row xl:bg-transparent"
                   >
                     <div className="flex w-full flex-wrap items-center gap-3 xl:w-auto">
                       {/* Category Filter Dropdown */}
@@ -357,7 +357,7 @@ const Homepage: React.FC = () => {
                                 ? '4.0 & up'
                                 : 'All'
                         }
-                        onChange={(label) =>
+                        onChange={(label) => {
                           setFilters((prev) => ({
                             ...prev,
                             minRating:
@@ -369,7 +369,8 @@ const Homepage: React.FC = () => {
                                     ? 4
                                     : 'ALL',
                           }))
-                        }
+                          setCurrentPage(1)
+                        }}
                       />
 
                       {/* Sold Filter Dropdown */}
@@ -382,23 +383,25 @@ const Homepage: React.FC = () => {
                             ? 'Most Sold'
                             : 'All'
                         }
-                        onChange={(label) =>
+                        onChange={(label) => {
                           setFilters((prev) => ({
                             ...prev,
                             soldFilter:
                               label === 'Most Sold' ? 'MOST_SOLD' : 'ALL',
                           }))
-                        }
+                          setCurrentPage(1)
+                        }}
                       />
 
                       {/* Favorite Toggle Filter */}
                       <button
-                        onClick={() =>
+                        onClick={() => {
                           setFilters((prev) => ({
                             ...prev,
                             favoritesOnly: !prev.favoritesOnly,
                           }))
-                        }
+                          setCurrentPage(1)
+                        }}
                         className={`flex items-center gap-2.5 rounded-2xl border px-5 py-3.5 text-[10px] font-black tracking-widest uppercase transition-all ${
                           filters.favoritesOnly
                             ? 'border-rose-500 bg-rose-50 text-rose-500 shadow-xl shadow-rose-200/50'
@@ -436,7 +439,7 @@ const Homepage: React.FC = () => {
                             (o) => o.value === filters.availability,
                           )?.label || 'All Status'
                         }
-                        onChange={(label) =>
+                        onChange={(label) => {
                           setFilters((prev) => ({
                             ...prev,
                             availability:
@@ -446,7 +449,8 @@ const Homepage: React.FC = () => {
                                 ? 'IN_STOCK'
                                 : 'ALL',
                           }))
-                        }
+                          setCurrentPage(1)
+                        }}
                       />
                       <FilterDropdown
                         label="Press"
@@ -460,14 +464,15 @@ const Homepage: React.FC = () => {
                             (s) => s.id === filters.screenplateId,
                           )?.plate_name || 'All'
                         }
-                        onChange={(label) =>
+                        onChange={(label) => {
                           setFilters((prev) => ({
                             ...prev,
                             screenplateId:
                               screenplates.find((s) => s.plate_name === label)
                                 ?.id || 'ALL',
                           }))
-                        }
+                          setCurrentPage(1)
+                        }}
                       />
                     </div>
                   </motion.div>

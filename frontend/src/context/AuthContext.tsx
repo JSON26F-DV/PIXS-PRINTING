@@ -44,6 +44,17 @@ export interface BannedInfo {
   deleted_at: string
 }
 
+interface RawUserData {
+  id: string
+  email: string
+  first_name?: string
+  last_name?: string
+  name?: string
+  role: RoleType
+  user_type?: 'employee' | 'customer' | 'deleted'
+  profile_picture?: string | null
+}
+
 export interface RegisterFormData {
   first_name: string
   last_name: string
@@ -116,17 +127,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const navigate = useNavigate()
 
   const handleAuthSuccess = useCallback(
-    (data: { token: string; user: any; account_type: string }) => {
+    (data: {
+      token: string
+      user: RawUserData
+      account_type: string
+    }) => {
       localStorage.setItem('pixs_token', data.token)
       axiosInstance.defaults.headers.common['Authorization'] =
         `Bearer ${data.token}`
 
       const loggedInUser: User = {
-        ...data.user,
+        ...(data.user as User),
         name:
           `${data.user.first_name || ''} ${data.user.last_name || ''}`.trim() ||
-          data.user.name,
-        account_type: data.account_type,
+          data.user.name ||
+          '',
+        account_type: data.account_type as 'customer' | 'employee' | 'guest',
         isLoggedIn: true,
       }
       setUser(loggedInUser)

@@ -27,9 +27,9 @@ const AddressSection: React.FC<AddressSectionProps> = ({
           <div
             key={addr.id}
             onClick={() => onSelect(addr.id)}
-            className={`AddressCard group relative cursor-pointer rounded-2xl border p-5 transition-all active:scale-[0.98] ${
+            className={`AddressCard group relative cursor-pointer rounded-2xl border p-4 transition-all active:scale-[0.98] ${
               selectedId === addr.id
-                ? 'border-pixs-mint shadow-pixs-mint/5 bg-white shadow-lg'
+                ? 'border-pixs-mint bg-white shadow-lg'
                 : 'border-slate-100 bg-slate-50/50 hover:border-slate-200'
             }`}
           >

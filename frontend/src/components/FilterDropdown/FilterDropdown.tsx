@@ -49,10 +49,12 @@ const FilterDropdown: React.FC<FilterDropdownProps> = ({
   }, [])
 
   const isActive =
+    value !== null &&
     value !== 'All' &&
     value !== 'All Prices' &&
     value !== 'All Status' &&
-    value !== 'Price: Low-High'
+    value !== 'All Plates' &&
+    value !== 'Price: Low to High'
 
   return (
     <div ref={dropdownRef} className="relative min-w-[180px] flex-1">
@@ -93,7 +95,7 @@ const FilterDropdown: React.FC<FilterDropdownProps> = ({
             initial={{ opacity: 0, y: 10, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 10, scale: 0.95 }}
-            className="MarketplaceDropdownMenu custom-scrollbar absolute top-full right-0 left-0 z-[100] mt-2 max-h-64 overflow-y-auto rounded-[24px] border border-slate-100 bg-white p-2 shadow-2xl"
+            className="MarketplaceDropdownMenu custom-scrollbar absolute top-full right-0 left-0 z-[1001] mt-2 max-h-64 overflow-y-auto rounded-[24px] border border-slate-100 bg-white p-2 shadow-2xl"
           >
             {options.map((opt) => {
               const optVal = getVal(opt)

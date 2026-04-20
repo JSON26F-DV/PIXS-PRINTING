@@ -97,21 +97,23 @@ class ProductController extends Controller
 
             // Sort Protocols
             $sort = $request->sort;
-            if ($request->boolean('most_sold')) {
-                $query->leftJoin('order_items', 'products.id', '=', 'order_items.product_id')
-                    ->leftJoin('orders', 'orders.id', '=', 'order_items.order_id')
-                    ->selectRaw('SUM(CASE WHEN orders.status = "DELIVERED" THEN order_items.quantity ELSE 0 END) as total_sold')
-                    ->groupBy([
-                        'products.id', 'products.name', 'products.short_description',
-                        'products.base_price', 'products.current_stock', 'products.main_image',
-                        'products.min_order', 'products.is_need_screenplate', 'products.is_need_color',
-                        'products.category_id', 'categories.label',
-                    ])
-                    ->orderBy('total_sold', 'DESC');
-            } elseif ($sort === 'Price: Low-High') {
+            $mostSold = $request->boolean('most_sold') || $sort === 'Most Sold';
+
+            if ($mostSold) {
+                $query->orderBy(
+                    DB::table('order_items')
+                        ->join('orders', 'orders.id', '=', 'order_items.order_id')
+                        ->whereColumn('order_items.product_id', 'products.id')
+                        ->where('orders.status', 'DELIVERED')
+                        ->select(DB::raw('SUM(order_items.quantity)')),
+                    'DESC'
+                )->orderBy('products.id', 'DESC');
+            } elseif ($sort === 'Price: Low to High' || $sort === 'Price: Low-High') {
                 $query->orderBy('products.base_price', 'ASC');
-            } elseif ($sort === 'Price: High-Low') {
+            } elseif ($sort === 'Price: High to Low' || $sort === 'Price: High-Low') {
                 $query->orderBy('products.base_price', 'DESC');
+            } elseif ($sort === 'Highest Rating') {
+                $query->orderBy('products.ratings', 'DESC');
             } elseif ($sort === 'A to Z') {
                 $query->orderBy('products.name', 'ASC');
             } elseif ($sort === 'Z to A') {
@@ -140,6 +142,8 @@ class ProductController extends Controller
                     'category_id' => $product->category_id,
                     'category_label' => $product->category_label,
                     'min_order' => (int) $product->min_order,
+                    'best_for' => $product->best_for,
+                    'print_method' => $product->print_method,
                     'tags' => $product->tags->pluck('tag')->toArray(),
                     'variants' => $product->variants->map(fn ($v) => [
                         'variant_id' => $v->variant_id,
@@ -204,6 +208,8 @@ class ProductController extends Controller
                 'category_label' => $product->category->label ?? '',
                 'min_order' => (int) $product->min_order,
                 'min_threshold' => (int) $product->min_threshold,
+                'best_for' => $product->best_for,
+                'print_method' => $product->print_method,
                 'tags' => $product->tags->pluck('tag')->toArray(),
                 'variants' => $product->variants->map(fn ($v) => [
                     'variant_id' => $v->variant_id,

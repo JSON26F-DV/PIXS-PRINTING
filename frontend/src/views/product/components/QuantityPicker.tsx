@@ -32,16 +32,16 @@ const QuantityPicker: React.FC<QuantityPickerProps> = ({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <p className="text-[10px] font-black tracking-[4px] text-slate-400 uppercase">
-          Order Quantity Protocol
+          Select Quantity
         </p>
         <span className="text-[9px] font-black tracking-widest text-slate-400 uppercase italic">
-          {maxStock.toLocaleString()} Nodes Available
+          {maxStock.toLocaleString()} units available
         </span>
       </div>
 
       <div className="flex flex-col items-start gap-8 md:flex-row md:items-center">
         {/* Manual Protocol Interaction */}
-        <div className="flex items-center rounded-[32px] border border-slate-800 bg-slate-900 p-2 shadow-2xl shadow-slate-900/40">
+        <div className="flex items-center rounded-2xl border border-slate-800 bg-slate-900 p-2 shadow-2xl shadow-slate-900/40 md:rounded-[32px]">
           <button
             onClick={() => onChange(Math.max(minOrder, quantity - 1))}
             disabled={isTooLow}
@@ -104,11 +104,11 @@ const QuantityPicker: React.FC<QuantityPickerProps> = ({
               : 'border-slate-100 bg-slate-50 text-slate-400',
           )}
         >
-          <Info size={12} /> Min Node Protocol: {minOrder.toLocaleString()}
+          <Info size={12} /> Minimum Requirement: {minOrder.toLocaleString()} units
         </div>
         {isAtPeak && (
           <div className="flex animate-pulse items-center gap-2 rounded-xl border border-rose-100 bg-rose-50 px-4 py-2 text-[9px] font-black tracking-widest text-rose-600 uppercase shadow-sm shadow-rose-200/20">
-            <AlertTriangle size={12} /> Peak Inventory Level Reached
+            <AlertTriangle size={12} /> Maximum Available Stock Reached
           </div>
         )}
       </div>

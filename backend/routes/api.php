@@ -9,8 +9,15 @@ use App\Http\Controllers\Customer\CustomerController;
 use App\Http\Controllers\Customer\CustomerScreenplateController;
 use App\Http\Controllers\MessageController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\OrderController;
+use App\Http\Controllers\ScreenplateRequestController;
 use App\Http\Controllers\User\UserController;
+use App\Http\Controllers\DeliveryMethodController;
 use Illuminate\Support\Facades\Route;
+
+// Public Data Routes
+Route::get('/delivery-methods', [DeliveryMethodController::class, 'index']);
+
 
 // Public Auth Routes
 Route::prefix('auth')->group(function () {
@@ -63,6 +70,12 @@ Route::middleware(['auth:sanctum', 'role:customer'])->prefix('customer')->group(
 
     // Screenplates (owner rows in `screenplates`)
     Route::get('/screenplates', [CustomerScreenplateController::class, 'index']);
+
+    // Screenplate Requests
+    Route::post('/screenplate-requests', [ScreenplateRequestController::class, 'store']);
+
+    // Orders
+    Route::post('/orders', [OrderController::class, 'store']);
 });
 
 // Messaging

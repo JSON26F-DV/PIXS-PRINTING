@@ -25,6 +25,8 @@ export interface CartVariantInfo {
   stock: number
 }
 
+import type { IProduct } from './product.types'
+
 export interface CartItem {
   id: string
   productId: string
@@ -39,6 +41,7 @@ export interface CartItem {
   plate: CartPlateInfo | null
   customRequirements?: string
   createdAt: string
+  fullProduct?: IProduct
 }
 
 export interface CartItemTotals {

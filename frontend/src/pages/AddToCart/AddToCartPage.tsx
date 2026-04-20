@@ -11,12 +11,37 @@ import {
 import toast from 'react-hot-toast'
 import {
   getColors,
-  getProducts,
   getCustomerScreenplates,
 } from '../../api/products.api'
 import { useCart } from './hooks/useCart'
-import type { CartColorInfo } from '../../types/cart'
-import type { IProduct, IScreenPlate } from '../../types/product.types'
+import type { CartColorInfo, CartItem } from '../../types/cart'
+import type { IScreenPlate } from '../../types/product.types'
+import BoxFallback from '../../components/common/BoxFallback'
+
+// ─── Sub-Component for Image Handling ────────────────────────────────────────
+const CartProductImage: React.FC<{ src: string; alt: string }> = ({
+  src,
+  alt,
+}) => {
+  const [imgError, setImgError] = useState(false)
+
+  if (imgError || !src) {
+    return (
+      <div className="h-24 w-24 shrink-0 overflow-hidden rounded-[24px] border border-slate-100 bg-slate-50 md:h-28 md:w-28">
+        <BoxFallback />
+      </div>
+    )
+  }
+
+  return (
+    <img
+      src={src}
+      className="h-24 w-24 rounded-[24px] object-cover md:h-28 md:w-28"
+      alt={alt}
+      onError={() => setImgError(true)}
+    />
+  )
+}
 
 const AddToCartPage: React.FC = () => {
   const navigate = useNavigate()
@@ -32,25 +57,17 @@ const AddToCartPage: React.FC = () => {
   } = useCart()
 
   const [colors, setColors] = useState<CartColorInfo[]>([])
-  const [products, setProducts] = useState<IProduct[]>([])
   const [screenplates, setScreenplates] = useState<IScreenPlate[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [colorsRes, productsRes, screenplatesRes] = await Promise.all([
+        const [colorsRes, screenplatesRes] = await Promise.all([
           getColors(),
-          getProducts(),
           getCustomerScreenplates(),
         ])
         setColors(colorsRes.data)
-        // Products endpoint might be paginated based on ProductController@index
-        setProducts(
-          Array.isArray(productsRes.data)
-            ? productsRes.data
-            : productsRes.data.data || [],
-        )
         setScreenplates(screenplatesRes.data)
       } catch (error) {
         console.error('Failed to fetch data:', error)
@@ -63,12 +80,14 @@ const AddToCartPage: React.FC = () => {
   }, [])
 
   const [selectedItemIds, setSelectedItemIds] = useState<string[]>([])
+  const [hasInitializedSelection, setHasInitializedSelection] = useState(false)
 
   useEffect(() => {
-    if (!isCartLoading && items.length > 0 && selectedItemIds.length === 0) {
-      setSelectedItemIds(items.map((i) => i.id))
+    if (items.length > 0 && !hasInitializedSelection) {
+      setSelectedItemIds([items[0].id])
+      setHasInitializedSelection(true)
     }
-  }, [items, isCartLoading])
+  }, [items, hasInitializedSelection])
 
   const toggleSelection = (id: string) => {
     setSelectedItemIds((prev) =>
@@ -76,19 +95,22 @@ const AddToCartPage: React.FC = () => {
     )
   }
 
-  const selectedItems = items.filter((i) => selectedItemIds.includes(i.id))
-  const selectedTotal = selectedItems.reduce((acc, item) => {
-    const total = getItemTotal(item.id)?.total ?? 0
-    return acc + total
-  }, 0)
+  const isAllSelected =
+    items.length > 0 && selectedItemIds.length === items.length
 
-  const handleSelectAll = () => {
-    if (selectedItemIds.length === items.length) {
+  const handleSelectToggle = () => {
+    if (isAllSelected) {
       setSelectedItemIds([])
     } else {
       setSelectedItemIds(items.map((i) => i.id))
     }
   }
+
+  const selectedItems = items.filter((i) => selectedItemIds.includes(i.id))
+  const selectedTotal = selectedItems.reduce((acc, item) => {
+    const total = getItemTotal(item.id)?.total ?? 0
+    return acc + total
+  }, 0)
 
   const handleCheckout = () => {
     if (selectedItems.length === 0) {
@@ -104,7 +126,9 @@ const AddToCartPage: React.FC = () => {
     const target = items.find((item) => item.id === itemId)
     if (!target) return
 
-    const nextQty = Number.isFinite(nextQtyRaw) ? Math.floor(nextQtyRaw) : 1
+    let nextQty = Number.isFinite(nextQtyRaw) ? Math.floor(nextQtyRaw) : target.minOrder
+    if (nextQty < target.minOrder) nextQty = target.minOrder
+
     updateQuantity(target, nextQty)
   }
 
@@ -132,32 +156,76 @@ const AddToCartPage: React.FC = () => {
   }
 
   const handleVariantChange = (
-    itemId: string,
+    item: CartItem,
     variantId: string,
-    productId: string,
   ) => {
-    const product = products.find((p) => p.id === productId)
+    const product = item.fullProduct
     const variant = product?.variants.find((v) => v.variant_id === variantId)
-    if (!variant) return
-
-    const targetItem = items.find((i) => i.id === itemId)
-    if (targetItem?.plate) {
-      const plate = screenplates.find((p) => p.id === targetItem.plate?.id)
-      const compatibility = (plate as any)?.compatibility?.find(
-        (cp: any) => cp.product_id === productId,
-      )
-      const newPrice = compatibility?.print_price_per_unit?.[variant.size] ?? 0
-      updatePlatePrice(itemId, newPrice)
+    if (!variant) {
+        toast.error('Variant metadata not found.')
+        return
     }
 
-    updateVariant(itemId, {
+    if (item.plate) {
+      const plate = screenplates.find((p) => p.id === item.plate?.id)
+      const compatibility = (plate?.compatibility as Array<{ product_id: string; print_price_per_unit: Record<string, number> }>)?.find((cp) => cp.product_id === item.productId)
+      const newPrice = compatibility?.print_price_per_unit?.[variant.size] ?? 0
+      updatePlatePrice(item.id, newPrice)
+    }
+
+    updateVariant(item.id, {
       id: variant.variant_id,
       size: variant.size,
-      width: (variant as any).width || '',
-      height: (variant as any).height || '',
+      width: (variant as { width?: string }).width || '',
+      height: (variant as { height?: string }).height || '',
       unitPrice: variant.price,
       stock: variant.stock,
     })
+  }
+
+  const getVariantCompatibility = (item: CartItem) => {
+    const map: Record<string, { isCompatible: boolean; reason?: string }> = {}
+    const product = item.fullProduct
+    if (!product) return map
+
+    const plateId = item.plate?.id
+    if (!plateId) {
+       product.variants.forEach(v => { map[v.variant_id] = { isCompatible: true } })
+       return map
+    }
+
+    const plate = screenplates.find(p => p.id === plateId)
+    if (!plate) {
+       product.variants.forEach(v => { map[v.variant_id] = { isCompatible: true } })
+       return map
+    }
+
+    const comp = plate.compatibility.find(c => c.product_id === item.productId)
+    const incomp = plate.incompatibility?.find(i => i.product_id === item.productId)
+
+    product.variants.forEach((v) => {
+      const isAllowed = comp && (
+        comp.allowed_variants.includes(v.variant_id) || 
+        comp.allowed_variants.includes(v.size) || 
+        comp.allowed_variants.includes('ALL')
+      )
+
+      const isDenied = incomp && (
+        incomp.variant_ids.length === 0 || 
+        incomp.variant_ids.includes(v.variant_id) || 
+        incomp.variant_ids.includes(v.size)
+      )
+      
+      if (isDenied) {
+        map[v.variant_id] = { isCompatible: false, reason: 'Incompatible with this plate' }
+      } else if (isAllowed) {
+        map[v.variant_id] = { isCompatible: true }
+      } else {
+        map[v.variant_id] = { isCompatible: false, reason: 'Not in plate allow-list' }
+      }
+    })
+    
+    return map
   }
 
   if (isLoading || isCartLoading) {
@@ -169,18 +237,18 @@ const AddToCartPage: React.FC = () => {
   }
 
   return (
-    <div className="AddToCartPage min-h-screen bg-slate-50 pb-32">
-      <div className="sticky top-32 z-30 border-b border-slate-100 bg-white/60 px-6 py-5 backdrop-blur-3xl md:px-16 lg:top-20">
+    <div className="AddToCartPage min-h-screen bg-slate-50 pb-44 lg:pb-32 mt-7 lg:mt-25">
+      <div className="fixed top-0 lg:top-20 w-screen z-30 border-b border-slate-100 bg-white/60 px-6 py-5 backdrop-blur-3xl md:px-16 md:top-20">
         <div className="mx-auto flex max-w-[1400px] items-center justify-between">
           <button
             onClick={() => navigate('/')}
             className="CartBackButton flex items-center gap-2 text-[10px] font-black tracking-widest text-slate-500 uppercase transition hover:text-slate-900"
           >
             <ArrowLeft size={16} />
-            Back to Homepage
+            <span className="hidden md:inline">Back to Homepage</span>
           </button>
           <p className="text-[10px] font-black tracking-widest text-slate-400 uppercase">
-            Cart Review Node
+            Cart Review
           </p>
         </div>
       </div>
@@ -198,25 +266,22 @@ const AddToCartPage: React.FC = () => {
           </div>
 
           {items.length > 0 && (
-            <button
-              onClick={handleSelectAll}
-              className="group flex items-center gap-2 rounded-2xl border border-slate-100 bg-white px-6 py-3 text-[10px] font-black tracking-widest text-slate-500 uppercase shadow-sm transition-all hover:bg-slate-50 hover:text-slate-900"
-            >
-              {selectedItemIds.length === items.length ? (
-                <>
-                  <Circle
-                    size={16}
-                    className="text-slate-300 group-hover:text-slate-400"
-                  />
-                  Deselect All Terminal Nodes
-                </>
-              ) : (
-                <>
-                  <CheckCircle2 size={16} className="text-pixs-mint" />
-                  Select All Terminal Nodes
-                </>
-              )}
-            </button>
+            <div className="hidden items-center gap-3 md:flex">
+              <button
+                onClick={() => setSelectedItemIds(items.map((i) => i.id))}
+                className="group flex items-center gap-2 rounded-2xl border border-slate-100 bg-white px-5 py-3 text-[10px] font-black tracking-widest text-slate-500 uppercase shadow-sm transition-all hover:bg-slate-50 hover:text-pixs-mint"
+              >
+                <CheckCircle2 size={16} className="text-pixs-mint" />
+                Select All
+              </button>
+              <button
+                onClick={() => setSelectedItemIds([])}
+                className="group flex items-center gap-2 rounded-2xl border border-slate-100 bg-white px-5 py-3 text-[10px] font-black tracking-widest text-slate-500 uppercase shadow-sm transition-all hover:bg-slate-50 hover:text-rose-500"
+              >
+                <Trash2 size={16} className="text-rose-300 group-hover:text-rose-500" />
+                Clear Selection
+              </button>
+            </div>
           )}
         </div>
 
@@ -235,9 +300,7 @@ const AddToCartPage: React.FC = () => {
               {items.map((item) => {
                 const itemTotal = getItemTotal(item.id)
                 if (!itemTotal) return null
-                const productMeta = products.find(
-                  (product) => product.id === item.productId,
-                )
+                const productMeta = item.fullProduct
                 const isNeedColor =
                   productMeta?.is_need_color ?? item.colors.length > 0
                 const shortDescription =
@@ -248,29 +311,28 @@ const AddToCartPage: React.FC = () => {
                 return (
                   <article
                     key={item.id}
-                    className={`CartProductCard relative rounded-[24px] border p-5 shadow-sm transition-all md:p-6 ${
+                    onClick={() => toggleSelection(item.id)}
+                    className={`CartProductCard relative cursor-pointer rounded-[24px] border p-5 shadow-sm transition-all md:p-6 ${
                       isSelected
-                        ? 'border-pixs-mint bg-white'
+                        ? 'border-pixs-mint bg-white ring-4 ring-pixs-mint/5'
                         : 'border-slate-100 bg-slate-50 opacity-60'
                     }`}
                   >
                     {/* Selection Hub */}
-                    <button
-                      onClick={() => toggleSelection(item.id)}
-                      className="absolute top-4 left-4 z-10 flex h-6 w-6 items-center justify-center rounded-full transition-all active:scale-95"
+                    <div
+                      className="absolute top-4 left-4 z-10 flex h-6 w-6 items-center justify-center rounded-full transition-all"
                     >
                       {isSelected ? (
                         <CheckCircle2 className="text-pixs-mint" size={24} />
                       ) : (
                         <Circle className="text-slate-300" size={24} />
                       )}
-                    </button>
+                    </div>
 
                     <div className="flex flex-col gap-4 pl-8 md:flex-row md:items-start">
-                      <img
-                        src={item.productImage}
+                      <CartProductImage
+                        src={`/images/products/${item.productImage}`}
                         alt={item.productName}
-                        className="CartProductImage h-24 w-24 rounded-[24px] object-cover md:h-28 md:w-28"
                       />
 
                       <div className="flex-1 space-y-4">
@@ -289,7 +351,10 @@ const AddToCartPage: React.FC = () => {
                           </div>
 
                           <button
-                            onClick={() => removeItem(item.id)}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              removeItem(item.id)
+                            }}
                             className="CartProductRemoveButton inline-flex items-center gap-1 rounded-xl border border-rose-100 bg-rose-50 px-3 py-2 text-xs font-black tracking-wider text-rose-600 uppercase transition hover:bg-rose-100"
                           >
                             <Trash2 size={14} />
@@ -301,7 +366,7 @@ const AddToCartPage: React.FC = () => {
                         <div className="CartProductVariantPicker space-y-2">
                           <div className="flex items-center justify-between">
                             <label className="text-[10px] font-black tracking-widest text-slate-500 uppercase">
-                              Variant Node
+                              Variant
                             </label>
                             {item.plate && (
                               <span className="text-pixs-mint flex items-center gap-1 text-[9px] font-black tracking-widest uppercase">
@@ -310,48 +375,41 @@ const AddToCartPage: React.FC = () => {
                             )}
                           </div>
                           <div className="flex flex-wrap gap-2">
-                            {productMeta?.variants.map((v) => {
-                              const isSelected =
-                                item.variant.id === v.variant_id
-                              let isCompatible = true
-
-                              if (item.plate) {
-                                const plate = (
-                                  screenplateData as IScreenPlate[]
-                                ).find((p) => p.id === item.plate?.id)
-                                const compatibility = plate?.compatibility.find(
-                                  (cp) => cp.product_id === item.productId,
-                                )
-                                isCompatible =
-                                  compatibility?.allowed_variants.includes(
-                                    v.size,
-                                  ) ?? false
-                              }
+                            {item.fullProduct?.variants?.map((v) => {
+                              const isVariantSelected = item.variant.id === v.variant_id
+                              const compatibilityMap = getVariantCompatibility(item)
+                              const { isCompatible, reason } = compatibilityMap[v.variant_id] || { isCompatible: true }
 
                               return (
-                                <button
-                                  key={`${item.id}-${v.variant_id}`}
-                                  disabled={!isCompatible}
-                                  onClick={() =>
-                                    handleVariantChange(
-                                      item.id,
-                                      v.variant_id,
-                                      item.productId,
-                                    )
-                                  }
-                                  className={`relative rounded-xl border px-3 py-2 text-[10px] font-black tracking-wider uppercase transition ${
-                                    isSelected
-                                      ? 'border-slate-900 bg-slate-900 text-white'
-                                      : isCompatible
-                                        ? 'border-slate-200 bg-white text-slate-600 hover:border-slate-400'
-                                        : 'cursor-not-allowed border-slate-100 bg-slate-50 text-slate-300 grayscale'
-                                  }`}
-                                >
-                                  {v.size}
-                                  {!isCompatible && isSelected && (
-                                    <div className="absolute -top-1 -right-1 h-3 w-3 rounded-full border-2 border-white bg-rose-500" />
+                                <div key={`${item.id}-${v.variant_id}`} className="relative group">
+                                  <button
+                                    disabled={!isCompatible}
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      handleVariantChange(item, v.variant_id)
+                                    }}
+                                    className={`relative rounded-xl border px-3 py-2 text-[10px] font-black tracking-wider uppercase transition ${
+                                      isVariantSelected
+                                        ? 'border-slate-900 bg-slate-900 text-white'
+                                        : isCompatible
+                                          ? 'border-slate-200 bg-white text-slate-600 hover:border-slate-400'
+                                          : 'cursor-not-allowed border-slate-100 bg-slate-50 text-slate-300 grayscale'
+                                    }`}
+                                  >
+                                    {v.size}
+                                    {!isCompatible && isVariantSelected && (
+                                      <div className="absolute -top-1 -right-1 h-3 w-3 rounded-full border-2 border-white bg-rose-500" />
+                                    )}
+                                  </button>
+                                  
+                                  {!isCompatible && (
+                                    <div className="pointer-events-none absolute -top-8 left-1/2 z-20 -translate-x-1/2 opacity-0 transition-opacity group-hover:opacity-100">
+                                      <div className="whitespace-nowrap rounded bg-slate-900 px-2 py-1 text-[8px] font-bold text-white shadow-xl">
+                                        {reason || 'Incompatible'}
+                                      </div>
+                                    </div>
                                   )}
-                                </button>
+                                </div>
                               )
                             })}
                           </div>
@@ -360,11 +418,12 @@ const AddToCartPage: React.FC = () => {
                               * Note: Locked to your screenplate. Contact Admin
                               if you need other variants or{' '}
                               <button
-                                onClick={() =>
+                                onClick={(e) => {
+                                  e.stopPropagation()
                                   navigate(
                                     `/screenplate?product_id=${item.productId}&variant=${item.variant.size}&mode=incompatible`,
                                   )
-                                }
+                                }}
                                 className="underline hover:text-slate-900"
                               >
                                 request new plate
@@ -378,11 +437,12 @@ const AddToCartPage: React.FC = () => {
                                 Missing Screenplate Requirement
                               </p>
                               <button
-                                onClick={() =>
+                                onClick={(e) => {
+                                  e.stopPropagation()
                                   navigate(
                                     `/screenplate?product_id=${item.productId}&variant=${item.variant.size}`,
                                   )
-                                }
+                                }}
                                 className="rounded-lg bg-amber-600 px-3 py-1 text-[8px] font-black text-white uppercase transition-colors hover:bg-amber-700"
                               >
                                 Initialize Setup
@@ -415,9 +475,10 @@ const AddToCartPage: React.FC = () => {
                                 return (
                                   <button
                                     key={`${item.id}-${color.id}`}
-                                    onClick={() =>
+                                    onClick={(e) => {
+                                      e.stopPropagation()
                                       handleColorChange(item, color.id)
-                                    }
+                                    }}
                                     className={`relative rounded-full border px-3 py-1.5 text-[10px] font-black tracking-wider uppercase transition ${
                                       selected
                                         ? 'border-slate-900 bg-slate-900 text-white'
@@ -445,17 +506,19 @@ const AddToCartPage: React.FC = () => {
 
                         <div className="CartProductQuantity flex items-center gap-2">
                           <button
-                            onClick={() =>
+                            onClick={(e) => {
+                              e.stopPropagation()
                               handleQuantityChange(item.id, item.quantity - 1)
-                            }
+                            }}
                             className="rounded-xl border border-slate-200 bg-white p-2 text-slate-700 transition hover:bg-slate-100"
                           >
                             <Minus size={14} />
                           </button>
                           <input
                             type="number"
-                            min={1}
+                            min={item.minOrder}
                             value={item.quantity}
+                            onClick={(e) => e.stopPropagation()}
                             onChange={(event) =>
                               handleQuantityChange(
                                 item.id,
@@ -465,13 +528,15 @@ const AddToCartPage: React.FC = () => {
                             className="w-20 rounded-xl border border-slate-200 px-3 py-2 text-center text-sm font-black text-slate-900 outline-none"
                           />
                           <button
-                            onClick={() =>
+                            onClick={(e) => {
+                              e.stopPropagation()
                               handleQuantityChange(item.id, item.quantity + 1)
-                            }
+                            }}
                             className="rounded-xl border border-slate-200 bg-white p-2 text-slate-700 transition hover:bg-slate-100"
                           >
                             <Plus size={14} />
                           </button>
+                          <span className="text-[10px] font-bold text-slate-400 ml-2">min: {item.minOrder}</span>
                         </div>
 
                         <div className="grid grid-cols-2 gap-3 rounded-[24px] bg-slate-50 p-4 md:grid-cols-3">
@@ -492,6 +557,20 @@ const AddToCartPage: React.FC = () => {
                             </p>
                           </div>
                         </div>
+
+                        {item.plate && (
+                          <div className="mt-2 border-t border-slate-100 pt-4">
+                            <p className="flex items-center gap-2 text-sm font-black tracking-tight text-slate-900 italic">
+                              🖨 {item.plate.name}
+                            </p>
+                            <p className="mt-1 text-[10px] font-black tracking-widest text-slate-400 uppercase">
+                              {item.plate.type === 'Flatscreen' ? 'Flat' : item.plate.type === 'Cylindrical' ? 'Center' : 'Front'} | {item.plate.channels} channels
+                            </p>
+                            <p className="mt-2 text-xs font-black italic">
+                              Plate price: ₱{(item.plate.printPricePerUnit || 0).toFixed(2)}/unit
+                            </p>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </article>
@@ -499,7 +578,7 @@ const AddToCartPage: React.FC = () => {
               })}
             </section>
 
-            <aside className="CartTotalSection sticky top-36 h-fit rounded-[24px] border border-slate-100 bg-white p-6 shadow-sm lg:top-40">
+            <aside className="CartTotalSection sticky top-36 h-fit hidden md:block rounded-[24px] border border-slate-100 bg-white p-6 shadow-sm lg:top-40">
               <h2 className="text-xl font-black tracking-tight text-slate-900 uppercase italic">
                 Cart Total
               </h2>
@@ -515,14 +594,55 @@ const AddToCartPage: React.FC = () => {
                 onClick={handleCheckout}
                 disabled={selectedItems.length === 0}
                 className={`CartCheckoutButton mt-6 w-full rounded-3xl border px-8 py-4 text-[10px] font-black tracking-[4px] uppercase italic shadow-2xl transition-all active:scale-95 ${
-                  selectedItems.length > 0
+                   selectedItems.length > 0
                     ? 'border-white/10 bg-slate-900 text-white hover:scale-105'
                     : 'cursor-not-allowed border-slate-200 bg-slate-100 text-slate-300 shadow-none'
                 }`}
               >
-                Checkout Selected Node
+                Checkout Selected
               </button>
             </aside>
+
+            {/* Mobile Fixed Bottom Bar */}
+            <div className="md:hidden fixed bottom-20 left-0 w-full z-40 bg-white/90 border-t border-slate-100 px-6 py-4 shadow-[0_-10px_40px_rgba(0,0,0,0.05)] backdrop-blur-3xl">
+              <div className="flex items-center justify-between gap-4">
+                {/* 1. Selection Toggle */}
+                <button
+                  onClick={handleSelectToggle}
+                  className="flex items-center gap-2 text-[10px] font-black tracking-widest text-slate-900 uppercase italic"
+                >
+                  {isAllSelected ? (
+                    <CheckCircle2 size={24} className="text-pixs-mint" />
+                  ) : (
+                    <Circle size={24} className="text-slate-300" />
+                  )}
+                  <span>All</span>
+                </button>
+
+                {/* 2. Total Price */}
+                <div className="flex-1 text-right">
+                  <p className="text-[8px] font-black tracking-widest text-slate-400 uppercase">
+                    Total
+                  </p>
+                  <p className="font-mono text-lg font-black text-slate-900 italic leading-none">
+                    PHP {selectedTotal.toFixed(2)}
+                  </p>
+                </div>
+
+                {/* 3. Checkout Button */}
+                <button
+                  onClick={handleCheckout}
+                  disabled={selectedItems.length === 0}
+                  className={`flex h-12 items-center justify-center rounded-2xl px-6 text-[10px] font-black tracking-[2px] uppercase italic shadow-lg transition-all active:scale-95 ${
+                    selectedItems.length > 0
+                      ? 'bg-slate-900 text-white'
+                      : 'bg-slate-100 text-slate-300 shadow-none'
+                  }`}
+                >
+                  Checkout
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </main>

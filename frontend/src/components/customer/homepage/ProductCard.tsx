@@ -7,7 +7,7 @@ import {
 } from '../../../types/homepage.types'
 import type { IProduct } from '../../../types/product.types'
 import StarRating from './StarRating'
-import cubeIcon from '@/assets/icons/cube.svg'
+import BoxFallback from '../../common/BoxFallback'
 
 interface ProductCardProps {
   product: IProduct
@@ -15,17 +15,6 @@ interface ProductCardProps {
   toggleFavorite: (id: string) => void
 }
 
-const BoxFallback = () => (
-  <div className="flex h-full w-full items-center justify-center">
-    <img
-      src={cubeIcon}
-      alt=""
-      className="h-16 w-16 opacity-50"
-      loading="lazy"
-      draggable={false}
-    />
-  </div>
-)
 
 const ProductCard: React.FC<ProductCardProps> = ({
   product,
