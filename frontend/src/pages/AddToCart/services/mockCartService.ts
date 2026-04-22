@@ -73,6 +73,9 @@ export const mockCartService = {
       id: itemId,
       ...input,
       createdAt: new Date().toISOString(),
+      selected: true,
+      totalCartPrice: (input.variant.unitPrice * input.quantity) + ((input.plate?.printPricePerUnit ?? 0) * input.quantity),
+      fullProduct: null as unknown as import('../../../types/product.types').IProduct,
     }
 
     const updated = [nextItem, ...current]

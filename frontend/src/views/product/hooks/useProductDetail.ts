@@ -294,7 +294,7 @@ export const useProductDetail = ({
         selectedPlate,
         product.id,
         quantity,
-        selectedVariant.size,
+        selectedVariant.variant_id,
       )
     }
     return base

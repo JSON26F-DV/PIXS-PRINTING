@@ -32,7 +32,7 @@ export const useCart = () => {
 
   const totals = useMemo(() => calculateCartTotals(items), [items])
 
-  const updateQuantity = async (item: CartItem, nextQty: number) => {
+  const updateQuantity = (item: CartItem, nextQty: number) => {
     if (nextQty < 1) {
       toast.error('Quantity must be at least 1.')
       return false
@@ -43,52 +43,45 @@ export const useCart = () => {
       return false
     }
 
-    try {
-      const updated = await cartService.updateQuantity(item.id, nextQty)
-      setItems(updated)
-      return true
-    } catch (error) {
-      toast.error('Failed to update quantity.')
-      return false
-    }
+    setItems((prev) =>
+      prev.map((i) => {
+        if (i.id === item.id) {
+          const nextTotal = (i.variant.unitPrice * nextQty) + ((i.plate?.printPricePerUnit ?? 0) * nextQty);
+          return { ...i, quantity: nextQty, totalCartPrice: nextTotal };
+        }
+        return i;
+      }),
+    )
+    return true
   }
 
-  const updateColors = async (itemId: string, colors: CartItem['colors']) => {
-    try {
-      const updated = await cartService.updateColors(itemId, colors)
-      setItems(updated)
-      toast.success('Configuration updated.')
-    } catch (error) {
-      toast.error('Failed to update colors.')
-    }
+  const updateColors = (itemId: string, colors: CartItem['colors']) => {
+    setItems((prev) =>
+      prev.map((i) => (i.id === itemId ? { ...i, colors } : i)),
+    )
   }
 
-  const updateVariant = async (
-    itemId: string,
-    variant: CartItem['variant'],
-  ) => {
-    try {
-      const updated = await cartService.updateVariant(itemId, variant)
-      setItems(updated)
-      toast.success('Product variant updated.')
-    } catch (error) {
-      toast.error('Failed to update variant.')
-    }
-  }
 
-  const updatePlatePrice = async (
+  const updatePlatePrice = (
     itemId: string,
     printPricePerUnit: number,
   ) => {
-    try {
-      const updated = await cartService.updatePlatePrice(
-        itemId,
-        printPricePerUnit,
-      )
-      setItems(updated)
-    } catch (error) {
-      console.error('Failed to update plate price:', error)
-    }
+    setItems((prev) =>
+      prev.map((i) => {
+        if (i.id === itemId) {
+          const nextPlate = i.plate ? { ...i.plate, printPricePerUnit } : null;
+          const nextTotal = (i.variant.unitPrice * i.quantity) + (printPricePerUnit * i.quantity);
+          return { ...i, plate: nextPlate, totalCartPrice: nextTotal };
+        }
+        return i;
+      }),
+    )
+  }
+  
+  const updateSelected = (itemId: string, selected: boolean) => {
+    setItems((prev) =>
+      prev.map((i) => (i.id === itemId ? { ...i, selected } : i)),
+    )
   }
 
   const removeItem = async (itemId: string) => {
@@ -96,13 +89,69 @@ export const useCart = () => {
       const updated = await cartService.removeCartItem(itemId)
       setItems(updated)
       toast.success('Item removed from cart.')
-    } catch (error) {
+    } catch {
       toast.error('Failed to remove item.')
     }
   }
 
   const getItemTotal = (itemId: string) =>
     totals.perItem.find((item) => item.itemId === itemId) ?? null
+
+  const updateItemConfig = (
+    itemId: string,
+    updates: Partial<{
+      colors: CartItem['colors'];
+      platePrice: number;
+      quantity: number;
+      selected: boolean;
+    }>
+  ) => {
+    setItems((prev) =>
+      prev.map((i) => {
+        if (i.id === itemId) {
+          const nextQty = updates.quantity ?? i.quantity;
+          const nextColors = updates.colors ?? i.colors;
+          const nextSelected = updates.selected ?? i.selected;
+          const nextPrintPrice = updates.platePrice !== undefined ? updates.platePrice : (i.plate?.printPricePerUnit ?? 0);
+          
+          const nextTotal = (i.variant.unitPrice * nextQty) + (nextPrintPrice * nextQty);
+          
+          return { 
+            ...i, 
+            quantity: nextQty, 
+            colors: nextColors, 
+            selected: nextSelected,
+            totalCartPrice: nextTotal,
+            plate: i.plate ? { ...i.plate, printPricePerUnit: nextPrintPrice } : null
+          };
+        }
+        return i;
+      }),
+    )
+  }
+
+  const syncCart = async () => {
+    try {
+      const promises = items.map((item) =>
+        cartService.updateCartItem(item.id, {
+          quantity: item.quantity,
+          total_cart_price: item.totalCartPrice,
+          selected: item.selected ? 1 : 0,
+          colors: item.colors.map((c, index) => ({
+            id: c.id,
+            channel_label: index === 0 ? 'Primary' : index === 1 ? 'Secondary' : 'Accent',
+            channel_order: index,
+          })),
+        }),
+      )
+      await Promise.all(promises)
+      return true
+    } catch (e) {
+      console.error('Failed to sync cart:', e)
+      toast.error('Failed to save cart changes.')
+      return false
+    }
+  }
 
   return {
     items,
@@ -111,9 +160,11 @@ export const useCart = () => {
     updateQuantity,
     removeItem,
     updateColors,
-    updateVariant,
     updatePlatePrice,
     getItemTotal,
     getStockStatusLabel,
+    updateSelected,
+    updateItemConfig,
+    syncCart,
   }
 }

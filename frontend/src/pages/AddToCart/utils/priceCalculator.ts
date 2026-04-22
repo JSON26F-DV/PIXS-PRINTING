@@ -23,20 +23,9 @@ export const calculateItemTotal = (
 }
 
 export const calculateCartTotals = (items: CartItem[]): CartTotalsResult => {
-  const alreadyChargedPlateIds = new Set<string>()
   const perItem = items.map((item) => {
-    const shouldChargeSetupFee =
-      !!item.plate &&
-      !item.plate.isOwned &&
-      !alreadyChargedPlateIds.has(item.plate.id)
-    const setupFeeApplied = shouldChargeSetupFee
-      ? (item.plate?.setupFee ?? 0)
-      : 0
-
-    if (shouldChargeSetupFee && item.plate) {
-      alreadyChargedPlateIds.add(item.plate.id)
-    }
-
+    // Setup fees are removed globally.
+    const setupFeeApplied = 0
     return calculateItemTotal(item, setupFeeApplied)
   })
 

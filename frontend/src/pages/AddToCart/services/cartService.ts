@@ -6,7 +6,6 @@ import {
 import type {
   CartItem,
   CartColorInfo,
-  CartVariantInfo,
 } from '../../../types/cart'
 import type { IProduct } from '../../../types/product.types'
 
@@ -47,6 +46,8 @@ const mapBackendToFrontend = (item: {
   }
   screenplate_id: string
   plate_price: string
+  total_cart_price?: string | number
+  selected?: boolean | number
   created_at: string
 }): CartItem => {
   return {
@@ -86,6 +87,10 @@ const mapBackendToFrontend = (item: {
       : null,
     customRequirements: '',
     createdAt: item.created_at,
+    selected: Boolean(item.selected),
+    totalCartPrice: typeof item.total_cart_price === 'string' 
+      ? parseFloat(item.total_cart_price) 
+      : (item.total_cart_price || 0),
     fullProduct: item.product as unknown as IProduct,
   }
 }
@@ -116,16 +121,6 @@ export const cartService = {
     return this.getCartItems()
   },
 
-  async updateVariant(
-    itemId: string,
-    variant: CartVariantInfo,
-  ): Promise<CartItem[]> {
-    await updateCartItem(itemId, {
-      variant_id: variant.id,
-      unit_price: variant.unitPrice,
-    })
-    return this.getCartItems()
-  },
 
   async updatePlatePrice(
     itemId: string,
@@ -137,6 +132,14 @@ export const cartService = {
 
   async removeCartItem(itemId: string): Promise<CartItem[]> {
     await removeFromCart(itemId)
+    return this.getCartItems()
+  },
+
+  async updateCartItem(
+    itemId: string,
+    data: Record<string, unknown>,
+  ): Promise<CartItem[]> {
+    await updateCartItem(itemId, data)
     return this.getCartItems()
   },
 }

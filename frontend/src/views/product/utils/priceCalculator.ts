@@ -55,12 +55,19 @@ export const calculatePriceWithPlate = (
   plate: IScreenPlate,
   productId: string,
   quantity: number,
-  variantSize: string,
+  variantId: string,
 ): IPriceBreakdown => {
   const compat = plate.compatibility.find((cp) => cp.product_id === productId)
-  const printPricePerUnit = compat?.print_price_per_unit?.[variantSize] ?? 0
+  
+  let printPricePerUnit = 0
+  if (compat?.print_price_per_unit) {
+    printPricePerUnit =
+      compat.print_price_per_unit[variantId] ??
+      compat.print_price_per_unit['ALL'] ??
+      0
+  }
 
-  // Rule: Concept of Setup Fee (+) addition is removed as per updated specification.
+  // Rule: Setup Fee is completely removed as per updated specification.
   const setupFee = 0
 
   const subtotal = breakdown.variantUnitPrice * quantity

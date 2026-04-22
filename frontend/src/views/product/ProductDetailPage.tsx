@@ -104,14 +104,16 @@ const ProductDetailInner: React.FC<{
         screenplate_id: computed.selectedPlate?.id || null,
         quantity: state.quantity,
         unit_price: variant.price,
-        plate_price: computed.selectedVariant
-          ? (computed.selectedPlate?.compatibility?.find(
-              (cp: {
-                product_id: string
-                print_price_per_unit?: Record<string, number>
-              }) => cp.product_id === product.id,
-            )?.print_price_per_unit?.[computed.selectedVariant.size] ?? 0)
+        plate_price: computed.selectedVariant && computed.selectedPlate
+          ? (() => {
+              const cp = computed.selectedPlate.compatibility.find(
+                (c: { product_id: string }) => c.product_id === product.id
+              );
+              return cp?.print_price_per_unit?.[computed.selectedVariant.variant_id] ?? 
+                     cp?.print_price_per_unit?.['ALL'] ?? 0;
+            })()
           : 0,
+        total_cart_price: computed.priceBreakdown.total,
         colors: computed.selectedColors.map((c, index) => ({
           color_id: c.id, // Included to match prompt requirement, but mapped to id in backend
           id: c.id,
@@ -185,11 +187,14 @@ const ProductDetailInner: React.FC<{
               ? 'Flatscreen'
               : 'Cylindrical',
             printPricePerUnit: computed.selectedVariant
-              ? (computed.selectedPlate.compatibility.find(
-                  (cp) => cp.product_id === product.id,
-                )?.print_price_per_unit?.[computed.selectedVariant.size] ?? 0)
+              ? (() => {
+                  const cp = computed.selectedPlate.compatibility.find(
+                    (c) => c.product_id === product.id
+                  );
+                  return cp?.print_price_per_unit?.[computed.selectedVariant.variant_id] ?? 
+                         cp?.print_price_per_unit?.['ALL'] ?? 0;
+                })()
               : 0,
-            setupFee: computed.selectedPlate.base_setup_fee,
             channels: computed.selectedPlate.channels,
             printingInfo:
               computed.selectedPlate.technical_info ||
@@ -396,6 +401,7 @@ const ProductDetailInner: React.FC<{
                 isNeedColor={product.is_need_color}
                 onAddToCart={handleAddToCart}
                 onBuyNow={handleBuyNow}
+                quantity={state.quantity}
               />
             </div>
 

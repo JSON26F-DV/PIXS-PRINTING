@@ -41,6 +41,8 @@ export interface CartItem {
   plate: CartPlateInfo | null
   customRequirements?: string
   createdAt: string
+  selected: boolean
+  totalCartPrice: number
   fullProduct?: IProduct
 }
 

@@ -23,6 +23,7 @@ interface PriceCalculatorUIProps {
   isNeedColor: boolean
   onAddToCart: () => void
   onBuyNow: () => void
+  quantity: number
 }
 
 /**
@@ -42,6 +43,7 @@ const PriceCalculatorUI: React.FC<PriceCalculatorUIProps> = ({
   isNeedColor,
   onAddToCart,
   onBuyNow,
+  quantity,
 }) => {
   const isColorMissing = isNeedColor && !hasRequiredColor
   const isPlateMissing = isNeedScreenplate && !hasRequiredPlate
@@ -72,30 +74,74 @@ const PriceCalculatorUI: React.FC<PriceCalculatorUIProps> = ({
           </div>
         </div>
 
-        {/* Calculation Nodes */}
-        <div className="relative z-10 grid grid-cols-2 gap-8">
-          <div className="hover:border-pixs-mint/20 group/stat space-y-1.5 rounded-[28px] border border-slate-800/60 bg-slate-800/40 p-5 transition-all">
-            <div className="mb-1 flex items-center gap-2 text-slate-400">
-              <Printer size={12} className="text-pixs-mint" />
-              <p className="text-[8px] font-black tracking-widest uppercase">
-                Print / Unit
-              </p>
+        {/* Precise Calculation Matrix */}
+        <div className="relative z-10 space-y-4">
+          {/* Unit Price Node */}
+          <div className="flex items-center justify-between border-b border-slate-800/50 pb-3">
+            <div className="flex items-center gap-3">
+              <PackageCheck size={14} className="text-pixs-mint" />
+              <span className="text-[10px] font-black tracking-[3px] text-slate-400 uppercase italic">
+                Unit Price
+              </span>
             </div>
-            <p className="text-lg font-black text-white italic">
-              ₱{breakdown.printPricePerUnit.toLocaleString()}
-            </p>
+            <span className="text-sm font-black text-white italic">
+              ₱{breakdown.variantUnitPrice.toLocaleString()}
+            </span>
           </div>
 
-          <div className="hover:border-pixs-mint/20 group/stat space-y-1.5 rounded-[28px] border border-slate-800/60 bg-slate-800/40 p-5 transition-all">
-            <div className="mb-1 flex items-center gap-2 text-slate-400">
-              <PackageCheck size={12} className="text-pixs-mint" />
-              <p className="text-[8px] font-black tracking-widest uppercase">
-                Base / Unit
-              </p>
+          {/* Volume Indicator Node */}
+          <div className="flex items-center justify-between border-b border-slate-800/50 pb-3">
+            <div className="flex items-center gap-3">
+              <Layers size={14} className="text-pixs-mint" />
+              <span className="text-[10px] font-black tracking-[3px] text-slate-400 uppercase italic">
+                Quantity
+              </span>
             </div>
-            <p className="text-lg font-black text-white italic">
-              ₱{breakdown.variantUnitPrice.toLocaleString()}
-            </p>
+            <span className="text-sm font-black text-white italic">
+              {quantity.toLocaleString()} Units
+            </span>
+          </div>
+
+          {/* Fabrication Node (Only if Plate Identified) */}
+          {!isPlateMissing && breakdown.printPricePerUnit > 0 && (
+            <>
+              <div className="flex items-center justify-between border-b border-slate-800/50 pb-3">
+                <div className="flex items-center gap-3">
+                  <Printer size={14} className="text-pixs-mint" />
+                  <span className="text-[10px] font-black tracking-[3px] text-slate-400 uppercase italic">
+                    Print Per Unit
+                  </span>
+                </div>
+                <span className="text-sm font-black text-white italic">
+                  ₱{breakdown.printPricePerUnit.toLocaleString()}
+                </span>
+              </div>
+              
+              <div className="flex items-center justify-between border-b border-slate-800/50 pb-3">
+                <div className="flex items-center gap-3">
+                  <span className="text-pixs-mint text-[10px]">∑</span>
+                  <span className="text-[10px] font-black tracking-[3px] text-slate-400 uppercase italic">
+                    Printing Total ({quantity.toLocaleString()} units)
+                  </span>
+                </div>
+                <span className="text-sm font-black text-white italic">
+                  ₱{(breakdown.printPricePerUnit * quantity).toLocaleString()}
+                </span>
+              </div>
+            </>
+          )}
+
+          {/* Product Subtotal (Cups Total) */}
+          <div className="flex items-center justify-between pt-2">
+            <div className="flex items-center gap-3">
+              <span className="text-pixs-mint text-[10px]">∑</span>
+              <span className="text-[10px] font-black tracking-[3px] text-slate-400 uppercase italic">
+                Hardware Subtotal
+              </span>
+            </div>
+            <span className="text-sm font-black text-white italic">
+              ₱{(breakdown.variantUnitPrice * quantity).toLocaleString()}
+            </span>
           </div>
         </div>
       </div>
