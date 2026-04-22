@@ -79,6 +79,7 @@ class OrderController extends Controller
                 ]);
 
                 // STEP 6: For each cart_item, create order_item row
+                /*
                 foreach ($cartItems as $cartItem) {
                     $orderItem = OrderItem::create([
                         'order_id' => $orderId,
@@ -106,6 +107,7 @@ class OrderController extends Controller
 
                 // STEP 8: Delete processed cart_items
                 \App\Models\CartItem::whereIn('id', $validated['cart_item_ids'])->delete();
+                */
 
                 // STEP 9: Return JSON response (201)
                 return response()->json([

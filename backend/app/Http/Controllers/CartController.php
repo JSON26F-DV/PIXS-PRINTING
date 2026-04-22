@@ -62,6 +62,8 @@ class CartController extends Controller
             'quantity' => 'required|integer|min:1',
             'unit_price' => 'required|numeric',
             'plate_price' => 'nullable|numeric',
+            'total_cart_price' => 'nullable|numeric',
+            'selected' => 'nullable|boolean',
             'colors' => 'nullable|array',
             'colors.*.id' => 'required|string',
             'colors.*.channel_label' => 'required|string|in:Primary,Secondary,Accent',
@@ -79,6 +81,8 @@ class CartController extends Controller
                         'quantity' => $validated['quantity'],
                         'unit_price' => $validated['unit_price'],
                         'plate_price' => $validated['plate_price'] ?? 0,
+                        'total_cart_price' => $validated['total_cart_price'] ?? 0,
+                        'selected' => $validated['selected'] ?? false,
                     ]
                 );
 
@@ -121,15 +125,14 @@ class CartController extends Controller
 
         $validated = $request->validate([
             'quantity' => 'sometimes|integer|min:1',
-            'variant_id' => 'sometimes|string',
-            'unit_price' => 'sometimes|numeric',
-            'plate_price' => 'sometimes|numeric',
+            'total_cart_price' => 'sometimes|numeric',
+            'selected' => 'sometimes|boolean',
             'colors' => 'sometimes|array',
         ]);
 
         try {
-            return DB::transaction(function () use ($validated, $cartItem) {
-                $cartItem->update($request->only(['quantity', 'variant_id', 'unit_price', 'plate_price']));
+            return DB::transaction(function () use ($validated, $cartItem, $request) {
+                $cartItem->update($request->only(['quantity', 'total_cart_price', 'selected']));
 
                 if (isset($validated['colors'])) {
                     $cartItem->colors()->delete();

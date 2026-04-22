@@ -10,6 +10,8 @@ class CartItem extends Model
 
     protected $keyType = 'string';
 
+    public $timestamps = false;
+
     protected $fillable = [
         'id',
         'customer_id',
@@ -19,12 +21,16 @@ class CartItem extends Model
         'quantity',
         'unit_price',
         'plate_price',
+        'total_cart_price',
+        'selected',
     ];
 
     protected $casts = [
         'quantity' => 'integer',
         'unit_price' => 'decimal:2',
         'plate_price' => 'decimal:2',
+        'total_cart_price' => 'decimal:2',
+        'selected' => 'boolean',
     ];
 
     public function product()
