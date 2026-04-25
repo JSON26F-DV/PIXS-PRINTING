@@ -43,6 +43,7 @@ interface CartItem {
     hex: string
     type: string
   }[]
+  totalCartPrice?: number
 }
 
 interface ReceiptSectionProps {
@@ -59,7 +60,7 @@ const ReceiptSection: React.FC<ReceiptSectionProps> = ({
   const cartItems = items
 
   const subtotal = cartItems.reduce(
-    (acc, item) => acc + item.quantity * item.variant.unitPrice,
+    (acc, item) => acc + (item.totalCartPrice ?? item.quantity * item.variant.unitPrice),
     0,
   )
   const total = subtotal + deliveryFee - discountAmount
@@ -123,7 +124,7 @@ const ReceiptSection: React.FC<ReceiptSectionProps> = ({
                 </span>
                 <span className="text-xs font-black text-slate-900 italic">
                   PHP{' '}
-                  {(item.quantity * item.variant.unitPrice).toLocaleString()}
+                  {(item.totalCartPrice ?? (item.quantity * item.variant.unitPrice)).toLocaleString()}
                 </span>
               </div>
             </div>

@@ -17,9 +17,7 @@ return new class extends Migration
             $table->string('address_id', 50)->nullable();
             $table->string('payment_method_id', 50)->nullable();
             $table->string('delivery_method_id', 50)->nullable();
-            $table->string('discount_id', 20)->nullable();
-            $table->decimal('total_amount', 12)->default(0);
-            $table->decimal('total_discount_amount', 12)->default(0);
+            $table->decimal('total_amount', 10, 2)->default(0);
             $table->text('production_notes')->nullable();
             $table->enum('status', ['PENDING', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED'])->default('PENDING');
             $table->text('feedback')->nullable();
@@ -27,8 +25,6 @@ return new class extends Migration
             $table->unsignedTinyInteger('rating')->default(0);
             $table->text('admin_comment')->nullable();
             $table->dateTime('created_at')->useCurrent();
-            $table->dateTime('updated_at')->useCurrentOnUpdate()->useCurrent();
-
             $table->foreign('customer_id')->references('id')->on('customers')->onDelete('cascade');
             $table->foreign('delivery_method_id')->references('id')->on('delivery_methods')->nullOnDelete();
         });

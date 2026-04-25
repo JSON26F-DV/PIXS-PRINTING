@@ -9,5 +9,5 @@ class DeliveryMethod extends Model
     protected $keyType = 'string';
     public $incrementing = false;
 
-    protected $fillable = ['id', 'name', 'type', 'fee', 'note'];
+    protected $fillable = ['id', 'name'];
 }

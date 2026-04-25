@@ -20,6 +20,7 @@ import {
   Users,
   User,
 } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import {
   ResponsiveContainer,
   BarChart,
@@ -935,20 +936,17 @@ const MarketingPromotions: React.FC = () => {
               <div className="space-y-6">
                 <div className="flex flex-wrap gap-4">
                   {[
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     {
                       id: 'all_users',
                       label: 'Broadcast All',
-                      icon: Users as any,
+                      icon: Users as LucideIcon,
                     },
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     {
                       id: 'specific_user',
                       label: 'Specific Entity',
-                      icon: User as any,
+                      icon: User as LucideIcon,
                     },
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    { id: 'code', label: 'Manual Code', icon: Tag as any },
+                    { id: 'code', label: 'Manual Code', icon: Tag as LucideIcon },
                   ].map((t) => (
                     <label
                       key={t.id}

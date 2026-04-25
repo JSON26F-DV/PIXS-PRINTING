@@ -179,7 +179,6 @@ const AppRouter: React.FC = () => {
         <Route path="message" element={<StaffComHub />} />
         <Route path="setting" element={<AdminSettings />} />
         <Route path="marketing" element={<MarketingPromotions />} />
-        {/* <Route path="complaints" element={<DisputeView />} /> */}
       </Route>
 
       {/* Staff Routes */}

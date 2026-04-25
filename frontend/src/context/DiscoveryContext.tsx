@@ -42,6 +42,7 @@ export const DiscoveryProvider: React.FC<{ children: ReactNode }> = ({
   )
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useDiscovery = () => {
   const context = useContext(DiscoveryContext)
   if (!context) {

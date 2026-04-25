@@ -57,32 +57,32 @@ const OrderReceiptModal: React.FC<ReceiptModalProps> = ({
             <div className="space-y-4">
               <h3 className="text-[10px] font-black tracking-[4px] text-slate-400 uppercase italic">Items in Node</h3>
               <div className="space-y-3">
-                {products.map((item: any, idx: number) => (
+                {products.map((item: IOrderData['products'][number], idx: number) => (
                   <div key={idx} className="flex items-center gap-4 rounded-2xl border border-slate-50 bg-slate-50/30 p-3">
                     <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl border border-white bg-white shadow-sm">
-                      {item.productImage ? (
+                      {item.product_image ? (
                         <img 
-                          src={`/images/products/${item.productImage}`} 
+                          src={`/images/products/${item.product_image}`} 
                           className="h-full w-full object-cover" 
-                          alt={item.productName} 
+                          alt={item.product_name} 
                         />
                       ) : (
                         <BoxFallback />
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h4 className="truncate text-xs font-black tracking-tight text-slate-900 uppercase italic">{item.productName}</h4>
+                      <h4 className="truncate text-xs font-black tracking-tight text-slate-900 uppercase italic">{item.product_name}</h4>
                       <p className="text-[9px] font-black tracking-widest text-slate-400 uppercase">
-                        {item.variant?.size} • {item.quantity} Unit{item.quantity > 1 ? 's' : ''}
+                        {item.quantity} Unit{item.quantity > 1 ? 's' : ''}
                       </p>
-                      {item.plate && (
+                      {item.screenplate_id && (
                         <span className="mt-1 flex items-center gap-1 text-[8px] font-black tracking-widest text-pixs-mint uppercase">
-                          Custom Plate: {item.plate.name}
+                          Custom Plate Configured
                         </span>
                       )}
                     </div>
                     <div className="text-right">
-                      <p className="text-xs font-black text-slate-900 italic">PHP {(item.quantity * item.variant?.unitPrice).toLocaleString()}</p>
+                      <p className="text-xs font-black text-slate-900 italic">PHP {(item.quantity * item.unit_price).toLocaleString()}</p>
                     </div>
                   </div>
                 ))}

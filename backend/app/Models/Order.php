@@ -10,15 +10,14 @@ class Order extends Model
 {
     protected $keyType = 'string';
     public $incrementing = false;
+    public const UPDATED_AT = null;
 
     protected $fillable = [
         'id',
         'customer_id',
         'address_id',
         'payment_method_id',
-        'discount_id',
         'total_amount',
-        'total_discount_amount',
         'status',
         'delivery_method_id',
         'production_notes',

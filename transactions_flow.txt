@@ -1,0 +1,56 @@
+# PIXS PRINTING - Transactions Flow Documentation
+
+This document explains the end-to-end flow of the transaction process, from the frontend (Transactions.tsx) to the backend (OrderController.php) and the database (orders table).
+
+## 1. Frontend Flow (Transactions.tsx)
+
+### Data Fetching
+- **Initial Load:** Fetches delivery methods, addresses, and payment methods.
+- **Checkout Items:** Loaded from `localStorage` or cart.
+
+### Order Submission (`handlePurchase`)
+- Validates that the user has selected an Address, Payment Method, and Delivery Method.
+- Constructs the payload using dynamic user selections:
+    ```json
+    {
+      "cart_item_ids": ["uuid-1", "uuid-2"],
+      "address_id": "selected-addr-id",
+      "payment_method_id": "selected-pay-id",
+      "delivery_method_id": "selected-del-id",
+      "production_notes": "Handle with care"
+    }
+    ```
+- Calls POST `/api/orders` via `axiosInstance` (to include the Auth Bearer token).
+
+---
+
+## 2. Backend Flow (OrderController.php)
+
+### Process Overview (`store` method)
+1. **Authentication & Validation:** Checks validity of array keys and ensures `delivery_method_id` exists in the database.
+2. **Database Transaction:** Surrounds everything in a DB lock to ensure stability.
+3. **Load & Validate Cart Items:** Confirms the cart items belong directly to the authenticated customer making the request.
+4. **Calculate Totals:** Computes the total price dynamically from the `total_cart_price` columns of the selected cart items.
+5. **Create Order:** Inserts data dynamically into the `orders` table using the IDs passed from the request.
+6. **Create Order Items:** Maps `cart_items` exactly to `order_items` copying `quantity`, `unit_price`, `plate_price`, `product_id`, `variant_id` and `screenplate_id`.
+7. **Create Order Item Colors:** Iterates over the `cart_item_colors` tied to each cart item and duplicates them identically to `order_item_colors`.
+8. **Cart Cleanup:** `CartItem` records are **NOT DELETED**, instead their `selected` flag is set identically to `0` (false) so they cleanly disappear from the selected checkout list without permanently erasing historical data.
+
+---
+
+## 3. Database Schema
+
+### `orders` Table
+- `total_amount`: decimal(10, 2)
+- `status`: Enum (PENDING, PROCESSING, SHIPPED, DELIVERED, CANCELLED)
+- (Note: `updated_at` timestamps are purposely disabled via `UPDATED_AT = null` in standard Eloquent behavior to match the custom DB schema)
+
+### `order_items` & `order_item_colors`
+- Exact mappings of the contents of `cart_items` bound by the newly created generated `ORD-` Primary Key.
+
+---
+
+## 4. Troubleshooting Guide for Agents
+1. **DYNAMIC FLOW IS ACTIVE:** The backend currently reads actively mapped selections.
+2. **All Tables Populating:** Records populate across `orders`, `order_items`, and `order_item_colors`.
+3. **Cart Items Modified:** Ensure that processed cart items simply get their `selected` flag set to `0`. If they reappear at checkout, ensure clientside query/mutation refetch checks for `selected: true/1`.

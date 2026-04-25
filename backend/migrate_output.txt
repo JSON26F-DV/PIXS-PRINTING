@@ -1,0 +1,74 @@
+
+  Dropping all tables  107.93ms DONE
+
+   INFO  Preparing database.  
+
+  Creating migration table  6.82ms DONE
+
+   INFO  Running migrations.  
+
+  0001_01_01_000001_create_cache_table  18.23ms DONE
+  0001_01_01_000002_create_jobs_table  19.18ms DONE
+  2026_04_11_143002_create_personal_access_tokens_table  17.91ms DONE
+  2026_04_11_143003_create_delivery_methods_table  5.03ms DONE
+  2026_04_11_143004_create_categories_table  4.84ms DONE
+  2026_04_11_143005_create_colors_table  3.71ms DONE
+  2026_04_11_143006_create_customers_table  24.79ms DONE
+  2026_04_11_143007_create_employees_table  12.88ms DONE
+  2026_04_11_143008_create_products_table  9.37ms DONE
+  2026_04_11_143009_create_screenplates_table  9.38ms DONE
+  2026_04_11_143010_create_conversations_table  4.67ms DONE
+  2026_04_11_143011_create_product_variants_table  9.16ms DONE
+  2026_04_11_143012_create_product_gallery_table  9.27ms DONE
+  2026_04_11_143013_create_product_tags_table  10.89ms DONE
+  2026_04_11_143014_create_customer_addresses_table  12.01ms DONE
+  2026_04_11_143015_create_customer_contact_numbers_table  11.86ms DONE
+  2026_04_11_143016_create_customer_discounts_table  11.01ms DONE
+  2026_04_11_143017_create_customer_payment_methods_table  10.27ms DONE
+  2026_04_11_143018_create_employee_addresses_table  10.25ms DONE
+  2026_04_11_143019_create_employee_attendance_table  15.67ms DONE
+  2026_04_11_143020_create_employee_contact_numbers_table  9.21ms DONE
+  2026_04_11_143021_create_employee_weekly_salary_table  10.70ms DONE
+  2026_04_11_143022_create_cart_items_table  26.44ms DONE
+  2026_04_11_143023_create_cart_item_colors_table  36.35ms DONE
+  2026_04_11_143024_create_orders_table  66.26ms DONE
+  2026_04_11_143025_create_order_items_table  61.72ms DONE
+  2026_04_11_143026_create_order_item_colors_table  79.12ms DONE
+  2026_04_11_143027_create_screenplate_compatibility_table  38.14ms DONE
+  2026_04_11_143028_create_screenplate_incompatible_table  35.98ms DONE
+  2026_04_11_143029_create_screenplate_requests_table  20.90ms DONE
+  2026_04_11_143030_create_messages_table  13.64ms DONE
+  2026_04_11_143031_create_message_attachments_table  8.84ms DONE
+  2026_04_11_143032_create_message_reactions_table  9.41ms DONE
+  2026_04_11_143033_create_conversation_participants_table  9.70ms DONE
+  2026_04_11_143034_create_inventory_logs_table  14.87ms DONE
+  2026_04_11_143035_create_marketing_promotions_table  10.56ms DONE
+  2026_04_11_143036_create_production_logs_table  10.51ms DONE
+  2026_04_11_143037_create_deleted_accounts_table  15.82ms DONE
+  2026_04_11_150138convert_database_to_utf8mb4_and_bcrypt_passwords  524.79ms DONE
+  2026_04_22_013058_update_cart_items_table  7.71ms FAIL
+
+   Illuminate\Database\QueryException 
+
+  SQLSTATE[42000]: Syntax error or access violation: 1091 Can't DROP COLUMN `updated_at`; check that it exists (Connection: mariadb, Host: 127.0.0.1, Port: 3306, Database: pixs_db, SQL: alter table `cart_items` drop `updated_at`)
+
+  at vendor/laravel/framework/src/Illuminate/Database/Connection.php:841
+    837▕             $exceptionType = ($isUniqueConstraintError = $this->isUniqueConstraintError($e))
+    838▕                 ? UniqueConstraintViolationException::class
+    839▕                 : QueryException::class;
+    840▕ 
+  ➜ 841▕             $exception = new $exceptionType(
+    842▕                 $this->getNameWithReadWriteType(),
+    843▕                 $query,
+    844▕                 $this->prepareBindings($bindings),
+    845▕                 $e,
+
+      [2m+9 vendor frames [22m
+
+  10  database/migrations/2026_04_22_013058_update_cart_items_table.php:14
+      Illuminate\Support\Facades\Facade::__callStatic()
+      [2m+37 vendor frames [22m
+
+  48  artisan:16
+      Illuminate\Foundation\Application::handleCommand()
+

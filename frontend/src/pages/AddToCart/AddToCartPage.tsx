@@ -15,6 +15,7 @@ import {
 import { useCart } from './hooks/useCart'
 import type { CartColorInfo, CartItem } from '../../types/cart'
 import BoxFallback from '../../components/common/BoxFallback'
+import VariantSelector from '../../views/product/components/VariantSelector'
 
 // ─── Sub-Component for Image Handling ────────────────────────────────────────
 const CartProductImage: React.FC<{ src: string; alt: string }> = ({
@@ -56,7 +57,6 @@ const AddToCartPage: React.FC = () => {
     items,
     removeItem,
     isLoading: isCartLoading,
-    updateItemConfig,
     syncCart,
   } = useCart()
 
@@ -65,15 +65,88 @@ const AddToCartPage: React.FC = () => {
   const [pendingMap, setPendingMap] = useState<Record<string, PendingConfig>>({})
 
   // Merge cart item with its pending overrides and RECALCULATE totals
+  const getVariantCompatibilityMap = useCallback((item: CartItem) => {
+    const map: Record<string, { isCompatible: boolean; reason?: string }> = {}
+    try {
+      const product = item.fullProduct
+      if (!product || !product.variants) return map
+
+      // We use the merged item's plate to get compatibility info
+      const plate = item.plate
+
+      product.variants.forEach((v) => {
+        if (!plate) {
+          map[v.variant_id] = { isCompatible: true }
+          return
+        }
+
+        const comp = plate.compatibility?.find((c) => c.product_id === product.id)
+        const incomp = plate.incompatibility?.find(
+          (i) => i.product_id === product.id,
+        )
+
+        // If no compatibility record exists for this specific product, we default to compatible
+        // because the plate is already assigned to this cart item.
+        if (!comp && !incomp) {
+          map[v.variant_id] = { isCompatible: true }
+          return
+        }
+
+        const isAllowed =
+          comp &&
+          (comp.allowed_variants?.includes(v.variant_id) ||
+            comp.allowed_variants?.includes(v.size) ||
+            comp.allowed_variants?.includes('ALL'))
+
+        const isDenied =
+          incomp &&
+          (incomp.variant_ids?.length === 0 ||
+            incomp.variant_ids?.includes(v.variant_id) ||
+            incomp.variant_ids?.includes(v.size))
+
+        if (isDenied) {
+          map[v.variant_id] = { isCompatible: false, reason: 'Not Compatible' }
+        } else if (isAllowed) {
+          map[v.variant_id] = { isCompatible: true }
+        } else {
+          // If a compatibility record EXISTS for this product but this variant isn't in it, then it's incompatible
+          map[v.variant_id] = { isCompatible: false, reason: 'Not Compatible' }
+        }
+      })
+    } catch (err) {
+      console.error('Compatibility calculation failed:', err)
+    }
+
+    return map
+  }, [])
+
   const getMergedItem = useCallback(
     (item: CartItem): CartItem => {
       const pending = pendingMap[item.id]
-      if (!pending) return item
+      const merged = pending ? { ...item, ...pending } : { ...item }
 
-      const merged = { ...item, ...pending }
+      // Dynamically determine plate price based on selected variant's compatibility mapping
+      if (merged.plate && merged.plate.compatibility) {
+        const product = item.fullProduct
+        const comp = merged.plate.compatibility.find(
+          (c) => c.product_id === product?.id,
+        )
+        if (comp && comp.print_price_per_unit) {
+          const vId = merged.variant.id
+          const dynamicPrice =
+            comp.print_price_per_unit[vId] ?? comp.print_price_per_unit['ALL']
 
-      // Map platePrice override into the plate object for UI rendering
-      if (pending.platePrice !== undefined && merged.plate) {
+          if (dynamicPrice !== undefined) {
+            merged.plate = {
+              ...merged.plate,
+              printPricePerUnit: Number(dynamicPrice),
+            }
+          }
+        }
+      }
+
+      // Explicit pending override takes precedence (if any)
+      if (pending?.platePrice !== undefined && merged.plate) {
         merged.plate = { ...merged.plate, printPricePerUnit: pending.platePrice }
       }
 
@@ -129,9 +202,25 @@ const AddToCartPage: React.FC = () => {
   }
 
   const selectedItems = mergedItems.filter((i) => i.selected)
+  
+  const hasMissingColor = selectedItems.some(item => {
+    const productMeta = item.fullProduct
+    if (productMeta?.is_need_color) {
+      const requiredChannels = item.plate?.channels || 1
+      return item.colors.length < requiredChannels
+    }
+    return false
+  })
+
   const selectedTotal = selectedItems.reduce((acc, item) => {
     return acc + item.totalCartPrice
   }, 0)
+
+  const hasIncompatibleVariant = selectedItems.some((item) => {
+    if (!item.variant || !item.variant.id) return false
+    const compMap = getVariantCompatibilityMap(item)
+    return compMap[item.variant.id]?.isCompatible === false
+  })
 
   // ─── Checkout: flush all pending to backend then navigate ─────────────────
   const handleCheckout = async () => {
@@ -140,16 +229,35 @@ const AddToCartPage: React.FC = () => {
       return
     }
 
-    // Flush pending changes to useCart's state first
-    for (const [itemId, pending] of Object.entries(pendingMap)) {
-      await updateItemConfig(itemId, pending)
+    if (hasMissingColor) {
+      toast.error('Please select the required colors for all selected items.')
+      return
     }
 
-    const success = await syncCart()
-    if (!success) return
+    if (hasIncompatibleVariant) {
+      toast.error(
+        'Some selected products have incompatible sizes for their assigned screenplates.',
+      )
+      return
+    }
 
-    localStorage.setItem('pixs_checkout_node', JSON.stringify(selectedItems))
-    navigate('/transactions')
+    try {
+      const success = await syncCart(mergedItems)
+      if (!success) {
+        // Error is already toasted by syncCart, but we stop navigation
+        return
+      }
+
+      toast.success('Cart updated successfully')
+      setPendingMap({})
+      
+      // Save the specifically selected items to localStorage for Transactions page
+      localStorage.setItem('pixs_checkout_node', JSON.stringify(selectedItems))
+      navigate('/transactions')
+    } catch (err) {
+      console.error('Checkout error:', err)
+      toast.error('Systems encountered an error during checkout. Please try again.')
+    }
   }
 
   // ─── Quantity ─────────────────────────────────────────────────────────────
@@ -163,7 +271,25 @@ const AddToCartPage: React.FC = () => {
     setPending(itemId, { quantity: nextQty })
   }
 
-  // ─── Color ────────────────────────────────────────────────────────────────
+  const handleVariantChange = (itemId: string, variantId: string) => {
+    const item = mergedItems.find((i) => i.id === itemId)
+    if (!item || !item.fullProduct) return
+
+    const productVariant = item.fullProduct.variants?.find((v) => v.variant_id === variantId)
+    if (!productVariant) return
+
+    setPending(itemId, {
+      variant: {
+        id: productVariant.variant_id,
+        size: productVariant.size || '',
+        width: String(productVariant.width || ''),
+        height: String(productVariant.height || ''),
+        unitPrice: typeof productVariant.price === 'string' ? parseFloat(productVariant.price) : (Number(productVariant.price) || 0),
+        stock: Number(productVariant.stock) || 0,
+      },
+    })
+  }
+
   const handleColorChange = (item: CartItem, colorId: string) => {
     const selectedColor = colors.find((c) => c.id === colorId)
     if (!selectedColor) return
@@ -273,9 +399,6 @@ const AddToCartPage: React.FC = () => {
             <section className="CartProductList space-y-4">
               {mergedItems.map((item) => {
                 const productMeta = item.fullProduct
-                const isNeedColor =
-                  (Boolean(productMeta?.is_need_color) || item.colors.length > 0) &&
-                  item.colors.length > 0
                 const shortDescription =
                   productMeta?.short_description ?? 'No short description available.'
                 const isSelected = item.selected
@@ -311,10 +434,12 @@ const AddToCartPage: React.FC = () => {
                             <h3 className="CartProductTitle text-lg font-black tracking-tight text-slate-900 uppercase italic">
                               {item.productName}
                             </h3>
-                            <p className="CartProductVariant text-xs font-black tracking-widest text-slate-500 uppercase">
-                              {item.variant.size} | {item.variant.width} x{' '}
-                              {item.variant.height}
-                            </p>
+                            {item.variant && (
+                              <p className="CartProductVariant text-xs font-black tracking-widest text-slate-500 uppercase">
+                                {item.variant.size} | {item.variant.width} x{' '}
+                                {item.variant.height}
+                              </p>
+                            )}
                             <p className="mt-2 text-sm text-slate-600">
                               {shortDescription}
                             </p>
@@ -333,14 +458,35 @@ const AddToCartPage: React.FC = () => {
                         </div>
 
 
+                        {/* Variant Selector */}
+                        {productMeta?.variants && (
+                          <div className="CartProductVariantSelector" onClick={(e) => e.stopPropagation()}>
+                             <VariantSelector
+                                variants={productMeta.variants}
+                                selectedVariantId={item.variant.id}
+                                onSelect={(vId) => handleVariantChange(item.id, vId)}
+                                minThreshold={productMeta.min_threshold ?? 5}
+                                minOrder={item.minOrder}
+                                variantCompatibilityMap={getVariantCompatibilityMap(item)}
+                             />
+                          </div>
+                        )}
+
                         {/* Color Picker */}
-                        {Boolean(isNeedColor) && (
+                        {Boolean(productMeta?.is_need_color) && (
                           <div className="CartProductColorPicker space-y-2">
-                            <label className="text-[10px] font-black tracking-widest text-slate-500 uppercase">
-                              Master Color Sequence{' '}
-                              {item.plate &&
-                                `(${item.colors.length}/${item.plate.channels} Channels)`}
-                            </label>
+                            <div className="flex items-center justify-between">
+                              <label className="text-[10px] font-black tracking-widest text-slate-500 uppercase">
+                                Master Color Sequence{' '}
+                                {item.plate &&
+                                  `(${item.colors.length}/${item.plate.channels} Channels)`}
+                              </label>
+                              {item.colors.length < (item.plate?.channels || 1) && (
+                                <span className="text-[10px] font-black tracking-widest text-rose-500 uppercase animate-pulse">
+                                  * Color required
+                                </span>
+                              )}
+                            </div>
                             <div className="flex flex-wrap gap-2">
                               {colors.map((color) => {
                                 const index = item.colors.findIndex((c) => c.id === color.id)
@@ -488,14 +634,14 @@ const AddToCartPage: React.FC = () => {
               </p>
               <button
                 onClick={handleCheckout}
-                disabled={selectedItems.length === 0}
+                disabled={selectedItems.length === 0 || hasMissingColor}
                 className={`CartCheckoutButton mt-6 w-full rounded-3xl border px-8 py-4 text-[10px] font-black tracking-[4px] uppercase italic shadow-2xl transition-all active:scale-95 ${
-                  selectedItems.length > 0
+                  selectedItems.length > 0 && !hasMissingColor
                     ? 'border-white/10 bg-slate-900 text-white hover:scale-105'
                     : 'cursor-not-allowed border-slate-200 bg-slate-100 text-slate-300 shadow-none'
                 }`}
               >
-                Checkout Selected
+                {hasMissingColor ? 'Complete Config' : 'Checkout Selected'}
               </button>
             </aside>
           </div>
@@ -528,14 +674,14 @@ const AddToCartPage: React.FC = () => {
 
           <button
             onClick={handleCheckout}
-            disabled={selectedItems.length === 0}
+            disabled={selectedItems.length === 0 || hasMissingColor}
             className={`flex h-12 items-center justify-center rounded-2xl px-6 text-[10px] font-black tracking-[2px] uppercase italic shadow-lg transition-all active:scale-95 ${
-              selectedItems.length > 0
+              selectedItems.length > 0 && !hasMissingColor
                 ? 'bg-slate-900 text-white'
                 : 'bg-slate-100 text-slate-300 shadow-none'
             }`}
           >
-            Checkout
+            {hasMissingColor ? 'Fix Entry' : 'Checkout'}
           </button>
         </div>
       </div>

@@ -14,6 +14,8 @@ export interface CartPlateInfo {
   channels: number
   printingInfo: string
   isOwned: boolean
+  compatibility?: IScreenPlateCompatibility[]
+  incompatibility?: IScreenPlateIncompatibility[]
 }
 
 export interface CartVariantInfo {
@@ -25,7 +27,7 @@ export interface CartVariantInfo {
   stock: number
 }
 
-import type { IProduct } from './product.types'
+import type { IProduct, IScreenPlateCompatibility, IScreenPlateIncompatibility } from './product.types'
 
 export interface CartItem {
   id: string
@@ -52,4 +54,35 @@ export interface CartItemTotals {
   printCost: number
   setupFeeApplied: number
   total: number
+}
+
+export interface AddToCartData {
+  id: string
+  product_id: string
+  variant_id: string
+  screenplate_id: string | null
+  quantity: number
+  unit_price: number
+  plate_price: number
+  total_cart_price: number
+  colors: {
+    color_id: string
+    id: string
+    channel_label: string
+    channel_order: number
+  }[]
+}
+
+export interface UpdateCartItemData {
+  quantity?: number
+  selected?: boolean | number
+  variant_id?: string
+  unit_price?: number
+  total_cart_price?: number
+  plate_price?: number
+  colors?: {
+    id: string
+    channel_label: string
+    channel_order: number
+  }[]
 }

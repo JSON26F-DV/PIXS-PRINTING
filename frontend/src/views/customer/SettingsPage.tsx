@@ -1,5 +1,5 @@
 import React, { useState, useRef, lazy, Suspense } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { clsx } from 'clsx'
 import { FiArrowLeft, FiMenu, FiX } from 'react-icons/fi'
@@ -164,8 +164,13 @@ const SidebarContent: React.FC<{
 // ── Main SettingsPage ──────────────────────────────────────────────
 const SettingsPage: React.FC = () => {
   const navigate = useNavigate()
+  const location = useLocation()
   const { user, isLoading } = useAuth()
-  const [activeSection, setActiveSection] = useState<SectionKey>('account')
+  
+  // Initialize with section from navigation state, defaulting to 'account'
+  const [activeSection, setActiveSection] = useState<SectionKey>(
+    (location.state as { section?: SectionKey })?.section || 'account'
+  )
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const contentRef = useRef<HTMLDivElement>(null)
 

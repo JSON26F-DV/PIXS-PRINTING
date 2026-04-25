@@ -18,24 +18,31 @@ class OrderController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
+        Log::info('Order creation attempt', ['request' => $request->all()]);
+
         $user = $request->user();
         if (!$user instanceof Customer) {
             return response()->json(['message' => 'Unauthorized'], 401);
         }
 
-        $validated = $request->validate([
-            'cart_item_ids' => 'required|array|min:1',
-            'cart_item_ids.*' => 'required|string',
-            'address_id' => 'required|string',
-            'payment_method_id' => 'required|string',
-            'delivery_method_id' => 'required|string|exists:delivery_methods,id',
-            'production_notes' => 'nullable|string',
-        ]);
+        try {
+            $validated = $request->validate([
+                'cart_item_ids' => 'required|array|min:1',
+                'cart_item_ids.*' => 'required|string',
+                'address_id' => 'required|string',
+                'payment_method_id' => 'required|string',
+                'delivery_method_id' => 'required|string|exists:delivery_methods,id',
+                'production_notes' => 'nullable|string',
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::warning('Order validation failed', ['errors' => $e->errors()]);
+            return response()->json(['message' => 'Validation failed', 'errors' => $e->errors()], 422);
+        }
 
         try {
             return DB::transaction(function () use ($validated, $user) {
                 // STEP 2: Load cart items with relations
-                $cartItems = \App\Models\CartItem::with(['colors.color', 'variant', 'screenplate', 'product.category'])
+                $cartItems = \App\Models\CartItem::with(['colors', 'variant', 'screenplate'])
                     ->whereIn('id', $validated['cart_item_ids'])
                     ->get();
 
@@ -47,23 +54,14 @@ class OrderController extends Controller
                 }
 
                 if ($cartItems->count() !== count($validated['cart_item_ids'])) {
-                     return response()->json(['message' => 'Some cart items were not found.'], 400);
+                     return response()->json(['message' => 'Some cart items were not found or do not belong to you.'], 400);
                 }
 
                 // STEP 3: Calculate totals
-                $subtotal = 0;
-                $plate_total = 0;
+                $totalAmount = $cartItems->sum('total_cart_price');
                 
-                foreach ($cartItems as $item) {
-                    $subtotal += $item->quantity * $item->unit_price;
-                    $plate_total += $item->quantity * $item->plate_price;
-                }
-                
-                $deliveryMethod = \App\Models\DeliveryMethod::find($validated['delivery_method_id']);
-                $totalAmount = $subtotal + $plate_total + ($deliveryMethod ? $deliveryMethod->fee : 0);
-
                 // STEP 4: Generate order ID
-                $orderId = 'ORD-' . strtoupper(\Illuminate\Support\Str::random(8));
+                $orderId = 'ORD-' . strtoupper(\Illuminate\Support\Str::random(10));
 
                 // STEP 5: Create the order row
                 $order = Order::create([
@@ -74,12 +72,14 @@ class OrderController extends Controller
                     'delivery_method_id' => $validated['delivery_method_id'],
                     'production_notes' => $validated['production_notes'] ?? null,
                     'total_amount' => $totalAmount,
-                    'total_discount_amount' => 0,
                     'status' => 'PENDING',
+                    'rating' => 0,
+                    'feedback' => null,
+                    'admin_comment' => null,
+                    'complaint' => null,
                 ]);
 
                 // STEP 6: For each cart_item, create order_item row
-                /*
                 foreach ($cartItems as $cartItem) {
                     $orderItem = OrderItem::create([
                         'order_id' => $orderId,
@@ -105,15 +105,13 @@ class OrderController extends Controller
                     }
                 }
 
-                // STEP 8: Delete processed cart_items
-                \App\Models\CartItem::whereIn('id', $validated['cart_item_ids'])->delete();
-                */
+                // STEP 8: Unselect processed cart_items (instead of deleting them)
+                \App\Models\CartItem::whereIn('id', $validated['cart_item_ids'])->update(['selected' => 0]);
 
                 // STEP 9: Return JSON response (201)
                 return response()->json([
                     "id" => $orderId,
                     "total_amount" => $totalAmount,
-                    "total_discount_amount" => 0,
                     "status" => "PENDING"
                 ], 201);
             });

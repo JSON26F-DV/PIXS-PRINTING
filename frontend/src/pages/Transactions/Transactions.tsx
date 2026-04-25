@@ -16,6 +16,7 @@ import type { CartItem } from '../../types/cart'
 import AbortConfirmModal from '../../components/Transactions/AbortConfirmModal'
 import PurchaseSuccessModal from '../../components/Transactions/PurchaseSuccessModal'
 import { orderApi } from '../../api/orders.api'
+import { cartService } from '../AddToCart/services/cartService'
 
 import AddressSection from '../../components/Transactions/AddressSection'
 import PaymentSection from '../../components/Transactions/PaymentSection'
@@ -124,48 +125,57 @@ const Transactions: React.FC = () => {
 
   // Initial Data Load
   useEffect(() => {
-    const fetchDeliveryData = async () => {
+    const fetchInitialData = async () => {
       try {
-        const res = await axiosInstance.get('/api/delivery-methods')
-        setDeliveryData(res.data)
-        const def = res.data.find((d: IDeliveryMethod) => d.id === 'del_001') || res.data[0]
+        const [delRes] = await Promise.all([
+          axiosInstance.get('/api/delivery-methods'),
+          fetchAddresses(),
+          fetchPayments(),
+        ])
+
+        setDeliveryData(delRes.data)
+        const def =
+          delRes.data.find((d: IDeliveryMethod) => d.id === 'del_001') ||
+          delRes.data[0]
         if (def) {
           setSelectedDeliveryId(def.id)
           setDeliveryFee(Number(def.fee || 0))
         }
+
+        // Load checkout items
+        const isDirect =
+          new URLSearchParams(location.search).get('direct') === 'true'
+        if (isDirect) {
+          const savedItems = JSON.parse(
+            localStorage.getItem('pixs_buy_now_v1') || '[]',
+          )
+          setCheckoutItems(savedItems)
+          if (savedItems.length === 0) {
+            toast.error('No items selected for transaction.')
+            navigate(-1)
+          }
+        } else {
+          try {
+            const items = await cartService.getCartItems()
+            const selected = items.filter((i) => i.selected)
+            setCheckoutItems(selected)
+            if (selected.length === 0) {
+              toast.error('No selected items found in cart.')
+              navigate('/cart')
+            }
+          } catch (err) {
+            console.error('Failed to fetch cart items:', err)
+            toast.error('Failed to load cart items.')
+            navigate('/cart')
+          }
+        }
       } catch (err) {
-        console.error('Failed to fetch delivery methods:', err)
+        console.error('Failed to fetch data:', err)
       }
     }
 
-    fetchAddresses()
-    fetchPayments()
-    // fetchPromotions()
-    fetchDeliveryData()
-
-    // Load selected items from localStorage
-    const isDirect =
-      new URLSearchParams(location.search).get('direct') === 'true'
-    const sourceKey = isDirect ? 'pixs_buy_now_v1' : 'pixs_checkout_node'
-
-    const savedItems = JSON.parse(localStorage.getItem(sourceKey) || '[]')
-    setCheckoutItems(savedItems)
-
-    if (savedItems.length === 0) {
-      toast.error('No items selected for transaction.')
-      if (isDirect) {
-        navigate(-1)
-      } else {
-        navigate('/cart')
-      }
-    }
-  }, [
-    navigate,
-    location.search,
-    fetchAddresses,
-    fetchPayments,
-    // fetchPromotions,
-  ])
+    fetchInitialData()
+  }, [navigate, location.search, fetchAddresses, fetchPayments])
 
   // Set defaults once data is loaded
   useEffect(() => {
@@ -217,8 +227,11 @@ const Transactions: React.FC = () => {
       production_notes: notes
     };
 
+    console.log('Final Order Payload:', payload)
+
     try {
       const response = await orderApi.createOrder(payload)
+      console.log('Order Response:', response)
 
       // The backend creates order, order items, and deletes the cart items. 
       // We can trigger an event or just remove checkout_nodes so it refreshes.
@@ -238,9 +251,11 @@ const Transactions: React.FC = () => {
       localStorage.removeItem('pixs_checkout_node')
       localStorage.removeItem('pixs_buy_now_v1')
       
-      const orderDataResponse = response.data;
-      setLastOrderId(orderDataResponse?.id || 'ORD-NEW')
-      setLastOrderTotal(orderDataResponse?.total_amount || 0)
+      const orderId = response?.id || 'ORD-NEW'
+      const orderTotal = response?.total_amount || 0
+
+      setLastOrderId(orderId)
+      setLastOrderTotal(orderTotal)
       
       if ('vibrate' in navigator) {
         navigator.vibrate([100, 50, 100, 50, 200])
@@ -248,6 +263,7 @@ const Transactions: React.FC = () => {
 
       setIsSuccessModalOpen(true)
       toast.success('Order placed successfully!')
+      alert('SUCCESS: Data has been created in the orders table.')
       
       setTimeout(() => {
         navigate('/orders')
@@ -257,6 +273,7 @@ const Transactions: React.FC = () => {
       const errorResponse = err as { errors?: { message: string }[]; response?: { data?: { message?: string } } };
       const msg = errorResponse.errors?.[0]?.message || errorResponse.response?.data?.message || 'Failed to place order.'
       toast.error(msg)
+      alert('ERROR: Failed to create data in the orders table. ' + msg)
     } finally {
       setIsProcessing(false)
     }
@@ -307,17 +324,61 @@ const Transactions: React.FC = () => {
 
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_420px] lg:gap-12">
           <div className="TransactionsLeft space-y-10">
-            <AddressSection
-              selectedId={selectedAddressId}
-              onSelect={setSelectedAddressId}
-            />
+            {/* 📍 ADDRESS SELECTION FALLBACK */}
+            {/* If no addresses found, prompt user to add one in their profile/settings */}
+            {addresses.length > 0 ? (
+              <AddressSection
+                selectedId={selectedAddressId}
+                onSelect={setSelectedAddressId}
+              />
+            ) : (
+              <div className="AddressFallback rounded-[32px] border-2 border-dashed border-slate-200 bg-white p-12 text-center">
+                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-slate-50 text-slate-400">
+                  <Truck size={32} />
+                </div>
+                <h3 className="text-lg font-black tracking-tighter text-slate-900 uppercase italic">
+                  No Shipping Address Found.
+                </h3>
+                <p className="mt-2 text-[10px] font-bold tracking-widest text-slate-400 uppercase italic">
+                  PLEASE ADD A SHIPPING ADDRESS IN YOUR PROFILE TO PROCEED.
+                </p>
+                <button 
+                  onClick={() => navigate('/settings', { state: { section: 'address' } })}
+                  className="mt-6 text-[10px] font-black tracking-[4px] text-pixs-mint border border-pixs-mint/20 px-6 py-3 rounded-full hover:bg-pixs-mint/5 transition-all uppercase italic"
+                >
+                  Add Address Now
+                </button>
+              </div>
+            )}
 
             <div className="h-px w-full bg-slate-100" />
 
-            <PaymentSection
-              selectedId={selectedPaymentId}
-              onSelect={setSelectedPaymentId}
-            />
+            {/* 💳 PAYMENT METHOD FALLBACK */}
+            {/* If no payment methods found, prompt user to add one to continue checkout */}
+            {paymentMethods.length > 0 ? (
+              <PaymentSection
+                selectedId={selectedPaymentId}
+                onSelect={setSelectedPaymentId}
+              />
+            ) : (
+              <div className="PaymentFallback rounded-[32px] border-2 border-dashed border-slate-200 bg-white p-12 text-center">
+                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-slate-50 text-slate-400">
+                  <ShieldCheck size={32} />
+                </div>
+                <h3 className="text-lg font-black tracking-tighter text-slate-900 uppercase italic">
+                  No Payment Method Linked.
+                </h3>
+                <p className="mt-2 text-[10px] font-bold tracking-widest text-slate-400 uppercase italic">
+                  PLEASE ADD A PAYMENT METHOD TO SECURE YOUR ORDER.
+                </p>
+                <button 
+                  onClick={() => navigate('/settings', { state: { section: 'payment' } })}
+                  className="mt-6 text-[10px] font-black tracking-[4px] text-pixs-mint border border-pixs-mint/20 px-6 py-3 rounded-full hover:bg-pixs-mint/5 transition-all uppercase italic"
+                >
+                  Link Payment Method
+                </button>
+              </div>
+            )}
 
             <div className="h-px w-full bg-slate-100" />
 

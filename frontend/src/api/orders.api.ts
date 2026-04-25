@@ -1,19 +1,19 @@
-import axios from 'axios'
+import axiosInstance from '../lib/axiosInstance'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
+export interface CreateOrderPayload {
+    cart_item_ids: string[]
+    address_id: string
+    payment_method_id: string
+    delivery_method_id: string
+    production_notes?: string
+}
 
 export const orderApi = {
     /**
      * Create a new order.
      */
-    createOrder: async (orderData: any) => {
-        const response = await axios.post(`${API_URL}/orders`, orderData, {
-            withCredentials: true,
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json',
-            }
-        })
+    createOrder: async (orderData: CreateOrderPayload) => {
+        const response = await axiosInstance.post(`/api/customer/orders`, orderData)
         return response.data
     }
 }

@@ -14,10 +14,6 @@ return new class extends Migration
         Schema::create('delivery_methods', function (Blueprint $table) {
             $table->string('id', 50)->primary();
             $table->string('name');
-            $table->enum('type', ['courier', 'pickup']);
-            $table->decimal('fee', 10, 2)->default(0);
-            $table->text('note')->nullable();
-            $table->timestamps();
         });
     }
 

@@ -104,6 +104,7 @@ export const useCart = () => {
       platePrice: number;
       quantity: number;
       selected: boolean;
+      variant: CartItem['variant'];
     }>
   ) => {
     setItems((prev) =>
@@ -113,14 +114,16 @@ export const useCart = () => {
           const nextColors = updates.colors ?? i.colors;
           const nextSelected = updates.selected ?? i.selected;
           const nextPrintPrice = updates.platePrice !== undefined ? updates.platePrice : (i.plate?.printPricePerUnit ?? 0);
-          
-          const nextTotal = (i.variant.unitPrice * nextQty) + (nextPrintPrice * nextQty);
+          const nextVariant = updates.variant ?? i.variant;
+
+          const nextTotal = (nextVariant.unitPrice * nextQty) + (nextPrintPrice * nextQty);
           
           return { 
             ...i, 
             quantity: nextQty, 
             colors: nextColors, 
             selected: nextSelected,
+            variant: nextVariant,
             totalCartPrice: nextTotal,
             plate: i.plate ? { ...i.plate, printPricePerUnit: nextPrintPrice } : null
           };
@@ -130,13 +133,16 @@ export const useCart = () => {
     )
   }
 
-  const syncCart = async () => {
+  const syncCart = async (targetItems?: CartItem[]) => {
     try {
-      const promises = items.map((item) =>
+      const itemsToSync = targetItems || items
+      const promises = itemsToSync.map((item) =>
         cartService.updateCartItem(item.id, {
           quantity: item.quantity,
           total_cart_price: item.totalCartPrice,
           selected: item.selected ? 1 : 0,
+          variant_id: item.variant.id,
+          unit_price: item.variant.unitPrice,
           colors: item.colors.map((c, index) => ({
             id: c.id,
             channel_label: index === 0 ? 'Primary' : index === 1 ? 'Secondary' : 'Accent',
@@ -145,6 +151,9 @@ export const useCart = () => {
         }),
       )
       await Promise.all(promises)
+      if (targetItems) {
+        setItems(targetItems)
+      }
       return true
     } catch (e) {
       console.error('Failed to sync cart:', e)

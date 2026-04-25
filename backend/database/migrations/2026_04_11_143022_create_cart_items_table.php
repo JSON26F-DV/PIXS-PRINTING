@@ -17,8 +17,8 @@ return new class extends Migration {
             $table->string('variant_id', 30)->index('variant_id');
             $table->string('screenplate_id', 20)->nullable()->index('screenplate_id');
             $table->unsignedInteger('quantity')->default(1);
-            $table->decimal('unit_price', 10)->default(0);
-            $table->decimal('plate_price', 10)->default(0);
+            $table->decimal('unit_price', 10, 2)->default(0);
+            $table->decimal('plate_price', 10, 2)->default(0);
             $table->dateTime('created_at')->useCurrent();
         });
     }

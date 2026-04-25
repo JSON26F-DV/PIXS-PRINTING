@@ -88,10 +88,12 @@ export const InputField = ({
   label: string
   name?: string
   type?: string
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
   register?: UseFormRegister<any>
   error?: FieldError
   placeholder?: string
-  rules?: RegisterOptions
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+  rules?: RegisterOptions<any>
   value?: string | number
   onChange?: (val: string) => void
 }) => {
@@ -145,6 +147,7 @@ export const TextArea = ({
 }: {
   label: string
   name?: string
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
   register?: UseFormRegister<any>
   error?: FieldError
   placeholder?: string

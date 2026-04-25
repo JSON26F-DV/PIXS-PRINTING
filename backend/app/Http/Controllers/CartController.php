@@ -11,9 +11,6 @@ use Illuminate\Support\Facades\Log;
 
 class CartController extends Controller
 {
-    /**
-     * Get the authenticated customer's cart items.
-     */
     public function index(Request $request): JsonResponse
     {
         $user = $request->user();
@@ -33,12 +30,21 @@ class CartController extends Controller
                 ->where('customer_id', $user->id)
                 ->get();
 
+            foreach ($items as $item) {
+                if ($item->screenplate) {
+                    $this->transformScreenplate($item->screenplate);
+                }
+            }
+
             return response()->json([
                 'status' => 'success',
                 'data' => $items,
             ]);
         } catch (\Throwable $e) {
-            Log::error('CartController@index failed', ['message' => $e->getMessage()]);
+            Log::error('CartController@index failed', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
 
             return response()->json(['message' => 'Failed to load cart'], 500);
         }
@@ -98,10 +104,15 @@ class CartController extends Controller
                     }
                 }
 
+                $cartItem->load(['colors.color', 'product.variants', 'variant', 'screenplate.compatibility', 'screenplate.incompatibility']);
+                if ($cartItem->screenplate) {
+                    $this->transformScreenplate($cartItem->screenplate);
+                }
+
                 return response()->json([
                     'status' => 'success',
                     'message' => 'Cart updated',
-                    'data' => $cartItem->load(['colors.color', 'product.variants', 'variant', 'screenplate.compatibility', 'screenplate.incompatibility']),
+                    'data' => $cartItem,
                 ]);
             });
         } catch (\Throwable $e) {
@@ -125,6 +136,8 @@ class CartController extends Controller
 
         $validated = $request->validate([
             'quantity' => 'sometimes|integer|min:1',
+            'variant_id' => 'sometimes|string',
+            'unit_price' => 'sometimes|numeric',
             'total_cart_price' => 'sometimes|numeric',
             'selected' => 'sometimes|boolean',
             'colors' => 'sometimes|array',
@@ -132,7 +145,7 @@ class CartController extends Controller
 
         try {
             return DB::transaction(function () use ($validated, $cartItem, $request) {
-                $cartItem->update($request->only(['quantity', 'total_cart_price', 'selected']));
+                $cartItem->update($request->only(['quantity', 'variant_id', 'unit_price', 'total_cart_price', 'selected']));
 
                 if (isset($validated['colors'])) {
                     $cartItem->colors()->delete();
@@ -145,10 +158,15 @@ class CartController extends Controller
                     }
                 }
 
+                $cartItem->load(['colors.color', 'product.variants', 'variant', 'screenplate.compatibility', 'screenplate.incompatibility']);
+                if ($cartItem->screenplate) {
+                    $this->transformScreenplate($cartItem->screenplate);
+                }
+
                 return response()->json([
                     'status' => 'success',
                     'message' => 'Item updated',
-                    'data' => $cartItem->load(['colors.color', 'product.variants', 'variant', 'screenplate.compatibility', 'screenplate.incompatibility']),
+                    'data' => $cartItem,
                 ]);
             });
         } catch (\Throwable $e) {
@@ -174,5 +192,28 @@ class CartController extends Controller
             'status' => 'success',
             'message' => 'Item removed',
         ]);
+    }
+
+    private function transformScreenplate($screenplate)
+    {
+        $screenplate->compatibilityMapped = $screenplate->compatibility->groupBy('product_id')->map(function ($rows, $productId) {
+            return [
+                'product_id' => $productId,
+                'allowed_variants' => $rows->pluck('variant_id')->map(fn($v) => $v ?? 'ALL')->toArray(),
+                'print_price_per_unit' => $rows->pluck('print_price_per_unit', 'variant_id')->mapWithKeys(function($price, $vId) {
+                    return [$vId ?? 'ALL' => (float)$price];
+                })->toArray(),
+            ];
+        })->values();
+
+        $screenplate->incompatibilityMapped = $screenplate->incompatibility->groupBy('product_id')->map(function ($rows, $productId) {
+            return [
+                'product_id' => $productId,
+                'variant_ids' => $rows->pluck('variant_id')->filter()->values()->toArray(),
+            ];
+        })->values();
+        
+        $screenplate->setRelation('compatibility', $screenplate->compatibilityMapped);
+        $screenplate->setRelation('incompatibility', $screenplate->incompatibilityMapped);
     }
 }

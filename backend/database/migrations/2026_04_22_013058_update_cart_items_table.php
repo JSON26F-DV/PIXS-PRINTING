@@ -14,7 +14,9 @@ return new class extends Migration
         Schema::table('cart_items', function (Blueprint $table) {
             $table->decimal('total_cart_price', 10, 2)->after('plate_price')->default(0);
             $table->boolean('selected')->after('total_cart_price')->default(false);
-            $table->dropColumn('updated_at');
+            if (Schema::hasColumn('cart_items', 'updated_at')) {
+                $table->dropColumn('updated_at');
+            }
         });
     }
 
