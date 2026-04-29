@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost
--- Generation Time: Apr 20, 2026 at 03:52 AM
+-- Generation Time: Apr 27, 2026 at 11:27 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -37,6 +37,12 @@ CREATE TABLE `cache` (
 -- Dumping data for table `cache`
 --
 
+INSERT INTO `cache` (`key`, `value`, `expiration`) VALUES
+('laravel-cache-5210a5ff37c1adf5db1b3c6d03bff28b', 'i:1;', 1777281693),
+('laravel-cache-5210a5ff37c1adf5db1b3c6d03bff28b:timer', 'i:1777281693;', 1777281693),
+('laravel-cache-a75f3f172bfb296f2e10cbfc6dfc1883', 'i:10;', 1777281693),
+('laravel-cache-a75f3f172bfb296f2e10cbfc6dfc1883:timer', 'i:1777281693;', 1777281693);
+
 -- --------------------------------------------------------
 
 --
@@ -64,13 +70,18 @@ CREATE TABLE `cart_items` (
   `quantity` int(10) UNSIGNED NOT NULL DEFAULT 1,
   `unit_price` decimal(10,2) NOT NULL DEFAULT 0.00,
   `plate_price` decimal(10,2) NOT NULL DEFAULT 0.00,
-  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
-  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `total_cart_price` decimal(10,2) NOT NULL DEFAULT 0.00,
+  `selected` tinyint(1) NOT NULL DEFAULT 0,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `cart_items`
 --
+
+INSERT INTO `cart_items` (`id`, `customer_id`, `product_id`, `variant_id`, `screenplate_id`, `quantity`, `unit_price`, `plate_price`, `total_cart_price`, `selected`, `created_at`) VALUES
+('P007__V-DOME-90MM__no-color__no-plate', 'CUST-503', 'P007', 'V-DOME-90MM', NULL, 200, 1.30, 0.00, 260.00, 1, '2026-04-27 17:20:38'),
+('P011__V-BS-STD__no-color__no-plate', 'CUST-503', 'P011', 'V-BS-STD', NULL, 500, 1.00, 0.00, 500.00, 0, '2026-04-25 22:01:09');
 
 -- --------------------------------------------------------
 
@@ -79,15 +90,12 @@ CREATE TABLE `cart_items` (
 --
 
 CREATE TABLE `cart_item_colors` (
+  `id` int(10) UNSIGNED NOT NULL,
   `cart_item_id` varchar(100) NOT NULL,
   `color_id` varchar(10) NOT NULL,
   `channel_label` enum('Primary','Secondary','Accent') NOT NULL DEFAULT 'Primary',
-  `channel_order` int(11) NOT NULL DEFAULT 0
+  `channel_order` tinyint(3) UNSIGNED NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
---
--- Dumping data for table `cart_item_colors`
---
 
 -- --------------------------------------------------------
 
@@ -152,13 +160,6 @@ CREATE TABLE `conversations` (
   `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Dumping data for table `conversations`
---
-
-INSERT INTO `conversations` (`id`, `last_message_id`, `created_at`, `updated_at`) VALUES
-('EMP-001_CUST-501', 'msg_2', '2026-04-11 21:29:57', '2026-04-11 21:29:57');
-
 -- --------------------------------------------------------
 
 --
@@ -173,14 +174,6 @@ CREATE TABLE `conversation_participants` (
   `joined_at` datetime NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Dumping data for table `conversation_participants`
---
-
-INSERT INTO `conversation_participants` (`id`, `conversation_id`, `participant_id`, `participant_type`, `joined_at`) VALUES
-(1, 'EMP-001_CUST-501', 'EMP-001', 'employee', '2026-04-11 21:29:57'),
-(2, 'EMP-001_CUST-501', 'CUST-501', 'customer', '2026-04-11 21:29:57');
-
 -- --------------------------------------------------------
 
 --
@@ -193,7 +186,6 @@ CREATE TABLE `customers` (
   `last_name` varchar(100) NOT NULL,
   `profile_picture` varchar(500) DEFAULT NULL,
   `email` varchar(255) NOT NULL,
-  `role` enum('customer') NOT NULL DEFAULT 'customer',
   `status` enum('active','inactive') NOT NULL DEFAULT 'active',
   `age` tinyint(3) UNSIGNED DEFAULT NULL,
   `gender` enum('male','female','other') DEFAULT NULL,
@@ -211,10 +203,10 @@ CREATE TABLE `customers` (
 -- Dumping data for table `customers`
 --
 
-INSERT INTO `customers` (`id`, `first_name`, `last_name`, `profile_picture`, `email`, `role`, `status`, `age`, `gender`, `company_name`, `password`, `total_orders_value`, `orders`, `google_id`, `facebook_id`, `date_created`, `last_login`) VALUES
-('CUST-501', 'Juan', 'Dela Cruz', 'https://i.pravatar.cc/300?img=14', 'juan@example.com', 'customer', 'active', 35, 'male', 'Juan\'s Sari-Sari', '$2y$12$6pX90R7u0.9TInXzGPmGuev6MvE.C1uXyX8v7.nF9t/K9.uH.yM2e', 15450.50, 12, NULL, NULL, '2024-05-12 14:20:00', '2026-03-27 11:00:00'),
-('CUST-502', 'Laguna', 'Prints', 'https://i.pravatar.cc/300?img=15', 'info@lagunaprints.com', 'customer', 'active', 42, 'female', 'Laguna Prints & Design', '$2y$12$6pX90R7u0.9TInXzGPmGuev6MvE.C1uXyX8v7.nF9t/K9.uH.yM2e', 85200.00, 45, NULL, NULL, '2024-06-20 11:45:00', '2026-03-28 09:30:00'),
-('CUST-503', 'aira', 'uzi', NULL, 'airamapagmahal67@gmail.com', 'customer', 'active', 21, 'female', 'Ligma Shop\r\n', '$2y$12$tL5Z7oAftnGXxR/OiRbWsesHft8PIlY0uNWrGjojWGU1q4aEhL9Dq', 0.00, 0, NULL, NULL, '2026-04-12 01:07:22', NULL);
+INSERT INTO `customers` (`id`, `first_name`, `last_name`, `profile_picture`, `email`, `status`, `age`, `gender`, `company_name`, `password`, `total_orders_value`, `orders`, `google_id`, `facebook_id`, `date_created`, `last_login`) VALUES
+('CUST-501', 'Juan', 'Dela Cruz', 'https://i.pravatar.cc/300?img=14', 'juan@example.com', 'active', 35, 'male', 'Juan\'s Sari-Sari', '$2y$12$6pX90R7u0.9TInXzGPmGuev6MvE.C1uXyX8v7.nF9t/K9.uH.yM2e', 15450.50, 12, NULL, NULL, '2024-05-12 14:20:00', '2026-03-27 11:00:00'),
+('CUST-502', 'Laguna', 'Prints', 'https://i.pravatar.cc/300?img=15', 'info@lagunaprints.com', 'active', 42, 'female', 'Laguna Prints & Design', '$2y$12$6pX90R7u0.9TInXzGPmGuev6MvE.C1uXyX8v7.nF9t/K9.uH.yM2e', 85200.00, 45, NULL, NULL, '2024-06-20 11:45:00', '2026-03-28 09:30:00'),
+('CUST-503', 'aira', 'uzi', NULL, 'airamapagmahal67@gmail.com', 'active', 21, 'female', 'Ligma Shop\r\n', '$2y$12$tL5Z7oAftnGXxR/OiRbWsesHft8PIlY0uNWrGjojWGU1q4aEhL9Dq', 0.00, 0, NULL, NULL, '2026-04-12 01:07:22', NULL);
 
 -- --------------------------------------------------------
 
@@ -257,17 +249,6 @@ CREATE TABLE `customer_contact_numbers` (
   `is_default` tinyint(1) NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Dumping data for table `customer_contact_numbers`
---
-
-INSERT INTO `customer_contact_numbers` (`id`, `customer_id`, `number`, `is_default`) VALUES
-(1, 'CUST-501', '+63 918 111 2233', 1),
-(2, 'CUST-501', '+63 919 444 5566', 0),
-(3, 'CUST-502', '+63 920 555 8888', 1),
-(4, 'CUST-502', '+63 921 222 1010', 0),
-(5, 'CUST-503', '+639945646355', 1);
-
 -- --------------------------------------------------------
 
 --
@@ -286,13 +267,6 @@ CREATE TABLE `customer_discounts` (
   `expires_at` datetime DEFAULT NULL,
   `status` enum('active','used','expired') NOT NULL DEFAULT 'active'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
---
--- Dumping data for table `customer_discounts`
---
-
-INSERT INTO `customer_discounts` (`id`, `customer_id`, `discount_id`, `type`, `value`, `product_id`, `remaining_uses`, `is_one_time`, `expires_at`, `status`) VALUES
-(1, 'CUST-502', 'DISC-001', 'unit', 1.50, 'P001', 1, 1, '2026-06-01 00:00:00', 'active');
 
 -- --------------------------------------------------------
 
@@ -337,14 +311,6 @@ CREATE TABLE `deleted_accounts` (
   `deleted_at` datetime NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Dumping data for table `deleted_accounts`
---
-
-INSERT INTO `deleted_accounts` (`id`, `original_id`, `account_type`, `email`, `password`, `deleted_by`, `deleted_by_type`, `reason`, `deleted_at`) VALUES
-(1, 'CUST-503', 'customer', 'banned@example.com', '$2y$12$6pX90R7u0.9TInXzGPmGuev6MvE.C1uXyX8v7.nF9t/K9.uH.yM2e', 'EMP-001', 'employee', 'Fraudulent transactions reported', '2026-04-11 18:07:15'),
-(2, 'EMP-005', 'employee', 'fired@pixs.com', '$2y$12$6pX90R7u0.9TInXzGPmGuev6MvE.C1uXyX8v7.nF9t/K9.uH.yM2e', 'EMP-001', 'employee', 'Violation of company policy', '2026-04-11 18:07:15');
-
 -- --------------------------------------------------------
 
 --
@@ -353,22 +319,17 @@ INSERT INTO `deleted_accounts` (`id`, `original_id`, `account_type`, `email`, `p
 
 CREATE TABLE `delivery_methods` (
   `id` varchar(50) NOT NULL,
-  `name` varchar(255) NOT NULL,
-  `type` enum('courier','pickup') NOT NULL,
-  `fee` decimal(10,2) NOT NULL DEFAULT 0.00,
-  `note` text DEFAULT NULL,
-  `created_at` timestamp NULL DEFAULT NULL,
-  `updated_at` timestamp NULL DEFAULT NULL
+  `name` varchar(255) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `delivery_methods`
 --
 
-INSERT INTO `delivery_methods` (`id`, `name`, `type`, `fee`, `note`, `created_at`, `updated_at`) VALUES
-('del_001', 'Lalamoves', 'courier', 0.00, 'Customer will book and pay the courier directly upon pickup.', '2026-04-19 14:38:44', '2026-04-19 14:38:44'),
-('del_002', 'J&T Express', 'courier', 0.00, 'Shipping fee will be paid by the customer upon delivery (Cash on Delivery for SF).', '2026-04-19 14:38:44', '2026-04-19 14:38:44'),
-('del_003', 'Store Pickup/Self-Book', 'pickup', 0.00, 'Pick up your order directly from our production hub.', '2026-04-19 14:38:44', '2026-04-19 14:38:44');
+INSERT INTO `delivery_methods` (`id`, `name`) VALUES
+('del_001', 'Lalamove'),
+('del_002', 'J&T Express'),
+('del_003', 'Store Pickup/Self-Book');
 
 -- --------------------------------------------------------
 
@@ -382,7 +343,7 @@ CREATE TABLE `employees` (
   `last_name` varchar(100) NOT NULL,
   `profile_picture` varchar(500) DEFAULT NULL,
   `email` varchar(255) NOT NULL,
-  `role` enum('admin','staff','technician','welder','inventory') NOT NULL,
+  `role` enum('admin','staff','technician','welder') NOT NULL,
   `status` enum('active','inactive') NOT NULL DEFAULT 'active',
   `age` tinyint(3) UNSIGNED DEFAULT NULL,
   `gender` enum('male','female','other') DEFAULT NULL,
@@ -394,16 +355,6 @@ CREATE TABLE `employees` (
   `date_created` datetime NOT NULL DEFAULT current_timestamp(),
   `last_login` datetime DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
---
--- Dumping data for table `employees`
---
-
-INSERT INTO `employees` (`id`, `first_name`, `last_name`, `profile_picture`, `email`, `role`, `status`, `age`, `gender`, `company_name`, `password`, `total_orders_value`, `daily_rate`, `ot_rate`, `date_created`, `last_login`) VALUES
-('EMP-001', 'Jason', 'G', 'https://i.pravatar.cc/300?img=11', 'jason@pixs.com', 'admin', 'active', 28, 'male', 'PIXS PRINTING SHOP', '$2y$12$tL5Z7oAftnGXxR/OiRbWsesHft8PIlY0uNWrGjojWGU1q4aEhL9Dq', 0.00, 850.00, 150.00, '2024-01-15 08:00:00', '2026-03-28 10:30:00'),
-('EMP-002', 'Staff', 'A', 'https://i.pravatar.cc/300?img=12', 'staff_a@pixs.com', 'staff', 'active', 24, 'female', 'PIXS PRINTING SHOP', '$2y$12$6pX90R7u0.9TInXzGPmGuev6MvE.C1uXyX8v7.nF9t/K9.uH.yM2e', 0.00, 600.00, 100.00, '2024-02-10 09:00:00', '2026-03-28 08:15:00'),
-('EMP-003', 'Tech', 'B', 'https://i.pravatar.cc/300?img=13', 'tech_b@pixs.com', 'technician', 'active', 30, 'male', 'PIXS PRINTING SHOP', '$2y$12$6pX90R7u0.9TInXzGPmGuev6MvE.C1uXyX8v7.nF9t/K9.uH.yM2e', 0.00, 750.00, 120.00, '2024-03-15 10:00:00', '2026-03-28 11:45:00'),
-('EMP-004', 'Weld', 'C', 'https://i.pravatar.cc/300?img=15', 'weld_c@pixs.com', 'welder', 'active', 28, 'male', 'PIXS PRINTING SHOP', '$2y$12$6pX90R7u0.9TInXzGPmGuev6MvE.C1uXyX8v7.nF9t/K9.uH.yM2e', 0.00, 800.00, 150.00, '2024-03-15 10:00:00', '2026-03-28 11:45:00');
 
 -- --------------------------------------------------------
 
@@ -428,14 +379,6 @@ CREATE TABLE `employee_addresses` (
   `longitude` decimal(10,7) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Dumping data for table `employee_addresses`
---
-
-INSERT INTO `employee_addresses` (`id`, `employee_id`, `full_name`, `phone`, `region`, `province`, `city`, `barangay`, `street`, `address`, `postal_code`, `is_default`, `latitude`, `longitude`) VALUES
-('addr_001', 'EMP-001', 'Jason G', '+63 912 345 6789', 'NCR', 'Metro Manila', 'Manila', 'Barangay 123', '123 Taft Ave', '123 Taft Ave, Manila', '1000', 1, 14.5995000, 120.9842000),
-('addr_003', 'EMP-002', 'Staff Primary', '+63 911 111 2222', 'Region IV-A', 'Laguna', 'Calamba', 'Parian', '456 National Hwy', 'Calamba, Laguna', '4027', 1, 14.2133000, 121.1633000);
-
 -- --------------------------------------------------------
 
 --
@@ -455,33 +398,6 @@ CREATE TABLE `employee_attendance` (
   `is_holiday` tinyint(1) NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Dumping data for table `employee_attendance`
---
-
-INSERT INTO `employee_attendance` (`id`, `weekly_salary_id`, `employee_id`, `date`, `status`, `overtime_hours`, `late_minutes`, `hours_worked`, `computed_salary`, `is_holiday`) VALUES
-(1, 1, 'EMP-001', '2026-03-30', 'full', 2.00, 0, 8.00, 1150.00, 0),
-(2, 1, 'EMP-001', '2026-03-31', 'full', 0.00, 0, 8.00, 850.00, 0),
-(3, 1, 'EMP-001', '2026-04-01', 'half', 1.00, 0, 4.00, 575.00, 1),
-(4, 1, 'EMP-001', '2026-04-02', 'full', 0.00, 0, 8.00, 850.00, 0),
-(5, 1, 'EMP-001', '2026-04-03', 'full', 2.00, 30, 7.50, 1150.00, 0),
-(6, 1, 'EMP-001', '2026-04-04', 'absent', 0.00, 0, 0.00, 0.00, 0),
-(7, 1, 'EMP-001', '2026-04-05', 'absent', 0.00, 0, 0.00, 0.00, 0),
-(8, 2, 'EMP-001', '2026-04-06', 'full', 0.00, 0, 8.00, 850.00, 0),
-(9, 2, 'EMP-001', '2026-04-07', 'full', 2.00, 0, 8.00, 1150.00, 0),
-(10, 2, 'EMP-001', '2026-04-08', 'full', 0.00, 0, 8.00, 850.00, 0),
-(11, 2, 'EMP-001', '2026-04-09', 'full', 0.00, 0, 8.00, 850.00, 0),
-(12, 2, 'EMP-001', '2026-04-10', 'full', 1.00, 0, 8.00, 1000.00, 0),
-(13, 2, 'EMP-001', '2026-04-11', 'absent', 0.00, 0, 0.00, 0.00, 0),
-(14, 2, 'EMP-001', '2026-04-12', 'absent', 0.00, 0, 0.00, 0.00, 0),
-(15, 3, 'EMP-002', '2026-03-30', 'full', 0.00, 0, 8.00, 600.00, 0),
-(16, 3, 'EMP-002', '2026-03-31', 'full', 2.00, 0, 8.00, 800.00, 0),
-(17, 3, 'EMP-002', '2026-04-01', 'full', 1.00, 0, 8.00, 700.00, 0),
-(18, 3, 'EMP-002', '2026-04-02', 'half', 0.00, 60, 3.00, 225.00, 0),
-(19, 3, 'EMP-002', '2026-04-03', 'full', 2.00, 0, 8.00, 800.00, 0),
-(20, 3, 'EMP-002', '2026-04-04', 'full', 0.00, 0, 8.00, 600.00, 0),
-(21, 3, 'EMP-002', '2026-04-05', 'absent', 0.00, 0, 0.00, 0.00, 0);
-
 -- --------------------------------------------------------
 
 --
@@ -494,18 +410,6 @@ CREATE TABLE `employee_contact_numbers` (
   `number` varchar(30) NOT NULL,
   `is_default` tinyint(1) NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
---
--- Dumping data for table `employee_contact_numbers`
---
-
-INSERT INTO `employee_contact_numbers` (`id`, `employee_id`, `number`, `is_default`) VALUES
-(1, 'EMP-001', '+63 912 345 6789', 1),
-(2, 'EMP-001', '+63 917 200 1001', 0),
-(3, 'EMP-002', '+63 912 345 6780', 1),
-(4, 'EMP-002', '+63 917 200 1002', 0),
-(5, 'EMP-003', '+63 912 345 6788', 1),
-(6, 'EMP-004', '+63 912 345 6789', 1);
 
 -- --------------------------------------------------------
 
@@ -520,15 +424,6 @@ CREATE TABLE `employee_weekly_salary` (
   `weekly_total` decimal(12,2) NOT NULL DEFAULT 0.00,
   `weekly_hours_total` decimal(6,2) NOT NULL DEFAULT 0.00
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
---
--- Dumping data for table `employee_weekly_salary`
---
-
-INSERT INTO `employee_weekly_salary` (`id`, `employee_id`, `week_start`, `weekly_total`, `weekly_hours_total`) VALUES
-(1, 'EMP-001', '2026-03-30', 4575.00, 35.50),
-(2, 'EMP-001', '2026-04-06', 4700.00, 40.00),
-(3, 'EMP-002', '2026-03-30', 3725.00, 43.00);
 
 -- --------------------------------------------------------
 
@@ -564,31 +459,6 @@ CREATE TABLE `inventory_logs` (
   `date` datetime NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Dumping data for table `inventory_logs`
---
-
-INSERT INTO `inventory_logs` (`id`, `employee_id`, `product_id`, `product_name`, `qty_added`, `cost`, `type`, `notes`, `date`) VALUES
-('RL-001', 'EMP-001', 'P001', 'PPY Cup', 500, 1500.00, 'RESTOCK', 'Bulk restock for April start.', '2026-04-01 10:00:00'),
-('RL-002', 'EMP-002', 'P002', 'Thinwall Container', 200, 800.00, 'RESTOCK', 'Emergency restock.', '2026-04-02 14:30:00'),
-('RL-003', 'EMP-001', NULL, 'Utility - Ink Supply', 0, 2500.00, 'MISC', 'Industrial screen ink procurement.', '2026-04-02 16:00:00'),
-('RL-004', 'EMP-001', 'P003', 'Meal Box (Standard)', 1000, 3000.00, 'RESTOCK', 'Weekly base stock.', '2026-03-31 09:15:00');
-
---
--- Triggers `inventory_logs`
---
-DELIMITER $$
-CREATE TRIGGER `trg_inventory_log_restock` AFTER INSERT ON `inventory_logs` FOR EACH ROW BEGIN
-  IF NEW.type = 'RESTOCK' AND NEW.product_id IS NOT NULL AND NEW.qty_added > 0 THEN
-    UPDATE products SET current_stock = current_stock + NEW.qty_added WHERE id = NEW.product_id;
-  END IF;
-  IF NEW.type = 'ADJUSTMENT' AND NEW.product_id IS NOT NULL THEN
-    UPDATE products SET current_stock = current_stock + NEW.qty_added WHERE id = NEW.product_id;
-  END IF;
-END
-$$
-DELIMITER ;
-
 -- --------------------------------------------------------
 
 --
@@ -608,6 +478,25 @@ CREATE TABLE `jobs` (
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `job_batches`
+--
+
+CREATE TABLE `job_batches` (
+  `id` varchar(255) NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `total_jobs` int(11) NOT NULL,
+  `pending_jobs` int(11) NOT NULL,
+  `failed_jobs` int(11) NOT NULL,
+  `failed_job_ids` longtext NOT NULL,
+  `options` mediumtext DEFAULT NULL,
+  `cancelled_at` int(11) DEFAULT NULL,
+  `created_at` int(11) NOT NULL,
+  `finished_at` int(11) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `marketing_promotions`
 --
 
@@ -621,21 +510,13 @@ CREATE TABLE `marketing_promotions` (
   `product_id` varchar(20) DEFAULT NULL,
   `code` varchar(50) NOT NULL,
   `max_uses` int(11) DEFAULT NULL,
-  `used_count` int(11) NOT NULL DEFAULT 0,
+  `used_count` int(11) DEFAULT 0,
   `minimum_quantity` int(11) DEFAULT NULL,
   `expires_at` datetime NOT NULL,
-  `status` enum('active','inactive') NOT NULL DEFAULT 'active',
+  `status` enum('active','inactive') DEFAULT 'active',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
---
--- Dumping data for table `marketing_promotions`
---
-
-INSERT INTO `marketing_promotions` (`id`, `title`, `discount_type`, `discount_value`, `target_type`, `assigned_user_id`, `product_id`, `code`, `max_uses`, `used_count`, `minimum_quantity`, `expires_at`, `status`, `created_at`, `updated_at`) VALUES
-('PROMO-001', 'VIP Laguna Client', 'unit', 1.50, 'specific_user', 'CUST-501', 'P001', 'LAGUNA300', 1, 0, 300, '2026-06-01 00:00:00', 'active', '2026-04-11 13:23:28', '2026-04-11 13:23:28'),
-('PROMO-002', 'Welcome Discount', 'percentage', 10.00, 'all_users', NULL, NULL, 'WELCOME10', 100, 5, NULL, '2026-12-31 23:59:59', 'active', '2026-04-11 13:23:28', '2026-04-11 13:23:28');
 
 -- --------------------------------------------------------
 
@@ -659,26 +540,6 @@ CREATE TABLE `messages` (
   `created_at` datetime NOT NULL DEFAULT current_timestamp(),
   `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
---
--- Dumping data for table `messages`
---
-
-INSERT INTO `messages` (`id`, `conversation_id`, `sender_id`, `sender_type`, `receiver_id`, `receiver_type`, `message`, `reply_to_id`, `is_edited`, `original_text`, `is_deleted`, `is_read`, `created_at`, `updated_at`) VALUES
-('msg_1', 'EMP-001_CUST-501', 'EMP-001', 'employee', 'CUST-501', 'customer', 'Welcome to PIXS Printing Shop!', NULL, 0, NULL, 0, 1, '2026-04-11 21:29:57', '2026-04-11 21:29:57'),
-('msg_2', 'EMP-001_CUST-501', 'CUST-501', 'customer', 'EMP-001', 'employee', 'Hi! I need printing.', NULL, 0, NULL, 0, 0, '2026-04-11 21:29:57', '2026-04-11 21:29:57');
-
---
--- Triggers `messages`
---
-DELIMITER $$
-CREATE TRIGGER `trg_update_last_message` AFTER INSERT ON `messages` FOR EACH ROW BEGIN
-  UPDATE conversations
-  SET last_message_id = NEW.id, updated_at = NOW()
-  WHERE id = NEW.conversation_id;
-END
-$$
-DELIMITER ;
 
 -- --------------------------------------------------------
 
@@ -708,13 +569,6 @@ CREATE TABLE `message_reactions` (
   `emoji` varchar(10) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Dumping data for table `message_reactions`
---
-
-INSERT INTO `message_reactions` (`id`, `message_id`, `user_id`, `user_type`, `emoji`) VALUES
-(1, 'msg_1', 'CUST-501', 'customer', '👍');
-
 -- --------------------------------------------------------
 
 --
@@ -727,6 +581,53 @@ CREATE TABLE `migrations` (
   `batch` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+--
+-- Dumping data for table `migrations`
+--
+
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES
+(1, '0001_01_01_000001_create_cache_table', 1),
+(2, '0001_01_01_000002_create_jobs_table', 1),
+(3, '2026_04_11_143002_create_personal_access_tokens_table', 1),
+(4, '2026_04_11_143003_create_delivery_methods_table', 1),
+(5, '2026_04_11_143004_create_categories_table', 1),
+(6, '2026_04_11_143005_create_colors_table', 1),
+(7, '2026_04_11_143006_create_customers_table', 1),
+(8, '2026_04_11_143007_create_employees_table', 1),
+(9, '2026_04_11_143008_create_products_table', 1),
+(10, '2026_04_11_143009_create_screenplates_table', 1),
+(11, '2026_04_11_143010_create_conversations_table', 1),
+(12, '2026_04_11_143011_create_product_variants_table', 1),
+(13, '2026_04_11_143012_create_product_gallery_table', 1),
+(14, '2026_04_11_143013_create_product_tags_table', 1),
+(15, '2026_04_11_143014_create_customer_addresses_table', 1),
+(16, '2026_04_11_143015_create_customer_contact_numbers_table', 1),
+(17, '2026_04_11_143016_create_customer_discounts_table', 1),
+(18, '2026_04_11_143017_create_customer_payment_methods_table', 1),
+(19, '2026_04_11_143018_create_employee_addresses_table', 1),
+(20, '2026_04_11_143019_create_employee_attendance_table', 1),
+(21, '2026_04_11_143020_create_employee_contact_numbers_table', 1),
+(22, '2026_04_11_143021_create_employee_weekly_salary_table', 1),
+(23, '2026_04_11_143022_create_cart_items_table', 1),
+(24, '2026_04_11_143023_create_cart_item_colors_table', 1),
+(25, '2026_04_11_143024_create_orders_table', 1),
+(26, '2026_04_11_143025_create_order_items_table', 1),
+(27, '2026_04_11_143026_create_order_item_colors_table', 1),
+(28, '2026_04_11_143027_create_screenplate_compatibility_table', 1),
+(29, '2026_04_11_143028_create_screenplate_incompatible_table', 1),
+(30, '2026_04_11_143029_create_screenplate_requests_table', 1),
+(31, '2026_04_11_143030_create_messages_table', 1),
+(32, '2026_04_11_143031_create_message_attachments_table', 1),
+(33, '2026_04_11_143032_create_message_reactions_table', 1),
+(34, '2026_04_11_143033_create_conversation_participants_table', 1),
+(35, '2026_04_11_143034_create_inventory_logs_table', 1),
+(36, '2026_04_11_143035_create_marketing_promotions_table', 1),
+(37, '2026_04_11_143036_create_production_logs_table', 1),
+(38, '2026_04_11_143037_create_deleted_accounts_table', 1),
+(39, '2026_04_11_150138convert_database_to_utf8mb4_and_bcrypt_passwords', 1),
+(40, '2026_04_22_013058_update_cart_items_table', 1),
+(41, '2026_04_26_033029_create_screenplate_requests_table', 2);
+
 -- --------------------------------------------------------
 
 --
@@ -738,34 +639,25 @@ CREATE TABLE `orders` (
   `customer_id` varchar(20) NOT NULL,
   `address_id` varchar(50) DEFAULT NULL,
   `payment_method_id` varchar(50) DEFAULT NULL,
+  `delivery_method_id` varchar(50) DEFAULT NULL,
   `discount_id` varchar(20) DEFAULT NULL,
-  `total_amount` decimal(12,2) NOT NULL DEFAULT 0.00,
-  `total_discount_amount` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `total_amount` decimal(10,2) NOT NULL DEFAULT 0.00,
+  `total_discount_amount` decimal(10,2) NOT NULL DEFAULT 0.00,
   `production_notes` text DEFAULT NULL,
   `status` enum('PENDING','PROCESSING','SHIPPED','DELIVERED','CANCELLED') NOT NULL DEFAULT 'PENDING',
-  `delivery_method_id` varchar(50) DEFAULT NULL,
   `feedback` text DEFAULT NULL,
   `complaint` text DEFAULT NULL,
   `rating` tinyint(3) UNSIGNED NOT NULL DEFAULT 0,
   `admin_comment` text DEFAULT NULL,
-  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
-  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `created_at` datetime NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Triggers `orders`
+-- Dumping data for table `orders`
 --
-DELIMITER $$
-CREATE TRIGGER `trg_order_delivered` AFTER UPDATE ON `orders` FOR EACH ROW BEGIN
-  IF OLD.status != 'DELIVERED' AND NEW.status = 'DELIVERED' THEN
-    UPDATE products p
-    JOIN order_items oi ON oi.product_id = p.id
-    SET p.current_stock = p.current_stock - oi.quantity
-    WHERE oi.order_id = NEW.id;
-  END IF;
-END
-$$
-DELIMITER ;
+
+INSERT INTO `orders` (`id`, `customer_id`, `address_id`, `payment_method_id`, `delivery_method_id`, `discount_id`, `total_amount`, `total_discount_amount`, `production_notes`, `status`, `feedback`, `complaint`, `rating`, `admin_comment`, `created_at`) VALUES
+('ORD-AT9FBTYKWZ', 'CUST-503', 'ADDR-003', 'PAY-10778', 'del_001', NULL, 500.00, 0.00, NULL, 'PENDING', NULL, NULL, 0, '', '2026-04-26 04:20:43');
 
 -- --------------------------------------------------------
 
@@ -777,15 +669,21 @@ CREATE TABLE `order_items` (
   `id` int(10) UNSIGNED NOT NULL,
   `order_id` varchar(30) NOT NULL,
   `customer_id` varchar(20) NOT NULL,
-  `product_id` varchar(10) NOT NULL,
-  `variant_id` varchar(30) NOT NULL,
+  `product_id` varchar(10) DEFAULT NULL,
+  `variant_id` varchar(30) DEFAULT NULL,
   `screenplate_id` varchar(20) DEFAULT NULL,
   `quantity` int(10) UNSIGNED NOT NULL DEFAULT 1,
   `unit_price` decimal(10,2) NOT NULL DEFAULT 0.00,
   `plate_price` decimal(10,2) NOT NULL DEFAULT 0.00,
-  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
-  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `created_at` datetime NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `order_items`
+--
+
+INSERT INTO `order_items` (`id`, `order_id`, `customer_id`, `product_id`, `variant_id`, `screenplate_id`, `quantity`, `unit_price`, `plate_price`, `created_at`) VALUES
+(2, 'ORD-AT9FBTYKWZ', 'CUST-503', 'P011', 'V-BS-STD', NULL, 500, 1.00, 0.00, '2026-04-26 12:20:43');
 
 -- --------------------------------------------------------
 
@@ -804,26 +702,14 @@ CREATE TABLE `order_item_colors` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `password_reset_tokens`
---
-
-CREATE TABLE `password_reset_tokens` (
-  `email` varchar(255) NOT NULL,
-  `token` varchar(255) NOT NULL,
-  `created_at` timestamp NULL DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- --------------------------------------------------------
-
---
 -- Table structure for table `personal_access_tokens`
 --
 
 CREATE TABLE `personal_access_tokens` (
   `id` bigint(20) UNSIGNED NOT NULL,
   `tokenable_type` varchar(255) NOT NULL,
-  `tokenable_id` varchar(255) NOT NULL,
-  `name` varchar(255) NOT NULL,
+  `tokenable_id` varchar(30) NOT NULL,
+  `name` text NOT NULL,
   `token` varchar(64) NOT NULL,
   `abilities` text DEFAULT NULL,
   `last_used_at` timestamp NULL DEFAULT NULL,
@@ -837,7 +723,7 @@ CREATE TABLE `personal_access_tokens` (
 --
 
 INSERT INTO `personal_access_tokens` (`id`, `tokenable_type`, `tokenable_id`, `name`, `token`, `abilities`, `last_used_at`, `expires_at`, `created_at`, `updated_at`) VALUES
-(17, 'App\\Models\\Customer', 'CUST-503', 'customer-token', '62dbfe27b178c087481063c22ef9c6e5c087f97d624ec24df09150c10e90286c', '[\"role:customer\"]', '2026-04-19 17:46:32', '2026-05-19 08:25:05', '2026-04-19 08:25:05', '2026-04-19 17:46:32');
+(2, 'App\\Models\\Customer', 'CUST-503', 'customer-token', '57c9f8ff18ef4d2f90cfc8a0ffbf47d34a4000821418bdd34bf3b27fbae65672', '[\"role:customer\"]', '2026-04-27 01:21:17', '2026-05-25 20:38:54', '2026-04-25 20:38:54', '2026-04-27 01:21:17');
 
 -- --------------------------------------------------------
 
@@ -853,14 +739,6 @@ CREATE TABLE `production_logs` (
   `quantity` int(10) UNSIGNED NOT NULL DEFAULT 0,
   `completed_at` datetime NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
---
--- Dumping data for table `production_logs`
---
-
-INSERT INTO `production_logs` (`id`, `employee_id`, `order_id`, `product_name`, `quantity`, `completed_at`) VALUES
-('LOG-001', 'EMP-003', 'ORD-12347', 'Milktea Cup', 1000, '2026-04-05 10:30:00'),
-('LOG-002', 'EMP-004', 'ORD-12349', 'Black Straw', 500, '2026-04-05 14:20:00');
 
 -- --------------------------------------------------------
 
@@ -881,67 +759,38 @@ CREATE TABLE `products` (
   `min_threshold` int(10) UNSIGNED NOT NULL DEFAULT 0,
   `min_order` int(10) UNSIGNED NOT NULL DEFAULT 1,
   `main_image` varchar(500) DEFAULT NULL,
-  `ratings` decimal(3,1) NOT NULL DEFAULT 0.0,
-  `total_sold` int(10) UNSIGNED NOT NULL DEFAULT 0,
   `print_method` varchar(100) DEFAULT NULL,
   `is_need_screenplate` tinyint(1) NOT NULL DEFAULT 0,
-  `is_need_color` tinyint(1) NOT NULL DEFAULT 0
+  `is_need_color` tinyint(1) NOT NULL DEFAULT 0,
+  `ratings` tinyint(3) UNSIGNED NOT NULL DEFAULT 5,
+  `total_sold` int(10) UNSIGNED NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `products`
 --
 
-INSERT INTO `products` (`id`, `category_id`, `name`, `short_description`, `long_description`, `best_for`, `base_price`, `raw_material_cost`, `current_stock`, `min_threshold`, `min_order`, `main_image`, `ratings`, `total_sold`, `print_method`, `is_need_screenplate`, `is_need_color`) VALUES
-('P001', 'CT001', 'PPY Cup', 'Standard PP cup for milktea and cold drinks — affordable and food-grade.', 'The PPY Cup is an everyday polypropylene cup built for high-volume milktea shops and cafes.', 'Milktea Shops, Coffee Houses, and Catering Events.', 2.85, 1.10, 999, 500, 100, 'happycup.png', 3.9, 823, 'Screen Print / Offset', 1, 1),
-('P002', 'CT001', 'UCUP', 'Premium U-shaped PP cup — crystal clear with a modern profile.', 'The UCUP features a distinctive U-shaped design that enhances drink presentation.', 'Milktea Shops, Juice Bars, and Premium Cafes.', 2.95, 1.20, 5, 500, 100, 'ligma.jpeg', 4.4, 424, 'Screen Print / Offset', 1, 1),
-('P003', 'CT001', 'Slim Cup', 'Sleek slim-profile PP cup — ergonomic grip, great for on-the-go drinks.', 'The Slim Cup is designed with a narrower diameter for a comfortable grip.', 'Premium Milktea Shops, Coffee Shops, and Takeaway Counters.', 3.80, 1.50, 5000, 300, 100, 'nothappy.jpeg', 4.2, 543, 'Screen Print / Offset', 1, 1),
-('P004', 'CT001', 'Doublewall Cup with Lid', 'Insulated doublewall cup with lid — keeps drinks hot or cold longer.', 'The Doublewall Cup features a dual-wall construction that provides superior insulation.', 'Coffee Shops, Hot Beverage Stalls, and Premium Milktea Outlets.', 7.00, 3.00, 4000, 200, 50, 'happycup.png', 4.8, 281, 'Screen Print / Offset', 1, 1),
-('P005', 'CT001', 'PET Cup 95mm', 'Crystal-clear PET cup with 95mm diameter opening — vibrant and recyclable.', 'The PET Cup (95mm) is made from polyethylene terephthalate, offering exceptional clarity.', 'Milktea Shops, Fruit Tea Stalls, and Specialty Drink Outlets.', 3.20, 1.40, 7000, 500, 100, 'happycup.png', 3.8, 319, 'Screen Print / Offset', 1, 1),
-('P006', 'CT001', 'PET Cup 98mm', 'Wide-mouth crystal-clear PET cup with 98mm diameter — great for toppings-heavy drinks.', 'The PET Cup (98mm) features a wider 98mm opening, perfect for drinks loaded with pearls.', 'Milktea Shops, Dessert Drinks, and Topping-Heavy Beverages.', 4.45, 1.80, 6000, 500, 100, 'happycup.png', 4.1, 431, 'Screen Print / Offset', 1, 1),
-('P007', 'CT002', 'Dome Lid', 'Classic dome-shaped lid — fits standard 90mm and 98mm cup openings.', 'The Dome Lid features a raised dome design that accommodates whipped cream and pearls.', 'Milktea Cups, Smoothie Cups, and Topping-Heavy Drinks.', 1.30, 0.50, 15000, 1000, 200, 'happycup.png', 4.8, 1490, 'N/A', 0, 0),
-('P008', 'CT002', 'Strawless Lid', 'Eco-friendly strawless lid — sip-directly design, fits 90mm, 95mm, and 98mm cups.', 'The Strawless Lid promotes sustainable drinking with its no-straw sip design.', 'Eco-Friendly Shops, Cold Brew, and Juice Bars.', 1.20, 0.45, 18000, 1000, 200, 'happycup.png', 4.9, 433, 'N/A', 0, 0),
-('P009', 'CT002', 'Flat Lid', 'Flat-profile lid — clean, minimal design for no-straw or straw-hole use.', 'The Flat Lid provides a clean, low-profile seal for standard cups.', 'Standard Milktea Cups, Coffee, and Cold Drinks.', 1.20, 0.40, 12000, 1000, 200, 'happycup.png', 4.8, 467, 'N/A', 0, 0),
-('P010', 'CT002', 'Conjoined Lid', 'Double-cup conjoined lid — connects two cups for easy carrying.', 'The Conjoined Lid is a unique dual-cup lid that connects two cups side by side.', 'Takeaway Orders, Couple Deals, and Events.', 1.90, 0.70, 5000, 300, 100, 'happycup.png', 4.9, 661, 'N/A', 0, 0),
-('P011', 'CT003', 'Black Straw', 'Sleek black PP straw — stylish and sturdy for all cup types.', 'The Black Straw is made from food-grade polypropylene in a classic matte black finish.', 'All Beverage Types, Milktea Shops, and Coffee Outlets.', 1.00, 0.30, 20000, 1000, 500, 'happycup.png', 4.8, 644, 'N/A', 0, 0),
-('P012', 'CT004', 'Paper Bowl', 'Eco-friendly paper bowl for soups, noodles, and hot meals — available in 6 sizes.', 'The Paper Bowl is crafted from food-grade paperboard with a PE-coated interior.', 'Food Stalls, Canteens, Delivery Kitchens, and Catering Events.', 2.40, 1.00, 12000, 500, 100, 'happycup.png', 4.4, 846, 'Flexographic Print', 1, 1),
-('P013', 'CT005', 'Paper Cup', 'Single-wall paper cup for hot and cold drinks — available in 8 sizes.', 'Our Paper Cups are made from food-grade paperboard with a PE-lined interior.', 'Coffee Shops, Canteens, Events, and Takeaway Stalls.', 1.55, 0.65, 20000, 1000, 200, 'happycup.png', 4.2, 1491, 'Flexographic Print / Screen Print', 1, 1),
-('P014', 'CT006', 'Spaghetti Box', 'Rectangular paper box sized perfectly for spaghetti and pasta servings.', 'The Spaghetti Box is a long, rectangular food-grade paper box for pasta.', 'Food Stalls, Canteens, School Tuck Shops, and Catering.', 3.90, 1.60, 5000, 300, 100, 'happycup.png', 4.1, 220, 'Flexographic Print', 1, 1),
-('P015', 'CT006', 'Burger Box', 'Clamshell burger box — keeps burgers fresh, warm, and intact.', 'The Burger Box features a clamshell design that locks in heat.', 'Burger Stalls, Fast Food, and Food Delivery.', 3.72, 1.50, 5000, 300, 100, 'happycup.png', 3.6, 1217, 'Flexographic Print', 1, 1),
-('P016', 'CT006', 'Meal Box', 'Standard paper meal box for rice and viand combos — available in 750cc and 880cc.', 'The Meal Box is the go-to container for rice meal servings.', 'Carinderias, Food Stalls, Catering, and Takeaway Counters.', 5.05, 2.00, 6000, 300, 100, 'happycup.png', 4.7, 1103, 'Flexographic Print', 1, 1),
-('P017', 'CT006', 'High Meal Box', 'Tall-profile meal box — ideal for bulkier meals with heaping toppings.', 'The High Meal Box features greater height than a standard meal box.', 'Catering, Generous Meal Servings, and Food Stalls.', 5.25, 2.10, 4000, 300, 100, 'happycup.png', 4.6, 1228, 'Flexographic Print', 1, 1),
-('P018', 'CT006', 'Lechon Take Out Bag', 'Heavy-duty grease-resistant bag for lechon and roasted meat takeout.', 'The Lechon Take Out Bag is built to handle greasy, heavy roasted meat servings.', 'Lechon Stalls, Roasted Chicken Shops, BBQ Counters, and Catering.', 2.90, 1.10, 5000, 300, 100, 'happycup.png', 3.5, 521, 'Flexographic Print', 1, 1),
-('P019', 'CT006', '2-Division Box', 'Two-compartment paper box — keeps rice and viand neatly separated.', 'The 2-Division Box features an internal divider that keeps rice and viand separate.', 'Carinderias, Combo Meals, Catering, and Food Stalls.', 5.40, 2.20, 4000, 300, 100, 'happycup.png', 3.8, 756, 'Flexographic Print', 1, 1),
-('P020', 'CT006', 'Hotdog Box', 'Elongated paper box designed to hold hotdog sandwiches and corn dogs.', 'The Hotdog Box is a narrow, elongated food-grade paper box for hotdog sandwiches.', 'Street Food Stalls, School Canteens, Fairs, and Events.', 2.80, 1.10, 5000, 300, 100, 'happycup.png', 4.8, 839, 'Flexographic Print', 1, 1);
-
---
--- Triggers `products`
---
-DELIMITER $$
-CREATE TRIGGER `trg_product_delete` AFTER DELETE ON `products` FOR EACH ROW BEGIN
-  UPDATE categories
-  SET count = (SELECT COUNT(*) FROM products WHERE category_id = OLD.category_id)
-  WHERE id = OLD.category_id;
-END
-$$
-DELIMITER ;
-DELIMITER $$
-CREATE TRIGGER `trg_product_insert` AFTER INSERT ON `products` FOR EACH ROW BEGIN
-  UPDATE categories
-  SET count = (SELECT COUNT(*) FROM products WHERE category_id = NEW.category_id)
-  WHERE id = NEW.category_id;
-END
-$$
-DELIMITER ;
-DELIMITER $$
-CREATE TRIGGER `trg_product_update` AFTER UPDATE ON `products` FOR EACH ROW BEGIN
-  IF OLD.category_id != NEW.category_id THEN
-    UPDATE categories SET count = (SELECT COUNT(*) FROM products WHERE category_id = OLD.category_id) WHERE id = OLD.category_id;
-    UPDATE categories SET count = (SELECT COUNT(*) FROM products WHERE category_id = NEW.category_id) WHERE id = NEW.category_id;
-  END IF;
-END
-$$
-DELIMITER ;
+INSERT INTO `products` (`id`, `category_id`, `name`, `short_description`, `long_description`, `best_for`, `base_price`, `raw_material_cost`, `current_stock`, `min_threshold`, `min_order`, `main_image`, `print_method`, `is_need_screenplate`, `is_need_color`, `ratings`, `total_sold`) VALUES
+('P001', 'CT001', 'PPY Cup', 'Standard PP cup for milktea and cold drinks — affordable and food-grade.', 'The PPY Cup is an everyday polypropylene cup built for high-volume milktea shops and cafes.', 'Milktea Shops, Coffee Houses, and Catering Events.', 2.85, 1.10, 999, 500, 100, 'happycup.png', 'Screen Print / Offset', 1, 1, 4, 823),
+('P002', 'CT001', 'UCUP', 'Premium U-shaped PP cup — crystal clear with a modern profile.', 'The UCUP features a distinctive U-shaped design that enhances drink presentation.', 'Milktea Shops, Juice Bars, and Premium Cafes.', 2.95, 1.20, 5, 500, 100, 'ligma.jpeg', 'Screen Print / Offset', 1, 1, 4, 424),
+('P003', 'CT001', 'Slim Cup', 'Sleek slim-profile PP cup — ergonomic grip, great for on-the-go drinks.', 'The Slim Cup is designed with a narrower diameter for a comfortable grip.', 'Premium Milktea Shops, Coffee Shops, and Takeaway Counters.', 3.80, 1.50, 5000, 300, 100, 'nothappy.jpeg', 'Screen Print / Offset', 1, 1, 4, 543),
+('P004', 'CT001', 'Doublewall Cup with Lid', 'Insulated doublewall cup with lid — keeps drinks hot or cold longer.', 'The Doublewall Cup features a dual-wall construction that provides superior insulation.', 'Coffee Shops, Hot Beverage Stalls, and Premium Milktea Outlets.', 7.00, 3.00, 4000, 200, 50, 'happycup.png', 'Screen Print / Offset', 1, 1, 5, 281),
+('P005', 'CT001', 'PET Cup 95mm', 'Crystal-clear PET cup with 95mm diameter opening — vibrant and recyclable.', 'The PET Cup (95mm) is made from polyethylene terephthalate, offering exceptional clarity.', 'Milktea Shops, Fruit Tea Stalls, and Specialty Drink Outlets.', 3.20, 1.40, 7000, 500, 100, 'happycup.png', 'Screen Print / Offset', 1, 1, 4, 319),
+('P006', 'CT001', 'PET Cup 98mm', 'Wide-mouth crystal-clear PET cup with 98mm diameter — great for toppings-heavy drinks.', 'The PET Cup (98mm) features a wider 98mm opening, perfect for drinks loaded with pearls.', 'Milktea Shops, Dessert Drinks, and Topping-Heavy Beverages.', 4.45, 1.80, 6000, 500, 100, 'happycup.png', 'Screen Print / Offset', 1, 1, 4, 431),
+('P007', 'CT002', 'Dome Lid', 'Classic dome-shaped lid — fits standard 90mm and 98mm cup openings.', 'The Dome Lid features a raised dome design that accommodates whipped cream and pearls.', 'Milktea Cups, Smoothie Cups, and Topping-Heavy Drinks.', 1.30, 0.50, 15000, 1000, 200, 'happycup.png', 'N/A', 0, 0, 5, 1490),
+('P008', 'CT002', 'Strawless Lid', 'Eco-friendly strawless lid — sip-directly design, fits 90mm, 95mm, and 98mm cups.', 'The Strawless Lid promotes sustainable drinking with its no-straw sip design.', 'Eco-Friendly Shops, Cold Brew, and Juice Bars.', 1.20, 0.45, 18000, 1000, 200, 'happycup.png', 'N/A', 0, 0, 5, 433),
+('P009', 'CT002', 'Flat Lid', 'Flat-profile lid — clean, minimal design for no-straw or straw-hole use.', 'The Flat Lid provides a clean, low-profile seal for standard cups.', 'Standard Milktea Cups, Coffee, and Cold Drinks.', 1.20, 0.40, 12000, 1000, 200, 'happycup.png', 'N/A', 0, 0, 5, 467),
+('P010', 'CT002', 'Conjoined Lid', 'Double-cup conjoined lid — connects two cups for easy carrying.', 'The Conjoined Lid is a unique dual-cup lid that connects two cups side by side.', 'Takeaway Orders, Couple Deals, and Events.', 1.90, 0.70, 5000, 300, 100, 'happycup.png', 'N/A', 0, 0, 5, 661),
+('P011', 'CT003', 'Black Straw', 'Sleek black PP straw — stylish and sturdy for all cup types.', 'The Black Straw is made from food-grade polypropylene in a classic matte black finish.', 'All Beverage Types, Milktea Shops, and Coffee Outlets.', 1.00, 0.30, 20000, 1000, 500, 'happycup.png', 'N/A', 0, 0, 5, 644),
+('P012', 'CT004', 'Paper Bowl', 'Eco-friendly paper bowl for soups, noodles, and hot meals — available in 6 sizes.', 'The Paper Bowl is crafted from food-grade paperboard with a PE-coated interior.', 'Food Stalls, Canteens, Delivery Kitchens, and Catering Events.', 2.40, 1.00, 12000, 500, 100, 'happycup.png', 'Flexographic Print', 1, 1, 4, 846),
+('P013', 'CT005', 'Paper Cup', 'Single-wall paper cup for hot and cold drinks — available in 8 sizes.', 'Our Paper Cups are made from food-grade paperboard with a PE-lined interior.', 'Coffee Shops, Canteens, Events, and Takeaway Stalls.', 1.55, 0.65, 20000, 1000, 200, 'happycup.png', 'Flexographic Print / Screen Print', 1, 1, 4, 1491),
+('P014', 'CT006', 'Spaghetti Box', 'Rectangular paper box sized perfectly for spaghetti and pasta servings.', 'The Spaghetti Box is a long, rectangular food-grade paper box for pasta.', 'Food Stalls, Canteens, School Tuck Shops, and Catering.', 3.90, 1.60, 5000, 300, 100, 'happycup.png', 'Flexographic Print', 1, 1, 4, 220),
+('P015', 'CT006', 'Burger Box', 'Clamshell burger box — keeps burgers fresh, warm, and intact.', 'The Burger Box features a clamshell design that locks in heat.', 'Burger Stalls, Fast Food, and Food Delivery.', 3.72, 1.50, 5000, 300, 100, 'happycup.png', 'Flexographic Print', 1, 1, 4, 1217),
+('P016', 'CT006', 'Meal Box', 'Standard paper meal box for rice and viand combos — available in 750cc and 880cc.', 'The Meal Box is the go-to container for rice meal servings.', 'Carinderias, Food Stalls, Catering, and Takeaway Counters.', 5.05, 2.00, 6000, 300, 100, 'happycup.png', 'Flexographic Print', 1, 1, 5, 1103),
+('P017', 'CT006', 'High Meal Box', 'Tall-profile meal box — ideal for bulkier meals with heaping toppings.', 'The High Meal Box features greater height than a standard meal box.', 'Catering, Generous Meal Servings, and Food Stalls.', 5.25, 2.10, 4000, 300, 100, 'happycup.png', 'Flexographic Print', 1, 1, 5, 1228),
+('P018', 'CT006', 'Lechon Take Out Bag', 'Heavy-duty grease-resistant bag for lechon and roasted meat takeout.', 'The Lechon Take Out Bag is built to handle greasy, heavy roasted meat servings.', 'Lechon Stalls, Roasted Chicken Shops, BBQ Counters, and Catering.', 2.90, 1.10, 5000, 300, 100, 'happycup.png', 'Flexographic Print', 1, 1, 4, 521),
+('P019', 'CT006', '2-Division Box', 'Two-compartment paper box — keeps rice and viand neatly separated.', 'The 2-Division Box features an internal divider that keeps rice and viand separate.', 'Carinderias, Combo Meals, Catering, and Food Stalls.', 5.40, 2.20, 4000, 300, 100, 'happycup.png', 'Flexographic Print', 1, 1, 4, 756),
+('P020', 'CT006', 'Hotdog Box', 'Elongated paper box designed to hold hotdog sandwiches and corn dogs.', 'The Hotdog Box is a narrow, elongated food-grade paper box for hotdog sandwiches.', 'Street Food Stalls, School Canteens, Fairs, and Events.', 2.80, 1.10, 5000, 300, 100, 'happycup.png', 'Flexographic Print', 1, 1, 5, 839);
 
 -- --------------------------------------------------------
 
@@ -1252,49 +1101,7 @@ CREATE TABLE `screenplate_requests` (
   `comment` text DEFAULT NULL,
   `calculated_total` decimal(12,2) NOT NULL DEFAULT 0.00,
   `status` enum('Pending','Approved','Rejected') NOT NULL DEFAULT 'Pending',
-  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
-  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
---
--- Dumping data for table `screenplate_requests`
---
-
-INSERT INTO `screenplate_requests` (`id`, `customer_id`, `product_id`, `variant_id`, `color_count`, `alignment`, `reference_image`, `comment`, `calculated_total`, `status`, `created_at`, `updated_at`) VALUES
-('SPR-BK7B6P79AY', 'CUST-503', 'P016', 'V-MB-880CC', 2, 'Back-to-Back', '/images/screenplate_request/SPR_1776587247_WI2Ii.webp', 'ppykyuty', 1400.00, 'Pending', '2026-04-19 08:27:27', '2026-04-19 08:27:27'),
-('SPR-O5TKZBS2CC', 'CUST-503', 'P001', 'V-PPY-16OZ', 1, 'Front', NULL, 'thank you next bitches', 700.00, 'Pending', '2026-04-19 07:42:22', '2026-04-19 07:42:22'),
-('SPR-TG9ORWOKCC', 'CUST-503', 'P001', 'V-PPY-16OZ', 2, 'Back-to-Back', NULL, 'ligma', 1400.00, 'Pending', '2026-04-19 08:25:10', '2026-04-19 08:25:10');
-
--- --------------------------------------------------------
-
---
--- Table structure for table `sessions`
---
-
-CREATE TABLE `sessions` (
-  `id` varchar(255) NOT NULL,
-  `user_id` bigint(20) UNSIGNED DEFAULT NULL,
-  `ip_address` varchar(45) DEFAULT NULL,
-  `user_agent` text DEFAULT NULL,
-  `payload` longtext NOT NULL,
-  `last_activity` int(11) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- --------------------------------------------------------
-
---
--- Table structure for table `users`
---
-
-CREATE TABLE `users` (
-  `id` bigint(20) UNSIGNED NOT NULL,
-  `name` varchar(255) NOT NULL,
-  `email` varchar(255) NOT NULL,
-  `email_verified_at` timestamp NULL DEFAULT NULL,
-  `password` varchar(255) NOT NULL,
-  `remember_token` varchar(100) DEFAULT NULL,
-  `created_at` timestamp NULL DEFAULT NULL,
-  `updated_at` timestamp NULL DEFAULT NULL
+  `created_at` datetime NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -1329,8 +1136,10 @@ ALTER TABLE `cart_items`
 -- Indexes for table `cart_item_colors`
 --
 ALTER TABLE `cart_item_colors`
-  ADD KEY `fk_cart_item_colors_cart_item_id` (`cart_item_id`),
-  ADD KEY `fk_cart_item_colors_color_id` (`color_id`);
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uq_cart_channel` (`cart_item_id`,`channel_order`),
+  ADD UNIQUE KEY `uq_cart_color` (`cart_item_id`,`color_id`),
+  ADD KEY `color_id` (`color_id`);
 
 --
 -- Indexes for table `categories`
@@ -1467,6 +1276,12 @@ ALTER TABLE `jobs`
   ADD KEY `jobs_queue_index` (`queue`);
 
 --
+-- Indexes for table `job_batches`
+--
+ALTER TABLE `job_batches`
+  ADD PRIMARY KEY (`id`);
+
+--
 -- Indexes for table `marketing_promotions`
 --
 ALTER TABLE `marketing_promotions`
@@ -1507,7 +1322,7 @@ ALTER TABLE `migrations`
 ALTER TABLE `orders`
   ADD PRIMARY KEY (`id`),
   ADD KEY `customer_id` (`customer_id`),
-  ADD KEY `fk_orders_delivery_method` (`delivery_method_id`);
+  ADD KEY `orders_delivery_method_id_foreign` (`delivery_method_id`);
 
 --
 -- Indexes for table `order_items`
@@ -1530,17 +1345,13 @@ ALTER TABLE `order_item_colors`
   ADD KEY `color_id` (`color_id`);
 
 --
--- Indexes for table `password_reset_tokens`
---
-ALTER TABLE `password_reset_tokens`
-  ADD PRIMARY KEY (`email`);
-
---
 -- Indexes for table `personal_access_tokens`
 --
 ALTER TABLE `personal_access_tokens`
   ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `personal_access_tokens_token_unique` (`token`);
+  ADD UNIQUE KEY `personal_access_tokens_token_unique` (`token`),
+  ADD KEY `personal_access_tokens_tokenable_type_tokenable_id_index` (`tokenable_type`,`tokenable_id`),
+  ADD KEY `personal_access_tokens_expires_at_index` (`expires_at`);
 
 --
 -- Indexes for table `production_logs`
@@ -1607,70 +1418,61 @@ ALTER TABLE `screenplate_incompatible`
 --
 ALTER TABLE `screenplate_requests`
   ADD PRIMARY KEY (`id`),
-  ADD KEY `customer_id` (`customer_id`),
-  ADD KEY `product_id` (`product_id`),
-  ADD KEY `variant_id` (`variant_id`);
-
---
--- Indexes for table `sessions`
---
-ALTER TABLE `sessions`
-  ADD PRIMARY KEY (`id`),
-  ADD KEY `sessions_user_id_index` (`user_id`),
-  ADD KEY `sessions_last_activity_index` (`last_activity`);
-
---
--- Indexes for table `users`
---
-ALTER TABLE `users`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `users_email_unique` (`email`);
+  ADD KEY `screenplate_requests_customer_id_index` (`customer_id`),
+  ADD KEY `screenplate_requests_product_id_index` (`product_id`),
+  ADD KEY `screenplate_requests_variant_id_index` (`variant_id`);
 
 --
 -- AUTO_INCREMENT for dumped tables
 --
 
 --
+-- AUTO_INCREMENT for table `cart_item_colors`
+--
+ALTER TABLE `cart_item_colors`
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+
+--
 -- AUTO_INCREMENT for table `conversation_participants`
 --
 ALTER TABLE `conversation_participants`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `customer_contact_numbers`
 --
 ALTER TABLE `customer_contact_numbers`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `customer_discounts`
 --
 ALTER TABLE `customer_discounts`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `deleted_accounts`
 --
 ALTER TABLE `deleted_accounts`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `employee_attendance`
 --
 ALTER TABLE `employee_attendance`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=22;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `employee_contact_numbers`
 --
 ALTER TABLE `employee_contact_numbers`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `employee_weekly_salary`
 --
 ALTER TABLE `employee_weekly_salary`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `failed_jobs`
@@ -1694,19 +1496,19 @@ ALTER TABLE `message_attachments`
 -- AUTO_INCREMENT for table `message_reactions`
 --
 ALTER TABLE `message_reactions`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `migrations`
 --
 ALTER TABLE `migrations`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=42;
 
 --
 -- AUTO_INCREMENT for table `order_items`
 --
 ALTER TABLE `order_items`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `order_item_colors`
@@ -1718,7 +1520,7 @@ ALTER TABLE `order_item_colors`
 -- AUTO_INCREMENT for table `personal_access_tokens`
 --
 ALTER TABLE `personal_access_tokens`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `product_gallery`
@@ -1742,121 +1544,24 @@ ALTER TABLE `screenplate_compatibility`
 -- AUTO_INCREMENT for table `screenplate_incompatible`
 --
 ALTER TABLE `screenplate_incompatible`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
-
---
--- AUTO_INCREMENT for table `users`
---
-ALTER TABLE `users`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
 -- Constraints for dumped tables
 --
 
 --
--- Constraints for table `cart_items`
---
-ALTER TABLE `cart_items`
-  ADD CONSTRAINT `cart_items_ibfk_1` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  ADD CONSTRAINT `cart_items_ibfk_2` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  ADD CONSTRAINT `cart_items_ibfk_3` FOREIGN KEY (`variant_id`) REFERENCES `product_variants` (`variant_id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  ADD CONSTRAINT `cart_items_ibfk_4` FOREIGN KEY (`screenplate_id`) REFERENCES `screenplates` (`id`) ON DELETE SET NULL ON UPDATE CASCADE;
-
---
 -- Constraints for table `cart_item_colors`
 --
 ALTER TABLE `cart_item_colors`
-  ADD CONSTRAINT `fk_cart_item_colors_cart_item_id` FOREIGN KEY (`cart_item_id`) REFERENCES `cart_items` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  ADD CONSTRAINT `fk_cart_item_colors_color_id` FOREIGN KEY (`color_id`) REFERENCES `colors` (`id`) ON UPDATE CASCADE;
-
---
--- Constraints for table `conversation_participants`
---
-ALTER TABLE `conversation_participants`
-  ADD CONSTRAINT `conversation_participants_ibfk_1` FOREIGN KEY (`conversation_id`) REFERENCES `conversations` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
-
---
--- Constraints for table `customer_addresses`
---
-ALTER TABLE `customer_addresses`
-  ADD CONSTRAINT `customer_addresses_ibfk_1` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
-
---
--- Constraints for table `customer_contact_numbers`
---
-ALTER TABLE `customer_contact_numbers`
-  ADD CONSTRAINT `customer_contact_numbers_ibfk_1` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
-
---
--- Constraints for table `customer_discounts`
---
-ALTER TABLE `customer_discounts`
-  ADD CONSTRAINT `customer_discounts_ibfk_1` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
-
---
--- Constraints for table `customer_payment_methods`
---
-ALTER TABLE `customer_payment_methods`
-  ADD CONSTRAINT `customer_payment_methods_ibfk_1` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
-
---
--- Constraints for table `employee_addresses`
---
-ALTER TABLE `employee_addresses`
-  ADD CONSTRAINT `employee_addresses_ibfk_1` FOREIGN KEY (`employee_id`) REFERENCES `employees` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
-
---
--- Constraints for table `employee_attendance`
---
-ALTER TABLE `employee_attendance`
-  ADD CONSTRAINT `employee_attendance_ibfk_1` FOREIGN KEY (`weekly_salary_id`) REFERENCES `employee_weekly_salary` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  ADD CONSTRAINT `employee_attendance_ibfk_2` FOREIGN KEY (`employee_id`) REFERENCES `employees` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
-
---
--- Constraints for table `employee_contact_numbers`
---
-ALTER TABLE `employee_contact_numbers`
-  ADD CONSTRAINT `employee_contact_numbers_ibfk_1` FOREIGN KEY (`employee_id`) REFERENCES `employees` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
-
---
--- Constraints for table `employee_weekly_salary`
---
-ALTER TABLE `employee_weekly_salary`
-  ADD CONSTRAINT `employee_weekly_salary_ibfk_1` FOREIGN KEY (`employee_id`) REFERENCES `employees` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
-
---
--- Constraints for table `inventory_logs`
---
-ALTER TABLE `inventory_logs`
-  ADD CONSTRAINT `inventory_logs_ibfk_1` FOREIGN KEY (`employee_id`) REFERENCES `employees` (`id`) ON UPDATE CASCADE,
-  ADD CONSTRAINT `inventory_logs_ibfk_2` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE SET NULL ON UPDATE CASCADE;
-
---
--- Constraints for table `messages`
---
-ALTER TABLE `messages`
-  ADD CONSTRAINT `messages_ibfk_1` FOREIGN KEY (`conversation_id`) REFERENCES `conversations` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  ADD CONSTRAINT `messages_ibfk_2` FOREIGN KEY (`reply_to_id`) REFERENCES `messages` (`id`) ON DELETE SET NULL ON UPDATE CASCADE;
-
---
--- Constraints for table `message_attachments`
---
-ALTER TABLE `message_attachments`
-  ADD CONSTRAINT `message_attachments_ibfk_1` FOREIGN KEY (`message_id`) REFERENCES `messages` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
-
---
--- Constraints for table `message_reactions`
---
-ALTER TABLE `message_reactions`
-  ADD CONSTRAINT `message_reactions_ibfk_1` FOREIGN KEY (`message_id`) REFERENCES `messages` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+  ADD CONSTRAINT `cart_item_colors_cart_item_id_foreign` FOREIGN KEY (`cart_item_id`) REFERENCES `cart_items` (`id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `orders`
 --
 ALTER TABLE `orders`
-  ADD CONSTRAINT `fk_orders_delivery_method` FOREIGN KEY (`delivery_method_id`) REFERENCES `delivery_methods` (`id`) ON DELETE SET NULL,
-  ADD CONSTRAINT `orders_ibfk_1` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`id`) ON UPDATE CASCADE;
+  ADD CONSTRAINT `orders_customer_id_foreign` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `orders_delivery_method_id_foreign` FOREIGN KEY (`delivery_method_id`) REFERENCES `delivery_methods` (`id`) ON DELETE SET NULL;
 
 --
 -- Constraints for table `order_items`
@@ -1872,64 +1577,16 @@ ALTER TABLE `order_item_colors`
   ADD CONSTRAINT `order_item_colors_order_item_id_foreign` FOREIGN KEY (`order_item_id`) REFERENCES `order_items` (`id`) ON DELETE CASCADE;
 
 --
--- Constraints for table `production_logs`
---
-ALTER TABLE `production_logs`
-  ADD CONSTRAINT `production_logs_ibfk_1` FOREIGN KEY (`employee_id`) REFERENCES `employees` (`id`) ON UPDATE CASCADE;
-
---
--- Constraints for table `products`
---
-ALTER TABLE `products`
-  ADD CONSTRAINT `products_ibfk_1` FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`) ON UPDATE CASCADE;
-
---
--- Constraints for table `product_gallery`
---
-ALTER TABLE `product_gallery`
-  ADD CONSTRAINT `product_gallery_ibfk_1` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
-
---
--- Constraints for table `product_tags`
---
-ALTER TABLE `product_tags`
-  ADD CONSTRAINT `product_tags_ibfk_1` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
-
---
--- Constraints for table `product_variants`
---
-ALTER TABLE `product_variants`
-  ADD CONSTRAINT `product_variants_ibfk_1` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
-
---
--- Constraints for table `screenplates`
---
-ALTER TABLE `screenplates`
-  ADD CONSTRAINT `screenplates_ibfk_1` FOREIGN KEY (`owner_id`) REFERENCES `customers` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
-
---
 -- Constraints for table `screenplate_compatibility`
 --
 ALTER TABLE `screenplate_compatibility`
-  ADD CONSTRAINT `screenplate_compatibility_ibfk_1` FOREIGN KEY (`screenplate_id`) REFERENCES `screenplates` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  ADD CONSTRAINT `screenplate_compatibility_ibfk_2` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  ADD CONSTRAINT `screenplate_compatibility_ibfk_3` FOREIGN KEY (`variant_id`) REFERENCES `product_variants` (`variant_id`) ON DELETE CASCADE ON UPDATE CASCADE;
+  ADD CONSTRAINT `screenplate_compatibility_screenplate_id_foreign` FOREIGN KEY (`screenplate_id`) REFERENCES `screenplates` (`id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `screenplate_incompatible`
 --
 ALTER TABLE `screenplate_incompatible`
-  ADD CONSTRAINT `screenplate_incompatible_ibfk_1` FOREIGN KEY (`screenplate_id`) REFERENCES `screenplates` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  ADD CONSTRAINT `screenplate_incompatible_ibfk_2` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  ADD CONSTRAINT `screenplate_incompatible_ibfk_3` FOREIGN KEY (`variant_id`) REFERENCES `product_variants` (`variant_id`) ON DELETE CASCADE ON UPDATE CASCADE;
-
---
--- Constraints for table `screenplate_requests`
---
-ALTER TABLE `screenplate_requests`
-  ADD CONSTRAINT `screenplate_requests_ibfk_1` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  ADD CONSTRAINT `screenplate_requests_ibfk_2` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
-  ADD CONSTRAINT `screenplate_requests_ibfk_3` FOREIGN KEY (`variant_id`) REFERENCES `product_variants` (`variant_id`) ON DELETE SET NULL ON UPDATE CASCADE;
+  ADD CONSTRAINT `screenplate_incompatible_screenplate_id_foreign` FOREIGN KEY (`screenplate_id`) REFERENCES `screenplates` (`id`) ON DELETE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

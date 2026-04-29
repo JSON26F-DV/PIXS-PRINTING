@@ -48,13 +48,11 @@ interface CartItem {
 
 interface ReceiptSectionProps {
   items: CartItem[]
-  deliveryFee: number
   discountAmount?: number
 }
 
 const ReceiptSection: React.FC<ReceiptSectionProps> = ({
   items,
-  deliveryFee,
   discountAmount = 0,
 }) => {
   const cartItems = items
@@ -63,7 +61,7 @@ const ReceiptSection: React.FC<ReceiptSectionProps> = ({
     (acc, item) => acc + (item.totalCartPrice ?? item.quantity * item.variant.unitPrice),
     0,
   )
-  const total = subtotal + deliveryFee - discountAmount
+  const total = subtotal - discountAmount
 
   return (
     <div className="ReceiptSection space-y-8 rounded-[32px] border border-slate-100 bg-white/80 p-8 shadow-2xl backdrop-blur-xl">
@@ -140,19 +138,6 @@ const ReceiptSection: React.FC<ReceiptSectionProps> = ({
           </span>
         </div>
 
-        <div className="flex items-center justify-between text-[11px] font-black tracking-widest text-slate-400 uppercase italic">
-          <div className="flex items-center gap-2">
-            <span>Shipping Fee</span>
-            <Tag size={12} className="text-slate-300" />
-          </div>
-          <span
-            className={`${deliveryFee === 0 ? 'text-amber-500' : 'text-slate-900'}`}
-          >
-            {deliveryFee === 0
-              ? 'COLLECT'
-              : `PHP ${deliveryFee.toFixed(2)}`}
-          </span>
-        </div>
 
         {discountAmount > 0 && (
           <div className="animate-in slide-in-from-right-2 flex items-center justify-between text-[11px] font-black tracking-widest text-emerald-500 uppercase italic">

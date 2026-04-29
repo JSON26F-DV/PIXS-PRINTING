@@ -45,7 +45,6 @@ export interface IOrderData {
   delivery_method: {
     id: string
     name: string
-    fee: number
   }
   notes?: string
   shipping_address: {
@@ -78,7 +77,6 @@ export interface IOrderData {
 
 export interface IDeliveryMethod {
   id: string
-  fee: number
   name?: string
   type?: string
 }
@@ -107,7 +105,6 @@ const Transactions: React.FC = () => {
   const [selectedPaymentId, setSelectedPaymentId] = useState('')
   const [deliveryData, setDeliveryData] = useState<IDeliveryMethod[]>([])
   const [selectedDeliveryId, setSelectedDeliveryId] = useState('')
-  const [deliveryFee, setDeliveryFee] = useState(0)
   const [notes, setNotes] = useState('')
 
   const [isAbortModalOpen, setIsAbortModalOpen] = useState(false)
@@ -139,7 +136,6 @@ const Transactions: React.FC = () => {
           delRes.data[0]
         if (def) {
           setSelectedDeliveryId(def.id)
-          setDeliveryFee(Number(def.fee || 0))
         }
 
         // Load checkout items
@@ -383,11 +379,10 @@ const Transactions: React.FC = () => {
             <div className="h-px w-full bg-slate-100" />
 
             <DeliverySection
-              methods={deliveryData as unknown as Array<{ id: string; name: string; type: string; fee: number; note?: string }>}
+              methods={deliveryData as unknown as Array<{ id: string; name: string; type: string; note?: string }>}
               selectedId={selectedDeliveryId}
-              onSelect={(id, fee) => {
+              onSelect={(id) => {
                 setSelectedDeliveryId(id)
-                setDeliveryFee(fee)
               }}
             />
 
@@ -501,7 +496,6 @@ const Transactions: React.FC = () => {
             <div className="sticky top-0 md:top-24">
               <ReceiptSection
                 items={checkoutItems}
-                deliveryFee={deliveryFee}
                 discountAmount={discountAmount}
               />
 

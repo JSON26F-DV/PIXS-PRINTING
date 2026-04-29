@@ -17,7 +17,7 @@ function App() {
         <NotificationProvider>
           <DiscoveryProvider>
             <div className="AppRoot relative isolate flex min-h-screen w-full flex-col overflow-x-hidden bg-white">
-              <Toaster position="top-right" />
+              <Toaster position="top-right" containerStyle={{ zIndex: 99999 }} />
               <AppRouter />
             </div>
           </DiscoveryProvider>

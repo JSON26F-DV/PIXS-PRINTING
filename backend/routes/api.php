@@ -7,17 +7,16 @@ use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ColorController;
 use App\Http\Controllers\Customer\CustomerController;
 use App\Http\Controllers\Customer\CustomerScreenplateController;
+use App\Http\Controllers\DeliveryMethodController;
 use App\Http\Controllers\MessageController;
-use App\Http\Controllers\ProductController;
 use App\Http\Controllers\OrderController;
+use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ScreenplateRequestController;
 use App\Http\Controllers\User\UserController;
-use App\Http\Controllers\DeliveryMethodController;
 use Illuminate\Support\Facades\Route;
 
 // Public Data Routes
 Route::get('/delivery-methods', [DeliveryMethodController::class, 'index']);
-
 
 // Public Auth Routes
 Route::prefix('auth')->group(function () {
@@ -75,7 +74,9 @@ Route::middleware(['auth:sanctum', 'role:customer'])->prefix('customer')->group(
     Route::post('/screenplate-requests', [ScreenplateRequestController::class, 'store']);
 
     // Orders
+    Route::get('/orders', [OrderController::class, 'index']);
     Route::post('/orders', [OrderController::class, 'store']);
+    Route::patch('/orders/{id}', [OrderController::class, 'update']);
 });
 
 // Messaging

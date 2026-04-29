@@ -1,4 +1,6 @@
 import axiosInstance from '../lib/axiosInstance'
+import { isAxiosError } from 'axios'
+import type { Order } from '../pages/Order/components/OrderCard'
 
 export interface CreateOrderPayload {
     cart_item_ids: string[]
@@ -8,12 +10,64 @@ export interface CreateOrderPayload {
     production_notes?: string
 }
 
+function handleApiError(error: unknown): never {
+    if (isAxiosError(error)) {
+        if (error.response?.status === 401) {
+            localStorage.removeItem('pixs_token')
+            window.location.href = '/login'
+        }
+        
+        const message = error.response?.data?.message || error.message || 'An error occurred'
+        throw new Error(`API Error: ${error.response?.status || 'Unknown'} - ${message}`)
+    }
+    
+    if (error instanceof Error) {
+        throw error
+    }
+    
+    throw new Error('An unknown network error occurred')
+}
+
 export const orderApi = {
     /**
      * Create a new order.
      */
     createOrder: async (orderData: CreateOrderPayload) => {
-        const response = await axiosInstance.post(`/api/customer/orders`, orderData)
-        return response.data
+        try {
+            const response = await axiosInstance.post(`/api/customer/orders`, orderData)
+            return response.data
+        } catch (error) {
+            return handleApiError(error)
+        }
+    },
+
+    /**
+     * Get all orders for the current user.
+     */
+    getOrders: async (): Promise<Order[]> => {
+        try {
+            const response = await axiosInstance.get('/api/customer/orders')
+            return response.data as Order[]
+        } catch (error) {
+            return handleApiError(error)
+        }
+    },
+
+    /**
+     * Update an existing order (status, reviews, etc)
+     */
+    updateOrder: async (id: string, payload: Partial<{
+        status: string
+        admin_comment: string
+        rating: number
+        feedback: string
+        complaint: string
+    }>): Promise<Order> => {
+        try {
+            const response = await axiosInstance.patch(`/api/customer/orders/${id}`, payload)
+            return response.data as Order
+        } catch (error) {
+            return handleApiError(error)
+        }
     }
 }

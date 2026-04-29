@@ -5,14 +5,13 @@ export interface DeliveryMethod {
   id: string
   name: string
   type: string
-  fee: number
   note?: string
 }
 
 interface DeliverySectionProps {
   methods: DeliveryMethod[]
   selectedId: string
-  onSelect: (id: string, fee: number) => void
+  onSelect: (id: string) => void
 }
 
 const DeliverySection: React.FC<DeliverySectionProps> = ({
@@ -46,7 +45,7 @@ const DeliverySection: React.FC<DeliverySectionProps> = ({
         {deliveryMethods.map((del) => (
           <div
             key={del.id}
-            onClick={() => onSelect(String(del.id), Number(del.fee))}
+            onClick={() => onSelect(String(del.id))}
             className={`DeliveryCard group relative cursor-pointer rounded-2xl border p-4 transition-all active:scale-[0.98] ${
               String(selectedId) === String(del.id)
                 ? 'border-pixs-mint bg-white shadow-lg'
@@ -72,15 +71,7 @@ const DeliverySection: React.FC<DeliverySectionProps> = ({
                 <span className="block text-xs font-black tracking-tight text-slate-900 uppercase italic">
                   {del.name}
                 </span>
-                <span
-                  className={`mt-1 block rounded-full border px-3 py-1 text-[9px] font-black tracking-widest uppercase ${
-                    del.type === 'pickup'
-                      ? 'text-pixs-mint border-pixs-mint/20 bg-pixs-mint/5'
-                      : 'border-amber-200 bg-amber-50 text-amber-500'
-                  }`}
-                >
-                  {del.type === 'pickup' ? 'FREE' : 'TO BE CALCULATED'}
-                </span>
+
                 {del.note && (
                   <p className="mt-2 text-[8px] leading-tight font-bold text-slate-400 italic">
                     {del.note}

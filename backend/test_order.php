@@ -1,41 +1,64 @@
 <?php
-// Bootstrap Laravel
+
+use App\Models\Order;
+use Illuminate\Contracts\Console\Kernel;
+
 require __DIR__.'/vendor/autoload.php';
 $app = require_once __DIR__.'/bootstrap/app.php';
-$kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
+$kernel = $app->make(Kernel::class);
 $kernel->bootstrap();
 
-use Illuminate\Http\Request;
-use App\Http\Controllers\OrderController;
-use App\Models\Customer;
-use App\Models\CartItem;
+$orders = Order::with([
+    'items',
+    'items.product',
+    'items.variant',
+    'items.colors.colorDetails',
+    'items.screenplate',
+])->orderBy('created_at', 'desc')->get();
 
-$user = Customer::first();
-if (!$user) {
-    die("No user found.\n");
-}
+$formatted = $orders->map(function ($order) {
+    return [
+        'order_id' => $order->id,
+        'user_id' => $order->customer_id,
+        'total_amount' => (float) $order->total_amount,
+        'status' => $order->status,
+        'created_at' => $order->created_at,
+        'admin_comment' => $order->admin_comment,
+        'feedback' => $order->feedback,
+        'complaint' => $order->complaint,
+        'rating' => $order->rating,
+        'order_items' => $order->items->map(function ($item) use ($order) {
+            $order_item_colors = $item->colors ? $item->colors->map(function ($c) {
+                return [
+                    'name' => $c->colorDetails ? $c->colorDetails->name : $c->color_id,
+                    'hex' => $c->colorDetails ? $c->colorDetails->hex : '#000000',
+                ];
+            })->toArray() : [];
 
-$cartItem = CartItem::where('customer_id', $user->id)->first();
-if (!$cartItem) {
-    die("No cart items found.\n");
-}
+            $plate = $item->screenplate ? [
+                'name' => $item->screenplate->plate_name ?? 'Custom Plate',
+                'setupFee' => 0,
+                'printPricePerUnit' => (float) $item->plate_price,
+            ] : null;
 
-$request = Request::create('/api/orders', 'POST', [
-    'cart_item_ids' => [$cartItem->id],
-    'address_id' => '1',
-    'payment_method_id' => '1',
-    'delivery_method_id' => 'del_001',
-    'production_notes' => 'test notes',
-]);
-$request->setUserResolver(function () use ($user) { return $user; });
+            return [
+                'id' => (string) $item->id,
+                'product_id' => $item->product_id,
+                'productName' => $item->product ? $item->product->name : 'Unknown Product',
+                'productImage' => $item->product && $item->product->main_image
+                    ? '/images/products/'.$item->product->main_image
+                    : '',
+                'quantity' => $item->quantity,
+                'variant' => [
+                    'size' => $item->variant ? $item->variant->size : '',
+                    'unitPrice' => (float) $item->unit_price,
+                ],
+                'order_item_colors' => $order_item_colors,
+                'plate' => $plate,
+                'customRequirements' => clone $order->production_notes,
+            ];
+        })->toArray(),
+    ];
+});
 
-$controller = new OrderController();
-try {
-    $response = $controller->store($request);
-    echo "Response Code: " . $response->getStatusCode() . "\n";
-    echo "Response Content: " . $response->getContent() . "\n";
-} catch (\Illuminate\Validation\ValidationException $e) {
-    echo "Validation Error: " . json_encode($e->errors()) . "\n";
-} catch (\Exception $e) {
-    echo "Exception: " . $e->getMessage() . " at " . $e->getFile() . ":" . $e->getLine() . "\n";
-}
+echo json_encode($formatted);

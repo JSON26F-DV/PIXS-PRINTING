@@ -296,6 +296,16 @@ const ScreenplatePage: React.FC = () => {
   const searchResults = useMemo(() => {
     if (!searchQuery.trim()) return []
     return productsData.filter((p) => {
+      const catLabel = p.category_label?.toLowerCase() || ''
+      const catId = p.category_id?.toLowerCase() || ''
+      
+      if (
+        catLabel === 'lid' || catLabel === 'accessories' ||
+        catId === 'lid' || catId === 'accessories'
+      ) {
+        return false
+      }
+
       const q = searchQuery.toLowerCase()
       const matchName = p.name.toLowerCase().includes(q)
       const matchVariant = p.variants?.some((v: IProductVariant) =>
@@ -330,7 +340,23 @@ const ScreenplatePage: React.FC = () => {
   // Step 1: open modal for review
   const handlePayClick = () => {
     if (!isValid) {
-      toast.error('Please complete all required fields.')
+      if ('vibrate' in navigator) {
+        navigator.vibrate([200])
+      }
+      toast.custom(
+        (t) => (
+          <div
+            className={`flex flex-wrap items-center gap-3 rounded-full bg-rose-600 px-6 py-4 text-white shadow-2xl transition-all duration-300 ${t.visible ? 'animate-[bounce_0.5s_ease-out]' : 'opacity-0 scale-95'}`}
+            style={{ animationFillMode: 'forwards' }}
+          >
+            <span className="text-xl">⚠️</span>
+            <span className="text-[10px] font-black tracking-widest uppercase">
+              Please complete fields
+            </span>
+          </div>
+        ),
+        { duration: 3000 }
+      )
       return
     }
     setReviewOpen(true)
@@ -354,13 +380,42 @@ const ScreenplatePage: React.FC = () => {
       await createScreenplateRequest(payload)
 
       setReviewOpen(false)
-      toast.success(
-        'Setup Request Locked! Admin will process your fabrication shortly.',
-        { duration: 5000 },
+      if ('vibrate' in navigator) {
+        navigator.vibrate([80, 30, 80])
+      }
+      toast.custom(
+        (t) => (
+          <div
+            className={`flex items-center gap-3 rounded-full bg-slate-900 px-6 py-4 text-white shadow-2xl transition-all duration-300 ${t.visible ? 'animate-[bounce_0.5s_ease-out]' : 'opacity-0 scale-95'}`}
+            style={{ animationFillMode: 'forwards' }}
+          >
+            <span className="text-xl">✨✅</span>
+            <span className="text-[10px] font-black tracking-widest uppercase">
+              Setup request locked!
+            </span>
+          </div>
+        ),
+        { duration: 3500 }
       )
     } catch (error) {
       console.error('Failed to submit screenplate request:', error)
-      toast.error('Failed to submit request. Please ensure you are logged in.')
+      if ('vibrate' in navigator) {
+        navigator.vibrate([200, 100, 200])
+      }
+      toast.custom(
+        (t) => (
+          <div
+            className={`flex items-center gap-3 rounded-full bg-rose-600 px-6 py-4 text-white shadow-2xl transition-all duration-300 ${t.visible ? 'animate-[bounce_0.5s_ease-out]' : 'opacity-0 scale-95'}`}
+            style={{ animationFillMode: 'forwards' }}
+          >
+            <span className="text-xl">⚠️❌</span>
+            <span className="text-[10px] font-black tracking-widest uppercase">
+              Failed to complete request
+            </span>
+          </div>
+        ),
+        { duration: 4000 }
+      )
     } finally {
       setIsSubmitting(false)
     }

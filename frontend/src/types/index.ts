@@ -94,3 +94,8 @@ export interface User {
   name: string
   role: 'admin' | 'staff' | 'inventory' | 'customer'
 }
+
+export interface DeliveryMethod {
+  id: string
+  name: string
+}

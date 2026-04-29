@@ -7,8 +7,12 @@ use Illuminate\Database\Eloquent\Model;
 class ScreenplateRequest extends Model
 {
     protected $table = 'screenplate_requests';
+
     public $incrementing = false;
+
     protected $keyType = 'string';
+
+    public const UPDATED_AT = null;
 
     protected $fillable = [
         'id',

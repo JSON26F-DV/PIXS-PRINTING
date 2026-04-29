@@ -2,17 +2,120 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\CartItem;
+use App\Models\Customer;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\OrderItemColor;
-use App\Models\Customer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class OrderController extends Controller
 {
+    public function index(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        if (! $user instanceof Customer) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+
+        $orders = Order::with([
+            'items',
+            'items.product',
+            'items.variant',
+            'items.colors.colorDetails',
+            'items.screenplate',
+        ])
+            ->where('customer_id', $user->id)
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        $formatted = $orders->map(function ($order) {
+            return [
+                'order_id' => $order->id,
+                'user_id' => $order->customer_id,
+                'total_amount' => (float) $order->total_amount,
+                'status' => $order->status,
+                'created_at' => $order->created_at,
+                'admin_comment' => $order->admin_comment,
+                'feedback' => $order->feedback,
+                'complaint' => $order->complaint,
+                'rating' => $order->rating,
+                'order_items' => $order->items->map(function ($item) use ($order) {
+                    $order_item_colors = $item->colors ? $item->colors->map(function ($c) {
+                        return [
+                            'name' => $c->colorDetails ? $c->colorDetails->name : $c->color_id,
+                            'hex' => $c->colorDetails ? $c->colorDetails->hex : '#000000',
+                        ];
+                    })->toArray() : [];
+
+                    $plate = $item->screenplate ? [
+                        'name' => $item->screenplate->plate_name ?? 'Custom Plate',
+                        'type' => $item->screenplate->type ?? 'Flatscreen',
+                        'channels' => (int) $item->screenplate->channels ?? 1,
+                        'setupFee' => 0,
+                        'printPricePerUnit' => (float) $item->plate_price,
+                    ] : null;
+
+                    return [
+                        'id' => (string) $item->id,
+                        'product_id' => $item->product_id,
+                        'productName' => $item->product ? $item->product->name : 'Unknown Product',
+                        'short_description' => $item->product ? $item->product->short_description : null,
+                        'productImage' => $item->product && $item->product->main_image
+                            ? '/images/products/'.$item->product->main_image
+                            : '',
+                        'quantity' => $item->quantity,
+                        'variant' => [
+                            'size' => $item->variant ? $item->variant->size : '',
+                            'width' => $item->variant ? $item->variant->width : null,
+                            'height' => $item->variant ? $item->variant->height : null,
+                            'unitPrice' => (float) $item->unit_price,
+                        ],
+                        'order_item_colors' => $order_item_colors,
+                        'plate' => $plate,
+                        'customRequirements' => $order->production_notes,
+                    ];
+                })->toArray(),
+            ];
+        });
+
+        return response()->json($formatted);
+    }
+
+    public function update(Request $request, $id): JsonResponse
+    {
+        $user = $request->user();
+        $order = Order::where('customer_id', $user->id)->where('id', $id)->first();
+        if (! $order) {
+            return response()->json(['message' => 'Order not found'], 404);
+        }
+
+        if ($request->has('status')) {
+            $order->status = $request->status;
+        }
+        if ($request->has('admin_comment')) {
+            $order->admin_comment = $request->admin_comment;
+        }
+        if ($request->has('rating')) {
+            $order->rating = $request->rating;
+        }
+        if ($request->has('feedback')) {
+            $order->feedback = $request->feedback;
+        }
+        if ($request->has('complaint')) {
+            $order->complaint = $request->complaint;
+        }
+
+        $order->save();
+
+        return response()->json(['message' => 'Order updated']);
+    }
+
     /**
      * Store a newly created order in storage.
      */
@@ -21,7 +124,7 @@ class OrderController extends Controller
         Log::info('Order creation attempt', ['request' => $request->all()]);
 
         $user = $request->user();
-        if (!$user instanceof Customer) {
+        if (! $user instanceof Customer) {
             return response()->json(['message' => 'Unauthorized'], 401);
         }
 
@@ -34,15 +137,16 @@ class OrderController extends Controller
                 'delivery_method_id' => 'required|string|exists:delivery_methods,id',
                 'production_notes' => 'nullable|string',
             ]);
-        } catch (\Illuminate\Validation\ValidationException $e) {
+        } catch (ValidationException $e) {
             Log::warning('Order validation failed', ['errors' => $e->errors()]);
+
             return response()->json(['message' => 'Validation failed', 'errors' => $e->errors()], 422);
         }
 
         try {
             return DB::transaction(function () use ($validated, $user) {
                 // STEP 2: Load cart items with relations
-                $cartItems = \App\Models\CartItem::with(['colors', 'variant', 'screenplate'])
+                $cartItems = CartItem::with(['colors', 'variant', 'screenplate'])
                     ->whereIn('id', $validated['cart_item_ids'])
                     ->get();
 
@@ -54,14 +158,14 @@ class OrderController extends Controller
                 }
 
                 if ($cartItems->count() !== count($validated['cart_item_ids'])) {
-                     return response()->json(['message' => 'Some cart items were not found or do not belong to you.'], 400);
+                    return response()->json(['message' => 'Some cart items were not found or do not belong to you.'], 400);
                 }
 
                 // STEP 3: Calculate totals
                 $totalAmount = $cartItems->sum('total_cart_price');
-                
+
                 // STEP 4: Generate order ID
-                $orderId = 'ORD-' . strtoupper(\Illuminate\Support\Str::random(10));
+                $orderId = 'ORD-'.strtoupper(Str::random(10));
 
                 // STEP 5: Create the order row
                 $order = Order::create([
@@ -106,18 +210,19 @@ class OrderController extends Controller
                 }
 
                 // STEP 8: Unselect processed cart_items (instead of deleting them)
-                \App\Models\CartItem::whereIn('id', $validated['cart_item_ids'])->update(['selected' => 0]);
+                CartItem::whereIn('id', $validated['cart_item_ids'])->update(['selected' => 0]);
 
                 // STEP 9: Return JSON response (201)
                 return response()->json([
-                    "id" => $orderId,
-                    "total_amount" => $totalAmount,
-                    "status" => "PENDING"
+                    'id' => $orderId,
+                    'total_amount' => $totalAmount,
+                    'status' => 'PENDING',
                 ], 201);
             });
         } catch (\Throwable $e) {
             Log::error('OrderController@store failed', ['message' => $e->getMessage()]);
-            return response()->json(['message' => 'Failed to create order: ' . $e->getMessage()], 500);
+
+            return response()->json(['message' => 'Failed to create order: '.$e->getMessage()], 500);
         }
     }
 }
