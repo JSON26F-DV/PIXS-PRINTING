@@ -312,6 +312,20 @@ export const useProductDetail = ({
   const isQuantityTooHigh = quantity > stockForVariant
   const isOutOfStock = stockForVariant === 0
 
+  // Protocol: Constrain quantity against available stock when switching variants (Sizes)
+  // Fix: Derive during render or use timeout to avoid cascade
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setQuantity((prev) => {
+        if (stockForVariant === 0) return 0
+        if (prev > stockForVariant) return stockForVariant
+        if (prev < product.min_order && stockForVariant >= product.min_order) return product.min_order
+        return prev
+      })
+    }, 0)
+    return () => clearTimeout(t)
+  }, [stockForVariant, product.min_order, setQuantity])
+
   // Enforced Protocols: Check if required metadata selections are satisfied
   const hasRequiredPlate =
     !product.is_need_screenplate ||

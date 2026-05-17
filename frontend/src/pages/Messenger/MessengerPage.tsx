@@ -8,8 +8,7 @@ import MessageList from './components/MessageList.tsx'
 import MessageInput from './components/MessageInput.tsx'
 import GalleryView from './components/GalleryView.tsx'
 
-// Mock Data
-import initialMessages from '../../data/messages.json'
+import axiosInstance from '../../lib/axiosInstance.ts'
 
 export interface IMessage {
   id: string
@@ -25,51 +24,41 @@ export interface IMessage {
   replyTo?: { id: string; text: string; senderName: string }
 }
 
+interface ApiMessage {
+  id: string;
+  sender_type: 'customer' | 'employee';
+  message: string;
+  created_at: string;
+  sender_id?: string;
+  receiver_id?: string;
+}
+
 const MessengerPage: React.FC = () => {
-  const [messages, setMessages] = useState<IMessage[]>(() => {
-    const saved = localStorage.getItem('pixs_messenger_v1')
-    const localMessages: IMessage[] = saved ? JSON.parse(saved) : []
+  const [messages, setMessages] = useState<IMessage[]>([])
+  const [isLoading, setIsLoading] = useState(true)
 
-    // Transform initialMessages (new format) to IMessage[]
-    const transformedInitial = (initialMessages as unknown[]).map(
-      (m: unknown): IMessage => {
-        interface LegacyMsg {
-          id?: string
-          sender?: 'customer' | 'admin'
-          senderName?: string
-          text?: string
-          message?: string
-          timestamp?: string
-          created_at?: string
-          sender_id?: string
-          attachments?: unknown[]
-        }
-        const typedM = m as LegacyMsg
-        if (typedM.sender && (typedM.text || typedM.message))
-          return typedM as IMessage
-
-        // Map new format to old
-        return {
-          id: typedM.id || `msg_${Math.random()}`,
-          sender: typedM.sender_id === 'CUST-501' ? 'customer' : 'admin',
-          senderName: typedM.sender_id === 'CUST-501' ? 'You' : 'PIXS Admin',
-          text: typedM.message || typedM.text || '',
-          timestamp:
-            typedM.created_at || typedM.timestamp || new Date().toISOString(),
-          attachments: typedM.attachments || [],
-          reactions: [],
-        } as IMessage
-      },
-    )
-
-    // Merge transformedInitial and localMessages
-    const combined = [...transformedInitial, ...localMessages]
-    const unique = combined.filter(
-      (m, i, self) => i === self.findIndex((t) => t.id === m.id),
-    )
-
-    return unique
-  })
+  useEffect(() => {
+    const fetchMessages = async () => {
+      try {
+        const res = await axiosInstance.get('/api/messages')
+        const formatted = res.data.data.map((m: ApiMessage) => ({
+          id: m.id,
+          sender: m.sender_type === 'customer' ? 'customer' : 'admin',
+          senderName: m.sender_type === 'customer' ? 'You' : 'PIXS Admin',
+          text: m.message,
+          timestamp: m.created_at,
+          attachments: [],
+          reactions: []
+        }))
+        setMessages(formatted)
+      } catch (error) {
+        console.error('Failed to load messages', error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    fetchMessages()
+  }, [])
 
   const [isHeroVisible, setIsHeroVisible] = useState(messages.length === 0)
   // Initialize gallery to true for desktop mode reveal
@@ -90,12 +79,13 @@ const MessengerPage: React.FC = () => {
     localStorage.setItem('pixs_messenger_v1', JSON.stringify(messages))
   }, [messages])
 
-  const handleSendMessage = (
+  const handleSendMessage = async (
     text: string,
     attachments: { type: 'image' | 'file'; url: string; name: string }[] = [],
   ) => {
+    const tempId = `msg_${Date.now()}`
     const newMessage: IMessage = {
-      id: `msg_${Date.now()}`,
+      id: tempId,
       sender: 'customer',
       senderName: 'You',
       text,
@@ -112,6 +102,17 @@ const MessengerPage: React.FC = () => {
     }
     setMessages((prev) => [...prev, newMessage])
     setActiveReplyTo(null)
+
+    try {
+      await axiosInstance.post('/api/messages/send', {
+        message: text,
+        receiver_id: '1', // default to first admin
+        receiver_type: 'employee',
+      })
+    } catch (error) {
+      console.error('Message failed to send', error)
+      // Ideally flag message as failed here
+    }
   }
 
   const handleEditMessage = (id: string, newText: string) => {
@@ -169,7 +170,7 @@ const MessengerPage: React.FC = () => {
   }
 
   return (
-    <div className="MessengerTerminal flex h-[calc(100vh-6rem)] flex-col overflow-hidden bg-slate-50">
+    <div className="MessengerTerminal flex h-[100dvh] flex-col overflow-hidden bg-slate-50 pb-20 md:pb-0 md:pt-20">
       <AnimatePresence mode="wait">
         {isHeroVisible ? (
           <motion.div
@@ -184,7 +185,14 @@ const MessengerPage: React.FC = () => {
               isGalleryOpen={isGalleryOpen}
             />
             <div className="relative flex flex-1 items-center justify-center overflow-hidden border-t border-slate-100 bg-white p-6 shadow-2xl md:rounded-t-[48px]">
-              <HeroSection onStart={() => setIsHeroVisible(false)} />
+              {isLoading ? (
+                <div className="flex flex-col items-center gap-4 text-slate-400">
+                  <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-slate-800"></div>
+                  <p className="text-xs font-black uppercase tracking-widest">Waking up terminal...</p>
+                </div>
+              ) : (
+                <HeroSection onStart={() => setIsHeroVisible(false)} />
+              )}
             </div>
           </motion.div>
         ) : (
@@ -209,6 +217,7 @@ const MessengerPage: React.FC = () => {
                   onReply={setActiveReplyTo}
                   onEdit={handleEditMessage}
                   onDelete={handleDeleteMessage}
+                  isLoading={isLoading}
                 />
 
                 <MessageInput

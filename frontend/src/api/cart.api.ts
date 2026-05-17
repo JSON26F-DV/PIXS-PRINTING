@@ -11,6 +11,11 @@ export const addToCart = async (data: AddToCartData) => {
   return response.data
 }
 
+export const buyNowCart = async (data: AddToCartData) => {
+  const response = await axiosInstance.post('/api/cart/buy-now', data)
+  return response.data
+}
+
 export const updateCartItem = async (id: string, data: UpdateCartItemData) => {
   const response = await axiosInstance.patch(`/api/cart/${id}`, data)
   return response.data

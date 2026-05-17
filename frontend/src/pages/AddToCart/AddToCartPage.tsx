@@ -222,6 +222,11 @@ const AddToCartPage: React.FC = () => {
     return compMap[item.variant.id]?.isCompatible === false
   })
 
+  // Prevent checkout if any selected items are lower than their mandatory minimum order
+  const hasLowQuantityItem = selectedItems.some(
+    (item) => item.quantity < item.minOrder
+  )
+
   // ─── Checkout: flush all pending to backend then navigate ─────────────────
   const handleCheckout = async () => {
     if (selectedItems.length === 0) {
@@ -231,6 +236,11 @@ const AddToCartPage: React.FC = () => {
 
     if (hasMissingColor) {
       toast.error('Please select the required colors for all selected items.')
+      return
+    }
+
+    if (hasLowQuantityItem) {
+      toast.error('Some selected items do not meet their minimum quantity requirements. Please adjust to continue.')
       return
     }
 
@@ -265,8 +275,12 @@ const AddToCartPage: React.FC = () => {
     const target = mergedItems.find((item) => item.id === itemId)
     if (!target) return
 
-    let nextQty = Number.isFinite(nextQtyRaw) ? Math.floor(nextQtyRaw) : target.minOrder
-    if (nextQty < target.minOrder) nextQty = target.minOrder
+    const maxStock = target.variant?.stock ?? target.fullProduct?.current_stock ?? 0;
+    
+    let nextQty = Number.isNaN(nextQtyRaw) ? 0 : Math.floor(nextQtyRaw)
+
+    // Clamp to hard maximum, but allow dropping under minOrder for fluid typing experience
+    if (nextQty > maxStock) nextQty = maxStock
 
     setPending(itemId, { quantity: nextQty })
   }
@@ -278,14 +292,27 @@ const AddToCartPage: React.FC = () => {
     const productVariant = item.fullProduct.variants?.find((v) => v.variant_id === variantId)
     if (!productVariant) return
 
+    const stock = Number(productVariant.stock) || 0
+
+    // Clamp Quantity on Variant Change
+    let currentQty = item.quantity
+    if (stock === 0) {
+      currentQty = 0
+    } else if (currentQty > stock) {
+      currentQty = stock
+    } else if (currentQty < item.minOrder && stock >= item.minOrder) {
+      currentQty = item.minOrder
+    }
+
     setPending(itemId, {
+      quantity: currentQty,
       variant: {
         id: productVariant.variant_id,
         size: productVariant.size || '',
         width: String(productVariant.width || ''),
         height: String(productVariant.height || ''),
         unitPrice: typeof productVariant.price === 'string' ? parseFloat(productVariant.price) : (Number(productVariant.price) || 0),
-        stock: Number(productVariant.stock) || 0,
+        stock: stock,
       },
     })
   }
@@ -532,38 +559,43 @@ const AddToCartPage: React.FC = () => {
                         )}
 
                         {/* Quantity */}
-                        <div className="CartProductQuantity flex items-center gap-2">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleQuantityChange(item.id, item.quantity - 1)
-                            }}
-                            className="rounded-xl border border-slate-200 bg-white p-2 text-slate-700 transition hover:bg-slate-100"
-                          >
-                            <Minus size={14} />
-                          </button>
-                          <input
-                            type="number"
-                            min={item.minOrder}
-                            value={item.quantity}
-                            onClick={(e) => e.stopPropagation()}
-                            onChange={(event) =>
-                              handleQuantityChange(item.id, Number(event.target.value))
-                            }
-                            className="w-20 rounded-xl border border-slate-200 px-3 py-2 text-center text-sm font-black text-slate-900 outline-none"
-                          />
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleQuantityChange(item.id, item.quantity + 1)
-                            }}
-                            className="rounded-xl border border-slate-200 bg-white p-2 text-slate-700 transition hover:bg-slate-100"
-                          >
-                            <Plus size={14} />
-                          </button>
-                          <span className="text-[10px] font-bold text-slate-400 ml-2">
-                            min: {item.minOrder}
-                          </span>
+                        <div className="CartProductQuantity flex flex-col items-start gap-2">
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleQuantityChange(item.id, item.quantity - 1)
+                              }}
+                              className="rounded-xl border border-slate-200 bg-white p-2 text-slate-700 transition hover:bg-slate-100"
+                            >
+                              <Minus size={14} />
+                            </button>
+                            <input
+                              type="number"
+                              min={0}
+                              value={item.quantity || ''}
+                              onClick={(e) => e.stopPropagation()}
+                              onChange={(event) =>
+                                handleQuantityChange(item.id, parseInt(event.target.value))
+                              }
+                              className={`w-20 rounded-xl border px-3 py-2 text-center text-sm font-black text-slate-900 outline-none ${item.quantity < item.minOrder ? 'bg-rose-50 text-rose-500 border-rose-200' : 'bg-white border-slate-200'}`}
+                            />
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleQuantityChange(item.id, item.quantity + 1)
+                              }}
+                              className="rounded-xl border border-slate-200 bg-white p-2 text-slate-700 transition hover:bg-slate-100"
+                            >
+                              <Plus size={14} />
+                            </button>
+                            <span className="text-[10px] font-bold text-slate-400 ml-2">
+                              min: {item.minOrder}
+                            </span>
+                          </div>
+                          {item.quantity < item.minOrder && (
+                             <p className="text-[10px] text-rose-500 font-bold uppercase animate-pulse">Minimum {item.minOrder} units</p>
+                          )}
                         </div>
 
                         {/* Price Summary */}
@@ -634,14 +666,14 @@ const AddToCartPage: React.FC = () => {
               </p>
               <button
                 onClick={handleCheckout}
-                disabled={selectedItems.length === 0 || hasMissingColor}
+                disabled={selectedItems.length === 0 || hasMissingColor || hasLowQuantityItem}
                 className={`CartCheckoutButton mt-6 w-full rounded-3xl border px-8 py-4 text-[10px] font-black tracking-[4px] uppercase italic shadow-2xl transition-all active:scale-95 ${
-                  selectedItems.length > 0 && !hasMissingColor
+                  selectedItems.length > 0 && !hasMissingColor && !hasLowQuantityItem
                     ? 'border-white/10 bg-slate-900 text-white hover:scale-105'
                     : 'cursor-not-allowed border-slate-200 bg-slate-100 text-slate-300 shadow-none'
                 }`}
               >
-                {hasMissingColor ? 'Complete Config' : 'Checkout Selected'}
+                {hasMissingColor ? 'Complete Config' : hasLowQuantityItem ? 'Fix Quantities' : 'Checkout Selected'}
               </button>
             </aside>
           </div>
@@ -674,14 +706,14 @@ const AddToCartPage: React.FC = () => {
 
           <button
             onClick={handleCheckout}
-            disabled={selectedItems.length === 0 || hasMissingColor}
+            disabled={selectedItems.length === 0 || hasMissingColor || hasLowQuantityItem}
             className={`flex h-12 items-center justify-center rounded-2xl px-6 text-[10px] font-black tracking-[2px] uppercase italic shadow-lg transition-all active:scale-95 ${
-              selectedItems.length > 0 && !hasMissingColor
+              selectedItems.length > 0 && !hasMissingColor && !hasLowQuantityItem
                 ? 'bg-slate-900 text-white'
                 : 'bg-slate-100 text-slate-300 shadow-none'
             }`}
           >
-            {hasMissingColor ? 'Fix Entry' : 'Checkout'}
+            {hasMissingColor ? 'Fix Entry' : hasLowQuantityItem ? 'Fix Qtys' : 'Checkout'}
           </button>
         </div>
       </div>

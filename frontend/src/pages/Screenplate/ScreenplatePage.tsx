@@ -21,6 +21,8 @@ import { getProducts } from '../../api/products.api'
 import { createScreenplateRequest } from '../../api/screenplate.api'
 import type { IProduct, IProductVariant } from '../../types/product.types'
 import BoxFallback from '../../components/common/BoxFallback'
+import axiosInstance from '../../lib/axiosInstance.ts'
+import { useNotificationStore } from '../../store/useNotificationStore'
 
 // ─── Review Modal ────────────────────────────────────────────────────────────
 
@@ -214,6 +216,7 @@ const ScreenplatePage: React.FC = () => {
   // Modal state
   const [reviewOpen, setReviewOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const { fetchNotifications } = useNotificationStore()
 
   const dropdownRef = useRef<HTMLDivElement>(null)
   const leftPanelRef = useRef<HTMLDivElement>(null)
@@ -380,6 +383,14 @@ const ScreenplatePage: React.FC = () => {
       await createScreenplateRequest(payload)
 
       setReviewOpen(false)
+      
+      await axiosInstance.post('/api/notifications', {
+        title: 'Screenplate Requested',
+        message: `Your setup request for ${selectedProduct!.name} has been processed.`,
+        type: 'success'
+      })
+      await fetchNotifications()
+
       if ('vibrate' in navigator) {
         navigator.vibrate([80, 30, 80])
       }
@@ -399,6 +410,18 @@ const ScreenplatePage: React.FC = () => {
       )
     } catch (error) {
       console.error('Failed to submit screenplate request:', error)
+      
+      try {
+        await axiosInstance.post('/api/notifications', {
+          title: 'Request Failed',
+          message: `Could not process your screenplate request for ${selectedProduct?.name}. Please try again.`,
+          type: 'error'
+        })
+        await fetchNotifications()
+      } catch (postError) {
+        console.error('Failed to register notification', postError)
+      }
+
       if ('vibrate' in navigator) {
         navigator.vibrate([200, 100, 200])
       }

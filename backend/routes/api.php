@@ -79,9 +79,16 @@ Route::middleware(['auth:sanctum', 'role:customer'])->prefix('customer')->group(
     Route::patch('/orders/{id}', [OrderController::class, 'update']);
 });
 
-// Messaging
+// Messaging & Notifications
 Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/messages', [MessageController::class, 'index']);
     Route::post('/messages/send', [MessageController::class, 'store']);
+    
+    // Notifications
+    Route::post('/notifications', [\App\Http\Controllers\NotificationController::class, 'store']);
+    Route::get('/notifications', [\App\Http\Controllers\NotificationController::class, 'index']);
+    Route::patch('/notifications/read-all', [\App\Http\Controllers\NotificationController::class, 'markAllAsRead']);
+    Route::patch('/notifications/{id}/read', [\App\Http\Controllers\NotificationController::class, 'markAsRead']);
 });
 
 // Example of role-protected route
@@ -93,6 +100,7 @@ Route::middleware(['auth:sanctum', 'role:admin'])->get('/admin/test', function (
 Route::middleware(['auth:sanctum', 'role:customer'])->prefix('cart')->group(function () {
     Route::get('/', [CartController::class, 'index']);
     Route::post('/', [CartController::class, 'store']);
+    Route::post('/buy-now', [CartController::class, 'buyNow']);
     Route::patch('/{id}', [CartController::class, 'update']);
     Route::delete('/{id}', [CartController::class, 'destroy']);
 });

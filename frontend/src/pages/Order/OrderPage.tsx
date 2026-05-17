@@ -14,7 +14,7 @@ import { OrderCard, type Order } from './components/OrderCard'
 const TABS = [
   { id: 'all', label: 'All', status: 'ALL' },
   { id: 'pending', label: 'Pending', status: 'PENDING' },
-  { id: 'to-ship', label: 'To Ship', status: 'PROCESSING' },
+  { id: 'to-ship', label: 'Processing', status: 'PROCESSING' },
   { id: 'to-receive', label: 'To Receive', status: 'SHIPPED' },
   { id: 'to-review', label: 'To Review', status: 'DELIVERED' },
   {

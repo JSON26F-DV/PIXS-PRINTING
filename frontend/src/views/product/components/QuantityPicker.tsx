@@ -52,12 +52,16 @@ const QuantityPicker: React.FC<QuantityPickerProps> = ({
 
           <input
             type="number"
-            value={quantity}
+            value={quantity || ''}
             onChange={(e) => {
-              const val = parseInt(e.target.value) || minOrder
-              onChange(Math.min(maxStock, Math.max(minOrder, val)))
+              const val = parseInt(e.target.value)
+              if (isNaN(val)) {
+                onChange(0)
+              } else {
+                onChange(Math.min(maxStock, val))
+              }
             }}
-            className="w-24 bg-transparent text-center font-mono text-2xl font-black text-white italic outline-none"
+            className="w-24 bg-transparent text-center font-mono text-2xl font-black text-white italic outline-none disabled:opacity-50"
           />
 
           <button
@@ -99,12 +103,15 @@ const QuantityPicker: React.FC<QuantityPickerProps> = ({
         <div
           className={clsx(
             'flex items-center gap-2 rounded-xl border px-4 py-2 text-[9px] font-black tracking-widest uppercase transition-all',
-            quantity === minOrder
+            quantity < minOrder
+              ? 'border-rose-100 bg-rose-50 text-rose-600 shadow-sm animate-pulse'
+              : quantity === minOrder
               ? 'border-amber-100 bg-amber-50 text-amber-600 shadow-sm'
               : 'border-slate-100 bg-slate-50 text-slate-400',
           )}
         >
-          <Info size={12} /> Minimum Requirement: {minOrder.toLocaleString()} units
+          {quantity < minOrder ? <AlertTriangle size={12} /> : <Info size={12} />} 
+          Minimum Requirement: {minOrder.toLocaleString()} units
         </div>
         {isAtPeak && (
           <div className="flex animate-pulse items-center gap-2 rounded-xl border border-rose-100 bg-rose-50 px-4 py-2 text-[9px] font-black tracking-widest text-rose-600 uppercase shadow-sm shadow-rose-200/20">

@@ -139,8 +139,8 @@ const MessageInput: React.FC<MessageInputProps> = ({
                   handleSubmit(e)
                 }
               }}
-              placeholder="Describe your printing requirements..."
-              className="max-h-[150px] min-h-[56px] w-full resize-none rounded-[24px] border border-slate-100 bg-slate-50 px-6 py-4 text-sm leading-relaxed font-bold text-slate-700 shadow-inner transition-all placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-slate-900/5 focus:outline-none"
+              placeholder="Type your message ..."
+              className="max-h-[150px] min-h-[56px] w-full resize-none overflow-hidden whitespace-nowrap rounded-[24px] border border-slate-100 bg-slate-50 px-6 py-4 text-sm leading-relaxed font-bold text-slate-700 shadow-inner transition-all placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-slate-900/5 focus:outline-none"
               rows={1}
             />
           </div>

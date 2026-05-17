@@ -10,6 +10,31 @@ use Illuminate\Support\Str;
 class MessageController extends Controller
 {
     /**
+     * Get messages for the authenticated user.
+     */
+    public function index(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        if ($user->role === 'customer') {
+            $messages = DB::table('messages')
+                ->where('sender_id', $user->id)
+                ->orWhere('receiver_id', $user->id)
+                ->orderBy('created_at', 'asc')
+                ->get();
+        } else {
+            // Admin sees all messages, typically sorted by conversation in frontend
+            $messages = DB::table('messages')
+                ->orderBy('created_at', 'asc')
+                ->get();
+        }
+
+        return response()->json([
+            'data' => $messages
+        ]);
+    }
+
+    /**
      * Store new message.
      */
     public function store(Request $request): JsonResponse

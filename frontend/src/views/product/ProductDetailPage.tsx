@@ -11,7 +11,7 @@ import toast from 'react-hot-toast'
 // Core Technical Implementation Dependencies
 import type { IProduct, IScreenPlate } from '../../types/product.types'
 import { getProductById, getCustomerScreenplates } from '../../api/products.api'
-import { addToCart } from '../../api/cart.api'
+import { addToCart, buyNowCart } from '../../api/cart.api'
 import { useProductDetail } from './hooks/useProductDetail'
 import { getStockStatus } from './utils/priceCalculator'
 
@@ -150,63 +150,53 @@ const ProductDetailInner: React.FC<{
     }
   }
 
-  const handleBuyNow = () => {
+  const handleBuyNow = async () => {
     const variant = computed.selectedVariant
     if (!variant) {
       toast.error('Please select a product variant.')
       return
     }
 
-    const buyNowItem = {
-      productId: product.id,
-      productName: product.name,
-      productImage: mainImageUrl,
-      category: product.category_label,
-      minOrder: product.min_order,
-      currentStock: computed.stockForVariant,
-      quantity: state.quantity,
-      variant: {
-        id: variant.variant_id,
-        size: variant.size,
-        width: variant.width,
-        height: variant.height,
-        unitPrice: variant.price,
-        stock: variant.stock,
-      },
-      colors: computed.selectedColors.map((c) => ({
-        id: c.id,
-        name: c.name,
-        hex: c.hex,
-        type: c.type,
-      })),
-      plate: computed.selectedPlate
-        ? {
-            id: computed.selectedPlate.id,
-            name: computed.selectedPlate.plate_name,
-            type: computed.selectedPlate.is_flatscreen
-              ? 'Flatscreen'
-              : 'Cylindrical',
-            printPricePerUnit: computed.selectedVariant
-              ? (() => {
-                  const cp = computed.selectedPlate.compatibility.find(
-                    (c) => c.product_id === product.id
-                  );
-                  return cp?.print_price_per_unit?.[computed.selectedVariant.variant_id] ?? 
-                         cp?.print_price_per_unit?.['ALL'] ?? 0;
-                })()
-              : 0,
-            channels: computed.selectedPlate.channels,
-            printingInfo:
-              computed.selectedPlate.technical_info ||
-              'High-accuracy production node.',
-            isOwned: true,
-          }
-        : null,
-      customRequirements: state.customRequirements,
-    }
+    const colorIdPart =
+      computed.selectedColors
+        .map((c) => c.id)
+        .sort()
+        .join('-') || 'no-color'
+    const compositeId = `${product.id}__${variant.variant_id}__${colorIdPart}__${computed.selectedPlate?.id ?? 'no-plate'}`
 
-    localStorage.setItem('pixs_buy_now_v1', JSON.stringify([buyNowItem]))
-    navigate('/transactions?direct=true')
+    try {
+      await buyNowCart({
+        id: compositeId,
+        product_id: product.id,
+        variant_id: variant.variant_id,
+        screenplate_id: computed.selectedPlate?.id || null,
+        quantity: state.quantity,
+        unit_price: variant.price,
+        plate_price: computed.selectedVariant && computed.selectedPlate
+          ? (() => {
+              const cp = computed.selectedPlate.compatibility.find(
+                (c: { product_id: string }) => c.product_id === product.id
+              );
+              return cp?.print_price_per_unit?.[computed.selectedVariant.variant_id] ?? 
+                     cp?.print_price_per_unit?.['ALL'] ?? 0;
+            })()
+          : 0,
+        total_cart_price: computed.priceBreakdown.total,
+        colors: computed.selectedColors.map((c, index) => ({
+          color_id: c.id,
+          id: c.id,
+          channel_label:
+            index === 0 ? 'Primary' : index === 1 ? 'Secondary' : 'Accent',
+          channel_order: index,
+        })),
+      })
+
+      if ('vibrate' in navigator) navigator.vibrate([100])
+      navigate('/transactions')
+    } catch (e) {
+      console.error('Failed to quick-checkout product:', e)
+      toast.error('Failed to initialize quick checkout.')
+    }
   }
 
   return (
@@ -363,25 +353,6 @@ const ProductDetailInner: React.FC<{
                     productId={product.id}
                     selectedVariantSize={computed.selectedVariant?.size}
                     incompatiblePlateIds={state.incompatiblePlateIds}
-                  />
-                </div>
-
-                {/* Selection Node: Custom Production Requisition */}
-                <div className="stagger-item space-y-4">
-                  <div>
-                    <h3 className="mb-2 flex items-center gap-2 text-[10px] font-black tracking-[3px] text-slate-400 uppercase">
-                      <PackageCheck size={14} className="text-slate-900" />
-                      Custom Printing Instructions
-                    </h3>
-                    <p className="text-[10px] leading-relaxed font-bold text-slate-400">
-                      Specify details for logo placement, color choices, or unique design requirements.
-                    </p>
-                  </div>
-                  <textarea
-                    value={state.customRequirements}
-                    onChange={(e) => actions.setCustomRequirements(e.target.value)}
-                    placeholder="Ex. Place logo on center-front, use PMS 185C Red..."
-                    className="h-32 w-full resize-none rounded-2xl border border-slate-100 bg-slate-50 p-6 text-xs font-bold text-slate-900 transition-all placeholder:text-slate-300 focus:ring-2 focus:ring-slate-900/10 focus:outline-none md:rounded-[24px]"
                   />
                 </div>
               </>

@@ -196,6 +196,18 @@ class OrderController extends Controller
                         'plate_price' => $cartItem->plate_price,
                     ]);
 
+                    // Inventory Stock Deduction
+                    if ($cartItem->product_id) {
+                        \Illuminate\Support\Facades\DB::table('products')
+                            ->where('id', $cartItem->product_id)
+                            ->decrement('current_stock', $cartItem->quantity);
+                    }
+                    if ($cartItem->variant_id) {
+                        \Illuminate\Support\Facades\DB::table('product_variants')
+                            ->where('variant_id', $cartItem->variant_id)
+                            ->decrement('stock', $cartItem->quantity);
+                    }
+
                     // STEP 7: For each cart_item_color of that cart_item, create order_item_color row
                     if ($cartItem->colors) {
                         foreach ($cartItem->colors as $cartItemColor) {
@@ -212,7 +224,17 @@ class OrderController extends Controller
                 // STEP 8: Unselect processed cart_items (instead of deleting them)
                 CartItem::whereIn('id', $validated['cart_item_ids'])->update(['selected' => 0]);
 
-                // STEP 9: Return JSON response (201)
+                // STEP 9: Send Success Notification
+                \App\Models\Notification::create([
+                    'id' => \Illuminate\Support\Str::uuid(),
+                    'customer_id' => $user->id,
+                    'title' => 'Purchase Successful',
+                    'message' => "Order {$orderId} has been successfully placed.",
+                    'type' => 'success',
+                    'is_read' => false
+                ]);
+
+                // STEP 10: Return JSON response (201)
                 return response()->json([
                     'id' => $orderId,
                     'total_amount' => $totalAmount,
@@ -221,6 +243,19 @@ class OrderController extends Controller
             });
         } catch (\Throwable $e) {
             Log::error('OrderController@store failed', ['message' => $e->getMessage()]);
+
+            try {
+                \App\Models\Notification::create([
+                    'id' => \Illuminate\Support\Str::uuid(),
+                    'customer_id' => $user->id,
+                    'title' => 'Purchase Failed',
+                    'message' => 'An error occurred while processing your order.',
+                    'type' => 'error',
+                    'is_read' => false
+                ]);
+            } catch (\Exception $ex) {
+                Log::error('Failed to save error notification: ' . $ex->getMessage());
+            }
 
             return response()->json(['message' => 'Failed to create order: '.$e->getMessage()], 500);
         }

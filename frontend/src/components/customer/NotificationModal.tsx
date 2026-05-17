@@ -1,6 +1,8 @@
-import React from 'react'
-import { X, Package, CheckCircle2 } from 'lucide-react'
+import React, { useEffect } from 'react'
+import { X, CheckCircle2, AlertCircle, Info, Check } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { format } from 'date-fns'
+import { useNotificationStore } from '../../store/useNotificationStore'
 
 interface NotificationModalProps {
   isOpen: boolean
@@ -11,6 +13,15 @@ const NotificationModal: React.FC<NotificationModalProps> = ({
   isOpen,
   onClose,
 }) => {
+  const { notifications, fetchNotifications, markAsRead, markAllAsRead } =
+    useNotificationStore()
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchNotifications()
+    }
+  }, [isOpen, fetchNotifications])
+
   if (!isOpen) return null
 
   return (
@@ -19,7 +30,7 @@ const NotificationModal: React.FC<NotificationModalProps> = ({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[100] flex items-start justify-end bg-slate-900/60 backdrop-blur-md sm:p-6"
+        className="fixed inset-0 z-[100] flex items-start justify-end bg-slate-900/60 backdrop-blur-md sm:p-6 md:pt-24"
         onClick={onClose}
       >
         <motion.div
@@ -50,46 +61,74 @@ const NotificationModal: React.FC<NotificationModalProps> = ({
 
           {/* Body */}
           <div className="flex-1 space-y-4 overflow-y-auto p-4">
-            {/* Mock Active Order Alert */}
-            <div className="group hover:border-pixs-mint/50 relative flex cursor-pointer gap-4 overflow-hidden rounded-2xl border border-slate-100 bg-white p-4 shadow-sm transition-colors">
-              <div className="bg-pixs-mint/5 group-hover:bg-pixs-mint/10 absolute top-0 right-0 -z-10 h-20 w-20 rounded-bl-full transition-colors"></div>
-              <div className="bg-pixs-mint/20 text-pixs-mint flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
-                <Package size={18} />
-              </div>
-              <div>
-                <h3 className="text-sm font-black text-slate-900 italic">
-                  Screenplate Request
-                </h3>
-                <p className="mt-1 text-xs text-slate-500">
-                  Your screenplate setup is being analyzed. We'll update the
-                  tracking in your orders.
-                </p>
-                <p className="text-pixs-mint mt-3 text-[10px] font-bold tracking-[2px] uppercase italic">
-                  Processing
+            {notifications.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-10 opacity-60">
+                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100">
+                  <Check size={24} className="text-slate-400" />
+                </div>
+                <p className="mt-4 text-xs font-black tracking-widest text-slate-400 uppercase">
+                  No New Alerts
                 </p>
               </div>
-            </div>
+            ) : (
+              notifications.map((notif) => {
+                const isUnread = !notif.isRead
+                let Icon = Info
+                let colorClass = 'text-blue-500 bg-blue-50'
+                
+                if (notif.type === 'success') {
+                  Icon = CheckCircle2
+                  colorClass = 'text-pixs-mint bg-pixs-mint/20'
+                } else if (notif.type === 'warning') {
+                  Icon = AlertCircle
+                  colorClass = 'text-orange-500 bg-orange-50'
+                } else if (notif.type === 'error') {
+                  Icon = X
+                  colorClass = 'text-rose-500 bg-rose-50'
+                }
 
-            {/* Mock Completed Action */}
-            <div className="flex cursor-pointer gap-4 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm transition-colors hover:border-slate-300">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-500">
-                <CheckCircle2 size={18} />
-              </div>
-              <div>
-                <h3 className="text-sm font-black text-slate-900 italic">
-                  Delivery Dropped
-                </h3>
-                <p className="mt-1 text-xs text-slate-500">
-                  Order #ORD-9892 was successfully completed by courier.
-                </p>
-                <p className="mt-3 text-[10px] font-bold tracking-widest text-slate-400 uppercase">
-                  2 Days Ago
-                </p>
-              </div>
-            </div>
+                return (
+                  <div
+                    key={notif.id}
+                    onClick={() => !notif.isRead && markAsRead(notif.id)}
+                    className={`group relative flex cursor-pointer gap-4 overflow-hidden rounded-2xl border p-4 shadow-sm transition-colors ${
+                      isUnread
+                        ? 'border-pixs-mint/50 bg-white shadow-pixs-mint/10'
+                        : 'border-slate-100 bg-slate-50 opacity-80'
+                    } hover:border-pixs-mint/40`}
+                  >
+                    {isUnread && (
+                      <div className="bg-pixs-mint/5 absolute top-0 right-0 -z-10 h-20 w-20 rounded-bl-full"></div>
+                    )}
+                    <div
+                      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${colorClass}`}
+                    >
+                      <Icon size={18} />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-black text-slate-900 italic">
+                        {notif.title}
+                      </h3>
+                      <p className="mt-1 text-xs text-slate-500">
+                        {notif.message}
+                      </p>
+                      <p className="mt-3 text-[10px] font-bold tracking-[2px] text-slate-400 uppercase italic">
+                        {format(new Date(notif.timestamp), 'MMM dd, hh:mm a')}
+                      </p>
+                    </div>
+                  </div>
+                )
+              })
+            )}
           </div>
 
           <div className="z-10 border-t border-slate-100 bg-slate-50 p-4">
+            <button
+              onClick={() => markAllAsRead()}
+              className="mb-2 w-full rounded-2xl bg-white py-4 text-[10px] font-black tracking-[4px] text-slate-700 shadow-sm uppercase italic transition-transform hover:scale-[1.02] active:scale-[0.98]"
+            >
+              Mark All As Read
+            </button>
             <button
               onClick={onClose}
               className="w-full rounded-2xl bg-slate-900 py-4 text-[10px] font-black tracking-[4px] text-white uppercase italic transition-transform hover:scale-[1.02] active:scale-[0.98]"

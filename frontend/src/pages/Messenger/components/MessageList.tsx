@@ -29,6 +29,7 @@ interface MessageListProps {
   onReply: (msg: IMessage) => void
   onEdit: (id: string, text: string) => void
   onDelete: (id: string) => void
+  isLoading?: boolean
 }
 
 const QUICK_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '😡']
@@ -485,6 +486,7 @@ const MessageList: React.FC<MessageListProps> = ({
   onReply,
   onEdit,
   onDelete,
+  isLoading,
 }) => {
   const scrollRef = useRef<HTMLDivElement>(null)
   const [showScrollDown, setShowScrollDown] = useState(false)
@@ -523,17 +525,34 @@ const MessageList: React.FC<MessageListProps> = ({
         onScroll={handleScroll}
         className="MessageList no-scrollbar bg-emoji-pattern flex-1 overflow-y-auto scroll-smooth bg-slate-50/20 px-6 pt-8 pb-10 md:px-12 md:pt-12 md:pb-14"
       >
-        <div className="mx-auto flex max-w-4xl flex-col">
-          {messages.map((msg) => (
-            <MessageBubble
-              key={msg.id}
-              message={msg}
-              onReact={(emoji) => onReact(msg.id, emoji)}
-              onReply={() => onReply(msg)}
-              onEdit={(text) => onEdit(msg.id, text)}
-              onDelete={() => onDelete(msg.id)}
-            />
-          ))}
+        <div className="mx-auto flex h-full max-w-4xl flex-col">
+          {isLoading ? (
+            <div className="flex h-full flex-col items-center justify-center gap-4 text-slate-400">
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-slate-800"></div>
+              <p className="text-xs font-black uppercase tracking-widest">Loading Conversation...</p>
+            </div>
+          ) : messages.length === 0 ? (
+            <div className="flex h-full flex-col items-center justify-center py-20 text-center opacity-60 transition-opacity hover:opacity-100">
+              <div className="mb-6 flex h-24 w-24 items-center justify-center rounded-[32px] bg-white shadow-2xl shadow-slate-200/50">
+                <FileText size={40} className="text-slate-300" />
+              </div>
+              <h3 className="mb-2 text-xl font-black tracking-tight text-slate-800 uppercase italic">Awaiting Transmission</h3>
+              <p className="max-w-xs text-[10px] font-bold tracking-[2px] text-slate-400 uppercase leading-relaxed">
+                The communication channel is open. Send a message to initiate contact directly with PIXS Administration.
+              </p>
+            </div>
+          ) : (
+            messages.map((msg) => (
+              <MessageBubble
+                key={msg.id}
+                message={msg}
+                onReact={(emoji) => onReact(msg.id, emoji)}
+                onReply={() => onReply(msg)}
+                onEdit={(text) => onEdit(msg.id, text)}
+                onDelete={() => onDelete(msg.id)}
+              />
+            ))
+          )}
         </div>
       </div>
 

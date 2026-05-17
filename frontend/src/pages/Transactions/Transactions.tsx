@@ -26,6 +26,7 @@ import ExtraNotesSection from '../../components/Transactions/ExtraNotesSection'
 
 import { useCustomerAddressStore } from '../../store/useCustomerAddressStore'
 import { usePaymentMethodStore } from '../../store/usePaymentMethodStore'
+import { useNotificationStore } from '../../store/useNotificationStore'
 // import { usePromotionStore, type Promotion } from '../../store/usePromotionStore'
 import axiosInstance from '../../lib/axiosInstance'
 import { clsx, type ClassValue } from 'clsx'
@@ -96,6 +97,7 @@ const Transactions: React.FC = () => {
   const { addresses, fetchAddresses } = useCustomerAddressStore()
   const { methods: paymentMethods, fetchMethods: fetchPayments } =
     usePaymentMethodStore()
+  const { fetchNotifications } = useNotificationStore()
   // const { promotions, fetchPromotions } = usePromotionStore()
   
   const [isProcessing, setIsProcessing] = useState(false)
@@ -138,32 +140,21 @@ const Transactions: React.FC = () => {
           setSelectedDeliveryId(def.id)
         }
 
-        // Load checkout items
-        const isDirect =
-          new URLSearchParams(location.search).get('direct') === 'true'
-        if (isDirect) {
-          const savedItems = JSON.parse(
-            localStorage.getItem('pixs_buy_now_v1') || '[]',
-          )
-          setCheckoutItems(savedItems)
-          if (savedItems.length === 0) {
-            toast.error('No items selected for transaction.')
-            navigate(-1)
-          }
-        } else {
-          try {
-            const items = await cartService.getCartItems()
-            const selected = items.filter((i) => i.selected)
-            setCheckoutItems(selected)
-            if (selected.length === 0) {
-              toast.error('No selected items found in cart.')
-              navigate('/cart')
-            }
-          } catch (err) {
-            console.error('Failed to fetch cart items:', err)
-            toast.error('Failed to load cart items.')
+        // Load checkout items directly from server mapping
+        try {
+          const items = await cartService.getCartItems()
+          // Focus exclusively on actively 'selected' cart items
+          const selected = items.filter((i) => i.selected)
+          
+          setCheckoutItems(selected)
+          if (selected.length === 0) {
+            toast.error('No selected items found in checkout.')
             navigate('/cart')
           }
+        } catch (err) {
+          console.error('Failed to fetch transaction cart items:', err)
+          toast.error('Failed to load transaction data.')
+          navigate('/cart')
         }
       } catch (err) {
         console.error('Failed to fetch data:', err)
@@ -259,7 +250,7 @@ const Transactions: React.FC = () => {
 
       setIsSuccessModalOpen(true)
       toast.success('Order placed successfully!')
-      alert('SUCCESS: Data has been created in the orders table.')
+      fetchNotifications() // fetch real-time success notification
       
       setTimeout(() => {
         navigate('/orders')
@@ -269,7 +260,7 @@ const Transactions: React.FC = () => {
       const errorResponse = err as { errors?: { message: string }[]; response?: { data?: { message?: string } } };
       const msg = errorResponse.errors?.[0]?.message || errorResponse.response?.data?.message || 'Failed to place order.'
       toast.error(msg)
-      alert('ERROR: Failed to create data in the orders table. ' + msg)
+      fetchNotifications() // fetch real-time failed notification
     } finally {
       setIsProcessing(false)
     }
