@@ -106,4 +106,9 @@ class Customer extends Authenticatable
             'password' => 'hashed',
         ];
     }
+
+    public function getNameAttribute(): string
+    {
+        return "{$this->first_name} {$this->last_name}";
+    }
 }

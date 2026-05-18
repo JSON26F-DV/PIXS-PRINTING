@@ -23,6 +23,7 @@ import ColorPicker from './components/ColorPicker'
 import PlateSelector from './components/PlateSelector'
 import ProductInfoCard from './components/ProductInfoCard'
 import PriceCalculatorUI from './components/PriceCalculatorUI'
+import ProductReviews from './components/ProductReviews'
 import FullscreenGalleryModal from '../../components/common/FullscreenGalleryModal'
 
 // ─── Loading State UI Protocol ────────────────────────────────────────────────
@@ -39,10 +40,7 @@ const ProductDetailInner: React.FC<{
   preselectedPlateName?: string | null
 }> = ({ product, compatiblePlates, preselectedPlateName }) => {
   const navigate = useNavigate()
-  const stockStatus = getStockStatus(
-    product.current_stock,
-    product.min_threshold ?? 5,
-  )
+
 
   const mainImageUrl = product.main_image 
     ? `/images/products/${product.main_image}` 
@@ -57,6 +55,11 @@ const ProductDetailInner: React.FC<{
     compatiblePlates,
     preselectedPlateName,
   })
+
+  const stockStatus = getStockStatus(
+    computed.stockForVariant,
+    product.min_threshold ?? 5,
+  )
 
   // Gallery Modal State Protocol
   const [isGalleryOpen, setIsGalleryOpen] = useState(false)
@@ -200,7 +203,7 @@ const ProductDetailInner: React.FC<{
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white pb-15">
       <ToastContainer position="bottom-right" theme="dark" hideProgressBar />
 
       {/* Persistent Breadcrumb Architecture */}
@@ -373,11 +376,13 @@ const ProductDetailInner: React.FC<{
                 onAddToCart={handleAddToCart}
                 onBuyNow={handleBuyNow}
                 quantity={state.quantity}
+                isStockInsufficient={computed.isStockInsufficient}
               />
             </div>
 
             {/* Detailed Technical Nodes Table */}
             <div className="stagger-item pt-12">
+              <ProductReviews reviews={product.reviews} />
             </div>
           </div>
         </div>
@@ -398,6 +403,7 @@ const ProductDetailInner: React.FC<{
 // ─── Component Entry Hook (Lifecycle Logic) ──────────────────────────────────
 const ProductDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
 
   const [product, setProduct] = useState<IProduct | null>(null)
   const [plates, setPlates] = useState<IScreenPlate[]>([])
@@ -414,6 +420,11 @@ const ProductDetailPage: React.FC = () => {
         if (!prodRes || prodRes.status === 'error') {
           setNotFound(true)
         } else {
+          // Protocol: Automatic redirection if product is strictly out of stock
+          if (prodRes.data.is_in_stock === false || prodRes.data.is_in_stock === 0) {
+            navigate('/')
+            return
+          }
           setProduct(prodRes.data)
           const allPlates: IScreenPlate[] = plsRes.data || []
           const filtered = allPlates.filter((p) =>
@@ -432,7 +443,7 @@ const ProductDetailPage: React.FC = () => {
     return () => {
       isMounted = false
     }
-  }, [id])
+  }, [id, navigate])
 
   const location = useLocation()
   const searchParams = new URLSearchParams(location.search)

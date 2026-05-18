@@ -263,7 +263,7 @@ const OrderPage: React.FC = () => {
   return (
     <div className="order-page-wrapper min-h-screen bg-white">
       {/* Hero Section */}
-      <div className="relative overflow-hidden px-6 md:px-16">
+      <div className="relative overflow-hidden px-6 pt-10 md:px-16 md:pt-32">
         <div className="bg-pixs-mint/10 absolute top-0 right-0 -mt-20 -mr-20 h-96 w-96 rounded-full blur-[100px]" />
 
         <div className="relative mx-auto max-w-7xl space-y-4">
@@ -290,7 +290,7 @@ const OrderPage: React.FC = () => {
       {/* Main Content */}
       <div className="order-content-container mx-auto max-w-7xl space-y-12 px-6 pb-32 md:px-16">
         {/* Search & Filters */}
-        <div className="sticky top-0 z-30 -mx-4 flex flex-col items-center justify-between gap-8 rounded-3xl border border-transparent bg-white/80 px-4 py-4 backdrop-blur-md lg:top-20 lg:flex-row">
+        <div className="sticky top-[80px] z-[40] -mx-4 flex flex-col items-center justify-between gap-4 rounded-b-3xl border-b border-transparent bg-white/90 px-6 py-4 shadow-sm backdrop-blur-xl lg:top-[100px] lg:flex-row lg:rounded-3xl lg:border lg:bg-white/80 lg:shadow-none">
           {/* Scrollable Tabs */}
           <div className="order-tabs no-scrollbar -mb-2 flex w-full items-center gap-2 overflow-x-auto scroll-smooth pb-2 lg:w-auto">
             {TABS.map((tab) => (

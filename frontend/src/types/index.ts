@@ -62,7 +62,7 @@ export interface Product {
   size?: string
   min_order?: number
   print_method?: string
-  current_stock: number
+  is_in_stock: boolean
   min_threshold: number
   last_restocked?: string
   total_sales_volume?: number

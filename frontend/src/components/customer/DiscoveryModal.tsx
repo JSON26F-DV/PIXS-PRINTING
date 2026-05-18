@@ -135,7 +135,7 @@ const DiscoveryModal: React.FC<{
   if (!shouldRender) return null
 
   return (
-    <div className="fixed inset-0 z-[100] flex h-screen w-screen flex-col justify-end overflow-hidden">
+    <div className="fixed inset-0 z-[1000] flex h-screen w-screen flex-col justify-end overflow-hidden">
       {/* Search Modal Backdrop Backdrop */}
       <div
         ref={overlayRef}
@@ -312,8 +312,7 @@ const DiscoveryModal: React.FC<{
               {!searchLoading && (
                 <div className="grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-10 lg:grid-cols-4">
                   {filteredResults.map((product) => {
-                    const isOutOfStock =
-                      (product.current_stock ?? 0) < (product.min_order ?? 1)
+                    const isOutOfStock = !product.is_in_stock
 
                     const cardContent = (
                       <div className="group flex flex-col rounded-[32px] border border-slate-100 bg-white p-2 transition-all hover:shadow-2xl hover:shadow-slate-200/50 md:rounded-[44px]">

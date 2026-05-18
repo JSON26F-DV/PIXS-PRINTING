@@ -72,6 +72,7 @@ const SORT_OPTIONS = [
 const STATUS_OPTIONS = [
   { label: 'All Status', value: 'ALL' },
   { label: 'In Stock', value: 'IN_STOCK' },
+  { label: 'Out of Stock', value: 'OUT_OF_STOCK' },
 ] as const
 
 // ── Component ───────────────────────────────────────────────────────────────
@@ -153,7 +154,7 @@ const Homepage: React.FC = () => {
     most_sold:
       filters.priceSort === 'MOST_SOLD' || filters.soldFilter === 'MOST_SOLD',
     min_rating: filters.minRating === 'ALL' ? undefined : filters.minRating,
-    in_stock_only: filters.availability === 'IN_STOCK',
+    status: filters.availability === 'IN_STOCK' ? 'In Stock' : filters.availability === 'OUT_OF_STOCK' ? 'Out of Stock' : undefined,
     screenplate_id:
       filters.screenplateId === 'ALL' ? undefined : filters.screenplateId,
     page: currentPage,
@@ -328,7 +329,7 @@ const Homepage: React.FC = () => {
                     animate={{ height: 'auto', opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
                     transition={{ duration: 0.3, ease: 'easeInOut' }}
-                    className="sticky top-[80px] z-[1001] -mx-4 flex flex-col items-center justify-between gap-6 bg-slate-50/80 px-8 py-2 backdrop-blur-sm xl:flex-row xl:bg-transparent"
+                    className="sticky top-[80px] z-[100] -mx-4 flex flex-col items-center justify-between gap-6 bg-slate-50/80 px-8 py-2 backdrop-blur-sm xl:flex-row xl:bg-transparent"
                   >
                     <div className="flex w-full flex-wrap items-center gap-3 xl:w-auto">
                       {/* Category Filter Dropdown */}
@@ -445,9 +446,7 @@ const Homepage: React.FC = () => {
                             availability:
                               STATUS_OPTIONS.find(
                                 (o) => o.label === (label as string),
-                              )?.value === 'IN_STOCK'
-                                ? 'IN_STOCK'
-                                : 'ALL',
+                              )?.value || 'ALL',
                           }))
                           setCurrentPage(1)
                         }}

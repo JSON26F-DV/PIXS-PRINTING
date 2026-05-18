@@ -83,6 +83,7 @@ Route::middleware(['auth:sanctum', 'role:customer'])->prefix('customer')->group(
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/messages', [MessageController::class, 'index']);
     Route::post('/messages/send', [MessageController::class, 'store']);
+    Route::patch('/messages/mark-read', [MessageController::class, 'markConversationAsRead']);
     
     // Notifications
     Route::post('/notifications', [\App\Http\Controllers\NotificationController::class, 'store']);

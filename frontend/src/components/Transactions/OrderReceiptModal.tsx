@@ -127,7 +127,6 @@ const OrderReceiptModal: React.FC<ReceiptModalProps> = ({
                   </div>
                   <div className="rounded-2xl border border-slate-100 p-4">
                     <p className="text-xs font-black text-slate-900 uppercase italic">{delivery_method?.name}</p>
-                    <p className="mt-1 text-[9px] font-bold text-amber-500 uppercase italic">Fee: {delivery_method?.fee === 0 ? 'Collect' : `PHP ${delivery_method.fee}`}</p>
                   </div>
                 </div>
 

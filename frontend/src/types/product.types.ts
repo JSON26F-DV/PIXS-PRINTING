@@ -16,7 +16,7 @@ export interface IProduct {
   name: string
   short_description: string
   base_price: number
-  current_stock: number
+  is_in_stock: boolean
   main_image: string
   min_order: number
   is_need_screenplate: boolean
@@ -33,6 +33,13 @@ export interface IProduct {
   best_for?: string
   min_threshold?: number
   print_method?: string
+  reviews?: {
+    id: number
+    rating: number
+    feedback: string
+    customer_name: string
+    created_at: string
+  }[]
 }
 
 export interface ICategory {

@@ -6,7 +6,7 @@ export type HomepagePriceSort =
   | 'HIGHEST_RATING'
   | 'A_TO_Z'
   | 'Z_TO_A'
-export type HomepageAvailabilityFilter = 'ALL' | 'IN_STOCK'
+export type HomepageAvailabilityFilter = 'ALL' | 'IN_STOCK' | 'OUT_OF_STOCK'
 
 export interface HomepageProductFilters {
   priceSort: HomepagePriceSort

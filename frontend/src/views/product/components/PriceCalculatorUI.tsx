@@ -24,6 +24,7 @@ interface PriceCalculatorUIProps {
   onAddToCart: () => void
   onBuyNow: () => void
   quantity: number
+  isStockInsufficient?: boolean
 }
 
 /**
@@ -44,6 +45,7 @@ const PriceCalculatorUI: React.FC<PriceCalculatorUIProps> = ({
   onAddToCart,
   onBuyNow,
   quantity,
+  isStockInsufficient,
 }) => {
   const isColorMissing = isNeedColor && !hasRequiredColor
   const isPlateMissing = isNeedScreenplate && !hasRequiredPlate
@@ -152,7 +154,9 @@ const PriceCalculatorUI: React.FC<PriceCalculatorUIProps> = ({
           <div className="animate-in zoom-in flex items-center gap-3 rounded-2xl border border-rose-100 bg-rose-50 p-5 text-rose-600 italic transition-all duration-500 md:rounded-[28px]">
             <AlertTriangle size={18} strokeWidth={3} />
             <p className="text-[10px] font-black tracking-[2px] uppercase">
-              Product is currently out of stock.
+              {isStockInsufficient 
+                ? `Insufficient stock for minimum order (${minOrder} qty).` 
+                : "Product is currently out of stock."}
             </p>
           </div>
         )}

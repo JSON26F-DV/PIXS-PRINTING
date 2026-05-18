@@ -123,3 +123,50 @@
 .epr-main {
   z-index: 9999 !important;
 }
+
+/* Custom Scrollbar para sa MessageList */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #cbd5e1; /* slate-300 */
+  border-radius: 99px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8; /* slate-400 */
+}
+
+/* Firefox */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+/* Neogreen Scrollbar for MessageList */
+.scrollbar-neogreen::-webkit-scrollbar {
+  width: 6px;
+}
+
+.scrollbar-neogreen::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-neogreen::-webkit-scrollbar-thumb {
+  background: #39ff14; /* neogreen */
+  border-radius: 99px;
+}
+
+.scrollbar-neogreen::-webkit-scrollbar-thumb:hover {
+  background: #32e612;
+}
+
+.scrollbar-neogreen {
+  scrollbar-width: thin;
+  scrollbar-color: #39ff14 transparent;
+}

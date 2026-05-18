@@ -24,7 +24,16 @@ const ProductCard: React.FC<ProductCardProps> = ({
   onClick,
 }) => {
   const { user } = useAuth()
-  const isOutOfStock = (product.current_stock ?? 0) < (product.min_order ?? 1)
+  
+    // Aggregate stock intelligently across all internal variants natively to represent accurately
+  const totalStock = useMemo(() => {
+    if (product.variants && product.variants.length > 0) {
+      return product.variants.reduce((acc, v) => acc + (Number(v.stock) || 0), 0)
+    }
+    return product.is_in_stock ? 1000 : 0
+  }, [product.variants, product.is_in_stock])
+
+  const isOutOfStock = !product.is_in_stock
   const isLoggedIn = user?.isLoggedIn
 
   const imageSrc = useMemo(() => {
@@ -104,7 +113,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
             'absolute bottom-2 left-2 flex items-center gap-1.5 rounded-lg border border-white/10 px-2 py-1 text-[8px] font-black tracking-widest uppercase shadow-2xl md:bottom-6 md:left-6 md:gap-2.5 md:rounded-xl md:px-4 md:py-2 md:text-[9px]',
             isOutOfStock
               ? 'bg-slate-400 text-white'
-              : (product.current_stock ?? 0) > 50
+              : totalStock > 50
                 ? 'bg-slate-900 text-white'
                 : 'bg-rose-500 text-white',
           )}
@@ -114,12 +123,12 @@ const ProductCard: React.FC<ProductCardProps> = ({
               'h-1.5 w-1.5 animate-pulse rounded-full md:h-2 md:w-2',
               isOutOfStock
                 ? 'bg-white/50'
-                : (product.current_stock ?? 0) > 50
+                : totalStock > 50
                   ? 'bg-pixs-mint'
                   : 'bg-white',
             )}
           />
-          {(product.current_stock ?? 0).toLocaleString()}{' '}
+          {totalStock.toLocaleString()}{' '}
           <span className="hidden md:inline">
             {isOutOfStock ? 'Units Remaining' : 'Units Available'}
           </span>

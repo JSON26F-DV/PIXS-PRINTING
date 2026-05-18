@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useAuth } from '../../hooks/useAuth'
 
 // Local Components
 import HeroSection from './components/HeroSection.tsx'
@@ -16,12 +17,14 @@ export interface IMessage {
   senderName: string
   text: string
   timestamp: string
-  attachments?: { type: 'image' | 'file'; url: string; name: string }[]
+  attachments?: { type: 'image' | 'file'; url: string; name: string; fileObj?: File }[]
   reactions?: { user: string; emoji: string }[]
   isEdited?: boolean
   originalText?: string
   isDeleted?: boolean
   replyTo?: { id: string; text: string; senderName: string }
+  senderId?: string
+  receiverId?: string
 }
 
 interface ApiMessage {
@@ -31,9 +34,11 @@ interface ApiMessage {
   created_at: string;
   sender_id?: string;
   receiver_id?: string;
+  attachments?: { type: 'image' | 'file'; url: string; name: string }[];
 }
 
 const MessengerPage: React.FC = () => {
+  const { user } = useAuth()
   const [messages, setMessages] = useState<IMessage[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
@@ -41,15 +46,27 @@ const MessengerPage: React.FC = () => {
     const fetchMessages = async () => {
       try {
         const res = await axiosInstance.get('/api/messages')
-        const formatted = res.data.data.map((m: ApiMessage) => ({
-          id: m.id,
-          sender: m.sender_type === 'customer' ? 'customer' : 'admin',
-          senderName: m.sender_type === 'customer' ? 'You' : 'PIXS Admin',
-          text: m.message,
-          timestamp: m.created_at,
-          attachments: [],
-          reactions: []
-        }))
+        
+        // Filter messages to only show those related to the current user
+        const relatedMessages = res.data.data.filter(
+          (m: ApiMessage) => m.sender_id === user.id || m.receiver_id === user.id
+        )
+
+        const formatted = relatedMessages.map((m: ApiMessage) => {
+          const isMine = m.sender_id === user.id
+          return {
+            id: m.id,
+            // If the current user sent it, treat as 'customer' for right-side alignment
+            sender: isMine ? 'customer' : 'admin', 
+            senderName: isMine ? 'You' : (m.sender_type === 'employee' ? 'PIXS Admin' : 'Customer'),
+            text: m.message,
+            timestamp: m.created_at,
+            attachments: m.attachments ? m.attachments.map(a => ({ type: a.type, url: a.url, name: a.name })) : [],
+            reactions: [],
+            senderId: m.sender_id,
+            receiverId: m.receiver_id
+          }
+        })
         setMessages(formatted)
       } catch (error) {
         console.error('Failed to load messages', error)
@@ -57,10 +74,22 @@ const MessengerPage: React.FC = () => {
         setIsLoading(false)
       }
     }
-    fetchMessages()
-  }, [])
+    if (user && user.id) {
+      fetchMessages()
+    } else {
+      setIsLoading(false)
+    }
+  }, [user])
 
-  const [isHeroVisible, setIsHeroVisible] = useState(messages.length === 0)
+  const [isHeroVisible, setIsHeroVisible] = useState(() => {
+    return localStorage.getItem('pixs_messenger_hero_seen') !== 'true'
+  })
+
+  const handleStartHero = () => {
+    localStorage.setItem('pixs_messenger_hero_seen', 'true')
+    setIsHeroVisible(false)
+  }
+
   // Initialize gallery to true for desktop mode reveal
   const [isGalleryOpen, setIsGalleryOpen] = useState(window.innerWidth >= 1024)
   const [activeReplyTo, setActiveReplyTo] = useState<IMessage | null>(null)
@@ -81,7 +110,7 @@ const MessengerPage: React.FC = () => {
 
   const handleSendMessage = async (
     text: string,
-    attachments: { type: 'image' | 'file'; url: string; name: string }[] = [],
+    attachments: { type: 'image' | 'file'; url: string; name: string; fileObj?: File }[] = [],
   ) => {
     const tempId = `msg_${Date.now()}`
     const newMessage: IMessage = {
@@ -90,7 +119,7 @@ const MessengerPage: React.FC = () => {
       senderName: 'You',
       text,
       timestamp: new Date().toISOString(),
-      attachments,
+      attachments: attachments.map(a => ({ type: a.type, url: a.url, name: a.name })), // Safe for saving in state without non-serializable File object
       reactions: [],
       replyTo: activeReplyTo
         ? {
@@ -99,15 +128,38 @@ const MessengerPage: React.FC = () => {
             senderName: activeReplyTo.senderName,
           }
         : undefined,
+      senderId: user.id,
     }
     setMessages((prev) => [...prev, newMessage])
     setActiveReplyTo(null)
 
     try {
-      await axiosInstance.post('/api/messages/send', {
-        message: text,
-        receiver_id: '1', // default to first admin
-        receiver_type: 'employee',
+      const formData = new FormData()
+      formData.append('message', text)
+      
+      const receiverId = user.account_type === 'employee' 
+        ? (activeReplyTo?.senderId || '1') 
+        : '1';
+      const receiverType = user.account_type === 'employee'
+        ? 'customer'
+        : 'employee';
+
+      formData.append('receiver_id', receiverId)
+      formData.append('receiver_type', receiverType)
+
+      attachments.forEach((att, index) => {
+        formData.append(`attachments[${index}][name]`, att.name)
+        formData.append(`attachments[${index}][type]`, att.type)
+        formData.append(`attachments[${index}][url]`, att.url)
+        if (att.fileObj) {
+          formData.append(`attachments[${index}][file]`, att.fileObj)
+        }
+      })
+
+      await axiosInstance.post('/api/messages/send', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
       })
     } catch (error) {
       console.error('Message failed to send', error)
@@ -170,47 +222,41 @@ const MessengerPage: React.FC = () => {
   }
 
   return (
-    <div className="MessengerTerminal flex h-[100dvh] flex-col overflow-hidden bg-slate-50 pb-20 md:pb-0 md:pt-20">
+    <div className="MessengerTerminal relative flex min-h-screen flex-col bg-slate-50 scrollbar-neogreen">
       <AnimatePresence mode="wait">
         {isHeroVisible ? (
-          <motion.div
-            key="hero"
-            initial={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.5 }}
-            className="flex flex-1 flex-col overflow-hidden"
-          >
-            <ChatHeader
-              onToggleGallery={() => setIsGalleryOpen(!isGalleryOpen)}
-              isGalleryOpen={isGalleryOpen}
-            />
-            <div className="relative flex flex-1 items-center justify-center overflow-hidden border-t border-slate-100 bg-white p-6 shadow-2xl md:rounded-t-[48px]">
+          <div className="flex flex-1 flex-col pt-20">
+            <div className="fixed top-0 left-0 z-40 w-full md:top-20">
+              <ChatHeader
+                onToggleGallery={() => setIsGalleryOpen(!isGalleryOpen)}
+                isGalleryOpen={isGalleryOpen}
+              />
+            </div>
+            <main className="flex flex-1 items-center justify-center p-6 pt-32 md:pt-40">
               {isLoading ? (
                 <div className="flex flex-col items-center gap-4 text-slate-400">
                   <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-slate-800"></div>
-                  <p className="text-xs font-black uppercase tracking-widest">Waking up terminal...</p>
+                  <p className="text-xs font-black uppercase tracking-widest">
+                    Waking up terminal...
+                  </p>
                 </div>
               ) : (
-                <HeroSection onStart={() => setIsHeroVisible(false)} />
+                <HeroSection onStart={handleStartHero} />
               )}
-            </div>
-          </motion.div>
+            </main>
+          </div>
         ) : (
-          <motion.div
-            key="chat"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.5, ease: 'easeOut' }}
-            className="flex flex-1 flex-col overflow-hidden"
-          >
-            <ChatHeader
-              onToggleGallery={() => setIsGalleryOpen(!isGalleryOpen)}
-              isGalleryOpen={isGalleryOpen}
-            />
+          <div className="flex flex-1 flex-col">
+            {/* Header Fixed Logic */}
+            <div className="fixed top-0 left-0 z-40 w-full md:top-20">
+              <ChatHeader
+                onToggleGallery={() => setIsGalleryOpen(!isGalleryOpen)}
+                isGalleryOpen={isGalleryOpen}
+              />
+            </div>
 
-            <main className="relative flex h-full flex-1 overflow-hidden border-t border-slate-100 bg-white shadow-2xl md:rounded-t-[48px]">
-              <div className="relative flex h-full min-w-0 flex-[2] flex-col overflow-hidden border-r border-slate-50">
+            <main className="relative flex flex-1 overflow-hidden pt-[80px] pb-[196px] md:pt-[176px] md:pb-[116px]">
+              <div className="flex flex-1 flex-col">
                 <MessageList
                   messages={messages}
                   onReact={handleReaction}
@@ -219,21 +265,16 @@ const MessengerPage: React.FC = () => {
                   onDelete={handleDeleteMessage}
                   isLoading={isLoading}
                 />
-
-                <MessageInput
-                  onSend={handleSendMessage}
-                  activeReplyTo={activeReplyTo}
-                  onCancelReply={() => setActiveReplyTo(null)}
-                />
               </div>
 
+              {/* Gallery Node for Desktop */}
               <AnimatePresence mode="popLayout">
                 {isGalleryOpen && (
                   <motion.div
                     initial={{ width: 0, opacity: 0 }}
                     animate={{ width: '33.33%', opacity: 1 }}
                     exit={{ width: 0, opacity: 0 }}
-                    className="hidden h-full overflow-hidden bg-slate-50/10 lg:block"
+                    className="fixed top-[176px] right-0 bottom-[116px] z-30 hidden border-l border-slate-100 bg-white lg:block"
                   >
                     <GalleryView
                       messages={messages}
@@ -243,7 +284,16 @@ const MessengerPage: React.FC = () => {
                 )}
               </AnimatePresence>
             </main>
-          </motion.div>
+
+            {/* MessageInput Fixed Logic */}
+            <div className="fixed bottom-0 left-0 z-40 w-full bg-white pb-20 md:pb-0">
+              <MessageInput
+                onSend={handleSendMessage}
+                activeReplyTo={activeReplyTo}
+                onCancelReply={() => setActiveReplyTo(null)}
+              />
+            </div>
+          </div>
         )}
       </AnimatePresence>
 
@@ -264,7 +314,7 @@ const MessengerPage: React.FC = () => {
           </motion.div>
         )}
       </AnimatePresence>
-      {/* Portal Root for high-fidelity interaction nodes */}
+
       <div
         id="messenger-portal-root"
         className="pointer-events-none fixed inset-0 z-[9999]"

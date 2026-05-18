@@ -14,6 +14,7 @@ import {
   FileText,
   Download,
   ExternalLink,
+  ArrowDown,
 } from 'lucide-react'
 
 import { clsx } from 'clsx'
@@ -107,6 +108,13 @@ const MessageBubble: React.FC<{
   const anchorRef = useRef<HTMLDivElement>(null)
 
   const isCustomer = message.sender === 'customer'
+
+  const getAssetUrl = (at: { type: string, name: string, url: string }) => {
+    if (at.url.startsWith('blob:') || at.url.startsWith('http')) return at.url;
+    return at.type === 'image' 
+        ? `/src/assets/message_media/${at.name}` 
+        : `/src/assets/message_document/${at.name}`;
+  }
 
   const handleEditSubmit = () => {
     if (editText.trim() && editText !== message.text) {
@@ -254,10 +262,10 @@ const MessageBubble: React.FC<{
                     <motion.div
                       whileHover={{ scale: 1.02 }}
                       className="group relative cursor-pointer overflow-hidden rounded-[24px] border border-slate-100 bg-slate-50 shadow-lg"
-                      onClick={() => window.open(at.url, '_blank')}
+                      onClick={() => window.open(getAssetUrl(at), '_blank')}
                     >
                       <img
-                        src={at.url}
+                        src={getAssetUrl(at)}
                         alt={at.name}
                         className="max-h-[300px] w-auto object-cover"
                       />
@@ -267,7 +275,7 @@ const MessageBubble: React.FC<{
                     </motion.div>
                   ) : (
                     <a
-                      href={at.url}
+                      href={getAssetUrl(at)}
                       download={at.name}
                       className={clsx(
                         'group flex items-center gap-4 rounded-[22px] border p-4 shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98]',
@@ -490,42 +498,73 @@ const MessageList: React.FC<MessageListProps> = ({
 }) => {
   const scrollRef = useRef<HTMLDivElement>(null)
   const [showScrollDown, setShowScrollDown] = useState(false)
-  const [isNearBottom, setIsNearBottom] = useState(true)
+  const [isHoveredBottom, setIsHoveredBottom] = useState(false)
+  const isNearBottomRef = useRef(true)
+  const prevLengthRef = useRef(messages.length)
 
   const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTo({
-        top: scrollRef.current.scrollHeight,
-        behavior,
-      })
-    }
+    window.scrollTo({
+      top: document.body.scrollHeight,
+      behavior,
+    })
   }
 
   useEffect(() => {
-    if (isNearBottom) {
-      scrollToBottom('auto')
+    const newMessage = messages.length > prevLengthRef.current
+    prevLengthRef.current = messages.length
+
+    // Always scroll to bottom when a new message arrives/is sent
+    // or when user is already near the bottom
+    if (newMessage || isNearBottomRef.current) {
+      scrollToBottom(newMessage ? 'smooth' : 'auto')
     }
-  }, [messages, isNearBottom])
+  }, [messages])
 
-  const handleScroll = () => {
-    if (!scrollRef.current) return
+  useEffect(() => {
+    const handleWindowScroll = () => {
+      const scrollTop = window.scrollY
+      const scrollHeight = document.body.scrollHeight
+      const clientHeight = window.innerHeight
+      const scrollBottom = scrollHeight - scrollTop - clientHeight
 
-    const { scrollTop, scrollHeight, clientHeight } = scrollRef.current
-    const scrollBottom = scrollHeight - scrollTop - clientHeight
+      const nearBottom = scrollBottom < 100
+      isNearBottomRef.current = nearBottom
+      setShowScrollDown(scrollTop > 200 && !nearBottom)
+    }
 
-    const nearBottom = scrollBottom < 100
-    setIsNearBottom(nearBottom)
-    setShowScrollDown(scrollTop > 200 && !nearBottom)
-  }
+    window.addEventListener('scroll', handleWindowScroll)
+    return () => window.removeEventListener('scroll', handleWindowScroll)
+  }, [])
 
   return (
-    <div className="relative flex flex-1 flex-col overflow-hidden">
+    <div className="relative w-full">
       <div
         ref={scrollRef}
-        onScroll={handleScroll}
-        className="MessageList no-scrollbar bg-emoji-pattern flex-1 overflow-y-auto scroll-smooth bg-slate-50/20 px-6 pt-8 pb-10 md:px-12 md:pt-12 md:pb-14"
+        className="MessageList flex flex-col scroll-smooth bg-emoji-pattern bg-slate-50/20 px-6 pt-8 pb-10 md:px-12 md:pt-12 md:pb-14"
+        style={{
+          WebkitOverflowScrolling: 'touch',
+          touchAction: 'pan-y',
+          scrollbarWidth: 'thin',
+          scrollbarColor: '#39ff14 transparent',
+        }}
       >
-        <div className="mx-auto flex h-full max-w-4xl flex-col">
+        <style>{`
+          .MessageList::-webkit-scrollbar {
+            width: 6px;
+          }
+          .MessageList::-webkit-scrollbar-track {
+            background: transparent;
+          }
+          .MessageList::-webkit-scrollbar-thumb {
+            background-color: #39ff14;
+            border-radius: 99px;
+            transition: background-color 0.2s;
+          }
+          .MessageList::-webkit-scrollbar-thumb:hover {
+            background-color: #32e612;
+          }
+        `}</style>
+        <div className="mx-auto flex min-h-0 w-full max-w-4xl flex-col">
           {isLoading ? (
             <div className="flex h-full flex-col items-center justify-center gap-4 text-slate-400">
               <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-slate-800"></div>
@@ -556,28 +595,34 @@ const MessageList: React.FC<MessageListProps> = ({
         </div>
       </div>
 
-      <AnimatePresence>
-        {showScrollDown && (
-          <motion.button
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.8 }}
-            onClick={() => scrollToBottom()}
-            className="group absolute bottom-6 left-1/2 z-40 flex h-10 w-10 -translate-x-1/2 items-center justify-center rounded-full border border-slate-100 bg-white text-slate-900 shadow-2xl transition-all hover:scale-110 active:scale-95"
-          >
-            <div className="relative">
-              <Plus
-                size={20}
-                className="rotate-45 transition-transform group-hover:translate-y-0.5"
-              />
-              <div className="bg-pixs-mint absolute top-1/2 left-1/2 h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 animate-pulse rounded-full" />
-            </div>
-            <div className="absolute -top-10 rounded-lg bg-slate-900 px-3 py-1.5 text-[8px] font-black tracking-widest whitespace-nowrap text-white uppercase opacity-0 transition-opacity group-hover:opacity-100">
-              Latest Fulfillment
-            </div>
-          </motion.button>
-        )}
-      </AnimatePresence>
+      <div
+        className="fixed bottom-[140px] left-1/2 z-40 h-24 w-32 -translate-x-1/2 md:bottom-[10px]"
+        onMouseEnter={() => setIsHoveredBottom(true)}
+        onMouseLeave={() => setIsHoveredBottom(false)}
+      >
+        <AnimatePresence>
+          {(showScrollDown || isHoveredBottom) && (
+            <motion.button
+              initial={{ opacity: 0, scale: 0.8, x: '-50%' }}
+              animate={{ opacity: 1, scale: 1, x: '-50%' }}
+              exit={{ opacity: 0, scale: 0.8, x: '-50%' }}
+              onClick={() => scrollToBottom()}
+              className="group fixed bottom-[70px] left-1/2 z-50 flex h-14 w-14 items-center justify-center rounded-full border border-slate-100 bg-white text-slate-900 shadow-2xl transition-all hover:scale-110 active:scale-95 md:bottom-[150px]"
+            >
+              <div className="relative">
+                <ArrowDown
+                  size={28}
+                  className="transition-transform group-hover:translate-y-1"
+                />
+                <div className="absolute top-1/2 left-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 animate-pulse rounded-full bg-pixs-mint" />
+              </div>
+              <div className="absolute -top-12 rounded-xl bg-slate-900 px-4 py-2 text-[10px] font-black tracking-widest whitespace-nowrap text-white uppercase opacity-0 transition-opacity group-hover:opacity-100">
+                Latest fulfillment
+              </div>
+            </motion.button>
+          )}
+        </AnimatePresence>
+      </div>
     </div>
   )
 }

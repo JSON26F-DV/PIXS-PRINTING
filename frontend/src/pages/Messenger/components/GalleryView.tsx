@@ -43,6 +43,13 @@ const GalleryView: React.FC<GalleryViewProps> = ({
   const images = allAttachments.filter((at) => at.type === 'image')
   const files = allAttachments.filter((at) => at.type === 'file')
 
+  const getAssetUrl = (at: { type: string, name: string, url: string }) => {
+    if (at.url.startsWith('blob:') || at.url.startsWith('http')) return at.url;
+    return at.type === 'image' 
+        ? `/src/assets/message_media/${at.name}` 
+        : `/src/assets/message_document/${at.name}`;
+  }
+
   return (
     <div className="GalleryView flex h-full flex-col bg-white lg:bg-transparent">
       <div className="flex items-center justify-between border-b border-slate-100 p-6 md:p-8">
@@ -86,7 +93,7 @@ const GalleryView: React.FC<GalleryViewProps> = ({
                   }}
                 >
                   <img
-                    src={img.url}
+                    src={getAssetUrl(img)}
                     alt={img.name}
                     className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
                   />
@@ -136,7 +143,7 @@ const GalleryView: React.FC<GalleryViewProps> = ({
                     </div>
                   </div>
                   <a
-                    href={file.url}
+                    href={getAssetUrl(file)}
                     download={file.name}
                     className="block"
                     onClick={(e) => e.stopPropagation()}
@@ -176,7 +183,7 @@ const GalleryView: React.FC<GalleryViewProps> = ({
       <FullscreenGalleryModal
         isOpen={fullscreenOpen}
         onClose={() => setFullscreenOpen(false)}
-        images={images.map((img) => img.url)}
+        images={images.map((img) => getAssetUrl(img))}
         initialIndex={fullscreenIndex}
         productName="Production Assets"
       />

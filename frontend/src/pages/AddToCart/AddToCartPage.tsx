@@ -275,7 +275,7 @@ const AddToCartPage: React.FC = () => {
     const target = mergedItems.find((item) => item.id === itemId)
     if (!target) return
 
-    const maxStock = target.variant?.stock ?? target.fullProduct?.current_stock ?? 0;
+    const maxStock = target.variant?.stock ?? (target.fullProduct?.is_in_stock ? 999 : 0);
     
     let nextQty = Number.isNaN(nextQtyRaw) ? 0 : Math.floor(nextQtyRaw)
 

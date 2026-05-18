@@ -263,7 +263,7 @@ export const useProductDetail = ({
         width: 'N/A',
         height: 'N/A',
         price: product.base_price,
-        stock: product.current_stock,
+        stock: product.is_in_stock ? 1000 : 0,
       }
     }
     return (
@@ -307,10 +307,11 @@ export const useProductDetail = ({
     selectedPlate,
   ])
 
-  const stockForVariant = selectedVariant?.stock ?? product.current_stock
+  const stockForVariant = selectedVariant?.stock ?? (product.is_in_stock ? 1000 : 0)
   const isQuantityTooLow = quantity < product.min_order
   const isQuantityTooHigh = quantity > stockForVariant
-  const isOutOfStock = stockForVariant === 0
+  const isStockInsufficient = stockForVariant < product.min_order
+  const isOutOfStock = stockForVariant === 0 || isStockInsufficient
 
   // Protocol: Constrain quantity against available stock when switching variants (Sizes)
   // Fix: Derive during render or use timeout to avoid cascade
@@ -402,6 +403,7 @@ export const useProductDetail = ({
       isQuantityTooLow,
       isQuantityTooHigh,
       isOutOfStock,
+      isStockInsufficient,
       canAddToCart,
       hasRequiredPlate,
       hasRequiredColor,

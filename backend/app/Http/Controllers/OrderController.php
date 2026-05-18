@@ -90,7 +90,7 @@ class OrderController extends Controller
     public function update(Request $request, $id): JsonResponse
     {
         $user = $request->user();
-        $order = Order::where('customer_id', $user->id)->where('id', $id)->first();
+        $order = Order::with('items')->where('customer_id', $user->id)->where('id', $id)->first();
         if (! $order) {
             return response()->json(['message' => 'Order not found'], 404);
         }
@@ -101,17 +101,45 @@ class OrderController extends Controller
         if ($request->has('admin_comment')) {
             $order->admin_comment = $request->admin_comment;
         }
+        
+        $validated = $request->validate([
+            'rating' => 'nullable|integer|min:0|max:5',
+            'feedback' => 'nullable|string|max:1000',
+            'complaint' => 'nullable|string|max:1000',
+        ]);
+
         if ($request->has('rating')) {
-            $order->rating = $request->rating;
+            $order->rating = $validated['rating'];
         }
         if ($request->has('feedback')) {
-            $order->feedback = $request->feedback;
+            $order->feedback = $validated['feedback'];
         }
         if ($request->has('complaint')) {
-            $order->complaint = $request->complaint;
+            $order->complaint = $validated['complaint'];
         }
 
         $order->save();
+
+        // Sync product reviews if order is reviewed
+        if ($request->hasAny(['rating', 'feedback']) && $order->status === 'DELIVERED') {
+            foreach ($order->items as $item) {
+                \App\Models\ProductReview::updateOrCreate(
+                    [
+                        'order_id' => $order->id,
+                        'product_id' => $item->product_id,
+                    ],
+                    [
+                        'customer_id' => $user->id,
+                        'rating' => $order->rating,
+                        'feedback' => $order->feedback,
+                    ]
+                );
+
+                // Recalculate product ratings
+                $avgRating = \App\Models\ProductReview::where('product_id', $item->product_id)->avg('rating');
+                \App\Models\Product::where('id', $item->product_id)->update(['ratings' => round($avgRating)]);
+            }
+        }
 
         return response()->json(['message' => 'Order updated']);
     }
@@ -196,16 +224,29 @@ class OrderController extends Controller
                         'plate_price' => $cartItem->plate_price,
                     ]);
 
-                    // Inventory Stock Deduction
+                    // total_sold Increment & is_in_stock Evaluator
                     if ($cartItem->product_id) {
-                        \Illuminate\Support\Facades\DB::table('products')
-                            ->where('id', $cartItem->product_id)
-                            ->decrement('current_stock', $cartItem->quantity);
+                        \Illuminate\Support\Facades\DB::statement('
+                            UPDATE products 
+                            SET 
+                                total_sold = total_sold + ?,
+                                is_in_stock = IF((SELECT SUM(stock) FROM product_variants WHERE product_id = products.id) > 0, 1, 0)
+                            WHERE id = ?
+                        ', [
+                            $cartItem->quantity, 
+                            $cartItem->product_id
+                        ]);
                     }
+                    // Accurate Stock Deductions strictly rely upon dynamically targeted variants now natively
                     if ($cartItem->variant_id) {
-                        \Illuminate\Support\Facades\DB::table('product_variants')
-                            ->where('variant_id', $cartItem->variant_id)
-                            ->decrement('stock', $cartItem->quantity);
+                        \Illuminate\Support\Facades\DB::statement('
+                            UPDATE product_variants 
+                            SET stock = GREATEST(0, CAST(stock AS SIGNED) - ?)
+                            WHERE variant_id = ?
+                        ', [
+                            $cartItem->quantity, 
+                            $cartItem->variant_id
+                        ]);
                     }
 
                     // STEP 7: For each cart_item_color of that cart_item, create order_item_color row

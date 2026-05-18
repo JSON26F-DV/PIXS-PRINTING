@@ -14,7 +14,7 @@ import type { IMessage } from '../MessengerPage.tsx'
 interface MessageInputProps {
   onSend: (
     text: string,
-    attachments?: { type: 'image' | 'file'; url: string; name: string }[],
+    attachments?: { type: 'image' | 'file'; url: string; name: string; fileObj?: File }[],
   ) => void
   activeReplyTo: IMessage | null
   onCancelReply: () => void
@@ -50,6 +50,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
       type,
       url: type === 'image' ? URL.createObjectURL(file) : '#',
       name: file.name,
+      fileObj: file
     }
 
     onSend(`Sent a ${type}: ${file.name}`, [attachment])

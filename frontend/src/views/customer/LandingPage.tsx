@@ -11,7 +11,6 @@ import {
   ArrowRight,
   Heart,
   Star,
-  Clock,
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useDiscovery } from '../../context/DiscoveryContext'

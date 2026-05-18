@@ -10,7 +10,7 @@ export interface IDiscoveryProduct {
   name: string
   category_label: string
   base_price: number
-  current_stock: number
+  is_in_stock: boolean
   min_order: number
   main_image: string | null
 }

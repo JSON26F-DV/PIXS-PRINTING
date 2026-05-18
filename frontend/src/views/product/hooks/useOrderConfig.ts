@@ -75,7 +75,7 @@ export const useOrderConfig = ({
   ])
 
   // ─── Validation helpers ───────────────────────────────────────────────────
-  const stockForVariant = selectedVariant?.stock ?? product.current_stock
+  const stockForVariant = selectedVariant?.stock ?? (product.is_in_stock ? 1000 : 0)
   const isQuantityTooLow = quantity < product.min_order
   const isQuantityTooHigh = quantity > stockForVariant
   const isOutOfStock = stockForVariant === 0

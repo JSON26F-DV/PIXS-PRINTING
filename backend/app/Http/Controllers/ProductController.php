@@ -28,7 +28,7 @@ class ProductController extends Controller
                     'products.name',
                     'products.short_description',
                     'products.base_price',
-                    'products.current_stock',
+                    'products.is_in_stock',
                     'products.main_image',
                     'products.ratings',
                     'products.total_sold',
@@ -69,20 +69,19 @@ class ProductController extends Controller
                 $query->where('products.ratings', '>=', $request->min_rating);
             }
 
-            // Filter: Status
             if ($request->filled('status')) {
                 $status = $request->status;
                 if ($status === 'In Stock') {
-                    $query->where('products.current_stock', '>', 50);
+                    $query->where('products.is_in_stock', 1);
                 } elseif ($status === 'Low Stock') {
-                    $query->whereBetween('products.current_stock', [1, 50]);
+                    $query->where('products.is_in_stock', 1); // Sub-aggregated variant filters can refine further later
                 } elseif ($status === 'Out of Stock') {
-                    $query->where('products.current_stock', '<=', 0);
+                    $query->where('products.is_in_stock', 0);
                 }
             }
 
             if ($request->boolean('in_stock_only')) {
-                $query->where('products.current_stock', '>', 0);
+                $query->where('products.is_in_stock', 1);
             }
 
             // Filter: Screenplate Compatibility (JOIN screenplate_compatibility)
@@ -136,7 +135,7 @@ class ProductController extends Controller
                     'main_image' => $product->main_image,
                     'ratings' => (float) $product->ratings,
                     'total_sold' => (int) $product->total_sold,
-                    'current_stock' => (int) $product->current_stock,
+                    'is_in_stock' => (bool) $product->is_in_stock,
                     'is_need_screenplate' => (bool) $product->is_need_screenplate,
                     'is_need_color' => (bool) $product->is_need_color,
                     'category_id' => $product->category_id,
@@ -191,6 +190,8 @@ class ProductController extends Controller
                 'tags',
                 'gallery' => fn ($q) => $q->orderBy('sort_order'),
                 'category',
+                'reviews',
+                'reviews.customer',
             ])->findOrFail($id);
 
             $data = [
@@ -201,7 +202,7 @@ class ProductController extends Controller
                 'main_image' => $product->main_image,
                 'ratings' => (float) $product->ratings,
                 'total_sold' => (int) $product->total_sold,
-                'current_stock' => (int) $product->current_stock,
+                'is_in_stock' => (bool) $product->is_in_stock,
                 'is_need_screenplate' => (bool) $product->is_need_screenplate,
                 'is_need_color' => (bool) $product->is_need_color,
                 'category_id' => $product->category_id,
@@ -221,6 +222,13 @@ class ProductController extends Controller
                     'stock' => (int) $v->stock,
                 ])->toArray(),
                 'gallery' => $product->gallery->pluck('image_url')->toArray(),
+                'reviews' => $product->reviews->map(fn ($r) => [
+                    'id' => $r->id,
+                    'rating' => (int) $r->rating,
+                    'feedback' => $r->feedback,
+                    'customer_name' => $r->customer ? $r->customer->name : 'Anonymous',
+                    'created_at' => $r->created_at->toISOString(),
+                ])->toArray(),
             ];
 
             if ($isLoggedIn) {
@@ -280,7 +288,7 @@ class ProductController extends Controller
                     'products.id',
                     'products.name',
                     'products.base_price',
-                    'products.current_stock',
+                    'products.is_in_stock',
                     'categories.label as category_label',
                     DB::raw('(
                         SELECT image_url FROM product_gallery 

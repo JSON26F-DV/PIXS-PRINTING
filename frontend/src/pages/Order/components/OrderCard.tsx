@@ -9,7 +9,6 @@ import {
   RotateCcw,
   Star,
   MessageCircle,
-  Flag,
 } from 'lucide-react'
 import { motion } from 'framer-motion'
 
@@ -329,7 +328,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({
           {order.status.toUpperCase() === 'DELIVERED' && (
             <div className="mt-6 w-full rounded-3xl border border-slate-100 bg-slate-50 p-6">
               <div className="flex flex-col justify-between gap-6 md:flex-row md:items-start">
-                <div className="flex-1 space-y-4">
+                <div className="w-full space-y-4">
                   <div className="flex items-center gap-2">
                     <span className="text-[10px] font-black tracking-[3px] text-slate-900 uppercase italic">
                       Leave a Review
@@ -366,22 +365,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({
                   </div>
                 </div>
 
-                <div className="flex-1 space-y-4">
-                  <div className="flex items-center gap-2 text-rose-500">
-                    <Flag size={14} />
-                    <span className="text-[10px] font-black tracking-[3px] uppercase italic">
-                      Report Issue
-                    </span>
-                  </div>
-                  <textarea
-                    placeholder="Any damages or wrong specifications?"
-                    className={`w-full resize-none rounded-xl border border-rose-100 bg-rose-50/50 px-4 py-2 text-xs font-bold text-rose-600 placeholder:text-rose-300 focus:border-rose-300 focus:outline-none ${!isEditing && 'pointer-events-none opacity-60'}`}
-                    rows={2}
-                    value={tempComplaint}
-                    onChange={(e) => setTempComplaint(e.target.value)}
-                    readOnly={!isEditing}
-                  />
-                </div>
+
               </div>
 
               <div className="mt-4 flex justify-end">
