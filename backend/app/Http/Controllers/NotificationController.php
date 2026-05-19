@@ -3,15 +3,16 @@
 namespace App\Http\Controllers;
 
 use App\Models\Notification;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class NotificationController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
         $user = $request->user();
-        if (!$user) {
+        if (! $user) {
             return response()->json(['message' => 'Unauthorized'], 401);
         }
 
@@ -20,7 +21,7 @@ class NotificationController extends Controller
             ->get();
 
         return response()->json([
-            'data' => $notifications
+            'data' => $notifications,
         ]);
     }
 
@@ -33,7 +34,7 @@ class NotificationController extends Controller
         ]);
 
         $notification = Notification::create([
-            'id' => \Illuminate\Support\Str::uuid(),
+            'id' => Str::uuid(),
             'customer_id' => $request->user()->id,
             'title' => $validated['title'],
             'message' => $validated['message'],
@@ -63,5 +64,22 @@ class NotificationController extends Controller
             ->update(['is_read' => true]);
 
         return response()->json(['message' => 'All marked as read']);
+    }
+
+    public function destroy(Request $request, $id): JsonResponse
+    {
+        Notification::where('customer_id', $request->user()->id)
+            ->where('id', $id)
+            ->delete();
+
+        return response()->json(['message' => 'Notification deleted']);
+    }
+
+    public function clearAll(Request $request): JsonResponse
+    {
+        Notification::where('customer_id', $request->user()->id)
+            ->delete();
+
+        return response()->json(['message' => 'All notifications deleted']);
     }
 }

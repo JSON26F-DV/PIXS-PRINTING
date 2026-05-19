@@ -1,11 +1,13 @@
 import {
   getCart,
+  addToCart,
   updateCartItem,
   removeFromCart,
 } from '../../../api/cart.api'
 import type {
   CartItem,
   CartColorInfo,
+  AddToCartData,
 } from '../../../types/cart'
 import type { IProduct, IScreenPlateCompatibility, IScreenPlateIncompatibility } from '../../../types/product.types'
 
@@ -144,6 +146,11 @@ export const cartService = {
     data: Record<string, unknown>,
   ): Promise<CartItem[]> {
     await updateCartItem(itemId, data)
+    return this.getCartItems()
+  },
+
+  async addToCart(data: AddToCartData): Promise<CartItem[]> {
+    await addToCart(data)
     return this.getCartItems()
   },
 }

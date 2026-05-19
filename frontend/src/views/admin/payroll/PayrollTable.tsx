@@ -7,6 +7,8 @@ import {
   useReactTable,
 } from '@tanstack/react-table'
 import { Eye } from 'lucide-react'
+import BoxFallback from '@/components/common/BoxFallback'
+import { useState } from 'react'
 
 export interface PayrollRecord {
   id: string
@@ -31,6 +33,28 @@ interface PayrollTableProps {
   onViewDetails: (record: PayrollRecord) => void
 }
 
+const PayrollAvatar = ({ src, name }: { src: string; name: string }) => {
+  const [error, setError] = useState(false)
+
+  if (error || !src) {
+    return (
+      <BoxFallback
+        className="h-10 w-10 rounded-2xl bg-slate-100"
+        iconClassName="h-6 w-6 opacity-30"
+      />
+    )
+  }
+
+  return (
+    <img
+      src={src}
+      alt={name}
+      onError={() => setError(true)}
+      className="h-10 w-10 rounded-2xl border border-slate-100 object-cover shadow-sm"
+    />
+  )
+}
+
 const columnHelper = createColumnHelper<PayrollRecord>()
 
 const PayrollTable: React.FC<PayrollTableProps> = ({
@@ -43,10 +67,9 @@ const PayrollTable: React.FC<PayrollTableProps> = ({
       columnHelper.accessor('profile_picture', {
         header: 'Profile',
         cell: (info) => (
-          <img
+          <PayrollAvatar
             src={info.getValue()}
-            alt="Avatar"
-            className="h-10 w-10 rounded-2xl border border-slate-100 object-cover shadow-sm"
+            name={info.row.original.name}
           />
         ),
       }),

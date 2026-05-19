@@ -9,8 +9,14 @@ import {
   RotateCcw,
   Star,
   MessageCircle,
+  ShoppingBag,
+  Loader2,
 } from 'lucide-react'
 import { motion } from 'framer-motion'
+import { useNavigate } from 'react-router-dom'
+import { cartService } from '../../AddToCart/services/cartService'
+import toast from 'react-hot-toast'
+import type { AddToCartData } from '../../../types/cart'
 
 export interface OrderItem {
   id: string
@@ -19,14 +25,15 @@ export interface OrderItem {
   productImage: string
   quantity: number
   variant: {
+    id: string
     size: string
     width?: string
     height?: string
     unitPrice: number
   }
   short_description?: string
-  order_item_colors?: { name: string; hex: string }[]
-  plate?: { name: string; type: string; channels: number; setupFee: number; printPricePerUnit: number } | null
+  order_item_colors?: { id: string; name: string; hex: string }[]
+  plate?: { id: string; name: string; type: string; channels: number; setupFee: number; printPricePerUnit: number } | null
   customRequirements?: string
 }
 
@@ -100,6 +107,8 @@ export const OrderCard: React.FC<OrderCardProps> = ({
   onCancelOrder,
   onConfirmReceived,
 }) => {
+  const navigate = useNavigate()
+  const [isProcessingBuyAgain, setIsProcessingBuyAgain] = useState(false)
   const [isEditing, setIsEditing] = useState(!order.rating && !order.feedback)
   const [tempRating, setTempRating] = useState(order.rating || 0)
   const [tempFeedback, setTempFeedback] = useState(order.feedback || '')
@@ -137,6 +146,60 @@ export const OrderCard: React.FC<OrderCardProps> = ({
     }
   }
 
+  const handleBuyAgain = async (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setIsProcessingBuyAgain(true)
+    const toastId = toast.loading('Preparing your order for checkout...')
+
+    try {
+      // 1. Deselect current cart items to isolate the "Buy Again" set
+      const cartItems = await cartService.getCartItems()
+      await Promise.all(
+        cartItems
+          .filter((i) => i.selected)
+          .map((i) => cartService.updateCartItem(i.id, { selected: 0 })),
+      )
+
+      // 2. Add each order item back to the cart as a temporary item
+      await Promise.all(
+        order.order_items.map(async (item) => {
+          const payload: AddToCartData = {
+            id: self.crypto.randomUUID(), // New unique ID for the recreate cart item
+            product_id: item.product_id,
+            variant_id: item.variant.id,
+            screenplate_id: item.plate?.id || null,
+            quantity: item.quantity,
+            unit_price: item.variant.unitPrice,
+            plate_price: item.plate?.printPricePerUnit || 0,
+            temp: true,
+            selected: true,
+            total_cart_price:
+              (item.variant.unitPrice + (item.plate?.printPricePerUnit || 0)) *
+              item.quantity,
+            colors: (item.order_item_colors || []).map((c, idx) => ({
+              id: c.id,
+              color_id: c.id,
+              channel_label:
+                idx === 0 ? 'Primary' : idx === 1 ? 'Secondary' : 'Accent',
+              channel_order: idx,
+            })),
+          }
+          return cartService.addToCart(payload)
+        }),
+      )
+
+      toast.success('Items added to checkout', { id: toastId })
+      navigate('/transactions')
+    } catch (err) {
+      console.error('Buy again failure:', err)
+      toast.error('Failed to prepare checkout. Please try again.', {
+        id: toastId,
+      })
+    } finally {
+      setIsProcessingBuyAgain(false)
+    }
+  }
+
   return (
     <motion.div
       layout
@@ -171,11 +234,8 @@ export const OrderCard: React.FC<OrderCardProps> = ({
       {/* Product List */}
       <div className="OrderProductList mb-8 space-y-0">
         {order.order_items.map((product, idx) => (
-          <>
-            <article
-              key={`${order.order_id}-${idx}`}
-              className="OrderProductCard relative bg-white py-4 md:py-5"
-            >
+          <React.Fragment key={`${order.order_id}-${idx}`}>
+            <article className="OrderProductCard relative bg-white py-4 md:py-5">
               <div className="flex flex-col gap-4 md:flex-row md:items-start">
                 {/* Product Image */}
                 <div className="h-20 w-20 shrink-0 overflow-hidden rounded-lg bg-white md:h-24 md:w-24">
@@ -287,11 +347,10 @@ export const OrderCard: React.FC<OrderCardProps> = ({
                 </div>
               </div>
             </article>
-            {/* Underline divider */}
             {idx < order.order_items.length - 1 && (
               <div className="border-b border-slate-100" />
             )}
-          </>
+          </React.Fragment>
         ))}
       </div>
 
@@ -326,10 +385,10 @@ export const OrderCard: React.FC<OrderCardProps> = ({
           )}
 
           {order.status.toUpperCase() === 'DELIVERED' && (
-            <div className="mt-6 w-full rounded-3xl border border-slate-100 bg-slate-50 p-6">
+            <div className="mt-6 w-full rounded-3xl border border-slate-100 bg-slate-50 p-6 text-left">
               <div className="flex flex-col justify-between gap-6 md:flex-row md:items-start">
                 <div className="w-full space-y-4">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 text-left">
                     <span className="text-[10px] font-black tracking-[3px] text-slate-900 uppercase italic">
                       Leave a Review
                     </span>
@@ -364,26 +423,39 @@ export const OrderCard: React.FC<OrderCardProps> = ({
                     />
                   </div>
                 </div>
-
-
               </div>
 
-              <div className="mt-4 flex justify-end">
-                {isEditing ? (
-                  <button
-                    onClick={(e) => handleAction(e, 'submit-review')}
-                    className="rounded-xl bg-slate-900 px-6 py-3 text-[10px] font-black tracking-widest text-white uppercase italic shadow-lg shadow-slate-900/20 transition-all hover:scale-105"
-                  >
-                    Submit Feedback
-                  </button>
-                ) : (
-                  <button
-                    onClick={(e) => handleAction(e, 'edit-review')}
-                    className="rounded-xl border border-slate-200 bg-white px-6 py-3 text-[10px] font-black tracking-widest text-slate-900 uppercase italic shadow-sm transition-all hover:bg-slate-50"
-                  >
-                    Edit Review
-                  </button>
-                )}
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-4">
+                <button
+                  onClick={handleBuyAgain}
+                  disabled={isProcessingBuyAgain}
+                  className="flex items-center gap-2 rounded-xl border border-pixs-mint/20 bg-pixs-mint/5 px-6 py-3 text-[10px] font-black tracking-widest text-pixs-mint uppercase italic transition-all hover:bg-pixs-mint/10 disabled:opacity-50"
+                >
+                  {isProcessingBuyAgain ? (
+                    <Loader2 size={14} className="animate-spin" />
+                  ) : (
+                    <ShoppingBag size={14} />
+                  )}
+                  Buy Again
+                </button>
+
+                <div className="flex gap-3">
+                  {isEditing ? (
+                    <button
+                      onClick={(e) => handleAction(e, 'submit-review')}
+                      className="rounded-xl bg-slate-900 px-6 py-3 text-[10px] font-black tracking-widest text-white uppercase italic shadow-lg shadow-slate-900/20 transition-all hover:scale-105"
+                    >
+                      Submit Feedback
+                    </button>
+                  ) : (
+                    <button
+                      onClick={(e) => handleAction(e, 'edit-review')}
+                      className="rounded-xl border border-slate-200 bg-white px-6 py-3 text-[10px] font-black tracking-widest text-slate-900 uppercase italic shadow-sm transition-all hover:bg-slate-50"
+                    >
+                      Edit Review
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           )}

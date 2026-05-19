@@ -32,10 +32,14 @@ export const useCustomerAddressStore = create<CustomerAddressStore>((set) => ({
     try {
       const response = await axiosInstance.get('/api/customer/addresses')
       const data = response.data.data
+      const normalizedData = (data || []).map((a: CustomerAddress) => ({
+        ...a,
+        is_default: Boolean(a.is_default),
+      }))
       set({
-        addresses: data,
+        addresses: normalizedData,
         defaultAddressId:
-          data.find((a: CustomerAddress) => a.is_default)?.id || null,
+          normalizedData.find((a: CustomerAddress) => a.is_default)?.id || null,
         isLoading: false,
       })
     } catch (err: unknown) {

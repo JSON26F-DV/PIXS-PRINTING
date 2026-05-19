@@ -9,6 +9,7 @@ use App\Http\Controllers\Customer\CustomerController;
 use App\Http\Controllers\Customer\CustomerScreenplateController;
 use App\Http\Controllers\DeliveryMethodController;
 use App\Http\Controllers\MessageController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ScreenplateRequestController;
@@ -60,6 +61,8 @@ Route::middleware(['auth:sanctum', 'role:customer'])->prefix('customer')->group(
     // Payment Methods
     Route::get('/payment-methods', [CustomerController::class, 'paymentMethods']);
     Route::post('/payment-methods', [CustomerController::class, 'storePaymentMethod']);
+    Route::patch('/payment-methods/{id}', [CustomerController::class, 'updatePaymentMethod']);
+    Route::delete('/payment-methods', [CustomerController::class, 'deleteAllPaymentMethods']);
     Route::delete('/payment-methods/{id}', [CustomerController::class, 'deletePaymentMethod']);
     Route::post('/payment-methods/{id}/default', [CustomerController::class, 'setDefaultPaymentMethod']);
 
@@ -84,12 +87,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/messages', [MessageController::class, 'index']);
     Route::post('/messages/send', [MessageController::class, 'store']);
     Route::patch('/messages/mark-read', [MessageController::class, 'markConversationAsRead']);
-    
+
     // Notifications
-    Route::post('/notifications', [\App\Http\Controllers\NotificationController::class, 'store']);
-    Route::get('/notifications', [\App\Http\Controllers\NotificationController::class, 'index']);
-    Route::patch('/notifications/read-all', [\App\Http\Controllers\NotificationController::class, 'markAllAsRead']);
-    Route::patch('/notifications/{id}/read', [\App\Http\Controllers\NotificationController::class, 'markAsRead']);
+    Route::post('/notifications', [NotificationController::class, 'store']);
+    Route::get('/notifications', [NotificationController::class, 'index']);
+    Route::patch('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
+    Route::delete('/notifications/clear-all', [NotificationController::class, 'clearAll']);
+    Route::patch('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
+    Route::delete('/notifications/{id}', [NotificationController::class, 'destroy']);
 });
 
 // Example of role-protected route
@@ -104,6 +109,12 @@ Route::middleware(['auth:sanctum', 'role:customer'])->prefix('cart')->group(func
     Route::post('/buy-now', [CartController::class, 'buyNow']);
     Route::patch('/{id}', [CartController::class, 'update']);
     Route::delete('/{id}', [CartController::class, 'destroy']);
+});
+
+// Settings Utility Routes
+Route::middleware(['auth:sanctum', 'role:customer'])->prefix('settings')->group(function () {
+    Route::post('/profile-picture', [CustomerController::class, 'updateProfilePicture']);
+    Route::patch('/password', [CustomerController::class, 'updatePassword']);
 });
 
 Route::middleware(['throttle:api'])->group(function () {

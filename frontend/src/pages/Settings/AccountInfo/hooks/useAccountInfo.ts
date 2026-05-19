@@ -38,7 +38,10 @@ export const useAccountInfo = () => {
           last_name: data.last_name || '',
           email: data.email || '',
           company_name: data.company_name || '',
-          contacts: data.contacts || [],
+          contacts: (data.contacts || []).map((c: { number: string; is_default: unknown }) => ({
+            ...c,
+            is_default: Boolean(c.is_default),
+          })),
           profilePicture: data.profile_picture || '',
           default_contact: data.default_contact || '',
           addresses: data.addresses || [],

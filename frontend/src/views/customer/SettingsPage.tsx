@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { clsx } from 'clsx'
 import { FiArrowLeft, FiMenu, FiX } from 'react-icons/fi'
 import { useAuth } from '../../context/AuthContext'
+import BoxFallback from '../../components/common/BoxFallback'
 import type { User } from '../../context/auth.types'
 import { NAV_ITEMS } from '../../pages/Settings/settingsNav'
 import type { SectionKey, NavItem } from '../../pages/Settings/settingsNav'
@@ -128,12 +129,25 @@ const SidebarContent: React.FC<{
     {/* Profile Card */}
     <div className="mb-6 rounded-[24px] border border-slate-100 bg-white p-5 shadow-sm">
       <div className="flex items-center gap-4">
-        <div className="shadow-pixs-mint/10 border-pixs-mint/20 flex h-14 w-14 shrink-0 items-center justify-center rounded-full border bg-slate-900 shadow-lg">
-          <span className="text-pixs-mint text-xl font-black">
-            {user?.name?.[0]?.toUpperCase() ?? 'G'}
-          </span>
+        <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-full border border-slate-100 bg-slate-900 shadow-lg">
+          {user?.profile_picture ? (
+            <img
+              src={user.profile_picture.startsWith('http') ? user.profile_picture : `/src/assets/profile/${user.profile_picture}`}
+              alt=""
+              className="h-full w-full object-cover"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none'
+                const fallback = e.currentTarget.nextElementSibling as HTMLElement
+                if (fallback) fallback.style.display = 'flex'
+              }}
+            />
+          ) : null}
+          <BoxFallback 
+            className={clsx("flex h-full w-full items-center justify-center bg-slate-900", user?.profile_picture ? "hidden" : "flex")}
+            iconClassName="h-8 w-8 opacity-30 brightness-0 invert" 
+          />
         </div>
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-black tracking-tighter text-slate-900 uppercase italic">
             {user?.name ?? 'Guest'}
           </p>
@@ -199,7 +213,7 @@ const SettingsPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-slate-50 pt-0 md:pt-20">
       {/* Sticky Top Bar */}
       <div className="sticky top-0 z-30 border-b border-slate-100 bg-white/90 backdrop-blur-md lg:top-20">
         <div className="mx-auto flex h-14 max-w-[1440px] items-center justify-between gap-4 px-4 md:px-8">

@@ -15,6 +15,7 @@ import LoginPage from '../views/auth/LoginPage'
 import RegisterPage from '../views/auth/RegisterPage'
 import CustomerLayout from '../layouts/CustomerLayout'
 import { useAuth } from '../context/AuthContext'
+import { getHomePathForRole } from '../utils/authRouting'
 
 // Admin Layout & Views
 import AdminLayout from '../layouts/AdminLayout'
@@ -51,24 +52,26 @@ const ProtectedRoute: React.FC<{
   // 1. Session check
   if (!user.isLoggedIn) return <Navigate to="/" replace />
 
-  // 2. Strict Role-to-Path Lock (RBAC)
-  if (user.role === 'admin' && !location.startsWith('/admin')) {
+  const role = user?.role ?? 'guest'
+
+  // 2. Strict Role-to-Path Lock (RBAC) — path from customers.role / employees.role
+  if (role === 'admin' && !location.startsWith('/admin')) {
     return <Navigate to="/admin/dashboard" replace />
   }
 
   if (
-    ['staff', 'technician', 'welder'].includes(user.role) &&
+    ['staff', 'technician', 'welder'].includes(role) &&
     !location.startsWith('/staff')
   ) {
     return <Navigate to="/staff/overview" replace />
   }
 
-  if (user.role === 'inventory' && !location.startsWith('/inventory')) {
+  if (role === 'inventory' && !location.startsWith('/inventory')) {
     return <Navigate to="/inventory/overview" replace />
   }
 
   if (
-    user.role === 'customer' &&
+    role === 'customer' &&
     (location.startsWith('/admin') ||
       location.startsWith('/staff') ||
       location.startsWith('/inventory'))
@@ -77,11 +80,8 @@ const ProtectedRoute: React.FC<{
   }
 
   // 3. Allowed Roles check
-  if (!allowedRoles.includes(user.role)) {
-    // Redirect to their own dashboard if they try to access a route they aren't allowed in
-    if (user.role === 'admin') return <Navigate to="/admin/dashboard" replace />
-    if (user.role === 'customer') return <Navigate to="/homepage" replace />
-    return <Navigate to="/" replace />
+  if (!allowedRoles.includes(role)) {
+    return <Navigate to={getHomePathForRole(role)} replace />
   }
 
   return <>{children}</>
@@ -90,13 +90,7 @@ const ProtectedRoute: React.FC<{
 const AppRouter: React.FC = () => {
   const { user, isLoading } = useAuth()
 
-  const getHomePath = () => {
-    if (user.role === 'admin') return '/admin/dashboard'
-    if (['staff', 'technician', 'welder'].includes(user.role))
-      return '/staff/overview'
-    if (user.role === 'inventory') return '/inventory/overview'
-    return '/homepage'
-  }
+  const getHomePath = () => getHomePathForRole(user?.role)
 
   if (isLoading)
     return (

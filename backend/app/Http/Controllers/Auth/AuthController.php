@@ -22,14 +22,15 @@ class AuthController extends Controller
     public function login(Request $request): JsonResponse
     {
         $request->validate([
-            'email'    => ['required', 'email'],
+            'email' => ['required', 'email'],
             'password' => ['required', 'string'],
         ]);
 
         // Rate limit: 5 attempts per minute per IP
-        $key = 'login:' . $request->ip();
+        $key = 'login:'.$request->ip();
         if (RateLimiter::tooManyAttempts($key, 5)) {
             $seconds = RateLimiter::availableIn($key);
+
             return response()->json([
                 'message' => "Too many login attempts. Try again in {$seconds} seconds.",
             ], 429);
@@ -40,13 +41,14 @@ class AuthController extends Controller
 
         if ($banned && Hash::check($request->password, $banned->password)) {
             RateLimiter::clear($key);
+
             return response()->json([
-                'banned'       => true,
-                'original_id'  => $banned->original_id,
+                'banned' => true,
+                'original_id' => $banned->original_id,
                 'account_type' => $banned->account_type,
-                'email'        => $banned->email,
-                'reason'       => $banned->reason,
-                'deleted_at'   => $banned->deleted_at,
+                'email' => $banned->email,
+                'reason' => $banned->reason,
+                'deleted_at' => $banned->deleted_at,
             ], 403);
         }
 
@@ -70,17 +72,20 @@ class AuthController extends Controller
             )->plainTextToken;
 
             return response()->json([
-                'token'        => $token,
+                'token' => $token,
                 'account_type' => 'customer',
-                'expires_at'   => now()->addDays(30)->toISOString(),
-                'user'         => [
-                    'id'              => $customer->id,
-                    'email'           => $customer->email,
-                    'first_name'      => $customer->first_name,
-                    'last_name'       => $customer->last_name,
-                    'role'            => $customer->role,
+                'expires_at' => now()->addDays(30)->toISOString(),
+                'user' => [
+                    'id' => $customer->id,
+                    'email' => $customer->email,
+                    'first_name' => $customer->first_name,
+                    'last_name' => $customer->last_name,
+                    'role' => $customer->role ?? 'customer',
                     'profile_picture' => $customer->profile_picture,
-                    'status'          => $customer->status,
+                    'status' => $customer->status,
+                    'age' => $customer->age,
+                    'gender' => $customer->gender,
+                    'company_name' => $customer->company_name,
                 ],
             ]);
         }
@@ -100,22 +105,25 @@ class AuthController extends Controller
             $employee->tokens()->delete();
             $token = $employee->createToken(
                 'employee-token',
-                ['role:' . $employee->role],
+                ['role:'.$employee->role],
                 now()->addHours(8)
             )->plainTextToken;
 
             return response()->json([
-                'token'        => $token,
+                'token' => $token,
                 'account_type' => 'employee',
-                'expires_at'   => now()->addHours(8)->toISOString(),
-                'user'         => [
-                    'id'              => $employee->id,
-                    'email'           => $employee->email,
-                    'first_name'      => $employee->first_name,
-                    'last_name'       => $employee->last_name,
-                    'role'            => $employee->role,
+                'expires_at' => now()->addHours(8)->toISOString(),
+                'user' => [
+                    'id' => $employee->id,
+                    'email' => $employee->email,
+                    'first_name' => $employee->first_name,
+                    'last_name' => $employee->last_name,
+                    'role' => $employee->role,
                     'profile_picture' => $employee->profile_picture,
-                    'status'          => $employee->status,
+                    'status' => $employee->status,
+                    'age' => $employee->age,
+                    'gender' => $employee->gender,
+                    'company_name' => $employee->company_name,
                 ],
             ]);
         }
@@ -147,18 +155,21 @@ class AuthController extends Controller
         $user = $request->user();
 
         $accountType = $user instanceof Employee ? 'employee' : 'customer';
-        $role        = $accountType === 'employee' ? $user->role : 'customer';
+        $role = $user->role ?? ($accountType === 'customer' ? 'customer' : 'staff');
 
         return response()->json([
             'account_type' => $accountType,
-            'user'         => [
-                'id'              => $user->id,
-                'email'           => $user->email,
-                'first_name'      => $user->first_name,
-                'last_name'       => $user->last_name,
-                'role'            => $role,
+            'user' => [
+                'id' => $user->id,
+                'email' => $user->email,
+                'first_name' => $user->first_name,
+                'last_name' => $user->last_name,
+                'role' => $role,
                 'profile_picture' => $user->profile_picture,
-                'status'          => $user->status,
+                'status' => $user->status,
+                'age' => $user->age,
+                'gender' => $user->gender,
+                'company_name' => $user->company_name,
             ],
         ]);
     }

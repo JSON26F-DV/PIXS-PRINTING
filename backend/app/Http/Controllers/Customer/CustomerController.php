@@ -8,6 +8,7 @@ use App\Models\CustomerAddress;
 use App\Models\MarketingPromotion;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 
 class CustomerController extends Controller
 {
@@ -176,6 +177,7 @@ class CustomerController extends Controller
             'bank_name' => 'nullable|string',
             'provider' => 'nullable|string',
             'masked_number' => 'required|string',
+            'gateway_token' => 'nullable|string',
         ]);
 
         // Generate ID
@@ -209,6 +211,39 @@ class CustomerController extends Controller
         $request->user()->paymentMethods()->where('id', $id)->update(['is_default' => true]);
 
         return response()->json(['message' => 'Default payment method updated']);
+    }
+
+    /**
+     * Update payment method.
+     */
+    public function updatePaymentMethod(Request $request, string $id): JsonResponse
+    {
+        $method = $request->user()->paymentMethods()->findOrFail($id);
+
+        $validated = $request->validate([
+            'type' => 'sometimes|in:bank,ewallet,credit_card,cod',
+            'bank_name' => 'nullable|string',
+            'provider' => 'nullable|string',
+            'masked_number' => 'sometimes|string',
+            'gateway_token' => 'nullable|string',
+        ]);
+
+        $method->update($validated);
+
+        return response()->json([
+            'message' => 'Payment method updated successfully',
+            'data' => $method,
+        ]);
+    }
+
+    /**
+     * Delete all payment methods.
+     */
+    public function deleteAllPaymentMethods(Request $request): JsonResponse
+    {
+        $request->user()->paymentMethods()->delete();
+
+        return response()->json(['message' => 'All payment methods deleted']);
     }
 
     /**
@@ -274,7 +309,7 @@ class CustomerController extends Controller
 
         $contact = $request->user()->contacts()->create([
             'number' => $validated['number'],
-            'is_default' => $request->user()->contacts()->count() === 0
+            'is_default' => $request->user()->contacts()->count() === 0,
         ]);
 
         return response()->json([
@@ -292,5 +327,53 @@ class CustomerController extends Controller
         $request->user()->contacts()->where('number', $number)->update(['is_default' => true]);
 
         return response()->json(['message' => 'Default contact updated']);
+    }
+
+    /**
+     * Update profile picture.
+     * Saves file to frontend assets and stores only the filename in DB.
+     */
+    public function updateProfilePicture(Request $request): JsonResponse
+    {
+        $request->validate([
+            'profile_picture' => 'required|image|mimes:jpeg,png,jpg,gif|max:5120',
+        ]);
+
+        $customer = $request->user();
+        $file = $request->file('profile_picture');
+
+        $filename = 'profile_'.$customer->id.'_'.time().'.'.$file->getClientOriginalExtension();
+
+        $targetDir = base_path('../frontend/src/assets/profile');
+        if (! file_exists($targetDir)) {
+            mkdir($targetDir, 0755, true);
+        }
+
+        $file->move($targetDir, $filename);
+
+        // Store only the filename in the database as requested
+        $customer->update(['profile_picture' => $filename]);
+
+        return response()->json([
+            'message' => 'Profile picture updated',
+            'url' => $filename,
+        ]);
+    }
+
+    /**
+     * Update customer password.
+     */
+    public function updatePassword(Request $request): JsonResponse
+    {
+        $request->validate([
+            'password' => 'required|string|min:8|confirmed',
+        ]);
+
+        $customer = $request->user();
+        $customer->update([
+            'password' => Hash::make($request->password),
+        ]);
+
+        return response()->json(['message' => 'Password updated successfully']);
     }
 }

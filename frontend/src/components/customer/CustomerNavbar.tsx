@@ -19,7 +19,6 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { useDiscovery } from '../../context/DiscoveryContext'
-import AuthModal from './AuthModal'
 import DiscoveryModal from './DiscoveryModal'
 import AddressSelectModal from './AddressSelectModal'
 import NotificationModal from './NotificationModal'
@@ -27,15 +26,13 @@ import NavbarActionButton from './NavbarActionButton'
 import { useCustomerAddressStore } from '../../store/useCustomerAddressStore'
 import { useCartStore } from '../../store/useCartStore'
 import { useNotificationStore } from '../../store/useNotificationStore'
+import BoxFallback from '../common/BoxFallback'
+import { clsx } from 'clsx'
 
 const CustomerNavbar: React.FC = () => {
   const { user } = useAuth()
   const { isDiscoveryOpen, initialCategory, openDiscovery, closeDiscovery } =
     useDiscovery()
-  const [authModal, setAuthModal] = useState<{
-    open: boolean
-    type: 'signin' | 'signup'
-  }>({ open: false, type: 'signin' })
   const [isAddressModalOpen, setIsAddressModalOpen] = useState(false)
   const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false)
   const [showMobileMenu, setShowMobileMenu] = useState(false)
@@ -77,7 +74,7 @@ const CustomerNavbar: React.FC = () => {
       {/* ─────────────────────────────────────────── */}
       {/*  DESKTOP NAVBAR  (unchanged)               */}
       {/* ─────────────────────────────────────────── */}
-      <header className="CustomerNavbar fixed top-0 left-0 z-50 hidden h-20 w-full items-center border-b border-slate-100 bg-white/80 px-4 backdrop-blur-md min-[1251px]:px-12 md:flex md:px-8 z-9999">
+      <header className="CustomerNavbar fixed top-0 left-0 z-50 hidden h-20 w-full items-center border-b border-slate-100 bg-white/80 px-4 backdrop-blur-md min-[1251px]:px-12 md:flex md:px-8">
         <div className="CustomerNavbarLayout mx-auto flex w-full max-w-[1440px] items-center justify-between gap-2 min-[1251px]:gap-8 md:gap-4">
           {/* Left: Industrial Logo & Address Hub */}
           <div className="CustomerNavbarLeft flex shrink-0 items-center gap-3 min-[1251px]:gap-8">
@@ -205,8 +202,23 @@ const CustomerNavbar: React.FC = () => {
                     to="/settings"
                     className="group flex items-center gap-2 rounded-full border border-transparent bg-slate-50 py-1 pr-1 pl-1 shadow-sm transition-all hover:border-slate-100 hover:bg-white active:scale-95 sm:rounded-[28px] sm:pr-4"
                   >
-                    <div className="text-pixs-mint border-pixs-mint/20 shadow-pixs-mint/20 flex h-10 w-10 items-center justify-center rounded-full border bg-slate-900 text-sm font-black shadow-lg transition-transform group-hover:scale-105">
-                      {user.name[0].toUpperCase()}
+                    <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full border border-slate-100 bg-slate-900 shadow-lg">
+                      {user.profile_picture ? (
+                        <img
+                          src={user.profile_picture.startsWith('http') ? user.profile_picture : `/src/assets/profile/${user.profile_picture}`}
+                          alt=""
+                          className="h-full w-full object-cover"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none'
+                            const fallback = e.currentTarget.nextElementSibling as HTMLElement
+                            if (fallback) fallback.style.display = 'flex'
+                          }}
+                        />
+                      ) : null}
+                      <BoxFallback 
+                        className={clsx("flex h-full w-full items-center justify-center bg-slate-900", user.profile_picture ? "hidden" : "flex")}
+                        iconClassName="h-6 w-6 opacity-30 brightness-0 invert" 
+                      />
                     </div>
                     <span className="hidden text-[10px] font-black tracking-widest text-slate-400 uppercase italic transition-colors group-hover:text-slate-900 sm:block">
                       Profile
@@ -217,12 +229,12 @@ const CustomerNavbar: React.FC = () => {
             ) : (
               <div className="flex items-center gap-2 sm:gap-4">
                 <div className="hidden items-center gap-4 md:flex">
-                  <button
-                    onClick={() => setAuthModal({ open: true, type: 'signin' })}
+                  <Link
+                    to="/login"
                     className="px-6 py-3 text-[10px] font-black tracking-[4px] text-slate-500 uppercase italic transition-all hover:text-slate-900"
                   >
                     Sign In
-                  </button>
+                  </Link>
                   <Link
                     to="/register"
                     className="flex items-center justify-center rounded-3xl border border-white/10 bg-slate-900 px-8 py-4 text-[10px] font-black tracking-[4px] text-white uppercase italic shadow-2xl transition-all hover:bg-slate-800"
@@ -231,12 +243,12 @@ const CustomerNavbar: React.FC = () => {
                   </Link>
                 </div>
                 <div className="flex items-center gap-2 md:hidden">
-                  <button
-                    onClick={() => setAuthModal({ open: true, type: 'signin' })}
+                  <Link
+                    to="/login"
                     className="rounded-2xl border border-slate-100 bg-slate-50 px-5 py-2.5 text-[10px] font-black tracking-[3px] text-slate-900 uppercase italic transition-all hover:bg-slate-100 active:scale-95"
                   >
                     Sign In
-                  </button>
+                  </Link>
                 </div>
               </div>
             )}
@@ -423,10 +435,23 @@ const CustomerNavbar: React.FC = () => {
               className="nav-item flex w-16 flex-col items-center gap-1.5 px-3 py-2 transition-all duration-150 active:scale-90"
             >
               {user?.name ? (
-                <div
-                  className={`flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-black shadow-lg ${isActive('/settings') ? 'text-pixs-mint bg-slate-900' : 'bg-slate-100 text-slate-400'}`}
-                >
-                  {user.name[0].toUpperCase()}
+                <div className="relative h-6 w-6 shrink-0 overflow-hidden rounded-full bg-slate-100 shadow-lg">
+                  {user.profile_picture ? (
+                    <img
+                      src={user.profile_picture.startsWith('http') ? user.profile_picture : `/src/assets/profile/${user.profile_picture}`}
+                      alt=""
+                      className="h-full w-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none'
+                        const fallback = e.currentTarget.nextElementSibling as HTMLElement
+                        if (fallback) fallback.style.display = 'flex'
+                      }}
+                    />
+                  ) : null}
+                  <BoxFallback 
+                    className={clsx("flex h-full w-full items-center justify-center bg-slate-100", user.profile_picture ? "hidden" : "flex")}
+                    iconClassName="h-4 w-4 opacity-30" 
+                  />
                 </div>
               ) : (
                 <User
@@ -495,15 +520,13 @@ const CustomerNavbar: React.FC = () => {
                   About Us
                 </button>
                 <div className="space-y-4 border-t border-slate-100 pt-6">
-                  <button
-                    onClick={() => {
-                      setAuthModal({ open: true, type: 'signin' })
-                      setShowMobileMenu(false)
-                    }}
-                    className="w-full rounded-2xl bg-slate-50 py-4 text-center text-xs font-black tracking-[4px] text-slate-900 uppercase italic hover:bg-slate-100"
+                  <Link
+                    to="/login"
+                    onClick={() => setShowMobileMenu(false)}
+                    className="flex w-full items-center justify-center rounded-2xl bg-slate-50 py-4 text-center text-xs font-black tracking-[4px] text-slate-900 uppercase italic hover:bg-slate-100"
                   >
                     Sign In
-                  </button>
+                  </Link>
                   <Link
                     to="/register"
                     onClick={() => setShowMobileMenu(false)}
@@ -518,10 +541,10 @@ const CustomerNavbar: React.FC = () => {
         )}
       </AnimatePresence>
 
-      <AuthModal
-        isOpen={authModal.open}
-        onClose={() => setAuthModal({ ...authModal, open: false })}
-        initialType={authModal.type}
+      <DiscoveryModal
+        isOpen={isDiscoveryOpen}
+        onClose={() => closeDiscovery()}
+        initialCategory={initialCategory}
       />
       <AddressSelectModal
         isOpen={isAddressModalOpen}

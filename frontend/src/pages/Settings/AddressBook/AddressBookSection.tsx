@@ -36,51 +36,6 @@ type AddressFormValues = z.infer<typeof formSchema>
 
 type SelectOption = { value: string; label: string }
 
-const MapSelectorLazy = React.lazy(async () => {
-  const { MapContainer, Marker, TileLayer, useMap, useMapEvents } =
-    await import('react-leaflet')
-  const L = await import('leaflet')
-  await import('leaflet/dist/leaflet.css')
-  const markerIcon = L.icon({
-    iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-    shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-    iconAnchor: [12, 41],
-  })
-
-  interface MapProps {
-    center: { lat: number; lng: number } | null
-    onPositionChange: (pos: { lat: number; lng: number }) => void
-  }
-
-  const MapMarker = ({ center, onPositionChange }: MapProps) => {
-    const map = useMap()
-    useEffect(() => {
-      if (center) map.setView(center, map.getZoom())
-    }, [center, map])
-    useMapEvents({
-      click(e) {
-        onPositionChange(e.latlng)
-      },
-    })
-    return center ? <Marker position={center} icon={markerIcon} /> : null
-  }
-
-  return {
-    default: function MapComponent({ center, onPositionChange }: MapProps) {
-      return (
-        <MapContainer
-          center={center || [14.5995, 120.9842]}
-          zoom={14}
-          className="z-0 h-full w-full rounded-2xl"
-        >
-          <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-          <MapMarker center={center} onPositionChange={onPositionChange} />
-        </MapContainer>
-      )
-    },
-  }
-})
-
 const MaskedPhone: React.FC<{ phone: string }> = ({ phone }) => {
   const clean = phone.replace(/\s+/g, '')
   return (
@@ -115,12 +70,6 @@ const AddressBookSection: React.FC = () => {
   const [provinceCode, setProvinceCode] = useState('')
   const [municipalityCode, setMunicipalityCode] = useState('')
   const [barangayCode, setBarangayCode] = useState('')
-
-  const [selectionMode, setSelectionMode] = useState<'manual' | 'map'>('manual')
-  const [mapCenter, setMapCenter] = useState<{
-    lat: number
-    lng: number
-  } | null>(null)
 
   const formRef = useRef<HTMLFormElement>(null)
 
@@ -458,155 +407,100 @@ const AddressBookSection: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex gap-4">
-            <button
-              type="button"
-              className={`flex-1 rounded-xl py-3 text-[10px] font-black uppercase transition-colors ${selectionMode === 'manual' ? 'border-transparent bg-slate-900 text-white shadow-lg' : 'border border-slate-200 bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
-              onClick={() => setSelectionMode('manual')}
-            >
-              Manual Form
-            </button>
-            <button
-              type="button"
-              className={`flex-1 rounded-xl py-3 text-[10px] font-black uppercase transition-colors ${selectionMode === 'map' ? 'border-transparent bg-slate-900 text-white shadow-lg' : 'border border-slate-200 bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
-              onClick={() => setSelectionMode('map')}
-            >
-              Pin on Map
-            </button>
-          </div>
-
-          <div className="space-y-4 rounded-3xl border border-slate-900 bg-slate-50/50 p-5 shadow-inner transition-all md:p-8">
-            {selectionMode === 'map' && (
-              <div className="animate-in fade-in slide-in-from-top-2 space-y-4 pt-2">
-                <div className="relative z-0 h-[250px] w-full rounded-2xl border border-slate-200 bg-slate-50 p-1">
-                  <React.Suspense
-                    fallback={
-                      <div className="flex h-full items-center justify-center text-xs font-black tracking-widest text-slate-400 uppercase">
-                        Loading Map...
-                      </div>
+          <div className="space-y-6 rounded-3xl border border-slate-100 bg-slate-50/50 p-5 shadow-inner transition-all md:p-8">
+            <div className="animate-in fade-in slide-in-from-top-2 space-y-5 duration-300">
+              <div className="DropdownSelector grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div>
+                  <p className="mb-2 text-[10px] font-black tracking-widest text-slate-500 uppercase">
+                    Region
+                  </p>
+                  <Select
+                    options={regionOptions}
+                    value={
+                      regionOptions.find((o) => o.value === regionCode) ??
+                      null
                     }
-                  >
-                    <MapSelectorLazy
-                      center={mapCenter}
-                      onPositionChange={(pos: { lat: number; lng: number }) => {
-                        setMapCenter(pos)
-                        setValue('street', `${pos.lat}, ${pos.lng}`, {
-                          shouldValidate: true,
-                        })
-                      }}
-                    />
-                  </React.Suspense>
+                    onChange={onDropdownRegion}
+                    menuPosition="fixed"
+                    placeholder="Select region"
+                  />
                 </div>
                 <div>
-                  <label className="text-[10px] font-black tracking-widest text-slate-500 uppercase">
-                    Map Coordinates
-                  </label>
-                  <textarea
-                    className="min-h-[80px] w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-700"
-                    placeholder="Click on the map to capture coordinates..."
-                    {...register('street')}
+                  <p className="mb-2 text-[10px] font-black tracking-widest text-slate-500 uppercase">
+                    Province
+                  </p>
+                  <Select
+                    options={provinceOptions}
+                    value={
+                      provinceOptions.find((o) => o.value === provinceCode) ??
+                      null
+                    }
+                    onChange={onDropdownProvince}
+                    menuPosition="fixed"
+                    placeholder="Select province"
+                    isDisabled={!regionCode}
                   />
-                  {errors.street && (
-                    <p className="text-xs text-rose-500">
-                      {errors.street.message}
-                    </p>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {selectionMode === 'manual' && (
-              <div className="animate-in fade-in slide-in-from-top-2 space-y-5 pt-2 duration-300">
-                <div className="DropdownSelector grid grid-cols-1 gap-4 md:grid-cols-2">
-                  <div>
-                    <p className="mb-2 text-[10px] font-black tracking-widest text-slate-500 uppercase">
-                      Region
-                    </p>
-                    <Select
-                      options={regionOptions}
-                      value={
-                        regionOptions.find((o) => o.value === regionCode) ??
-                        null
-                      }
-                      onChange={onDropdownRegion}
-                      menuPosition="fixed"
-                      placeholder="Select region"
-                    />
-                  </div>
-                  <div>
-                    <p className="mb-2 text-[10px] font-black tracking-widest text-slate-500 uppercase">
-                      Province
-                    </p>
-                    <Select
-                      options={provinceOptions}
-                      value={
-                        provinceOptions.find((o) => o.value === provinceCode) ??
-                        null
-                      }
-                      onChange={onDropdownProvince}
-                      menuPosition="fixed"
-                      placeholder="Select province"
-                      isDisabled={!regionCode}
-                    />
-                  </div>
-                  <div>
-                    <p className="mb-2 text-[10px] font-black tracking-widest text-slate-500 uppercase">
-                      City
-                    </p>
-                    <Select
-                      options={cityOptions}
-                      value={
-                        cityOptions.find((o) => o.value === municipalityCode) ??
-                        null
-                      }
-                      onChange={onDropdownCity}
-                      menuPosition="fixed"
-                      placeholder="Select city"
-                      isDisabled={!provinceCode}
-                    />
-                  </div>
-                  <div>
-                    <p className="mb-2 text-[10px] font-black tracking-widest text-slate-500 uppercase">
-                      Barangay
-                    </p>
-                    <Select
-                      options={barangayOptions}
-                      value={
-                        barangayOptions.find((o) => o.value === barangayCode) ??
-                        null
-                      }
-                      onChange={onDropdownBarangay}
-                      menuPosition="fixed"
-                      placeholder="Select barangay"
-                      isDisabled={!municipalityCode}
-                    />
-                  </div>
                 </div>
                 <div>
-                  <label className="text-[10px] font-black tracking-widest text-slate-500 uppercase">
-                    Street / House No.
-                  </label>
-                  <textarea
-                    className="min-h-[80px] w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
-                    {...register('street')}
+                  <p className="mb-2 text-[10px] font-black tracking-widest text-slate-500 uppercase">
+                    City
+                  </p>
+                  <Select
+                    options={cityOptions}
+                    value={
+                      cityOptions.find((o) => o.value === municipalityCode) ??
+                      null
+                    }
+                    onChange={onDropdownCity}
+                    menuPosition="fixed"
+                    placeholder="Select city"
+                    isDisabled={!provinceCode}
                   />
-                  {errors.street && (
-                    <p className="text-xs text-rose-500">
-                      {errors.street.message}
-                    </p>
-                  )}
                 </div>
-                <div className="md:w-1/2">
-                  <label className="text-[10px] font-black tracking-widest text-slate-500 uppercase">
-                    Postal Code
-                  </label>
-                  <input
-                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
-                    {...register('postal_code')}
+                <div>
+                  <p className="mb-2 text-[10px] font-black tracking-widest text-slate-500 uppercase">
+                    Barangay
+                  </p>
+                  <Select
+                    options={barangayOptions}
+                    value={
+                      barangayOptions.find((o) => o.value === barangayCode) ??
+                      null
+                    }
+                    onChange={onDropdownBarangay}
+                    menuPosition="fixed"
+                    placeholder="Select barangay"
+                    isDisabled={!municipalityCode}
                   />
                 </div>
               </div>
-            )}
+              <div className="h-px bg-slate-200/50" />
+              <div>
+                <label className="text-[10px] font-black tracking-widest text-slate-500 uppercase">
+                  Street / House No. / Landmark
+                </label>
+                <textarea
+                  className="min-h-[100px] w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium focus:border-slate-900 focus:outline-none"
+                  placeholder="Enter detailed street address..."
+                  {...register('street')}
+                />
+                {errors.street && (
+                  <p className="mt-1 text-[10px] font-black text-rose-500 uppercase italic">
+                    {errors.street.message}
+                  </p>
+                )}
+              </div>
+              <div className="md:w-1/3">
+                <label className="text-[10px] font-black tracking-widest text-slate-500 uppercase">
+                  Postal Code
+                </label>
+                <input
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold focus:border-slate-900 focus:outline-none"
+                  placeholder="e.g. 1000"
+                  {...register('postal_code')}
+                />
+              </div>
+            </div>
           </div>
 
           <div className="flex justify-end gap-2 px-2">
@@ -640,7 +534,7 @@ const AddressBookSection: React.FC = () => {
                   <p className="text-sm font-black tracking-tighter text-slate-900 uppercase italic">
                     {address.adress_label || 'Address'}
                   </p>
-                  {address.is_default && (
+                  {address.is_default === true && (
                     <span className="rounded-full bg-slate-900 px-2 py-0.5 text-[8px] font-black tracking-widest text-white uppercase italic">
                       Default
                     </span>

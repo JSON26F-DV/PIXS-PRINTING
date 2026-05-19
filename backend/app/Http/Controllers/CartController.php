@@ -21,11 +21,11 @@ class CartController extends Controller
 
         try {
             $items = CartItem::with([
-                'colors.color', 
-                'product.variants', 
-                'variant', 
+                'colors.color',
+                'product.variants',
+                'variant',
                 'screenplate.compatibility',
-                'screenplate.incompatibility'
+                'screenplate.incompatibility',
             ])
                 ->where('customer_id', $user->id)
                 ->get();
@@ -43,7 +43,7 @@ class CartController extends Controller
         } catch (\Throwable $e) {
             Log::error('CartController@index failed', [
                 'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
 
             return response()->json(['message' => 'Failed to load cart'], 500);
@@ -70,6 +70,7 @@ class CartController extends Controller
             'plate_price' => 'nullable|numeric',
             'total_cart_price' => 'nullable|numeric',
             'selected' => 'nullable|boolean',
+            'temp' => 'nullable|boolean',
             'colors' => 'nullable|array',
             'colors.*.id' => 'required|string',
             'colors.*.channel_label' => 'required|string|in:Primary,Secondary,Accent',
@@ -89,6 +90,7 @@ class CartController extends Controller
                         'plate_price' => $validated['plate_price'] ?? 0,
                         'total_cart_price' => $validated['total_cart_price'] ?? 0,
                         'selected' => $validated['selected'] ?? false,
+                        'temp' => $validated['temp'] ?? false,
                     ]
                 );
 
@@ -141,6 +143,7 @@ class CartController extends Controller
             'unit_price' => 'required|numeric',
             'plate_price' => 'nullable|numeric',
             'total_cart_price' => 'nullable|numeric',
+            'temp' => 'nullable|boolean',
             'colors' => 'nullable|array',
             'colors.*.id' => 'required|string',
             'colors.*.channel_label' => 'required|string|in:Primary,Secondary,Accent',
@@ -163,6 +166,7 @@ class CartController extends Controller
                         'plate_price' => $validated['plate_price'] ?? 0,
                         'total_cart_price' => $validated['total_cart_price'] ?? 0,
                         'selected' => 1,
+                        'temp' => $validated['temp'] ?? false,
                     ]
                 );
 
@@ -272,9 +276,9 @@ class CartController extends Controller
         $screenplate->compatibilityMapped = $screenplate->compatibility->groupBy('product_id')->map(function ($rows, $productId) {
             return [
                 'product_id' => $productId,
-                'allowed_variants' => $rows->pluck('variant_id')->map(fn($v) => $v ?? 'ALL')->toArray(),
-                'print_price_per_unit' => $rows->pluck('print_price_per_unit', 'variant_id')->mapWithKeys(function($price, $vId) {
-                    return [$vId ?? 'ALL' => (float)$price];
+                'allowed_variants' => $rows->pluck('variant_id')->map(fn ($v) => $v ?? 'ALL')->toArray(),
+                'print_price_per_unit' => $rows->pluck('print_price_per_unit', 'variant_id')->mapWithKeys(function ($price, $vId) {
+                    return [$vId ?? 'ALL' => (float) $price];
                 })->toArray(),
             ];
         })->values();
@@ -285,7 +289,7 @@ class CartController extends Controller
                 'variant_ids' => $rows->pluck('variant_id')->filter()->values()->toArray(),
             ];
         })->values();
-        
+
         $screenplate->setRelation('compatibility', $screenplate->compatibilityMapped);
         $screenplate->setRelation('incompatibility', $screenplate->incompatibilityMapped);
     }

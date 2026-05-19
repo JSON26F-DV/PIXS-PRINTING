@@ -41,6 +41,7 @@ import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 import debounce from 'lodash/debounce'
 import bcrypt from 'bcryptjs'
+import BoxFallback from '../../components/common/BoxFallback'
 
 // Types and Schemas
 import {
@@ -87,6 +88,49 @@ interface RawUserNode {
   profile_picture?: string
   contact_numbers?: { number: string; is_default: boolean }[]
   [key: string]: unknown
+}
+
+// --- SUB-COMPONENTS ---
+const UserAvatar = ({
+  src,
+  name,
+  size = 'h-14 w-14',
+}: {
+  src?: string | null
+  name: string
+  size?: string
+}) => {
+  const [error, setError] = useState(false)
+
+  const displaySrc =
+    src && !error
+      ? src.startsWith('http') ||
+        src.startsWith('blob:') ||
+        src.startsWith('data:')
+        ? src
+        : `/src/assets/profile/${src}`
+      : null
+
+  if (!displaySrc) {
+    return (
+      <BoxFallback
+        className={cn(size, 'rounded-[22px] bg-slate-900 overflow-hidden')}
+        iconClassName="h-8 w-8 brightness-0 invert opacity-30"
+      />
+    )
+  }
+
+  return (
+    <img
+      src={displaySrc}
+      alt={name}
+      onError={() => setError(true)}
+      className={cn(
+        size,
+        'rounded-[22px] border-2 border-white bg-slate-100 object-cover shadow-xl ring-1 ring-slate-100',
+      )}
+    />
+  )
 }
 
 // --- UI COMPONENTS ---
@@ -185,17 +229,7 @@ const ProfilePictureUploader = ({
   return (
     <div className="account-profile-picture group flex flex-col items-center gap-4">
       <div className="relative h-32 w-32 overflow-hidden rounded-[32px] border-4 border-slate-50 shadow-2xl transition-transform group-hover:scale-105">
-        {preview ? (
-          <img
-            src={preview}
-            alt="Profile"
-            className="h-full w-full object-cover"
-          />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center bg-slate-100 text-slate-300">
-            <Users size={48} />
-          </div>
-        )}
+        <UserAvatar src={preview} name="Profile" size="h-full w-full" />
         <div
           onClick={() => fileInputRef.current?.click()}
           className="account-image-upload absolute inset-0 flex cursor-pointer items-center justify-center bg-slate-900/40 opacity-0 transition-opacity group-hover:opacity-100"
@@ -689,14 +723,7 @@ const Accounts: React.FC = () => {
                     <td className="px-10 py-8">
                       <div className="flex items-center gap-5">
                         <div className="relative">
-                          <img
-                            src={
-                              user.profile_picture ||
-                              `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}`
-                            }
-                            alt="Avatar"
-                            className="h-14 w-14 rounded-[22px] border-2 border-white bg-slate-100 object-cover shadow-xl ring-1 ring-slate-100"
-                          />
+                          <UserAvatar src={user.profile_picture} name={user.name} />
                           <div
                             className={cn(
                               'absolute -right-1 -bottom-1 h-5 w-5 rounded-full border-4 border-white',

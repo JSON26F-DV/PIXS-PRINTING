@@ -16,11 +16,16 @@ import {
   FiShield,
   FiAlertCircle,
   FiRefreshCw,
+  FiX,
   // FiBriefcase,
 } from 'react-icons/fi'
 import { clsx } from 'clsx'
+import { motion, AnimatePresence } from 'framer-motion'
+import Cropper, { type Area } from 'react-easy-crop'
+import getCroppedImg from './utils/cropImage'
 import AccountInputField from './components/AccountInputField'
 import PhoneInputGroup from './components/PhoneInputGroup'
+import BoxFallback from '../../../components/common/BoxFallback'
 import { useAccountInfo } from './hooks/useAccountInfo'
 import { useOTPVerification } from '../../../hooks/useOTPVerification'
 import {
@@ -62,6 +67,16 @@ const AccountInfoPage: React.FC = () => {
   const [profilePreview, setProfilePreview] = useState(
     defaultAccount.profilePicture,
   )
+  const [hasImageError, setHasImageError] = useState(false)
+  
+  // ─── Cropping States ───────────────────────────────────────────────────
+  const [tempImage, setTempImage] = useState<string | null>(null)
+  const [isCropping, setIsCropping] = useState(false)
+  const [crop, setCrop] = useState({ x: 0, y: 0 })
+  const [zoom, setZoom] = useState(1)
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null)
+  const [isUploading, setIsUploading] = useState(false)
+
   const [contacts, setContacts] = useState(defaultAccount.contacts)
   const [isAddingContact, setIsAddingContact] = useState(() => {
     const params = new URLSearchParams(location.search)
@@ -114,6 +129,7 @@ const AccountInfoPage: React.FC = () => {
       })
       setTimeout(() => {
         setProfilePreview(defaultAccount.profilePicture)
+        setHasImageError(false)
         setContacts(defaultAccount.contacts)
       }, 0)
     }
@@ -136,6 +152,47 @@ const AccountInfoPage: React.FC = () => {
   const strengthInfo = getStrengthLabel(strength)
 
   // ─── Handlers ────────────────────────────────────────────────────────────
+  const onCropComplete = (_: Area, croppedAreaPixels: Area) => {
+    setCroppedAreaPixels(croppedAreaPixels)
+  }
+
+  const handleApplyCrop = async () => {
+    if (!tempImage || !croppedAreaPixels) return
+
+    setIsUploading(true)
+    try {
+      const croppedBlob = await getCroppedImg(tempImage, croppedAreaPixels)
+      const file = new File([croppedBlob], 'profile.jpg', { type: 'image/jpeg' })
+      
+      const result = await uploadProfilePicture(file)
+      if (result.success && result.url) {
+        setProfilePreview(result.url)
+        toast.success('Profile picture updated')
+      } else {
+        toast.error('Failed to upload profile picture')
+      }
+    } catch (e) {
+      console.error(e)
+      toast.error('Error processing image')
+    } finally {
+      setIsUploading(false)
+      setIsCropping(false)
+      setTempImage(null)
+    }
+  }
+
+  const handleSelectFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      const reader = new FileReader()
+      reader.onload = () => {
+        setTempImage(reader.result as string)
+        setIsCropping(true)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
   const onProfileUpdate = async (values: ProfileFormValues) => {
     const result = await updateProfile(values)
     if (result.success) toast.success('Profile updated successfully.')
@@ -224,39 +281,121 @@ const AccountInfoPage: React.FC = () => {
         </div>
         <div className="flex flex-col items-center gap-10 md:flex-row">
           <div className="relative">
-            <div className="h-40 w-40 overflow-hidden rounded-[56px] border-4 border-white bg-slate-50 shadow-2xl transition-transform duration-700 group-hover:scale-105">
-              {profilePreview ? (
+            <div 
+              onClick={() => fileInputRef.current?.click()}
+              className="relative h-40 w-40 overflow-hidden rounded-[56px] border-4 border-white bg-slate-900 shadow-2xl transition-transform duration-700 group-hover:scale-105 cursor-pointer"
+            >
+              <BoxFallback 
+                className={clsx(
+                  "flex h-full w-full items-center justify-center bg-slate-900 transition-opacity duration-300",
+                  profilePreview && !hasImageError ? "absolute inset-0 z-0" : "relative z-10"
+                )} 
+                iconClassName="h-16 w-16 opacity-30 brightness-0 invert" 
+              />
+              
+              {profilePreview && !hasImageError && (
                 <img
-                  src={profilePreview}
-                  alt="Avatar"
-                  className="h-full w-full object-cover"
+                  src={
+                    profilePreview.startsWith('http') || 
+                    profilePreview.startsWith('blob:') || 
+                    profilePreview.startsWith('data:')
+                      ? profilePreview
+                      : `/src/assets/profile/${profilePreview}`
+                  }
+                  alt="Profile"
+                  onLoad={(e) => (e.currentTarget.style.opacity = '1')}
+                  onError={() => setHasImageError(true)}
+                  className="relative z-10 h-full w-full object-cover opacity-0 transition-opacity duration-500"
                 />
-              ) : (
-                <div className="text-pixs-mint flex h-full w-full items-center justify-center bg-slate-900 text-5xl font-black italic">
-                  {defaultAccount.first_name?.[0] || 'G'}
-                </div>
               )}
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="absolute inset-0 flex items-center justify-center bg-slate-900/40 opacity-0 backdrop-blur-sm transition-all group-hover:opacity-100"
+              <div
+                className="absolute inset-0 z-20 flex items-center justify-center bg-slate-900/40 opacity-0 backdrop-blur-sm transition-all group-hover:opacity-100"
               >
                 <FiCamera className="text-white" size={32} />
-              </button>
+              </div>
             </div>
             <input
               type="file"
               ref={fileInputRef}
-              onChange={(e) => {
-                const file = e.target.files?.[0]
-                if (file)
-                  uploadProfilePicture(file).then(
-                    (r) => r.url && setProfilePreview(r.url),
-                  )
-              }}
+              onChange={handleSelectFile}
               className="hidden"
               accept="image/*"
             />
           </div>
+
+          {/* ── Cropping Modal ── */}
+          <AnimatePresence>
+            {isCropping && tempImage && (
+              <div className="fixed inset-0 z-[600] flex items-center justify-center bg-slate-900/90 backdrop-blur-xl">
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  className="relative w-full max-w-2xl overflow-hidden rounded-[48px] bg-white p-10 shadow-2xl"
+                >
+                  <div className="mb-8 flex items-center justify-between">
+                    <div>
+                      <h3 className="text-2xl font-black tracking-tighter text-slate-900 uppercase italic">Edit Profile Picture</h3>
+                      <p className="text-[10px] font-black tracking-[4px] text-slate-400 uppercase">Crop and align your identity node</p>
+                    </div>
+                    <button onClick={() => setIsCropping(false)} className="text-slate-400 hover:text-slate-900">
+                      <FiX size={24} />
+                    </button>
+                  </div>
+
+                  <div className="relative h-[400px] w-full overflow-hidden rounded-[32px] bg-slate-100">
+                    <Cropper
+                      image={tempImage}
+                      crop={crop}
+                      zoom={zoom}
+                      aspect={1}
+                      onCropChange={setCrop}
+                      onCropComplete={onCropComplete}
+                      onZoomChange={setZoom}
+                      cropShape="round"
+                      showGrid={false}
+                    />
+                  </div>
+
+                  <div className="mt-10 space-y-8">
+                    <div className="space-y-4">
+                      <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-slate-400">
+                        <span>Zoom Level</span>
+                        <span>{Math.round(zoom * 100)}%</span>
+                      </div>
+                      <input
+                        type="range"
+                        value={zoom}
+                        min={1}
+                        max={3}
+                        step={0.1}
+                        aria-labelledby="Zoom"
+                        onChange={(e) => setZoom(Number(e.target.value))}
+                        className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-slate-100 accent-slate-900"
+                      />
+                    </div>
+
+                    <div className="flex gap-4">
+                      <button
+                        onClick={() => setIsCropping(false)}
+                        className="flex-1 rounded-2xl border border-slate-100 py-5 text-[10px] font-black uppercase tracking-[4px] text-slate-400 italic transition-all hover:bg-slate-50"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleApplyCrop}
+                        disabled={isUploading}
+                        className="flex-1 flex items-center justify-center gap-3 rounded-2xl bg-slate-900 py-5 text-[10px] font-black tracking-[4px] text-white uppercase italic shadow-xl transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50"
+                      >
+                        {isUploading ? <FiRefreshCw className="animate-spin" /> : <FiCheckCircle />}
+                        Apply & Save
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
+              </div>
+            )}
+          </AnimatePresence>
 
           <form
             onSubmit={handleProfileSubmit(onProfileUpdate)}
@@ -338,7 +477,9 @@ const AccountInfoPage: React.FC = () => {
                     'group flex items-center gap-4 rounded-[24px] border-2 px-6 py-4 text-left transition-all',
                     c.is_default
                       ? 'border-pixs-mint bg-pixs-mint/5 shadow-pixs-mint/10 shadow-lg'
-                      : 'border-slate-100 bg-white hover:border-slate-200',
+                      : c.number.startsWith('0')
+                        ? 'border-transparent bg-white hover:border-slate-200'
+                        : 'border-slate-100 bg-white hover:border-slate-200',
                   )}
                 >
                   <div
@@ -364,7 +505,7 @@ const AccountInfoPage: React.FC = () => {
                     >
                       {c.number}
                     </p>
-                    {c.is_default && (
+                    {c.is_default === true && (
                       <span className="text-pixs-mint text-[8px] font-black tracking-widest uppercase">
                         Active Primary
                       </span>

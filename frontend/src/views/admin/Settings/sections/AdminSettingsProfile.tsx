@@ -12,6 +12,7 @@ import {
 import { useAuth } from '../../../../context/AuthContext'
 import { clsx } from 'clsx'
 import toast from 'react-hot-toast'
+import BoxFallback from '../../../../components/common/BoxFallback'
 
 const AdminSettingsProfile: React.FC = () => {
   const { user } = useAuth()
@@ -33,6 +34,7 @@ const AdminSettingsProfile: React.FC = () => {
   })
 
   const [profilePic] = useState('https://i.pravatar.cc/300?img=11')
+  const [hasImageError, setHasImageError] = useState(false)
 
   const handleSave = () => {
     toast.success('Admin Profile Node Updated')
@@ -44,11 +46,19 @@ const AdminSettingsProfile: React.FC = () => {
       <div className="flex flex-col items-start gap-8 md:flex-row">
         <div className="group relative">
           <div className="h-32 w-32 overflow-hidden rounded-[32px] border-4 border-white bg-slate-100 shadow-xl">
-            <img
-              src={profilePic}
-              alt="Admin"
-              className="h-full w-full object-cover"
-            />
+            {profilePic && !hasImageError ? (
+              <img
+                src={profilePic}
+                alt=""
+                onError={() => setHasImageError(true)}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <BoxFallback 
+                className="flex h-full w-full items-center justify-center bg-slate-900" 
+                iconClassName="h-12 w-12 brightness-0 invert opacity-30" 
+              />
+            )}
             <div className="absolute inset-0 flex cursor-pointer items-center justify-center bg-slate-900/40 opacity-0 transition-opacity group-hover:opacity-100">
               <Camera className="text-white" size={24} />
             </div>

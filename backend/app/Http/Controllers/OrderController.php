@@ -4,9 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Models\CartItem;
 use App\Models\Customer;
+use App\Models\Notification;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\OrderItemColor;
+use App\Models\Product;
+use App\Models\ProductReview;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -48,12 +51,14 @@ class OrderController extends Controller
                 'order_items' => $order->items->map(function ($item) use ($order) {
                     $order_item_colors = $item->colors ? $item->colors->map(function ($c) {
                         return [
+                            'id' => $c->color_id,
                             'name' => $c->colorDetails ? $c->colorDetails->name : $c->color_id,
                             'hex' => $c->colorDetails ? $c->colorDetails->hex : '#000000',
                         ];
                     })->toArray() : [];
 
                     $plate = $item->screenplate ? [
+                        'id' => $item->screenplate_id,
                         'name' => $item->screenplate->plate_name ?? 'Custom Plate',
                         'type' => $item->screenplate->type ?? 'Flatscreen',
                         'channels' => (int) $item->screenplate->channels ?? 1,
@@ -71,6 +76,7 @@ class OrderController extends Controller
                             : '',
                         'quantity' => $item->quantity,
                         'variant' => [
+                            'id' => $item->variant_id,
                             'size' => $item->variant ? $item->variant->size : '',
                             'width' => $item->variant ? $item->variant->width : null,
                             'height' => $item->variant ? $item->variant->height : null,
@@ -101,7 +107,7 @@ class OrderController extends Controller
         if ($request->has('admin_comment')) {
             $order->admin_comment = $request->admin_comment;
         }
-        
+
         $validated = $request->validate([
             'rating' => 'nullable|integer|min:0|max:5',
             'feedback' => 'nullable|string|max:1000',
@@ -123,7 +129,7 @@ class OrderController extends Controller
         // Sync product reviews if order is reviewed
         if ($request->hasAny(['rating', 'feedback']) && $order->status === 'DELIVERED') {
             foreach ($order->items as $item) {
-                \App\Models\ProductReview::updateOrCreate(
+                ProductReview::updateOrCreate(
                     [
                         'order_id' => $order->id,
                         'product_id' => $item->product_id,
@@ -136,8 +142,8 @@ class OrderController extends Controller
                 );
 
                 // Recalculate product ratings
-                $avgRating = \App\Models\ProductReview::where('product_id', $item->product_id)->avg('rating');
-                \App\Models\Product::where('id', $item->product_id)->update(['ratings' => round($avgRating)]);
+                $avgRating = ProductReview::where('product_id', $item->product_id)->avg('rating');
+                Product::where('id', $item->product_id)->update(['ratings' => round($avgRating)]);
             }
         }
 
@@ -226,26 +232,26 @@ class OrderController extends Controller
 
                     // total_sold Increment & is_in_stock Evaluator
                     if ($cartItem->product_id) {
-                        \Illuminate\Support\Facades\DB::statement('
+                        DB::statement('
                             UPDATE products 
                             SET 
                                 total_sold = total_sold + ?,
                                 is_in_stock = IF((SELECT SUM(stock) FROM product_variants WHERE product_id = products.id) > 0, 1, 0)
                             WHERE id = ?
                         ', [
-                            $cartItem->quantity, 
-                            $cartItem->product_id
+                            $cartItem->quantity,
+                            $cartItem->product_id,
                         ]);
                     }
                     // Accurate Stock Deductions strictly rely upon dynamically targeted variants now natively
                     if ($cartItem->variant_id) {
-                        \Illuminate\Support\Facades\DB::statement('
+                        DB::statement('
                             UPDATE product_variants 
                             SET stock = GREATEST(0, CAST(stock AS SIGNED) - ?)
                             WHERE variant_id = ?
                         ', [
-                            $cartItem->quantity, 
-                            $cartItem->variant_id
+                            $cartItem->quantity,
+                            $cartItem->variant_id,
                         ]);
                     }
 
@@ -262,17 +268,24 @@ class OrderController extends Controller
                     }
                 }
 
-                // STEP 8: Unselect processed cart_items (instead of deleting them)
-                CartItem::whereIn('id', $validated['cart_item_ids'])->update(['selected' => 0]);
+                // STEP 8: Cleanup cart_items
+                // Delete temporary items, just unselect regular items
+                CartItem::whereIn('id', $validated['cart_item_ids'])
+                    ->where('temp', true)
+                    ->delete();
+
+                CartItem::whereIn('id', $validated['cart_item_ids'])
+                    ->where('temp', false)
+                    ->update(['selected' => 0]);
 
                 // STEP 9: Send Success Notification
-                \App\Models\Notification::create([
-                    'id' => \Illuminate\Support\Str::uuid(),
+                Notification::create([
+                    'id' => Str::uuid(),
                     'customer_id' => $user->id,
                     'title' => 'Purchase Successful',
                     'message' => "Order {$orderId} has been successfully placed.",
                     'type' => 'success',
-                    'is_read' => false
+                    'is_read' => false,
                 ]);
 
                 // STEP 10: Return JSON response (201)
@@ -286,16 +299,16 @@ class OrderController extends Controller
             Log::error('OrderController@store failed', ['message' => $e->getMessage()]);
 
             try {
-                \App\Models\Notification::create([
-                    'id' => \Illuminate\Support\Str::uuid(),
+                Notification::create([
+                    'id' => Str::uuid(),
                     'customer_id' => $user->id,
                     'title' => 'Purchase Failed',
                     'message' => 'An error occurred while processing your order.',
                     'type' => 'error',
-                    'is_read' => false
+                    'is_read' => false,
                 ]);
             } catch (\Exception $ex) {
-                Log::error('Failed to save error notification: ' . $ex->getMessage());
+                Log::error('Failed to save error notification: '.$ex->getMessage());
             }
 
             return response()->json(['message' => 'Failed to create order: '.$e->getMessage()], 500);

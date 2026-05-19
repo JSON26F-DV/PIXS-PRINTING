@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost
--- Generation Time: Apr 27, 2026 at 11:27 AM
+-- Generation Time: May 19, 2026 at 03:57 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -38,10 +38,10 @@ CREATE TABLE `cache` (
 --
 
 INSERT INTO `cache` (`key`, `value`, `expiration`) VALUES
-('laravel-cache-5210a5ff37c1adf5db1b3c6d03bff28b', 'i:1;', 1777281693),
-('laravel-cache-5210a5ff37c1adf5db1b3c6d03bff28b:timer', 'i:1777281693;', 1777281693),
-('laravel-cache-a75f3f172bfb296f2e10cbfc6dfc1883', 'i:10;', 1777281693),
-('laravel-cache-a75f3f172bfb296f2e10cbfc6dfc1883:timer', 'i:1777281693;', 1777281693);
+('laravel-cache-5210a5ff37c1adf5db1b3c6d03bff28b', 'i:1;', 1779187831),
+('laravel-cache-5210a5ff37c1adf5db1b3c6d03bff28b:timer', 'i:1779187831;', 1779187831),
+('laravel-cache-a75f3f172bfb296f2e10cbfc6dfc1883', 'i:4;', 1779187831),
+('laravel-cache-a75f3f172bfb296f2e10cbfc6dfc1883:timer', 'i:1779187831;', 1779187831);
 
 -- --------------------------------------------------------
 
@@ -72,16 +72,9 @@ CREATE TABLE `cart_items` (
   `plate_price` decimal(10,2) NOT NULL DEFAULT 0.00,
   `total_cart_price` decimal(10,2) NOT NULL DEFAULT 0.00,
   `selected` tinyint(1) NOT NULL DEFAULT 0,
+  `temp` tinyint(1) NOT NULL DEFAULT 0,
   `created_at` datetime NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
---
--- Dumping data for table `cart_items`
---
-
-INSERT INTO `cart_items` (`id`, `customer_id`, `product_id`, `variant_id`, `screenplate_id`, `quantity`, `unit_price`, `plate_price`, `total_cart_price`, `selected`, `created_at`) VALUES
-('P007__V-DOME-90MM__no-color__no-plate', 'CUST-503', 'P007', 'V-DOME-90MM', NULL, 200, 1.30, 0.00, 260.00, 1, '2026-04-27 17:20:38'),
-('P011__V-BS-STD__no-color__no-plate', 'CUST-503', 'P011', 'V-BS-STD', NULL, 500, 1.00, 0.00, 500.00, 0, '2026-04-25 22:01:09');
 
 -- --------------------------------------------------------
 
@@ -160,6 +153,13 @@ CREATE TABLE `conversations` (
   `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+--
+-- Dumping data for table `conversations`
+--
+
+INSERT INTO `conversations` (`id`, `last_message_id`, `created_at`, `updated_at`) VALUES
+('CUST-503_1', NULL, '2026-05-17 09:55:47', '2026-05-17 09:55:47');
+
 -- --------------------------------------------------------
 
 --
@@ -186,6 +186,7 @@ CREATE TABLE `customers` (
   `last_name` varchar(100) NOT NULL,
   `profile_picture` varchar(500) DEFAULT NULL,
   `email` varchar(255) NOT NULL,
+  `role` varchar(20) NOT NULL DEFAULT 'customer',
   `status` enum('active','inactive') NOT NULL DEFAULT 'active',
   `age` tinyint(3) UNSIGNED DEFAULT NULL,
   `gender` enum('male','female','other') DEFAULT NULL,
@@ -203,10 +204,11 @@ CREATE TABLE `customers` (
 -- Dumping data for table `customers`
 --
 
-INSERT INTO `customers` (`id`, `first_name`, `last_name`, `profile_picture`, `email`, `status`, `age`, `gender`, `company_name`, `password`, `total_orders_value`, `orders`, `google_id`, `facebook_id`, `date_created`, `last_login`) VALUES
-('CUST-501', 'Juan', 'Dela Cruz', 'https://i.pravatar.cc/300?img=14', 'juan@example.com', 'active', 35, 'male', 'Juan\'s Sari-Sari', '$2y$12$6pX90R7u0.9TInXzGPmGuev6MvE.C1uXyX8v7.nF9t/K9.uH.yM2e', 15450.50, 12, NULL, NULL, '2024-05-12 14:20:00', '2026-03-27 11:00:00'),
-('CUST-502', 'Laguna', 'Prints', 'https://i.pravatar.cc/300?img=15', 'info@lagunaprints.com', 'active', 42, 'female', 'Laguna Prints & Design', '$2y$12$6pX90R7u0.9TInXzGPmGuev6MvE.C1uXyX8v7.nF9t/K9.uH.yM2e', 85200.00, 45, NULL, NULL, '2024-06-20 11:45:00', '2026-03-28 09:30:00'),
-('CUST-503', 'aira', 'uzi', NULL, 'airamapagmahal67@gmail.com', 'active', 21, 'female', 'Ligma Shop\r\n', '$2y$12$tL5Z7oAftnGXxR/OiRbWsesHft8PIlY0uNWrGjojWGU1q4aEhL9Dq', 0.00, 0, NULL, NULL, '2026-04-12 01:07:22', NULL);
+INSERT INTO `customers` (`id`, `first_name`, `last_name`, `profile_picture`, `email`, `role`, `status`, `age`, `gender`, `company_name`, `password`, `total_orders_value`, `orders`, `google_id`, `facebook_id`, `date_created`, `last_login`) VALUES
+('CUST-501', 'Juan', 'Dela Cruz', 'https://i.pravatar.cc/300?img=14', 'juan@example.com', 'customer', 'active', 35, 'male', 'Juan\'s Sari-Sari', '$2y$12$Li91agNv9u.gYEtZQe/T8.yDarbrFB0s3qJ2YMjIC7BANDZ1txwsa', 15450.50, 12, NULL, NULL, '2024-05-12 14:20:00', '2026-03-27 11:00:00'),
+('CUST-502', 'Laguna', 'Prints', 'https://i.pravatar.cc/300?img=15', 'info@lagunaprints.com', 'customer', 'active', 42, 'female', 'Laguna Prints & Design', '$2y$12$yPIfziZLKim3dHxsuxp4we.uFkUd5H8KArKR48GX/b3tLvl92x5jS', 85200.00, 45, NULL, NULL, '2024-06-20 11:45:00', '2026-03-28 09:30:00'),
+('CUST-503', 'jason', 'begornia', 'profile_CUST-503_1779181704.jpg', 'airamapagmahal67@gmail.com', 'customer', 'active', 21, 'female', 'Ligma Shop', '$2y$12$yPIfziZLKim3dHxsuxp4we.uFkUd5H8KArKR48GX/b3tLvl92x5jS', 0.00, 0, NULL, NULL, '2026-04-12 01:07:22', NULL),
+('CUST-504', 'shelly', 'mylove', NULL, 'shelly1234@gmail.com', 'customer', 'active', 22, 'female', 'ligma', '$2y$12$RSUnoEB01sySl2sPoUJ.PeUIOKDxJ14MB0ddv9iP2Gb6Nf4L5wXEq', 0.00, 0, NULL, NULL, '2026-05-19 10:49:31', NULL);
 
 -- --------------------------------------------------------
 
@@ -233,7 +235,6 @@ CREATE TABLE `customer_addresses` (
 --
 
 INSERT INTO `customer_addresses` (`id`, `customer_id`, `adress_label`, `contact_number`, `region`, `province`, `city`, `barangay`, `street`, `postal_code`, `is_default`) VALUES
-('ADDR-002', 'CUST-503', 'seft', '+639945646355', NULL, NULL, NULL, NULL, '14.335473762927208, 120.90253472328187', NULL, 0),
 ('ADDR-003', 'CUST-503', 'bella vista', '+639945646355', 'Cordillera Administrative Region', 'Apayao', 'Conner', 'Banban', 'aws', '4017', 1);
 
 -- --------------------------------------------------------
@@ -248,6 +249,14 @@ CREATE TABLE `customer_contact_numbers` (
   `number` varchar(30) NOT NULL,
   `is_default` tinyint(1) NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `customer_contact_numbers`
+--
+
+INSERT INTO `customer_contact_numbers` (`id`, `customer_id`, `number`, `is_default`) VALUES
+(1, 'CUST-503', '+639945646355', 1),
+(2, 'CUST-503', '+639123423232', 0);
 
 -- --------------------------------------------------------
 
@@ -278,20 +287,23 @@ CREATE TABLE `customer_payment_methods` (
   `id` varchar(20) NOT NULL,
   `customer_id` varchar(20) NOT NULL,
   `type` enum('bank','ewallet','credit_card','cod') NOT NULL,
-  `bank_name` varchar(100) DEFAULT NULL,
-  `provider` varchar(100) DEFAULT NULL,
   `masked_number` varchar(30) NOT NULL,
-  `is_default` tinyint(1) NOT NULL DEFAULT 0
+  `gateway_token` varchar(255) DEFAULT NULL,
+  `is_default` tinyint(1) NOT NULL DEFAULT 0,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  `provider` varchar(100) DEFAULT NULL,
+  `bank_name` enum('BDO','BPI','Metrobank','Landbank','Unionbank','Security Bank','Chinabank','RCBC','EastWest','PNB','Other') DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `customer_payment_methods`
 --
 
-INSERT INTO `customer_payment_methods` (`id`, `customer_id`, `type`, `bank_name`, `provider`, `masked_number`, `is_default`) VALUES
-('pay_001', 'CUST-501', 'bank', 'BDO', NULL, '**** 1234', 1),
-('pay_002', 'CUST-501', 'ewallet', NULL, 'GCash', '**** 5678', 0),
-('PAY-10778', 'CUST-503', 'ewallet', NULL, 'GCash', '•••••••6355', 1);
+INSERT INTO `customer_payment_methods` (`id`, `customer_id`, `type`, `masked_number`, `gateway_token`, `is_default`, `created_at`, `updated_at`, `provider`, `bank_name`) VALUES
+('PAY-50239', 'CUST-503', 'bank', '•••••••6355', NULL, 0, '2026-05-19 00:38:25', '2026-05-19 00:38:38', NULL, 'BDO'),
+('PAY-81816', 'CUST-503', 'credit_card', '••••••••••6543', NULL, 1, '2026-05-19 00:38:13', '2026-05-19 00:38:38', 'Visa', NULL),
+('PAY-91219', 'CUST-503', 'ewallet', '•••••••6355', NULL, 0, '2026-05-19 00:38:03', '2026-05-19 00:38:38', 'GCash', NULL);
 
 -- --------------------------------------------------------
 
@@ -355,6 +367,13 @@ CREATE TABLE `employees` (
   `date_created` datetime NOT NULL DEFAULT current_timestamp(),
   `last_login` datetime DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `employees`
+--
+
+INSERT INTO `employees` (`id`, `first_name`, `last_name`, `profile_picture`, `email`, `role`, `status`, `age`, `gender`, `company_name`, `password`, `total_orders_value`, `daily_rate`, `ot_rate`, `date_created`, `last_login`) VALUES
+('1', 'Jason', 'Cruz', 'profile1.jpg', 'jasoncruz@gmail.com', 'admin', 'active', 25, 'male', 'Tech Solutions Inc', '$2y$12$yPIfziZLKim3dHxsuxp4we.uFkUd5H8KArKR48GX/b3tLvl92x5jS', 15000.50, 1200.00, 150.00, '2026-05-17 08:30:00', '2026-05-17 10:15:00');
 
 -- --------------------------------------------------------
 
@@ -541,6 +560,21 @@ CREATE TABLE `messages` (
   `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+--
+-- Dumping data for table `messages`
+--
+
+INSERT INTO `messages` (`id`, `conversation_id`, `sender_id`, `sender_type`, `receiver_id`, `receiver_type`, `message`, `reply_to_id`, `is_edited`, `original_text`, `is_deleted`, `is_read`, `created_at`, `updated_at`) VALUES
+('msg_0uUPkSW6Pi', 'CUST-503_1', '1', 'employee', 'CUST-503', 'customer', 'admin they say', NULL, 0, NULL, 0, 0, '2026-05-17 17:22:19', '2026-05-18 18:24:30'),
+('msg_8BODIW78XB', 'CUST-503_1', 'CUST-503', 'employee', '1', 'employee', 'awd', NULL, 0, NULL, 0, 0, '2026-05-17 17:49:44', '2026-05-17 17:49:44'),
+('msg_bO1jtuHrLP', 'CUST-503_1', 'CUST-503', 'employee', '1', 'employee', 'Sent a image: 0acf77af-bd57-4824-8779-2294c92e55e8.jpeg', NULL, 0, NULL, 0, 0, '2026-05-17 17:24:11', '2026-05-17 17:24:11'),
+('msg_hVjTIc05oN', 'CUST-503_1', 'CUST-503', 'employee', '1', 'employee', 'hello world', NULL, 0, NULL, 0, 0, '2026-05-17 16:51:42', '2026-05-17 16:51:42'),
+('msg_jLtaq3fVmI', 'CUST-503_1', 'CUST-503', 'employee', '1', 'employee', 'Sent a file: preview.webp', NULL, 0, NULL, 0, 0, '2026-05-17 17:21:47', '2026-05-17 17:21:47'),
+('msg_M1cjD7vdrz', 'CUST-503_1', 'CUST-503', 'employee', '1', 'employee', 'nihao', NULL, 0, NULL, 0, 0, '2026-05-17 17:15:53', '2026-05-17 17:15:53'),
+('msg_MHVEnEuxaV', 'CUST-503_1', 'CUST-503', 'employee', '1', 'employee', 'aws', NULL, 0, NULL, 0, 0, '2026-05-19 07:29:48', '2026-05-19 07:29:48'),
+('msg_Mnx1JgBFSQ', 'CUST-503_1', 'CUST-503', 'employee', '1', 'employee', 'awds', NULL, 0, NULL, 0, 0, '2026-05-17 18:20:18', '2026-05-17 18:20:18'),
+('msg_xITnTrR4Fg', 'CUST-503_1', 'CUST-503', 'employee', '1', 'employee', 'zsc', NULL, 0, NULL, 0, 0, '2026-05-17 18:20:24', '2026-05-17 18:20:24');
+
 -- --------------------------------------------------------
 
 --
@@ -554,6 +588,14 @@ CREATE TABLE `message_attachments` (
   `url` varchar(500) NOT NULL,
   `name` varchar(255) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `message_attachments`
+--
+
+INSERT INTO `message_attachments` (`id`, `message_id`, `type`, `url`, `name`) VALUES
+(1, 'msg_jLtaq3fVmI', 'file', '1779009707_preview.webp', '1779009707_preview.webp'),
+(2, 'msg_bO1jtuHrLP', 'image', '1779009851_0acf77af-bd57-4824-8779-2294c92e55e8.jpeg', '1779009851_0acf77af-bd57-4824-8779-2294c92e55e8.jpeg');
 
 -- --------------------------------------------------------
 
@@ -626,7 +668,49 @@ INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES
 (38, '2026_04_11_143037_create_deleted_accounts_table', 1),
 (39, '2026_04_11_150138convert_database_to_utf8mb4_and_bcrypt_passwords', 1),
 (40, '2026_04_22_013058_update_cart_items_table', 1),
-(41, '2026_04_26_033029_create_screenplate_requests_table', 2);
+(41, '2026_04_26_033029_create_screenplate_requests_table', 2),
+(42, '2026_05_17_025817_create_notifications_table', 3),
+(43, '2026_05_18_105141_create_product_reviews_table', 4),
+(44, '2026_05_19_000304_add_temp_v2_to_cart_items_table', 5),
+(45, '2026_05_19_150500_update_customer_payment_methods_table', 6),
+(46, '2026_05_19_081323_change_provider_to_enum_in_customer_payment_methods_table', 7),
+(47, '2026_05_19_083325_change_bank_name_to_enum_in_customer_payment_methods_table', 8),
+(48, '2026_05_19_100037_add_role_to_customers_table', 9);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `notifications`
+--
+
+CREATE TABLE `notifications` (
+  `id` varchar(255) NOT NULL,
+  `customer_id` varchar(255) NOT NULL,
+  `title` varchar(255) NOT NULL,
+  `message` text NOT NULL,
+  `type` varchar(255) NOT NULL DEFAULT 'info',
+  `is_read` tinyint(1) NOT NULL DEFAULT 0,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `notifications`
+--
+
+INSERT INTO `notifications` (`id`, `customer_id`, `title`, `message`, `type`, `is_read`, `created_at`, `updated_at`) VALUES
+('00da0e9f-4888-480f-8c2e-d7a3bb554d6f', 'CUST-503', 'Purchase Successful', 'Order ORD-PEWGKIBYLF has been successfully placed.', 'success', 1, '2026-05-16 20:14:15', '2026-05-19 01:25:41'),
+('1c5fd7f6-6553-48da-8f4b-01b5bdb5a3da', 'CUST-503', 'Purchase Failed', 'An error occurred while processing your order.', 'error', 1, '2026-05-16 21:32:51', '2026-05-19 01:25:41'),
+('2027f12f-ae49-43d1-b2d8-d8e46d4e9b4f', 'CUST-503', 'Purchase Successful', 'Order ORD-FQVYRMQ0VQ has been successfully placed.', 'success', 1, '2026-05-16 20:08:26', '2026-05-19 01:25:41'),
+('2630b346-67fb-4527-a7ac-5c376699f6bc', 'CUST-503', 'Screenplate Requested', 'Your setup request for PPY Cup has been processed.', 'success', 1, '2026-05-16 19:15:26', '2026-05-19 01:25:41'),
+('4a4bd6c1-4fc1-471f-b3e7-1c88e242acfb', 'CUST-503', 'Purchase Successful', 'Order ORD-BYTVJKSBFX has been successfully placed.', 'success', 1, '2026-05-16 21:15:15', '2026-05-19 01:25:41'),
+('4dfa4f32-a72b-4982-aa98-b5517b87815c', 'CUST-503', 'Purchase Failed', 'An error occurred while processing your order.', 'error', 1, '2026-05-16 19:41:08', '2026-05-19 01:25:41'),
+('6ade9c03-7488-4ed1-bcb0-060a2e276e8b', 'CUST-503', 'Purchase Failed', 'An error occurred while processing your order.', 'error', 1, '2026-05-16 21:32:46', '2026-05-19 01:25:41'),
+('7f60ba9f-fe7b-4d0f-94e5-5d5619502f33', 'CUST-503', 'Purchase Failed', 'An error occurred while processing your order.', 'error', 1, '2026-05-16 21:29:18', '2026-05-19 01:25:41'),
+('d5ce1990-b700-4fd8-8ce3-d58472bf31c5', 'CUST-503', 'Purchase Failed', 'An error occurred while processing your order.', 'error', 1, '2026-05-16 21:29:07', '2026-05-19 01:25:41'),
+('e1ece211-3721-42c9-80ba-a36b4cf6f740', 'CUST-503', 'Purchase Failed', 'An error occurred while processing your order.', 'error', 1, '2026-05-16 19:41:02', '2026-05-19 01:25:41'),
+('e2bbc5bd-29fb-4820-aca2-12665fea0edc', 'CUST-503', 'Purchase Successful', 'Order ORD-GPI1CIPMQT has been successfully placed.', 'success', 1, '2026-05-16 20:47:43', '2026-05-19 01:25:41'),
+('f950f15d-ba0b-4e2d-af1c-511f9e372228', 'CUST-503', 'Purchase Successful', 'Order ORD-MLA2WRCP30 has been successfully placed.', 'success', 1, '2026-05-16 21:47:13', '2026-05-19 01:25:41');
 
 -- --------------------------------------------------------
 
@@ -657,7 +741,15 @@ CREATE TABLE `orders` (
 --
 
 INSERT INTO `orders` (`id`, `customer_id`, `address_id`, `payment_method_id`, `delivery_method_id`, `discount_id`, `total_amount`, `total_discount_amount`, `production_notes`, `status`, `feedback`, `complaint`, `rating`, `admin_comment`, `created_at`) VALUES
-('ORD-AT9FBTYKWZ', 'CUST-503', 'ADDR-003', 'PAY-10778', 'del_001', NULL, 500.00, 0.00, NULL, 'PENDING', NULL, NULL, 0, '', '2026-04-26 04:20:43');
+('ORD-8TUVJXHJYM', 'CUST-503', 'ADDR-003', 'PAY-10778', 'del_001', NULL, 2735.00, 0.00, NULL, 'PROCESSING', NULL, NULL, 0, 'Cancelled by customer: Duplicate order', '2026-05-05 06:08:20'),
+('ORD-AT9FBTYKWZ', 'CUST-503', 'ADDR-003', 'PAY-10778', 'del_001', NULL, 500.00, 0.00, NULL, 'DELIVERED', 'ligma ball as', 'tralala', 5, '', '2026-04-26 04:20:43'),
+('ORD-BYTVJKSBFX', 'CUST-503', 'ADDR-003', 'PAY-10778', 'del_001', NULL, 1700.00, 0.00, 'hello world', 'PENDING', NULL, NULL, 0, NULL, '2026-05-17 05:15:15'),
+('ORD-D3MLWTDDET', 'CUST-503', 'ADDR-003', 'PAY-10778', 'del_002', NULL, 760.00, 0.00, NULL, 'DELIVERED', NULL, NULL, 0, 'Cancelled by customer: Change of mind', '2026-04-27 09:36:52'),
+('ORD-FQVYRMQ0VQ', 'CUST-503', 'ADDR-003', 'PAY-10778', 'del_002', NULL, 2919.15, 0.00, NULL, 'PENDING', NULL, NULL, 0, NULL, '2026-05-17 04:08:26'),
+('ORD-GPI1CIPMQT', 'CUST-503', 'ADDR-003', 'PAY-10778', 'del_001', NULL, 2470.05, 0.00, NULL, 'PENDING', NULL, NULL, 0, NULL, '2026-05-17 04:47:43'),
+('ORD-MLA2WRCP30', 'CUST-503', 'ADDR-003', 'PAY-10778', 'del_001', NULL, 2479.95, 0.00, NULL, 'PENDING', NULL, NULL, 0, NULL, '2026-05-17 05:47:13'),
+('ORD-PEWGKIBYLF', 'CUST-503', 'ADDR-003', 'PAY-10778', 'del_001', NULL, 2475.00, 0.00, NULL, 'PENDING', NULL, NULL, 0, NULL, '2026-05-17 04:14:15'),
+('ORD-PVVPKODRGU', 'CUST-503', 'ADDR-003', 'PAY-10778', 'del_001', NULL, 2475.00, 0.00, 'hello wolrd', 'PENDING', NULL, NULL, 0, NULL, '2026-05-17 02:28:33');
 
 -- --------------------------------------------------------
 
@@ -683,7 +775,18 @@ CREATE TABLE `order_items` (
 --
 
 INSERT INTO `order_items` (`id`, `order_id`, `customer_id`, `product_id`, `variant_id`, `screenplate_id`, `quantity`, `unit_price`, `plate_price`, `created_at`) VALUES
-(2, 'ORD-AT9FBTYKWZ', 'CUST-503', 'P011', 'V-BS-STD', NULL, 500, 1.00, 0.00, '2026-04-26 12:20:43');
+(2, 'ORD-AT9FBTYKWZ', 'CUST-503', 'P011', 'V-BS-STD', NULL, 500, 1.00, 0.00, '2026-04-26 12:20:43'),
+(3, 'ORD-D3MLWTDDET', 'CUST-503', 'P007', 'V-DOME-90MM', NULL, 200, 1.30, 0.00, '2026-04-27 17:36:52'),
+(4, 'ORD-D3MLWTDDET', 'CUST-503', 'P011', 'V-BS-STD', NULL, 500, 1.00, 0.00, '2026-04-27 17:36:52'),
+(5, 'ORD-8TUVJXHJYM', 'CUST-503', 'P001', 'V-PPY-16OZ', 'SP-FLAT-001', 500, 2.95, 2.00, '2026-05-05 14:08:20'),
+(6, 'ORD-8TUVJXHJYM', 'CUST-503', 'P007', 'V-DOME-90MM', NULL, 200, 1.30, 0.00, '2026-05-05 14:08:20'),
+(7, 'ORD-PVVPKODRGU', 'CUST-503', 'P001', 'V-PPY-16OZ', 'SP-FLAT-001', 500, 2.95, 2.00, '2026-05-17 10:28:33'),
+(10, 'ORD-FQVYRMQ0VQ', 'CUST-503', 'P001', 'V-PPY-12OZ', 'SP-FLAT-001', 499, 2.85, 2.00, '2026-05-17 12:08:26'),
+(11, 'ORD-PEWGKIBYLF', 'CUST-503', 'P001', 'V-PPY-16OZ', 'SP-FLAT-001', 500, 2.95, 2.00, '2026-05-17 12:14:15'),
+(12, 'ORD-GPI1CIPMQT', 'CUST-503', 'P001', 'V-PPY-16OZ', 'SP-FLAT-001', 499, 2.95, 2.00, '2026-05-17 12:47:43'),
+(13, 'ORD-BYTVJKSBFX', 'CUST-503', 'P009', 'V-FL-90MM', NULL, 1000, 1.20, 0.00, '2026-05-17 13:15:15'),
+(14, 'ORD-BYTVJKSBFX', 'CUST-503', 'P011', 'V-BS-STD', NULL, 500, 1.00, 0.00, '2026-05-17 13:15:15'),
+(19, 'ORD-MLA2WRCP30', 'CUST-503', 'P001', 'V-PPY-16OZ', 'SP-FLAT-001', 501, 2.95, 2.00, '2026-05-17 13:47:13');
 
 -- --------------------------------------------------------
 
@@ -698,6 +801,24 @@ CREATE TABLE `order_item_colors` (
   `channel_label` enum('Primary','Secondary','Accent') NOT NULL DEFAULT 'Primary',
   `channel_order` tinyint(3) UNSIGNED NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `order_item_colors`
+--
+
+INSERT INTO `order_item_colors` (`id`, `order_item_id`, `color_id`, `channel_label`, `channel_order`) VALUES
+(1, 5, 'C001', 'Primary', 0),
+(2, 5, 'C004', 'Secondary', 1),
+(3, 7, 'C001', 'Primary', 0),
+(4, 7, 'C004', 'Secondary', 1),
+(5, 10, 'C005', 'Primary', 0),
+(6, 10, 'C002', 'Secondary', 1),
+(7, 11, 'C001', 'Primary', 0),
+(8, 11, 'C004', 'Secondary', 1),
+(9, 12, 'C001', 'Primary', 0),
+(10, 12, 'C004', 'Secondary', 1),
+(11, 19, 'C001', 'Primary', 0),
+(12, 19, 'C004', 'Secondary', 1);
 
 -- --------------------------------------------------------
 
@@ -723,7 +844,12 @@ CREATE TABLE `personal_access_tokens` (
 --
 
 INSERT INTO `personal_access_tokens` (`id`, `tokenable_type`, `tokenable_id`, `name`, `token`, `abilities`, `last_used_at`, `expires_at`, `created_at`, `updated_at`) VALUES
-(2, 'App\\Models\\Customer', 'CUST-503', 'customer-token', '57c9f8ff18ef4d2f90cfc8a0ffbf47d34a4000821418bdd34bf3b27fbae65672', '[\"role:customer\"]', '2026-04-27 01:21:17', '2026-05-25 20:38:54', '2026-04-25 20:38:54', '2026-04-27 01:21:17');
+(28, 'App\\Models\\Employee', '1', 'employee-token', '9c75967106c1fe2f8f4a01e0487ca0f193ab32e181756ee8a823c90962a28771', '[\"role:admin\"]', NULL, '2026-05-19 10:15:06', '2026-05-19 02:15:06', '2026-05-19 02:15:06'),
+(31, 'App\\Models\\Customer', 'CUST-503', 'customer-token', 'd3f449ee4df44ece36bfa60caac1c8d6a520c7b8a71d5f614291acc90e9deeba', '[\"role:customer\"]', NULL, '2026-06-18 02:34:49', '2026-05-19 02:34:49', '2026-05-19 02:34:49'),
+(33, 'App\\Models\\Customer', 'CUST-505', 'customer-token', '1dae7ccbcd28c09b284490d8f264e066e453b7455862b549d53fd584d2cbbb36', '[\"role:customer\"]', NULL, '2026-06-18 02:36:46', '2026-05-19 02:36:46', '2026-05-19 02:36:46'),
+(34, 'App\\Models\\Customer', 'CUST-506', 'customer-token', '0c5e76f5f791c8ce0fe6b08ae6a3812e1b83a1ecb7cbb6ed68af63430440145f', '[\"role:customer\"]', NULL, '2026-06-18 02:42:34', '2026-05-19 02:42:34', '2026-05-19 02:42:34'),
+(37, 'App\\Models\\Customer', 'CUST-504', 'customer-token', 'd6db39d6b09142128d5bdb539b885c42d8ad59275012b4cdb1b3aedf06d06685', '[\"role:customer\"]', NULL, '2026-06-18 02:56:58', '2026-05-19 02:56:58', '2026-05-19 02:56:58'),
+(38, 'App\\Models\\Customer', 'CUST-501', 'customer-token', '68673273fbd2d3ce279737ea96253f04c7f4975ee57e1e6c2c232f74b308acf6', '[\"role:customer\"]', NULL, '2026-06-18 03:02:02', '2026-05-19 03:02:02', '2026-05-19 03:02:02');
 
 -- --------------------------------------------------------
 
@@ -754,8 +880,8 @@ CREATE TABLE `products` (
   `long_description` text DEFAULT NULL,
   `best_for` varchar(500) DEFAULT NULL,
   `base_price` decimal(10,2) NOT NULL DEFAULT 0.00,
+  `is_in_stock` tinyint(1) DEFAULT 1,
   `raw_material_cost` decimal(10,2) NOT NULL DEFAULT 0.00,
-  `current_stock` int(10) UNSIGNED NOT NULL DEFAULT 0,
   `min_threshold` int(10) UNSIGNED NOT NULL DEFAULT 0,
   `min_order` int(10) UNSIGNED NOT NULL DEFAULT 1,
   `main_image` varchar(500) DEFAULT NULL,
@@ -770,27 +896,27 @@ CREATE TABLE `products` (
 -- Dumping data for table `products`
 --
 
-INSERT INTO `products` (`id`, `category_id`, `name`, `short_description`, `long_description`, `best_for`, `base_price`, `raw_material_cost`, `current_stock`, `min_threshold`, `min_order`, `main_image`, `print_method`, `is_need_screenplate`, `is_need_color`, `ratings`, `total_sold`) VALUES
-('P001', 'CT001', 'PPY Cup', 'Standard PP cup for milktea and cold drinks — affordable and food-grade.', 'The PPY Cup is an everyday polypropylene cup built for high-volume milktea shops and cafes.', 'Milktea Shops, Coffee Houses, and Catering Events.', 2.85, 1.10, 999, 500, 100, 'happycup.png', 'Screen Print / Offset', 1, 1, 4, 823),
-('P002', 'CT001', 'UCUP', 'Premium U-shaped PP cup — crystal clear with a modern profile.', 'The UCUP features a distinctive U-shaped design that enhances drink presentation.', 'Milktea Shops, Juice Bars, and Premium Cafes.', 2.95, 1.20, 5, 500, 100, 'ligma.jpeg', 'Screen Print / Offset', 1, 1, 4, 424),
-('P003', 'CT001', 'Slim Cup', 'Sleek slim-profile PP cup — ergonomic grip, great for on-the-go drinks.', 'The Slim Cup is designed with a narrower diameter for a comfortable grip.', 'Premium Milktea Shops, Coffee Shops, and Takeaway Counters.', 3.80, 1.50, 5000, 300, 100, 'nothappy.jpeg', 'Screen Print / Offset', 1, 1, 4, 543),
-('P004', 'CT001', 'Doublewall Cup with Lid', 'Insulated doublewall cup with lid — keeps drinks hot or cold longer.', 'The Doublewall Cup features a dual-wall construction that provides superior insulation.', 'Coffee Shops, Hot Beverage Stalls, and Premium Milktea Outlets.', 7.00, 3.00, 4000, 200, 50, 'happycup.png', 'Screen Print / Offset', 1, 1, 5, 281),
-('P005', 'CT001', 'PET Cup 95mm', 'Crystal-clear PET cup with 95mm diameter opening — vibrant and recyclable.', 'The PET Cup (95mm) is made from polyethylene terephthalate, offering exceptional clarity.', 'Milktea Shops, Fruit Tea Stalls, and Specialty Drink Outlets.', 3.20, 1.40, 7000, 500, 100, 'happycup.png', 'Screen Print / Offset', 1, 1, 4, 319),
-('P006', 'CT001', 'PET Cup 98mm', 'Wide-mouth crystal-clear PET cup with 98mm diameter — great for toppings-heavy drinks.', 'The PET Cup (98mm) features a wider 98mm opening, perfect for drinks loaded with pearls.', 'Milktea Shops, Dessert Drinks, and Topping-Heavy Beverages.', 4.45, 1.80, 6000, 500, 100, 'happycup.png', 'Screen Print / Offset', 1, 1, 4, 431),
-('P007', 'CT002', 'Dome Lid', 'Classic dome-shaped lid — fits standard 90mm and 98mm cup openings.', 'The Dome Lid features a raised dome design that accommodates whipped cream and pearls.', 'Milktea Cups, Smoothie Cups, and Topping-Heavy Drinks.', 1.30, 0.50, 15000, 1000, 200, 'happycup.png', 'N/A', 0, 0, 5, 1490),
-('P008', 'CT002', 'Strawless Lid', 'Eco-friendly strawless lid — sip-directly design, fits 90mm, 95mm, and 98mm cups.', 'The Strawless Lid promotes sustainable drinking with its no-straw sip design.', 'Eco-Friendly Shops, Cold Brew, and Juice Bars.', 1.20, 0.45, 18000, 1000, 200, 'happycup.png', 'N/A', 0, 0, 5, 433),
-('P009', 'CT002', 'Flat Lid', 'Flat-profile lid — clean, minimal design for no-straw or straw-hole use.', 'The Flat Lid provides a clean, low-profile seal for standard cups.', 'Standard Milktea Cups, Coffee, and Cold Drinks.', 1.20, 0.40, 12000, 1000, 200, 'happycup.png', 'N/A', 0, 0, 5, 467),
-('P010', 'CT002', 'Conjoined Lid', 'Double-cup conjoined lid — connects two cups for easy carrying.', 'The Conjoined Lid is a unique dual-cup lid that connects two cups side by side.', 'Takeaway Orders, Couple Deals, and Events.', 1.90, 0.70, 5000, 300, 100, 'happycup.png', 'N/A', 0, 0, 5, 661),
-('P011', 'CT003', 'Black Straw', 'Sleek black PP straw — stylish and sturdy for all cup types.', 'The Black Straw is made from food-grade polypropylene in a classic matte black finish.', 'All Beverage Types, Milktea Shops, and Coffee Outlets.', 1.00, 0.30, 20000, 1000, 500, 'happycup.png', 'N/A', 0, 0, 5, 644),
-('P012', 'CT004', 'Paper Bowl', 'Eco-friendly paper bowl for soups, noodles, and hot meals — available in 6 sizes.', 'The Paper Bowl is crafted from food-grade paperboard with a PE-coated interior.', 'Food Stalls, Canteens, Delivery Kitchens, and Catering Events.', 2.40, 1.00, 12000, 500, 100, 'happycup.png', 'Flexographic Print', 1, 1, 4, 846),
-('P013', 'CT005', 'Paper Cup', 'Single-wall paper cup for hot and cold drinks — available in 8 sizes.', 'Our Paper Cups are made from food-grade paperboard with a PE-lined interior.', 'Coffee Shops, Canteens, Events, and Takeaway Stalls.', 1.55, 0.65, 20000, 1000, 200, 'happycup.png', 'Flexographic Print / Screen Print', 1, 1, 4, 1491),
-('P014', 'CT006', 'Spaghetti Box', 'Rectangular paper box sized perfectly for spaghetti and pasta servings.', 'The Spaghetti Box is a long, rectangular food-grade paper box for pasta.', 'Food Stalls, Canteens, School Tuck Shops, and Catering.', 3.90, 1.60, 5000, 300, 100, 'happycup.png', 'Flexographic Print', 1, 1, 4, 220),
-('P015', 'CT006', 'Burger Box', 'Clamshell burger box — keeps burgers fresh, warm, and intact.', 'The Burger Box features a clamshell design that locks in heat.', 'Burger Stalls, Fast Food, and Food Delivery.', 3.72, 1.50, 5000, 300, 100, 'happycup.png', 'Flexographic Print', 1, 1, 4, 1217),
-('P016', 'CT006', 'Meal Box', 'Standard paper meal box for rice and viand combos — available in 750cc and 880cc.', 'The Meal Box is the go-to container for rice meal servings.', 'Carinderias, Food Stalls, Catering, and Takeaway Counters.', 5.05, 2.00, 6000, 300, 100, 'happycup.png', 'Flexographic Print', 1, 1, 5, 1103),
-('P017', 'CT006', 'High Meal Box', 'Tall-profile meal box — ideal for bulkier meals with heaping toppings.', 'The High Meal Box features greater height than a standard meal box.', 'Catering, Generous Meal Servings, and Food Stalls.', 5.25, 2.10, 4000, 300, 100, 'happycup.png', 'Flexographic Print', 1, 1, 5, 1228),
-('P018', 'CT006', 'Lechon Take Out Bag', 'Heavy-duty grease-resistant bag for lechon and roasted meat takeout.', 'The Lechon Take Out Bag is built to handle greasy, heavy roasted meat servings.', 'Lechon Stalls, Roasted Chicken Shops, BBQ Counters, and Catering.', 2.90, 1.10, 5000, 300, 100, 'happycup.png', 'Flexographic Print', 1, 1, 4, 521),
-('P019', 'CT006', '2-Division Box', 'Two-compartment paper box — keeps rice and viand neatly separated.', 'The 2-Division Box features an internal divider that keeps rice and viand separate.', 'Carinderias, Combo Meals, Catering, and Food Stalls.', 5.40, 2.20, 4000, 300, 100, 'happycup.png', 'Flexographic Print', 1, 1, 4, 756),
-('P020', 'CT006', 'Hotdog Box', 'Elongated paper box designed to hold hotdog sandwiches and corn dogs.', 'The Hotdog Box is a narrow, elongated food-grade paper box for hotdog sandwiches.', 'Street Food Stalls, School Canteens, Fairs, and Events.', 2.80, 1.10, 5000, 300, 100, 'happycup.png', 'Flexographic Print', 1, 1, 5, 839);
+INSERT INTO `products` (`id`, `category_id`, `name`, `short_description`, `long_description`, `best_for`, `base_price`, `is_in_stock`, `raw_material_cost`, `min_threshold`, `min_order`, `main_image`, `print_method`, `is_need_screenplate`, `is_need_color`, `ratings`, `total_sold`) VALUES
+('P001', 'CT001', 'PPY Cup', 'Standard PP cup for milktea and cold drinks — affordable and food-grade.', 'The PPY Cup is an everyday polypropylene cup built for high-volume milktea shops and cafes.', 'Milktea Shops, Coffee Houses, and Catering Events.', 2.85, 1, 1.10, 500, 100, 'happycup.png', 'Screen Print / Offset', 1, 1, 4, 1324),
+('P002', 'CT001', 'UCUP', 'Premium U-shaped PP cup — crystal clear with a modern profile.', 'The UCUP features a distinctive U-shaped design that enhances drink presentation.', 'Milktea Shops, Juice Bars, and Premium Cafes.', 2.95, 1, 1.20, 500, 100, 'ligma.jpeg', 'Screen Print / Offset', 1, 1, 4, 424),
+('P003', 'CT001', 'Slim Cup', 'Sleek slim-profile PP cup — ergonomic grip, great for on-the-go drinks.', 'The Slim Cup is designed with a narrower diameter for a comfortable grip.', 'Premium Milktea Shops, Coffee Shops, and Takeaway Counters.', 3.80, 1, 1.50, 300, 100, 'nothappy.jpeg', 'Screen Print / Offset', 1, 1, 4, 543),
+('P004', 'CT001', 'Doublewall Cup with Lid', 'Insulated doublewall cup with lid — keeps drinks hot or cold longer.', 'The Doublewall Cup features a dual-wall construction that provides superior insulation.', 'Coffee Shops, Hot Beverage Stalls, and Premium Milktea Outlets.', 7.00, 1, 3.00, 200, 1, 'happycup.png', 'Screen Print / Offset', 1, 1, 5, 281),
+('P005', 'CT001', 'PET Cup 95mm', 'Crystal-clear PET cup with 95mm diameter opening — vibrant and recyclable.', 'The PET Cup (95mm) is made from polyethylene terephthalate, offering exceptional clarity.', 'Milktea Shops, Fruit Tea Stalls, and Specialty Drink Outlets.', 3.20, 1, 1.40, 500, 100, 'happycup.png', 'Screen Print / Offset', 1, 1, 4, 319),
+('P006', 'CT001', 'PET Cup 98mm', 'Wide-mouth crystal-clear PET cup with 98mm diameter — great for toppings-heavy drinks.', 'The PET Cup (98mm) features a wider 98mm opening, perfect for drinks loaded with pearls.', 'Milktea Shops, Dessert Drinks, and Topping-Heavy Beverages.', 4.45, 1, 1.80, 500, 100, 'happycup.png', 'Screen Print / Offset', 1, 1, 4, 431),
+('P007', 'CT002', 'Dome Lid', 'Classic dome-shaped lid — fits standard 90mm and 98mm cup openings.', 'The Dome Lid features a raised dome design that accommodates whipped cream and pearls.', 'Milktea Cups, Smoothie Cups, and Topping-Heavy Drinks.', 1.30, 1, 0.50, 1000, 200, 'happycup.png', 'N/A', 0, 0, 5, 1490),
+('P008', 'CT002', 'Strawless Lid', 'Eco-friendly strawless lid — sip-directly design, fits 90mm, 95mm, and 98mm cups.', 'The Strawless Lid promotes sustainable drinking with its no-straw sip design.', 'Eco-Friendly Shops, Cold Brew, and Juice Bars.', 1.20, 1, 0.45, 1000, 200, 'happycup.png', 'N/A', 0, 0, 5, 433),
+('P009', 'CT002', 'Flat Lid', 'Flat-profile lid — clean, minimal design for no-straw or straw-hole use.', 'The Flat Lid provides a clean, low-profile seal for standard cups.', 'Standard Milktea Cups, Coffee, and Cold Drinks.', 1.20, 1, 0.40, 1000, 200, 'happycup.png', 'N/A', 0, 0, 5, 467),
+('P010', 'CT002', 'Conjoined Lid', 'Double-cup conjoined lid — connects two cups for easy carrying.', 'The Conjoined Lid is a unique dual-cup lid that connects two cups side by side.', 'Takeaway Orders, Couple Deals, and Events.', 1.90, 1, 0.70, 300, 100, 'happycup.png', 'N/A', 0, 0, 5, 661),
+('P011', 'CT003', 'Black Straw', 'Sleek black PP straw — stylish and sturdy for all cup types.', 'The Black Straw is made from food-grade polypropylene in a classic matte black finish.', 'All Beverage Types, Milktea Shops, and Coffee Outlets.', 1.00, 1, 0.30, 1000, 500, 'happycup.png', 'N/A', 0, 0, 5, 644),
+('P012', 'CT004', 'Paper Bowl', 'Eco-friendly paper bowl for soups, noodles, and hot meals — available in 6 sizes.', 'The Paper Bowl is crafted from food-grade paperboard with a PE-coated interior.', 'Food Stalls, Canteens, Delivery Kitchens, and Catering Events.', 2.40, 1, 1.00, 500, 100, 'happycup.png', 'Flexographic Print', 1, 1, 4, 846),
+('P013', 'CT005', 'Paper Cup', 'Single-wall paper cup for hot and cold drinks — available in 8 sizes.', 'Our Paper Cups are made from food-grade paperboard with a PE-lined interior.', 'Coffee Shops, Canteens, Events, and Takeaway Stalls.', 1.55, 1, 0.65, 1000, 200, 'happycup.png', 'Flexographic Print / Screen Print', 1, 1, 4, 1491),
+('P014', 'CT006', 'Spaghetti Box', 'Rectangular paper box sized perfectly for spaghetti and pasta servings.', 'The Spaghetti Box is a long, rectangular food-grade paper box for pasta.', 'Food Stalls, Canteens, School Tuck Shops, and Catering.', 3.90, 1, 1.60, 300, 100, 'happycup.png', 'Flexographic Print', 1, 1, 4, 220),
+('P015', 'CT006', 'Burger Box', 'Clamshell burger box — keeps burgers fresh, warm, and intact.', 'The Burger Box features a clamshell design that locks in heat.', 'Burger Stalls, Fast Food, and Food Delivery.', 3.72, 1, 1.50, 300, 100, 'happycup.png', 'Flexographic Print', 1, 1, 4, 1217),
+('P016', 'CT006', 'Meal Box', 'Standard paper meal box for rice and viand combos — available in 750cc and 880cc.', 'The Meal Box is the go-to container for rice meal servings.', 'Carinderias, Food Stalls, Catering, and Takeaway Counters.', 5.05, 1, 2.00, 300, 100, 'happycup.png', 'Flexographic Print', 1, 1, 5, 1103),
+('P017', 'CT006', 'High Meal Box', 'Tall-profile meal box — ideal for bulkier meals with heaping toppings.', 'The High Meal Box features greater height than a standard meal box.', 'Catering, Generous Meal Servings, and Food Stalls.', 5.25, 1, 2.10, 300, 100, 'happycup.png', 'Flexographic Print', 1, 1, 5, 1228),
+('P018', 'CT006', 'Lechon Take Out Bag', 'Heavy-duty grease-resistant bag for lechon and roasted meat takeout.', 'The Lechon Take Out Bag is built to handle greasy, heavy roasted meat servings.', 'Lechon Stalls, Roasted Chicken Shops, BBQ Counters, and Catering.', 2.90, 1, 1.10, 300, 100, 'happycup.png', 'Flexographic Print', 1, 1, 4, 521),
+('P019', 'CT006', '2-Division Box', 'Two-compartment paper box — keeps rice and viand neatly separated.', 'The 2-Division Box features an internal divider that keeps rice and viand separate.', 'Carinderias, Combo Meals, Catering, and Food Stalls.', 5.40, 1, 2.20, 300, 100, 'happycup.png', 'Flexographic Print', 1, 1, 4, 756),
+('P020', 'CT006', 'Hotdog Box', 'Elongated paper box designed to hold hotdog sandwiches and corn dogs.', 'The Hotdog Box is a narrow, elongated food-grade paper box for hotdog sandwiches.', 'Street Food Stalls, School Canteens, Fairs, and Events.', 2.80, 1, 1.10, 300, 100, 'happycup.png', 'Flexographic Print', 1, 1, 5, 839);
 
 -- --------------------------------------------------------
 
@@ -859,6 +985,31 @@ INSERT INTO `product_gallery` (`id`, `product_id`, `image_url`, `sort_order`) VA
 (47, 'P019', 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&q=80', 1),
 (48, 'P020', 'https://images.unsplash.com/photo-1612392166886-ee8475b03af2?auto=format&fit=crop&q=80', 0),
 (49, 'P020', 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&q=80', 1);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `product_reviews`
+--
+
+CREATE TABLE `product_reviews` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `product_id` varchar(50) NOT NULL,
+  `customer_id` varchar(20) NOT NULL,
+  `order_id` varchar(30) NOT NULL,
+  `rating` tinyint(3) UNSIGNED NOT NULL DEFAULT 0,
+  `feedback` text DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `product_reviews`
+--
+
+INSERT INTO `product_reviews` (`id`, `product_id`, `customer_id`, `order_id`, `rating`, `feedback`, `created_at`, `updated_at`) VALUES
+(1, 'P011', 'CUST-503', 'ORD-AT9FBTYKWZ', 3, 'ligma ball as', '2026-05-18 02:54:04', '2026-05-18 02:54:04'),
+(3, 'P011', 'CUST-501', 'ORD-8TUVJXHJYM', 5, 'tralala haha', '2026-05-18 02:54:04', '2026-05-18 02:54:04');
 
 -- --------------------------------------------------------
 
@@ -973,14 +1124,14 @@ CREATE TABLE `product_variants` (
 INSERT INTO `product_variants` (`variant_id`, `product_id`, `size`, `width`, `height`, `price`, `stock`) VALUES
 ('V-2DB-STD', 'P019', 'Standard', '220mm', '60mm', 5.40, 4000),
 ('V-BB-STD', 'P015', 'Standard', '130mm', '75mm', 3.72, 5000),
-('V-BS-STD', 'P011', 'Standard', '8mm', '210mm', 1.00, 20000),
+('V-BS-STD', 'P011', 'Standard', '8mm', '210mm', 1.00, 19500),
 ('V-CL-90MM', 'P010', 'Standard (90mm)', '90mm', '20mm', 1.90, 5000),
 ('V-DOME-90MM', 'P007', 'Standard (90mm)', '90mm', '25mm', 1.30, 8000),
 ('V-DOME-98MM', 'P007', 'Wide (98mm)', '98mm', '25mm', 1.30, 7000),
 ('V-DW-12OZ', 'P004', '12oz', '90mm', '110mm', 7.70, 2000),
 ('V-DW-16OZ', 'P004', '16oz', '90mm', '130mm', 8.20, 1000),
 ('V-DW-8OZ', 'P004', '8oz', '80mm', '90mm', 7.00, 1000),
-('V-FL-90MM', 'P009', 'Standard (90mm)', '90mm', '12mm', 1.20, 4000),
+('V-FL-90MM', 'P009', 'Standard (90mm)', '90mm', '12mm', 1.20, 3000),
 ('V-FL-95MM', 'P009', 'PET 95mm', '95mm', '12mm', 1.20, 4000),
 ('V-FL-98MM', 'P009', 'PET 98mm', '98mm', '12mm', 1.20, 4000),
 ('V-HDB-STD', 'P020', 'Standard', '220mm', '60mm', 2.80, 5000),
@@ -1008,8 +1159,8 @@ INSERT INTO `product_variants` (`variant_id`, `product_id`, `size`, `width`, `he
 ('V-PET98-12OZ', 'P006', '12oz', '98mm', '98mm', 4.45, 2000),
 ('V-PET98-16OZ', 'P006', '16oz', '98mm', '118mm', 4.75, 2500),
 ('V-PET98-20OZ', 'P006', '20oz', '98mm', '140mm', 5.50, 1500),
-('V-PPY-12OZ', 'P001', '12oz', '90mm', '100mm', 2.85, 3000),
-('V-PPY-16OZ', 'P001', '16oz', '90mm', '122mm', 2.95, 999),
+('V-PPY-12OZ', 'P001', '12oz', '90mm', '100mm', 2.85, 2501),
+('V-PPY-16OZ', 'P001', '16oz', '90mm', '122mm', 2.95, 230),
 ('V-PPY-22OZ', 'P001', '22oz', '90mm', '145mm', 3.25, 1),
 ('V-SB-STD', 'P014', 'Standard', '200mm', '80mm', 3.90, 5000),
 ('V-SLIM-16OZ', 'P003', '16oz', '80mm', '140mm', 3.80, 3000),
@@ -1069,7 +1220,7 @@ CREATE TABLE `screenplate_compatibility` (
 
 INSERT INTO `screenplate_compatibility` (`id`, `screenplate_id`, `product_id`, `variant_id`, `print_price_per_unit`) VALUES
 (8, 'SP-FLAT-001', 'P001', 'V-PPY-16OZ', 2.00),
-(9, 'SP-FLAT-001', 'P001', 'V-PPY-22OZ', 3.00);
+(9, 'SP-FLAT-001', 'P001', 'V-PPY-12OZ', 3.00);
 
 -- --------------------------------------------------------
 
@@ -1103,6 +1254,13 @@ CREATE TABLE `screenplate_requests` (
   `status` enum('Pending','Approved','Rejected') NOT NULL DEFAULT 'Pending',
   `created_at` datetime NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `screenplate_requests`
+--
+
+INSERT INTO `screenplate_requests` (`id`, `customer_id`, `product_id`, `variant_id`, `color_count`, `alignment`, `reference_image`, `comment`, `calculated_total`, `status`, `created_at`) VALUES
+('SPR-T5LKO0XOEX', 'CUST-503', 'P001', 'V-PPY-16OZ', 2, 'Front', '/images/screenplate_request/SPR_1778987726_JXBec.jpeg', 'awsd', 1400.00, 'Pending', '2026-05-17 03:15:26');
 
 --
 -- Indexes for dumped tables
@@ -1317,6 +1475,12 @@ ALTER TABLE `migrations`
   ADD PRIMARY KEY (`id`);
 
 --
+-- Indexes for table `notifications`
+--
+ALTER TABLE `notifications`
+  ADD PRIMARY KEY (`id`);
+
+--
 -- Indexes for table `orders`
 --
 ALTER TABLE `orders`
@@ -1375,6 +1539,16 @@ ALTER TABLE `product_gallery`
   ADD KEY `product_id` (`product_id`);
 
 --
+-- Indexes for table `product_reviews`
+--
+ALTER TABLE `product_reviews`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `product_reviews_order_id_product_id_unique` (`order_id`,`product_id`),
+  ADD KEY `product_reviews_product_id_index` (`product_id`),
+  ADD KEY `product_reviews_customer_id_index` (`customer_id`),
+  ADD KEY `product_reviews_order_id_index` (`order_id`);
+
+--
 -- Indexes for table `product_tags`
 --
 ALTER TABLE `product_tags`
@@ -1430,7 +1604,7 @@ ALTER TABLE `screenplate_requests`
 -- AUTO_INCREMENT for table `cart_item_colors`
 --
 ALTER TABLE `cart_item_colors`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=45;
 
 --
 -- AUTO_INCREMENT for table `conversation_participants`
@@ -1442,7 +1616,7 @@ ALTER TABLE `conversation_participants`
 -- AUTO_INCREMENT for table `customer_contact_numbers`
 --
 ALTER TABLE `customer_contact_numbers`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `customer_discounts`
@@ -1490,7 +1664,7 @@ ALTER TABLE `jobs`
 -- AUTO_INCREMENT for table `message_attachments`
 --
 ALTER TABLE `message_attachments`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `message_reactions`
@@ -1502,31 +1676,37 @@ ALTER TABLE `message_reactions`
 -- AUTO_INCREMENT for table `migrations`
 --
 ALTER TABLE `migrations`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=42;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=49;
 
 --
 -- AUTO_INCREMENT for table `order_items`
 --
 ALTER TABLE `order_items`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=20;
 
 --
 -- AUTO_INCREMENT for table `order_item_colors`
 --
 ALTER TABLE `order_item_colors`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
 
 --
 -- AUTO_INCREMENT for table `personal_access_tokens`
 --
 ALTER TABLE `personal_access_tokens`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=39;
 
 --
 -- AUTO_INCREMENT for table `product_gallery`
 --
 ALTER TABLE `product_gallery`
   MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=50;
+
+--
+-- AUTO_INCREMENT for table `product_reviews`
+--
+ALTER TABLE `product_reviews`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT for table `product_tags`
@@ -1575,6 +1755,14 @@ ALTER TABLE `order_items`
 ALTER TABLE `order_item_colors`
   ADD CONSTRAINT `order_item_colors_color_id_foreign` FOREIGN KEY (`color_id`) REFERENCES `colors` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `order_item_colors_order_item_id_foreign` FOREIGN KEY (`order_item_id`) REFERENCES `order_items` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `product_reviews`
+--
+ALTER TABLE `product_reviews`
+  ADD CONSTRAINT `product_reviews_customer_id_foreign` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `product_reviews_order_id_foreign` FOREIGN KEY (`order_id`) REFERENCES `orders` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `product_reviews_product_id_foreign` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `screenplate_compatibility`

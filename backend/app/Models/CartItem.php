@@ -23,6 +23,7 @@ class CartItem extends Model
         'plate_price',
         'total_cart_price',
         'selected',
+        'temp',
     ];
 
     protected $casts = [
@@ -31,6 +32,7 @@ class CartItem extends Model
         'plate_price' => 'decimal:2',
         'total_cart_price' => 'decimal:2',
         'selected' => 'boolean',
+        'temp' => 'boolean',
     ];
 
     public function product()

@@ -799,7 +799,7 @@ const ScreenplatePage: React.FC = () => {
         </div>
 
         {/* ── Right Panel ── */}
-        <div className="ScreenplateRightPanel sticky top-8 flex h-fit w-full flex-col gap-6 rounded-[24px] border border-slate-100 bg-white p-8 shadow-sm lg:w-[320px]">
+        <div className="ScreenplateRightPanel mb-20 md:md-0 sticky top-8 flex h-fit w-full flex-col gap-6 rounded-[24px] border border-slate-100 bg-white p-8 shadow-sm lg:w-[320px]">
           <div className="ScreenplatePricingCard flex flex-col">
             <h3 className="mb-6 text-[10px] font-black tracking-[4px] text-slate-400 uppercase">
               Investment Summary

@@ -28,6 +28,16 @@ class Customer extends Authenticatable
     public $timestamps = false;
 
     /**
+     * Default attribute values for new customers.
+     *
+     * @var array<string, mixed>
+     */
+    protected $attributes = [
+        'role' => 'customer',
+        'status' => 'active',
+    ];
+
+    /**
      * The attributes that are mass assignable.
      *
      * @var array<int, string>

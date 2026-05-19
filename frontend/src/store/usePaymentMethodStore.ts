@@ -3,9 +3,9 @@ import axiosInstance from '../lib/axiosInstance'
 
 export interface PaymentMethod {
   id: string
-  type: 'bank' | 'ewallet'
-  bank_name: string
-  provider: string
+  type: 'bank' | 'ewallet' | 'credit_card' | 'cod'
+  bank_name: 'BDO' | 'BPI' | 'Metrobank' | 'Landbank' | 'Unionbank' | 'Security Bank' | 'Chinabank' | 'RCBC' | 'EastWest' | 'PNB' | 'Other' | null
+  provider: 'GCash' | 'Maya' | 'ShopeePay' | 'Visa' | 'Mastercard' | 'Other' | null
   masked_number: string
   is_default: boolean
 }
@@ -17,6 +17,7 @@ interface PaymentMethodStore {
 
   fetchMethods: () => Promise<void>
   addMethod: (method: Omit<PaymentMethod, 'id' | 'is_default'>) => Promise<void>
+  updateMethod: (id: string, method: Partial<Omit<PaymentMethod, 'id' | 'is_default'>>) => Promise<void>
   setDefault: (id: string) => Promise<void>
   removeMethod: (id: string) => Promise<void>
 }
@@ -50,6 +51,22 @@ export const usePaymentMethodStore = create<PaymentMethodStore>((set) => ({
             newMethod.is_default ? { ...m, is_default: false } : m,
           ),
         ],
+      }))
+    } catch (err: unknown) {
+      set({ error: (err as Error).message })
+      throw err
+    }
+  },
+
+  updateMethod: async (id, method) => {
+    try {
+      const resp = await axiosInstance.patch(
+        `/api/customer/payment-methods/${id}`,
+        method,
+      )
+      const updatedMethod = resp.data.data
+      set((state) => ({
+        methods: state.methods.map((m) => (m.id === id ? updatedMethod : m)),
       }))
     } catch (err: unknown) {
       set({ error: (err as Error).message })

@@ -135,7 +135,7 @@ const DiscoveryModal: React.FC<{
   if (!shouldRender) return null
 
   return (
-    <div className="fixed inset-0 z-[1000] flex h-screen w-screen flex-col justify-end overflow-hidden">
+    <div className="fixed inset-0 z-[9999] flex h-screen w-screen flex-col justify-end overflow-hidden">
       {/* Search Modal Backdrop Backdrop */}
       <div
         ref={overlayRef}

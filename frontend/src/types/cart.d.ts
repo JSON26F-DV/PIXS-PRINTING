@@ -44,6 +44,7 @@ export interface CartItem {
   customRequirements?: string
   createdAt: string
   selected: boolean
+  temp?: boolean
   totalCartPrice: number
   fullProduct?: IProduct
 }
@@ -65,6 +66,8 @@ export interface AddToCartData {
   unit_price: number
   plate_price: number
   total_cart_price: number
+  temp?: boolean
+  selected?: boolean
   colors: {
     color_id: string
     id: string

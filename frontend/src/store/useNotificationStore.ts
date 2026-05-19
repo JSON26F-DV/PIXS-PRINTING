@@ -19,7 +19,8 @@ interface NotificationStore {
   ) => void
   markAsRead: (id: string) => Promise<void>
   markAllAsRead: () => Promise<void>
-  clearNotifications: () => void
+  clearNotification: (id: string) => Promise<void>
+  clearAllNotifications: () => Promise<void>
 }
 
 interface ApiNotification {
@@ -97,5 +98,26 @@ export const useNotificationStore = create<NotificationStore>()((set) => ({
       console.error(e)
     }
   },
-  clearNotifications: () => set({ notifications: [], unreadCount: 0 }),
+  clearNotification: async (id) => {
+    try {
+      await axiosInstance.delete(`/api/notifications/${id}`)
+      set((state) => {
+        const updated = state.notifications.filter((n) => n.id !== id)
+        return {
+          notifications: updated,
+          unreadCount: updated.filter((item) => !item.isRead).length,
+        }
+      })
+    } catch (e) {
+      console.error(e)
+    }
+  },
+  clearAllNotifications: async () => {
+    try {
+      await axiosInstance.delete('/api/notifications/clear-all')
+      set({ notifications: [], unreadCount: 0 })
+    } catch (e) {
+      console.error(e)
+    }
+  },
 }))

@@ -61,7 +61,7 @@ const QuantityPicker: React.FC<QuantityPickerProps> = ({
                 onChange(Math.min(maxStock, val))
               }
             }}
-            className="w-24 bg-transparent text-center font-mono text-2xl font-black text-white italic outline-none disabled:opacity-50"
+            className="w-24 bg-transparent text-center font-mono text-2xl font-black text-white italic outline-none disabled:opacity-50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
           />
 
           <button

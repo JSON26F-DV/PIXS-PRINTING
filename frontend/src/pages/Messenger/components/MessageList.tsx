@@ -503,8 +503,13 @@ const MessageList: React.FC<MessageListProps> = ({
   const prevLengthRef = useRef(messages.length)
 
   const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
+    const targetY = Math.max(
+      document.body.scrollHeight,
+      document.documentElement.scrollHeight,
+      document.documentElement.offsetHeight,
+    )
     window.scrollTo({
-      top: document.body.scrollHeight,
+      top: targetY,
       behavior,
     })
   }
@@ -516,7 +521,9 @@ const MessageList: React.FC<MessageListProps> = ({
     // Always scroll to bottom when a new message arrives/is sent
     // or when user is already near the bottom
     if (newMessage || isNearBottomRef.current) {
-      scrollToBottom(newMessage ? 'smooth' : 'auto')
+      setTimeout(() => {
+        scrollToBottom(newMessage ? 'smooth' : 'auto')
+      }, 50)
     }
   }, [messages])
 
@@ -527,9 +534,9 @@ const MessageList: React.FC<MessageListProps> = ({
       const clientHeight = window.innerHeight
       const scrollBottom = scrollHeight - scrollTop - clientHeight
 
-      const nearBottom = scrollBottom < 100
+      const nearBottom = scrollBottom < 50
       isNearBottomRef.current = nearBottom
-      setShowScrollDown(scrollTop > 200 && !nearBottom)
+      setShowScrollDown(!nearBottom)
     }
 
     window.addEventListener('scroll', handleWindowScroll)
@@ -596,7 +603,7 @@ const MessageList: React.FC<MessageListProps> = ({
       </div>
 
       <div
-        className="fixed bottom-[140px] left-1/2 z-40 h-24 w-32 -translate-x-1/2 md:bottom-[10px]"
+        className="fixed bottom-[80px] left-1/2 z-40 h-32 w-48 -translate-x-1/2 md:bottom-[100px]"
         onMouseEnter={() => setIsHoveredBottom(true)}
         onMouseLeave={() => setIsHoveredBottom(false)}
       >
@@ -607,7 +614,7 @@ const MessageList: React.FC<MessageListProps> = ({
               animate={{ opacity: 1, scale: 1, x: '-50%' }}
               exit={{ opacity: 0, scale: 0.8, x: '-50%' }}
               onClick={() => scrollToBottom()}
-              className="group fixed bottom-[70px] left-1/2 z-50 flex h-14 w-14 items-center justify-center rounded-full border border-slate-100 bg-white text-slate-900 shadow-2xl transition-all hover:scale-110 active:scale-95 md:bottom-[150px]"
+              className="group fixed bottom-[140px] left-1/2 z-50 flex h-14 w-14 items-center justify-center rounded-full border border-slate-100 bg-white text-slate-900 shadow-2xl transition-all hover:scale-110 active:scale-95 md:bottom-[50px]"
             >
               <div className="relative">
                 <ArrowDown

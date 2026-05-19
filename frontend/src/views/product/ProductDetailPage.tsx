@@ -118,12 +118,13 @@ const ProductDetailInner: React.FC<{
           : 0,
         total_cart_price: computed.priceBreakdown.total,
         colors: computed.selectedColors.map((c, index) => ({
-          color_id: c.id, // Included to match prompt requirement, but mapped to id in backend
+          color_id: c.id,
           id: c.id,
           channel_label:
             index === 0 ? 'Primary' : index === 1 ? 'Secondary' : 'Accent',
           channel_order: index,
         })),
+        temp: false,
       })
 
       if ('vibrate' in navigator) {
@@ -192,6 +193,7 @@ const ProductDetailInner: React.FC<{
             index === 0 ? 'Primary' : index === 1 ? 'Secondary' : 'Accent',
           channel_order: index,
         })),
+        temp: true,
       })
 
       if ('vibrate' in navigator) navigator.vibrate([100])
