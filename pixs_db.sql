@@ -843,14 +843,6 @@ CREATE TABLE `personal_access_tokens` (
 -- Dumping data for table `personal_access_tokens`
 --
 
-INSERT INTO `personal_access_tokens` (`id`, `tokenable_type`, `tokenable_id`, `name`, `token`, `abilities`, `last_used_at`, `expires_at`, `created_at`, `updated_at`) VALUES
-(28, 'App\\Models\\Employee', '1', 'employee-token', '9c75967106c1fe2f8f4a01e0487ca0f193ab32e181756ee8a823c90962a28771', '[\"role:admin\"]', NULL, '2026-05-19 10:15:06', '2026-05-19 02:15:06', '2026-05-19 02:15:06'),
-(31, 'App\\Models\\Customer', 'CUST-503', 'customer-token', 'd3f449ee4df44ece36bfa60caac1c8d6a520c7b8a71d5f614291acc90e9deeba', '[\"role:customer\"]', NULL, '2026-06-18 02:34:49', '2026-05-19 02:34:49', '2026-05-19 02:34:49'),
-(33, 'App\\Models\\Customer', 'CUST-505', 'customer-token', '1dae7ccbcd28c09b284490d8f264e066e453b7455862b549d53fd584d2cbbb36', '[\"role:customer\"]', NULL, '2026-06-18 02:36:46', '2026-05-19 02:36:46', '2026-05-19 02:36:46'),
-(34, 'App\\Models\\Customer', 'CUST-506', 'customer-token', '0c5e76f5f791c8ce0fe6b08ae6a3812e1b83a1ecb7cbb6ed68af63430440145f', '[\"role:customer\"]', NULL, '2026-06-18 02:42:34', '2026-05-19 02:42:34', '2026-05-19 02:42:34'),
-(37, 'App\\Models\\Customer', 'CUST-504', 'customer-token', 'd6db39d6b09142128d5bdb539b885c42d8ad59275012b4cdb1b3aedf06d06685', '[\"role:customer\"]', NULL, '2026-06-18 02:56:58', '2026-05-19 02:56:58', '2026-05-19 02:56:58'),
-(38, 'App\\Models\\Customer', 'CUST-501', 'customer-token', '68673273fbd2d3ce279737ea96253f04c7f4975ee57e1e6c2c232f74b308acf6', '[\"role:customer\"]', NULL, '2026-06-18 03:02:02', '2026-05-19 03:02:02', '2026-05-19 03:02:02');
-
 -- --------------------------------------------------------
 
 --
