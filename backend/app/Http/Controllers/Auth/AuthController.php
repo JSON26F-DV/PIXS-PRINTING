@@ -3,28 +3,57 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Auth\LoginRequest;
 use App\Models\Customer;
 use App\Models\DeletedAccount;
 use App\Models\Employee;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
 
 class AuthController extends Controller
 {
+    private const INVALID_CREDENTIALS_MESSAGE = 'Invalid email or password.';
+
     /**
      * Handle login for both employees and customers.
      * Order: deleted_accounts → customers → employees
      *
      * All passwords use Bcrypt via Hash::check() — no legacy SHA-256.
      */
-    public function login(Request $request): JsonResponse
+    public function login(LoginRequest $request): JsonResponse
     {
-        $request->validate([
-            'email' => ['required', 'email'],
-            'password' => ['required', 'string'],
-        ]);
+        try {
+            return $this->attemptLogin($request);
+        } catch (QueryException $e) {
+            Log::error('Login database error', [
+                'ip' => $request->ip(),
+                'exception' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'message' => 'Unable to process your request. Please try again later.',
+            ], 503);
+        } catch (Throwable $e) {
+            Log::error('Login unexpected error', [
+                'ip' => $request->ip(),
+                'exception' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'message' => 'Something went wrong. Please try again later.',
+            ], 500);
+        }
+    }
+
+    private function attemptLogin(LoginRequest $request): JsonResponse
+    {
+        $validated = $request->validated();
+        $email = $validated['email'];
+        $password = $validated['password'];
 
         // Rate limit: 5 attempts per minute per IP
         $key = 'login:'.$request->ip();
@@ -32,14 +61,15 @@ class AuthController extends Controller
             $seconds = RateLimiter::availableIn($key);
 
             return response()->json([
-                'message' => "Too many login attempts. Try again in {$seconds} seconds.",
+                'message' => 'Too many login attempts. Please try again in a moment.',
+                'retry_after' => $seconds,
             ], 429);
         }
 
         // ── Step 1: Check deleted/banned accounts ──────────────────
-        $banned = DeletedAccount::where('email', $request->email)->first();
+        $banned = DeletedAccount::where('email', $email)->first();
 
-        if ($banned && Hash::check($request->password, $banned->password)) {
+        if ($banned && Hash::check($password, $banned->password)) {
             RateLimiter::clear($key);
 
             return response()->json([
@@ -53,17 +83,15 @@ class AuthController extends Controller
         }
 
         // ── Step 2: Check customers table ──────────────────────────
-        $customer = Customer::where('email', $request->email)->first();
+        $customer = Customer::where('email', $email)->first();
 
-        if ($customer && Hash::check($request->password, $customer->password)) {
+        if ($customer && Hash::check($password, $customer->password)) {
             RateLimiter::clear($key);
 
-            // Rehash if bcrypt cost has been updated
             if (Hash::needsRehash($customer->password)) {
-                $customer->update(['password' => Hash::make($request->password)]);
+                $customer->update(['password' => Hash::make($password)]);
             }
 
-            // Revoke old tokens, issue new one (30-day expiry)
             $customer->tokens()->delete();
             $token = $customer->createToken(
                 'customer-token',
@@ -91,17 +119,15 @@ class AuthController extends Controller
         }
 
         // ── Step 3: Check employees table ──────────────────────────
-        $employee = Employee::where('email', $request->email)->first();
+        $employee = Employee::where('email', $email)->first();
 
-        if ($employee && Hash::check($request->password, $employee->password)) {
+        if ($employee && Hash::check($password, $employee->password)) {
             RateLimiter::clear($key);
 
-            // Rehash if bcrypt cost has been updated
             if (Hash::needsRehash($employee->password)) {
-                $employee->update(['password' => Hash::make($request->password)]);
+                $employee->update(['password' => Hash::make($password)]);
             }
 
-            // Revoke old tokens, issue new one (8-hour expiry)
             $employee->tokens()->delete();
             $token = $employee->createToken(
                 'employee-token',
@@ -128,11 +154,10 @@ class AuthController extends Controller
             ]);
         }
 
-        // ── No match found ─────────────────────────────────────────
         RateLimiter::hit($key, 60);
 
         return response()->json([
-            'message' => 'Invalid email or password.',
+            'message' => self::INVALID_CREDENTIALS_MESSAGE,
         ], 401);
     }
 

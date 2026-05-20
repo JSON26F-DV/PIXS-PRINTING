@@ -11,6 +11,21 @@ use Illuminate\Support\Str;
 
 class ScreenplateRequestController extends Controller
 {
+    public function index(Request $request): JsonResponse
+    {
+        $user = Auth::guard('sanctum')->user();
+        if (!$user) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+
+        $requests = ScreenplateRequest::where('customer_id', $user->id)
+            ->with(['product'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return response()->json($requests);
+    }
+
     public function store(Request $request): JsonResponse
     {
         try {

@@ -74,7 +74,7 @@ const CustomerNavbar: React.FC = () => {
       {/* ─────────────────────────────────────────── */}
       {/*  DESKTOP NAVBAR  (unchanged)               */}
       {/* ─────────────────────────────────────────── */}
-      <header className="CustomerNavbar fixed top-0 left-0 z-50 hidden h-20 w-full items-center border-b border-slate-100 bg-white/80 px-4 backdrop-blur-md min-[1251px]:px-12 md:flex md:px-8">
+      <header className="CustomerNavbar fixed top-0 left-0 z-50 hidden h-20 w-full z-1000 items-center border-b border-slate-100 bg-white/80 px-4 backdrop-blur-md min-[1251px]:px-12 md:flex md:px-8">
         <div className="CustomerNavbarLayout mx-auto flex w-full max-w-[1440px] items-center justify-between gap-2 min-[1251px]:gap-8 md:gap-4">
           {/* Left: Industrial Logo & Address Hub */}
           <div className="CustomerNavbarLeft flex shrink-0 items-center gap-3 min-[1251px]:gap-8">
@@ -541,11 +541,6 @@ const CustomerNavbar: React.FC = () => {
         )}
       </AnimatePresence>
 
-      <DiscoveryModal
-        isOpen={isDiscoveryOpen}
-        onClose={() => closeDiscovery()}
-        initialCategory={initialCategory}
-      />
       <AddressSelectModal
         isOpen={isAddressModalOpen}
         onClose={() => setIsAddressModalOpen(false)}

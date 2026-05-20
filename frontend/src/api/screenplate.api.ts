@@ -14,3 +14,8 @@ export const createScreenplateRequest = async (payload: IScreenplateRequestPaylo
   const response = await axiosInstance.post('/api/customer/screenplate-requests', payload)
   return response.data
 }
+
+export const getScreenplateRequests = async () => {
+  const response = await axiosInstance.get('/api/customer/screenplate-requests')
+  return response.data
+}

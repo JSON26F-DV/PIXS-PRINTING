@@ -10,6 +10,8 @@ import { Link } from 'react-router-dom'
 import Footer from '../../components/Footer/Footer'
 import { orderApi } from '../../api/orders.api'
 import { OrderCard, type Order } from './components/OrderCard'
+import { ScreenplateRequestCard, type ScreenplateRequest } from './components/ScreenplateRequestCard'
+import { getScreenplateRequests } from '../../api/screenplate.api'
 
 const TABS = [
   { id: 'all', label: 'All', status: 'ALL' },
@@ -17,6 +19,7 @@ const TABS = [
   { id: 'to-ship', label: 'Processing', status: 'PROCESSING' },
   { id: 'to-receive', label: 'To Receive', status: 'SHIPPED' },
   { id: 'to-review', label: 'To Review', status: 'DELIVERED' },
+  { id: 'screenplates', label: 'Screenplates', status: 'SCREENPLATE' },
   {
     id: 'return-cancellation',
     label: 'Return & Cancellation',
@@ -159,6 +162,7 @@ const CancelOrderModal: React.FC<{
 
 const OrderPage: React.FC = () => {
   const [orders, setOrders] = useState<Order[]>([])
+  const [screenplateRequests, setScreenplateRequests] = useState<ScreenplateRequest[]>([])
   const [activeTab, setActiveTab] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [cancelModal, setCancelModal] = useState<{
@@ -168,6 +172,8 @@ const OrderPage: React.FC = () => {
 
   useEffect(() => {
     let mounted = true
+    
+    // Fetch Orders
     orderApi.getOrders()
       .then((data) => {
         if (mounted) {
@@ -177,6 +183,18 @@ const OrderPage: React.FC = () => {
       .catch((err) => {
         console.error('Failed to fetch orders:', err)
       })
+
+    // Fetch Screenplate Requests
+    getScreenplateRequests()
+      .then((data) => {
+        if (mounted) {
+          setScreenplateRequests(data)
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to fetch screenplate requests:', err)
+      })
+
     return () => { mounted = false }
   }, [])
 
@@ -236,15 +254,15 @@ const OrderPage: React.FC = () => {
   // ─── Filter Logic ────────────────────────────────────────────────────────
   const filterOrdersByStatus = (orders: Order[], status: string) => {
     if (status === 'ALL') return orders
+    if (status === 'SCREENPLATE') return [] // Handled via filteredItems combine
     return orders.filter((o) => o.status.toUpperCase() === status)
   }
 
-  const filteredOrders = useMemo(() => {
-    // 1. Filter by Tab Status
+  const filteredItems = useMemo(() => {
     const targetStatus = TABS.find((t) => t.id === activeTab)?.status || 'ALL'
+    
+    // Filter Orders
     let currentOrders = filterOrdersByStatus(orders, targetStatus)
-
-    // 3. Search Filter (by Order ID or Product Name)
     if (searchQuery) {
       const query = searchQuery.toLowerCase()
       currentOrders = currentOrders.filter(
@@ -254,11 +272,35 @@ const OrderPage: React.FC = () => {
       )
     }
 
-    return currentOrders.sort(
-      (a, b) =>
-        new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
-    )
-  }, [orders, activeTab, searchQuery])
+    // Filter Screenplate Requests
+    let currentRequests: ScreenplateRequest[] = []
+    if (targetStatus === 'ALL' || targetStatus === 'SCREENPLATE' || targetStatus === 'PENDING') {
+        currentRequests = screenplateRequests;
+        if (targetStatus === 'PENDING') {
+            currentRequests = currentRequests.filter(r => r.status === 'Pending')
+        }
+        if (targetStatus === 'SCREENPLATE') {
+            // specifically show all screenplates in screenplate tab
+        }
+
+        if (searchQuery) {
+            const query = searchQuery.toLowerCase()
+            currentRequests = currentRequests.filter(r => 
+                r.id.toLowerCase().includes(query) || 
+                r.product?.name.toLowerCase().includes(query)
+            )
+        }
+    } else {
+        currentRequests = []
+    }
+
+    const combined = [
+      ...currentOrders.map(o => ({ type: 'order' as const, data: o, date: new Date(o.created_at) })),
+      ...currentRequests.map(r => ({ type: 'screenplate' as const, data: r, date: new Date(r.created_at) }))
+    ]
+
+    return combined.sort((a, b) => b.date.getTime() - a.date.getTime())
+  }, [orders, screenplateRequests, activeTab, searchQuery])
 
   return (
     <div className="order-page-wrapper min-h-screen bg-white">
@@ -324,20 +366,27 @@ const OrderPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Orders Feed */}
+        {/* Feed */}
         <div className="grid grid-cols-1 gap-8">
           <AnimatePresence mode="popLayout">
-            {filteredOrders.length > 0 ? (
-              filteredOrders.map((order) => (
-                <OrderCard
-                  key={order.order_id}
-                  order={order}
-                  onUpdateReview={updateOrderReview}
-                  onCancelOrder={(id) =>
-                    setCancelModal({ isOpen: true, orderId: id })
-                  }
-                  onConfirmReceived={handleConfirmReceipt}
-                />
+            {filteredItems.length > 0 ? (
+              filteredItems.map((item) => (
+                item.type === 'order' ? (
+                  <OrderCard
+                    key={item.data.order_id}
+                    order={item.data}
+                    onUpdateReview={updateOrderReview}
+                    onCancelOrder={(id) =>
+                      setCancelModal({ isOpen: true, orderId: id })
+                    }
+                    onConfirmReceived={handleConfirmReceipt}
+                  />
+                ) : (
+                  <ScreenplateRequestCard
+                    key={item.data.id}
+                    request={item.data}
+                  />
+                )
               ))
             ) : (
               <motion.div
@@ -349,7 +398,7 @@ const OrderPage: React.FC = () => {
                   <ShoppingBag size={48} className="text-slate-100" />
                 </div>
                 <h3 className="text-2xl font-black tracking-tighter text-slate-900 uppercase italic">
-                  No orders found.
+                  No items found.
                 </h3>
                 <p className="mt-2 mb-10 text-[10px] font-bold tracking-[4px] text-slate-400 uppercase">
                   Start shopping now.

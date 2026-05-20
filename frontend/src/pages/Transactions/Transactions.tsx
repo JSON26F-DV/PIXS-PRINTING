@@ -252,6 +252,23 @@ const Transactions: React.FC = () => {
       toast.success('Order placed successfully!')
       fetchNotifications() // fetch real-time success notification
       
+      // Construct message for admin
+      try {
+        const messageBody = `review your shipping address ${orderId}`;
+        
+        const formData = new FormData();
+        formData.append('message', messageBody);
+        formData.append('receiver_id', '1'); // Admin
+        formData.append('receiver_type', 'employee');
+        formData.append('order_id', orderId);
+
+        await axiosInstance.post('/api/messages/send', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+      } catch (msgErr) {
+        console.error('Failed to send order message to admin:', msgErr);
+      }
+
       setTimeout(() => {
         navigate('/orders')
       }, 3000)

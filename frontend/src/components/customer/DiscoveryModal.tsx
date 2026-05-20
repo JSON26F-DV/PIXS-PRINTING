@@ -8,9 +8,10 @@ import { Link } from 'react-router-dom'
 import { useDiscoveryCategories } from '../../hooks/useDiscoveryCategories'
 import { useDiscoverySearch } from '../../hooks/useDiscoverySearch'
 import { useDebounce } from '../../hooks/useDebounce'
+import { useScrollLock } from '../../hooks/useScrollLock'
+import { useModalBehavior } from '../../hooks/useModalBehavior'
 
 // --- Interfaces ---
-// ICategory and IProduct are imported from product.types.ts
 
 const DiscoveryModal: React.FC<{
   isOpen: boolean
@@ -40,27 +41,27 @@ const DiscoveryModal: React.FC<{
     categoryId: selectedCategory,
   })
 
-  // 1. Strict Scroll Lock Persistence
+  // 1. Scroll Lock & Modal Behavior
+  useScrollLock(isOpen)
+  const { safeClose } = useModalBehavior({
+    isOpen,
+    onClose: () => handleClose(),
+    closeOnEsc: true,
+  })
+
   useEffect(() => {
     if (isOpen) {
-      document.body.style.overflow = 'hidden'
-      setTimeout(() => setShouldRender(true), 0)
-    } else {
-      document.body.style.overflow = 'unset'
-    }
-    return () => {
-      document.body.style.overflow = 'unset'
+      const timer = setTimeout(() => setShouldRender(true), 0);
+      return () => clearTimeout(timer);
     }
   }, [isOpen])
 
   // 2. Initial Setup logic
   useEffect(() => {
-    // Wrap state updates in timeout if open or initialCategory change
-    // to avoid "cascading renders" warning and ensure children exist for GSAP
     if (initialCategory) {
       setTimeout(() => {
         setSelectedCategory(initialCategory)
-        setQuery('') // Essential: Clear query to show ALL products in category per request
+        setQuery('')
       }, 0)
     } else if (isOpen) {
       setTimeout(() => {
@@ -68,12 +69,12 @@ const DiscoveryModal: React.FC<{
         setQuery('')
       }, 0)
     }
-  }, [initialCategory, isOpen, categories])
+  }, [initialCategory, isOpen])
 
   // 3. GSAP Precision Motion
   useLayoutEffect(() => {
     if (!shouldRender || !modalRef.current) return
-    if (catLoading) return // Wait for data before animating children
+    if (catLoading) return
 
     if (isOpen) {
       const tl = gsap.timeline()
@@ -113,7 +114,10 @@ const DiscoveryModal: React.FC<{
   }, [isOpen, shouldRender, catLoading])
 
   const handleClose = () => {
-    if (!modalRef.current) return
+    if (!modalRef.current) {
+        onClose();
+        return;
+    }
 
     const tl = gsap.timeline({
       onComplete: () => {
@@ -135,11 +139,14 @@ const DiscoveryModal: React.FC<{
   if (!shouldRender) return null
 
   return (
-    <div className="fixed inset-0 z-[9999] flex h-screen w-screen flex-col justify-end overflow-hidden">
+    <div 
+      className="fixed inset-0 z-[1000] flex h-screen w-screen flex-col justify-end overflow-hidden"
+      data-modal-open={isOpen}
+    >
       {/* Search Modal Backdrop Backdrop */}
       <div
         ref={overlayRef}
-        onClick={handleClose}
+        onClick={safeClose}
         className="pointer-events-auto absolute inset-0 bg-slate-900/60 backdrop-blur-xl"
       />
 
@@ -147,11 +154,12 @@ const DiscoveryModal: React.FC<{
       <div
         ref={modalRef}
         className="relative z-20 flex h-[92vh] w-full flex-col overflow-hidden rounded-t-[52px] bg-white shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
       >
         {/* Persistent Search Header */}
         <div className="sticky top-0 z-50 flex items-center gap-4 border-b border-slate-50 bg-white/80 p-6 backdrop-blur-md">
           <button
-            onClick={handleClose}
+            onClick={safeClose}
             className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-50 text-slate-400 transition-all hover:bg-slate-100 active:scale-90"
           >
             <ArrowLeft size={22} />

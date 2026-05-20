@@ -25,6 +25,8 @@ export interface IMessage {
   replyTo?: { id: string; text: string; senderName: string }
   senderId?: string
   receiverId?: string
+  order_id?: string
+  screenplate_request_id?: string
 }
 
 interface ApiMessage {
@@ -35,6 +37,8 @@ interface ApiMessage {
   sender_id?: string;
   receiver_id?: string;
   attachments?: { type: 'image' | 'file'; url: string; name: string }[];
+  order_id?: string
+  screenplate_request_id?: string
 }
 
 const MessengerPage: React.FC = () => {
@@ -64,7 +68,9 @@ const MessengerPage: React.FC = () => {
             attachments: m.attachments ? m.attachments.map(a => ({ type: a.type, url: a.url, name: a.name })) : [],
             reactions: [],
             senderId: m.sender_id,
-            receiverId: m.receiver_id
+            receiverId: m.receiver_id,
+            order_id: m.order_id,
+            screenplate_request_id: m.screenplate_request_id
           }
         })
         setMessages(formatted)

@@ -27,7 +27,6 @@ import ProductGrid from '../../components/VirtualizedProductGrid/ProductGrid'
 import Pagination from '../../components/Pagination/Pagination'
 import Footer from '../../components/Footer/Footer'
 import FilterDropdown from '../../components/FilterDropdown/FilterDropdown'
-import DiscoveryModal from '../../components/customer/DiscoveryModal'
 
 // Assets
 import hero1 from '../../assets/hero/hero-1.jpg'
@@ -125,7 +124,6 @@ const Homepage: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = isMobile ? 20 : 100
 
-  const [isDiscoveryOpen, setIsDiscoveryOpen] = useState(false)
 
   // Data fetching
   const { categories, isLoading: catLoading } = useCategories()
@@ -273,7 +271,7 @@ const Homepage: React.FC = () => {
           categories={quickCategories}
           isLoading={catLoading}
           onCategoryClick={handleCategoryIdSelect}
-          onMoreClick={() => setIsDiscoveryOpen(true)}
+          onMoreClick={() => openDiscovery()}
         />
       </section>
 
@@ -510,11 +508,6 @@ const Homepage: React.FC = () => {
       </div>
 
       <Footer />
-
-      <DiscoveryModal
-        isOpen={isDiscoveryOpen}
-        onClose={() => setIsDiscoveryOpen(false)}
-      />
     </div>
   )
 }

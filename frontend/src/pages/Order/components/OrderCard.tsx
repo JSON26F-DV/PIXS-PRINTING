@@ -48,6 +48,16 @@ export interface Order {
   feedback?: string
   complaint?: string
   rating?: number
+  shipping_address?: {
+    label: string
+    region: string
+    province: string
+    city: string
+    barangay: string
+    street: string
+    postal_code: string
+    contact_number: string
+  }
 }
 
 // Sub-components

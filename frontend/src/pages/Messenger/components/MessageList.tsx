@@ -23,6 +23,9 @@ import EmojiPicker, { Theme } from 'emoji-picker-react'
 import type { EmojiClickData } from 'emoji-picker-react'
 
 import type { IMessage } from '../MessengerPage.tsx'
+import OrderConfirmMessage from './OrderConfirmMessage'
+import ScreenplateConfirmMessage from './ScreenplateConfirmMessage'
+import FullscreenGalleryModal from '../../../components/common/FullscreenGalleryModal'
 
 interface MessageListProps {
   messages: IMessage[]
@@ -97,7 +100,8 @@ const MessageBubble: React.FC<{
   onReply: () => void
   onEdit: (text: string) => void
   onDelete: () => void
-}> = ({ message, onReact, onReply, onEdit, onDelete }) => {
+  onImageClick: (url: string) => void
+}> = ({ message, onReact, onReply, onEdit, onDelete, onImageClick }) => {
   const [showQuickBar, setShowQuickBar] = useState(false)
   const [showFullPicker, setShowFullPicker] = useState(false)
   const [showOptions, setShowOptions] = useState(false)
@@ -122,6 +126,8 @@ const MessageBubble: React.FC<{
     }
     setIsEditing(false)
   }
+
+  const hasCard = message.order_id || message.screenplate_request_id;
 
   return (
     <motion.div
@@ -166,12 +172,13 @@ const MessageBubble: React.FC<{
         {/* Message Container */}
         <div
           className={clsx(
-            'relative rounded-[28px] px-6 py-4 text-sm leading-relaxed font-bold shadow-sm transition-all',
+            'relative rounded-[28px] text-sm leading-relaxed font-bold shadow-sm transition-all',
+            hasCard ? '' : 'px-6 py-4',
             message.isDeleted
               ? 'border border-slate-200 bg-slate-100 text-slate-400'
               : isCustomer
-                ? 'rounded-tr-[4px] bg-slate-900 text-white shadow-slate-900/10'
-                : 'rounded-tl-[4px] border border-slate-100 bg-white text-slate-800 shadow-slate-100/50',
+                ? `rounded-tr-[4px] ${hasCard ? '' : 'bg-slate-900 text-white shadow-slate-900/10'}`
+                : `rounded-tl-[4px] ${hasCard ? '' : 'border border-slate-100 bg-white text-slate-800 shadow-slate-100/50'}`,
           )}
         >
           {isEditing ? (
@@ -201,7 +208,7 @@ const MessageBubble: React.FC<{
             </div>
           ) : (
             <>
-              {message.text}
+              {!hasCard && message.text}
 
               {message.isEdited && !message.isDeleted && (
                 <span
@@ -212,6 +219,18 @@ const MessageBubble: React.FC<{
                 </span>
               )}
             </>
+          )}
+
+          {message.order_id && !isEditing && (
+            <div className="mt-2 group-last:mb-0">
+               <OrderConfirmMessage orderId={message.order_id} isCustomer={isCustomer} />
+            </div>
+          )}
+
+          {message.screenplate_request_id && !isEditing && (
+            <div className="mt-2 group-last:mb-0">
+               <ScreenplateConfirmMessage requestId={message.screenplate_request_id} isCustomer={isCustomer} onImageClick={onImageClick} />
+            </div>
           )}
 
           <AnimatePresence>
@@ -237,7 +256,7 @@ const MessageBubble: React.FC<{
             className={clsx(
               'mt-2 flex items-center gap-1 text-[8px] font-black tracking-widest uppercase opacity-40',
               isCustomer
-                ? 'justify-end text-white'
+                ? (hasCard ? 'justify-end text-slate-500' : 'justify-end text-white')
                 : 'justify-start text-slate-400',
             )}
           >
@@ -262,7 +281,7 @@ const MessageBubble: React.FC<{
                     <motion.div
                       whileHover={{ scale: 1.02 }}
                       className="group relative cursor-pointer overflow-hidden rounded-[24px] border border-slate-100 bg-slate-50 shadow-lg"
-                      onClick={() => window.open(getAssetUrl(at), '_blank')}
+                      onClick={() => onImageClick(getAssetUrl(at))}
                     >
                       <img
                         src={getAssetUrl(at)}
@@ -502,6 +521,14 @@ const MessageList: React.FC<MessageListProps> = ({
   const isNearBottomRef = useRef(true)
   const prevLengthRef = useRef(messages.length)
 
+  const [galleryOpen, setGalleryOpen] = useState(false)
+  const [activeImage, setActiveImage] = useState('')
+
+  const handleImageClick = (url: string) => {
+    setActiveImage(url)
+    setGalleryOpen(true)
+  }
+
   const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
     const targetY = Math.max(
       document.body.scrollHeight,
@@ -518,8 +545,6 @@ const MessageList: React.FC<MessageListProps> = ({
     const newMessage = messages.length > prevLengthRef.current
     prevLengthRef.current = messages.length
 
-    // Always scroll to bottom when a new message arrives/is sent
-    // or when user is already near the bottom
     if (newMessage || isNearBottomRef.current) {
       setTimeout(() => {
         scrollToBottom(newMessage ? 'smooth' : 'auto')
@@ -596,11 +621,21 @@ const MessageList: React.FC<MessageListProps> = ({
                 onReply={() => onReply(msg)}
                 onEdit={(text) => onEdit(msg.id, text)}
                 onDelete={() => onDelete(msg.id)}
+                onImageClick={handleImageClick}
               />
             ))
           )}
         </div>
       </div>
+
+      <MessagePortal>
+        <FullscreenGalleryModal
+          isOpen={galleryOpen}
+          onClose={() => setGalleryOpen(false)}
+          images={[activeImage]}
+          productName="Production Assets"
+        />
+      </MessagePortal>
 
       <div
         className="fixed bottom-[80px] left-1/2 z-40 h-32 w-48 -translate-x-1/2 md:bottom-[100px]"

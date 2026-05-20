@@ -11,9 +11,18 @@ import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import axiosInstance from '../lib/axiosInstance'
 import {
+  AUTH_MESSAGES,
+  getAuthErrorMessage,
+  sanitizeFieldErrors,
+} from '../utils/authErrors'
+import {
   getHomePathForRole,
   normalizeRole,
 } from '../utils/authRouting'
+import {
+  normalizeLoginEmail,
+  validateLoginForm,
+} from '../utils/loginValidation'
 
 export type RoleType =
   | 'admin'
@@ -98,25 +107,7 @@ interface AuthContextType {
   register: (data: RegisterFormData) => Promise<void>
   logout: () => Promise<void>
   fetchMe: () => Promise<void>
-}
-
-function formatAuthError(err: unknown, fallback: string): string {
-  if (axios.isAxiosError(err)) {
-    if (!err.response) {
-      return `Cannot reach API server. Start Laravel (php artisan serve) and XAMPP MySQL, then retry. (${err.message})`
-    }
-    const data = err.response.data as {
-      message?: string
-      errors?: Record<string, string[]>
-    }
-    if (data?.errors) {
-      const first = Object.values(data.errors).flat()[0]
-      if (first) return first
-    }
-    return data?.message || fallback
-  }
-  if (err instanceof Error) return err.message
-  return fallback
+  clearAuthErrors: () => void
 }
 
 function parseStoredUser(): User {
@@ -174,10 +165,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({})
   const navigate = useNavigate()
 
+  const clearAuthErrors = useCallback(() => {
+    setError(null)
+    setFieldErrors({})
+  }, [])
+
   const handleAuthSuccess = useCallback(
     (data: AuthSuccessPayload) => {
       if (!data?.token || !data?.user) {
-        setError('Invalid login response from server. Missing token or user.')
+        setError('Authentication service is currently unavailable.')
         return
       }
 
@@ -240,14 +236,37 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       return
     }
 
-    const email = emailOrObj
+    const normalizedEmail = normalizeLoginEmail(emailOrObj)
+    const clientValidation = validateLoginForm({
+      email: normalizedEmail,
+      password: password ?? '',
+    })
+
+    if (!clientValidation.valid) {
+      const nextFieldErrors: Record<string, string[]> = {}
+      if (clientValidation.email) {
+        nextFieldErrors.email = [clientValidation.email]
+      }
+      if (clientValidation.password) {
+        nextFieldErrors.password = [clientValidation.password]
+      }
+      setFieldErrors(nextFieldErrors)
+      setError(
+        clientValidation.form ??
+          clientValidation.email ??
+          clientValidation.password ??
+          AUTH_MESSAGES.validationFailed,
+      )
+      return
+    }
+
     setIsAuthLoading(true)
     setError(null)
     setFieldErrors({})
     try {
       const res = await axiosInstance.post<AuthSuccessPayload>(
         '/api/auth/login',
-        { email, password },
+        { email: normalizedEmail, password },
       )
       handleAuthSuccess(res.data)
     } catch (err: unknown) {
@@ -260,16 +279,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
           localStorage.removeItem('pixs_user')
           navigate('/delete-account')
         } else if (errorResponse?.status === 422) {
-          setFieldErrors(errorResponse.data.errors ?? {})
+          const errors = sanitizeFieldErrors(errorResponse.data?.errors)
+          setFieldErrors(errors)
+          const first = Object.values(errors).flat()[0]
+          setError(first ?? AUTH_MESSAGES.validationFailed)
         } else {
-          setError(
-            formatAuthError(err, errorResponse?.data?.message || 'Login failed'),
-          )
+          setError(getAuthErrorMessage(err, AUTH_MESSAGES.invalidCredentials))
         }
       } else {
-        setError('An unexpected error occurred')
+        setError(AUTH_MESSAGES.unexpected)
       }
-      throw err
     } finally {
       setIsAuthLoading(false)
     }
@@ -319,13 +338,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
           localStorage.removeItem('pixs_user')
           navigate('/delete-account')
         } else if (errorResponse?.status === 422) {
-          setFieldErrors(errorResponse.data.errors ?? {})
-          setError(formatAuthError(err, 'Registration validation failed'))
+          const errors = sanitizeFieldErrors(errorResponse.data?.errors)
+          setFieldErrors(errors)
+          const first = Object.values(errors).flat()[0]
+          setError(first ?? AUTH_MESSAGES.validationFailed)
         } else {
-          setError(formatAuthError(err, 'Registration failed'))
+          setError(getAuthErrorMessage(err, AUTH_MESSAGES.unexpected))
         }
       } else {
-        setError(formatAuthError(err, 'An unexpected error occurred'))
+        setError(AUTH_MESSAGES.unexpected)
       }
       throw err
     } finally {
@@ -417,6 +438,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         register,
         logout,
         fetchMe,
+        clearAuthErrors,
       }}
     >
       {children}

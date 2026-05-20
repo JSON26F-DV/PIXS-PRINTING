@@ -14,17 +14,31 @@ import Footer from '../../components/Footer/Footer'
 import { Link } from 'react-router-dom'
 
 const LoginPage: React.FC = () => {
-  const { login, error: authError, loading: isLoading } = useAuth()
+  const {
+    login,
+    error: authError,
+    fieldErrors,
+    loading: isLoading,
+    clearAuthErrors,
+  } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [agreedToTerms, setAgreedToTerms] = useState(true)
   const [localError, setLocalError] = useState<string | null>(null)
 
+  const emailError = fieldErrors.email?.[0]
+  const passwordError = fieldErrors.password?.[0]
   const displayError = localError || authError
+
+  const clearErrors = () => {
+    setLocalError(null)
+    clearAuthErrors()
+  }
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
+    clearErrors()
 
     if (!agreedToTerms) {
       setLocalError(
@@ -33,17 +47,7 @@ const LoginPage: React.FC = () => {
       return
     }
 
-    setLocalError(null)
-
-    try {
-      await login(email, password)
-    } catch (err: unknown) {
-      if (err instanceof Error) {
-        setLocalError(err.message)
-      } else {
-        setLocalError('An unexpected error occurred during login.')
-      }
-    }
+    await login(email, password)
   }
 
   return (
@@ -68,12 +72,12 @@ const LoginPage: React.FC = () => {
                 P
               </div>
               <h1 className="text-5xl leading-tight font-black tracking-tighter uppercase italic">
-                PIXS <span className="text-slate-400">SHOP</span>
+                PIXS <span className="text-slate-400">PRINTING</span>
                 <br />
-                <span className="text-pixs-mint">CENTRAL HUB</span>
+                <span className="text-pixs-mint">PORTAL</span>
               </h1>
               <p className="mt-8 text-[10px] font-black tracking-[8px] text-slate-400 uppercase">
-                System Interface / v8.2.0
+                Secure Access Gateway
               </p>
             </div>
 
@@ -90,8 +94,7 @@ const LoginPage: React.FC = () => {
 
               <div className="border-t border-white/10 pt-8">
                 <p className="font-mono text-[9px] leading-relaxed text-slate-500 uppercase">
-                  Log in to access your dashboard, track orders, and interact with the production matrix. 
-                  Unauthorized entry attempts are logged and reported to secondary security nodes.
+                  Access your dashboard to track orders, manage your projects, and view production status in real-time. Unauthorized access attempts are monitored and recorded.
                 </p>
               </div>
             </div>
@@ -101,32 +104,37 @@ const LoginPage: React.FC = () => {
           <div className="flex flex-col justify-center p-12 md:p-20">
             <div className="mb-12">
               <h2 className="text-4xl font-black tracking-tighter text-slate-900 uppercase italic">
-                Access <span className="text-pixs-mint">Terminal</span>
+                Login <span className="text-pixs-mint">Account</span>
               </h2>
               <p className="mt-3 text-[10px] font-black tracking-[4px] text-slate-400 uppercase">
-                Initialize Secure Session
+                Enter your credentials
               </p>
             </div>
 
             {displayError && (
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
+                role="alert"
+                aria-live="polite"
                 className="mb-8 border-l-4 border-rose-500 bg-rose-50 p-5"
               >
-                <div className="flex items-center gap-2">
+                <motion.div className="flex items-center gap-2">
                   <div className="h-1.5 w-1.5 rounded-full bg-rose-500 animate-pulse" />
                   <p className="text-[10px] font-black tracking-widest text-rose-700 uppercase italic">
                     {displayError}
                   </p>
-                </div>
+                </motion.div>
               </motion.div>
             )}
 
-            <form onSubmit={handleLogin} className="space-y-8">
+            <form onSubmit={handleLogin} className="space-y-8" noValidate>
               <div className="space-y-3">
-                <label className="text-[10px] font-black tracking-[3px] text-slate-400 uppercase">
-                  Identity (Email Node)
+                <label
+                  htmlFor="login-email"
+                  className="text-[10px] font-black tracking-[3px] text-slate-400 uppercase"
+                >
+                  Email Address
                 </label>
                 <div className="group relative">
                   <Mail
@@ -134,19 +142,40 @@ const LoginPage: React.FC = () => {
                     size={20}
                   />
                   <input
+                    id="login-email"
                     type="email"
+                    name="email"
+                    autoComplete="email"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="focus:border-pixs-mint w-full rounded-[24px] border border-slate-100 bg-slate-50 py-5 pr-6 pl-14 text-sm font-bold text-slate-900 transition-all focus:bg-white focus:outline-none focus:ring-4 focus:ring-pixs-mint/5"
-                    placeholder="operator@pixs.com"
-                    required
+                    onChange={(e) => {
+                      setEmail(e.target.value)
+                      clearErrors()
+                    }}
+                    className={`focus:border-pixs-mint w-full rounded-[24px] border bg-slate-50 py-5 pr-6 pl-14 text-sm font-bold text-slate-900 transition-all focus:bg-white focus:outline-none focus:ring-4 focus:ring-pixs-mint/5 ${
+                      emailError ? 'border-rose-300' : 'border-slate-100'
+                    }`}
+                    placeholder="name@email.com"
+                    aria-invalid={!!emailError}
+                    aria-describedby={emailError ? 'login-email-error' : undefined}
                   />
                 </div>
+                {emailError && (
+                  <p
+                    id="login-email-error"
+                    role="alert"
+                    className="text-[10px] font-bold tracking-wide text-rose-600"
+                  >
+                    {emailError}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-3">
-                <label className="text-[10px] font-black tracking-[3px] text-slate-400 uppercase">
-                  Access Key (Encrypted)
+                <label
+                  htmlFor="login-password"
+                  className="text-[10px] font-black tracking-[3px] text-slate-400 uppercase"
+                >
+                  Password
                 </label>
                 <div className="group relative">
                   <Lock
@@ -154,21 +183,42 @@ const LoginPage: React.FC = () => {
                     size={20}
                   />
                   <input
+                    id="login-password"
                     type={showPassword ? 'text' : 'password'}
+                    name="password"
+                    autoComplete="current-password"
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="focus:border-pixs-mint w-full rounded-[24px] border border-slate-100 bg-slate-50 py-5 pr-14 pl-14 text-sm font-bold text-slate-900 transition-all focus:bg-white focus:outline-none focus:ring-4 focus:ring-pixs-mint/5"
+                    onChange={(e) => {
+                      setPassword(e.target.value)
+                      clearErrors()
+                    }}
+                    className={`focus:border-pixs-mint w-full rounded-[24px] border bg-slate-50 py-5 pr-14 pl-14 text-sm font-bold text-slate-900 transition-all focus:bg-white focus:outline-none focus:ring-4 focus:ring-pixs-mint/5 ${
+                      passwordError ? 'border-rose-300' : 'border-slate-100'
+                    }`}
                     placeholder="••••••••••••"
-                    required
+                    aria-invalid={!!passwordError}
+                    aria-describedby={
+                      passwordError ? 'login-password-error' : undefined
+                    }
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute top-1/2 right-5 -translate-y-1/2 text-slate-300 transition-colors hover:text-slate-900"
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
                   >
                     {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                   </button>
                 </div>
+                {passwordError && (
+                  <p
+                    id="login-password-error"
+                    role="alert"
+                    className="text-[10px] font-bold tracking-wide text-rose-600"
+                  >
+                    {passwordError}
+                  </p>
+                )}
               </div>
 
               <div className="flex items-center justify-between py-2">
@@ -180,11 +230,11 @@ const LoginPage: React.FC = () => {
                     className="text-pixs-mint focus:ring-pixs-mint h-5 w-5 rounded-lg border-slate-200"
                   />
                   <span className="text-[9px] font-black tracking-[2px] text-slate-400 uppercase">
-                    Protocol Acknowledged
+                    I agree to terms
                   </span>
                 </label>
                 <Link to="/forgot-password" className="text-[10px] font-black tracking-widest text-pixs-mint uppercase hover:underline">
-                  Reset Key
+                  Forgot Password?
                 </Link>
               </div>
 
@@ -197,7 +247,7 @@ const LoginPage: React.FC = () => {
                   <div className="h-6 w-6 animate-spin rounded-full border-2 border-white/20 border-t-white" />
                 ) : (
                   <>
-                    Initialize Session{' '}
+                    Sign In{' '}
                     <ArrowRight
                       size={18}
                       className="transition-transform group-hover:translate-x-2"
@@ -211,7 +261,7 @@ const LoginPage: React.FC = () => {
               <p className="text-[10px] font-bold tracking-widest text-slate-400 uppercase">
                 New to the platform?{' '}
                 <Link to="/register" className="text-pixs-mint hover:underline">
-                  Apply for Credentials
+                  Create an Account
                 </Link>
               </p>
             </div>

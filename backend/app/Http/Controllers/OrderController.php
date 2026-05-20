@@ -32,6 +32,7 @@ class OrderController extends Controller
             'items.variant',
             'items.colors.colorDetails',
             'items.screenplate',
+            'address',
         ])
             ->where('customer_id', $user->id)
             ->orderBy('created_at', 'desc')
@@ -48,6 +49,16 @@ class OrderController extends Controller
                 'feedback' => $order->feedback,
                 'complaint' => $order->complaint,
                 'rating' => $order->rating,
+                'shipping_address' => $order->address ? [
+                    'label' => $order->address->adress_label,
+                    'region' => $order->address->region,
+                    'province' => $order->address->province,
+                    'city' => $order->address->city,
+                    'barangay' => $order->address->barangay,
+                    'street' => $order->address->street,
+                    'postal_code' => $order->address->postal_code,
+                    'contact_number' => $order->address->contact_number,
+                ] : null,
                 'order_items' => $order->items->map(function ($item) use ($order) {
                     $order_item_colors = $item->colors ? $item->colors->map(function ($c) {
                         return [
@@ -89,6 +100,93 @@ class OrderController extends Controller
                 })->toArray(),
             ];
         });
+
+        return response()->json($formatted);
+    }
+
+    public function show(Request $request, $id): JsonResponse
+    {
+        $user = $request->user();
+        
+        $order = Order::with([
+            'items',
+            'items.product',
+            'items.variant',
+            'items.colors.colorDetails',
+            'items.screenplate',
+            'address',
+        ])
+        ->where('id', $id)
+        ->first();
+
+        if (!$order) {
+            return response()->json(['message' => 'Order not found'], 404);
+        }
+
+        // Security: customer can only see their own, admin can see all
+        if ($user instanceof Customer && $order->customer_id !== $user->id) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $formatted = [
+            'order_id' => $order->id,
+            'user_id' => $order->customer_id,
+            'total_amount' => (float) $order->total_amount,
+            'status' => $order->status,
+            'created_at' => $order->created_at,
+            'admin_comment' => $order->admin_comment,
+            'feedback' => $order->feedback,
+            'complaint' => $order->complaint,
+            'rating' => $order->rating,
+            'shipping_address' => $order->address ? [
+                'label' => $order->address->adress_label,
+                'region' => $order->address->region,
+                'province' => $order->address->province,
+                'city' => $order->address->city,
+                'barangay' => $order->address->barangay,
+                'street' => $order->address->street,
+                'postal_code' => $order->address->postal_code,
+                'contact_number' => $order->address->contact_number,
+            ] : null,
+            'order_items' => $order->items->map(function ($item) use ($order) {
+                $order_item_colors = $item->colors ? $item->colors->map(function ($c) {
+                    return [
+                        'id' => $c->color_id,
+                        'name' => $c->colorDetails ? $c->colorDetails->name : $c->color_id,
+                        'hex' => $c->colorDetails ? $c->colorDetails->hex : '#000000',
+                    ];
+                })->toArray() : [];
+
+                $plate = $item->screenplate ? [
+                    'id' => $item->screenplate_id,
+                    'name' => $item->screenplate->plate_name ?? 'Custom Plate',
+                    'type' => $item->screenplate->type ?? 'Flatscreen',
+                    'channels' => (int) $item->screenplate->channels ?? 1,
+                    'setupFee' => 0,
+                    'printPricePerUnit' => (float) $item->plate_price,
+                ] : null;
+
+                return [
+                    'id' => (string) $item->id,
+                    'product_id' => $item->product_id,
+                    'productName' => $item->product ? $item->product->name : 'Unknown Product',
+                    'short_description' => $item->product ? $item->product->short_description : null,
+                    'productImage' => $item->product && $item->product->main_image
+                        ? '/images/products/'.$item->product->main_image
+                        : '',
+                    'quantity' => $item->quantity,
+                    'variant' => [
+                        'id' => $item->variant_id,
+                        'size' => $item->variant ? $item->variant->size : '',
+                        'width' => $item->variant ? $item->variant->width : null,
+                        'height' => $item->variant ? $item->variant->height : null,
+                        'unitPrice' => (float) $item->unit_price,
+                    ],
+                    'order_item_colors' => $order_item_colors,
+                    'plate' => $plate,
+                ];
+            })->toArray(),
+        ];
 
         return response()->json($formatted);
     }

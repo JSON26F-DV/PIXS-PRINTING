@@ -1,4 +1,5 @@
 import React from 'react'
+import { createPortal } from 'react-dom'
 import { motion } from 'framer-motion'
 import {
   X,
@@ -180,13 +181,18 @@ const GalleryView: React.FC<GalleryViewProps> = ({
         </div>
       )}
 
-      <FullscreenGalleryModal
-        isOpen={fullscreenOpen}
-        onClose={() => setFullscreenOpen(false)}
-        images={images.map((img) => getAssetUrl(img))}
-        initialIndex={fullscreenIndex}
-        productName="Production Assets"
-      />
+      {fullscreenOpen && document.getElementById('messenger-portal-root') && 
+        createPortal(
+          <FullscreenGalleryModal
+            isOpen={fullscreenOpen}
+            onClose={() => setFullscreenOpen(false)}
+            images={images.map((img) => getAssetUrl(img))}
+            initialIndex={fullscreenIndex}
+            productName="Production Assets"
+          />,
+          document.getElementById('messenger-portal-root')!
+        )
+      }
     </div>
   )
 }

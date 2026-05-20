@@ -24,6 +24,7 @@ class MessageController extends Controller
             'id', 'conversation_id', 'sender_id', 'sender_type',
             'receiver_id', 'receiver_type', 'message',
             'reply_to_id', 'is_edited', 'is_deleted', 'is_read',
+            'order_id', 'screenplate_request_id',
             'created_at', 'updated_at',
         ];
 
@@ -74,6 +75,8 @@ class MessageController extends Controller
             'receiver_id'  => 'required|string|max:20',
             'receiver_type'=> 'required|in:employee,customer',
             'reply_to_id'  => 'nullable|string|max:30',
+            'order_id'     => 'nullable|string|max:30',
+            'screenplate_request_id' => 'nullable|string|max:20',
             'attachments'  => 'nullable|array|max:5',
             'attachments.*.file' => [
                 'nullable', 'file', 'max:10240',           // 10 MB in KB
@@ -115,8 +118,8 @@ class MessageController extends Controller
             // Insert message
             DB::insert('
                 INSERT INTO messages 
-                (id, conversation_id, sender_id, sender_type, receiver_id, receiver_type, message, created_at, updated_at) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+                (id, conversation_id, sender_id, sender_type, receiver_id, receiver_type, message, order_id, screenplate_request_id, created_at, updated_at) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
             ', [
                 $msgId,
                 $convId,
@@ -124,7 +127,9 @@ class MessageController extends Controller
                 $senderType,
                 $receiverId,
                 $receiverType,
-                $validated['message']
+                $validated['message'],
+                $validated['order_id'] ?? null,
+                $validated['screenplate_request_id'] ?? null
             ]);
 
             if (!empty($attachments)) {

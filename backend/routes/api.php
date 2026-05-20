@@ -74,10 +74,12 @@ Route::middleware(['auth:sanctum', 'role:customer'])->prefix('customer')->group(
     Route::get('/screenplates', [CustomerScreenplateController::class, 'index']);
 
     // Screenplate Requests
+    Route::get('/screenplate-requests', [ScreenplateRequestController::class, 'index']);
     Route::post('/screenplate-requests', [ScreenplateRequestController::class, 'store']);
 
     // Orders
     Route::get('/orders', [OrderController::class, 'index']);
+    Route::get('/orders/{id}', [OrderController::class, 'show']);
     Route::post('/orders', [OrderController::class, 'store']);
     Route::patch('/orders/{id}', [OrderController::class, 'update']);
 });

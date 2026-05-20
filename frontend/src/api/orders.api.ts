@@ -69,5 +69,17 @@ export const orderApi = {
         } catch (error) {
             return handleApiError(error)
         }
+    },
+    
+    /**
+     * Get a single order by ID.
+     */
+    getOrderById: async (id: string): Promise<Order> => {
+        try {
+            const response = await axiosInstance.get(`/api/customer/orders/${id}`)
+            return response.data as Order
+        } catch (error) {
+            return handleApiError(error)
+        }
     }
 }
