@@ -139,22 +139,21 @@ const MessageBubble: React.FC<{
       initial={{ opacity: 0, y: 10, scale: 0.95 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       className={clsx(
-        'group relative mb-8 flex cursor-default flex-col',
-        isCustomer ? 'items-end' : 'items-start',
+        'group relative mb-3 md:mb-8 flex cursor-default flex-col',
+        isCustomer ? 'items-end mr-1.5 min-[360px]:mr-3.5 min-[414px]:mr-1 sm:mr-0' : 'items-start',
       )}
-    >
+      >
       <div
         className={clsx(
-          'relative flex max-w-[85%] flex-col md:max-w-[70%]',
-          isCustomer ? 'items-end' : 'items-start',
+          'relative flex max-w-[80%] min-[414px]:max-w-[85%] flex-col md:max-w-[70%]',
+          isCustomer ? 'items-end mr-1.5 min-[360px]:mr-3.5 min-[414px]:mr-1 sm:mr-0' : 'items-start',
         )}
-      >
-        {/* Reply Snippet Node */}
+      >        {/* Reply Snippet Node */}
         {message.replyTo && (
           <div
             className={clsx(
               'mb-2 flex items-center gap-2 border-l-2 border-slate-300 px-3 py-1.5 opacity-40',
-              isCustomer ? 'mr-3 flex-row-reverse text-right' : 'ml-3',
+              isCustomer ? 'mr-1 flex-row-reverse text-right' : 'ml-1',
             )}
           >
             <CornerUpRight size={12} />
@@ -172,8 +171,8 @@ const MessageBubble: React.FC<{
         {/* Message Container */}
         <div
           className={clsx(
-            'relative rounded-[28px] text-sm leading-relaxed font-bold shadow-sm transition-all',
-            hasCard ? '' : 'px-6 py-4',
+            'relative rounded-[14px] min-[360px]:rounded-[16px] sm:rounded-[20px] md:rounded-[28px] text-[10px] min-[360px]:text-[11px] min-[414px]:text-[12px] sm:text-[13px] md:text-sm leading-relaxed font-bold shadow-sm transition-all',
+            hasCard ? '' : 'px-2 py-1 min-[360px]:px-2.5 min-[360px]:py-1.5 min-[414px]:px-3 min-[414px]:py-2 sm:px-4 sm:py-3 md:px-6 md:py-4',
             message.isDeleted
               ? 'border border-slate-200 bg-slate-100 text-slate-400'
               : isCustomer
@@ -280,13 +279,13 @@ const MessageBubble: React.FC<{
                   {at.type === 'image' ? (
                     <motion.div
                       whileHover={{ scale: 1.02 }}
-                      className="group relative cursor-pointer overflow-hidden rounded-[24px] border border-slate-100 bg-slate-50 shadow-lg"
+                      className="group relative cursor-pointer overflow-hidden rounded-[16px] md:rounded-[24px] border border-slate-100 bg-slate-50 shadow-lg"
                       onClick={() => onImageClick(getAssetUrl(at))}
                     >
                       <img
                         src={getAssetUrl(at)}
                         alt={at.name}
-                        className="max-h-[300px] w-auto object-cover"
+                        className="max-h-[180px] sm:max-h-[240px] md:max-h-[300px] w-auto object-cover"
                       />
                       <div className="absolute inset-0 flex items-center justify-center bg-slate-900/40 opacity-0 transition-opacity group-hover:opacity-100">
                         <ExternalLink size={24} className="text-white" />
@@ -297,20 +296,21 @@ const MessageBubble: React.FC<{
                       href={getAssetUrl(at)}
                       download={at.name}
                       className={clsx(
-                        'group flex items-center gap-4 rounded-[22px] border p-4 shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98]',
+                        'group flex items-center gap-3 md:gap-4 rounded-[16px] md:rounded-[22px] border p-3 md:p-4 shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98]',
                         isCustomer
                           ? 'hover:border-pixs-mint/50 border-slate-200 bg-slate-50 text-slate-900'
                           : 'hover:border-pixs-mint/50 border-slate-100 bg-white text-slate-900',
                       )}
                     >
-                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-slate-900 shadow-lg shadow-slate-900/10">
-                        <FileText size={20} className="text-pixs-mint" />
+                      <div className="flex h-10 w-10 md:h-12 md:w-12 shrink-0 items-center justify-center rounded-xl md:rounded-2xl bg-slate-900 shadow-lg shadow-slate-900/10">
+                        <FileText size={18} className="text-pixs-mint md:hidden" />
+                        <FileText size={20} className="text-pixs-mint hidden md:block" />
                       </div>
-                      <div className="min-w-0 pr-4">
-                        <p className="truncate text-[10px] leading-none font-black uppercase italic">
+                      <div className="min-w-0 pr-2 md:pr-4">
+                        <p className="truncate text-[9px] md:text-[10px] leading-none font-black uppercase italic">
                           {at.name}
                         </p>
-                        <p className="mt-2 flex items-center gap-1.5 text-[8px] font-bold tracking-widest text-slate-400 uppercase">
+                        <p className="mt-1.5 md:mt-2 flex items-center gap-1.5 text-[7px] md:text-[8px] font-bold tracking-widest text-slate-400 uppercase">
                           Click to Download{' '}
                           <Download size={10} className="text-pixs-mint" />
                         </p>
@@ -355,7 +355,7 @@ const MessageBubble: React.FC<{
           <div
             className={clsx(
               'absolute top-1/2 flex -translate-y-1/2 items-center gap-1.5 opacity-0 transition-opacity group-hover:opacity-100',
-              isCustomer ? '-left-24 flex-row-reverse' : '-right-24',
+              isCustomer ? '-left-12 md:-left-24 flex-row-reverse' : '-right-12 md:-right-24',
             )}
           >
             <div className="relative" ref={anchorRef}>
@@ -572,7 +572,7 @@ const MessageList: React.FC<MessageListProps> = ({
     <div className="relative w-full">
       <div
         ref={scrollRef}
-        className="MessageList flex flex-col scroll-smooth bg-emoji-pattern bg-slate-50/20 px-6 pt-8 pb-10 md:px-12 md:pt-12 md:pb-14"
+        className="MessageList flex flex-col scroll-smooth bg-emoji-pattern bg-slate-50/20 px-2 min-[360px]:px-3 min-[414px]:px-3 sm:px-8 pt-6 md:pt-12 pb-8 md:pb-14"
         style={{
           WebkitOverflowScrolling: 'touch',
           touchAction: 'pan-y',

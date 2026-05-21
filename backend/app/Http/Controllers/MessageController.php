@@ -66,6 +66,26 @@ class MessageController extends Controller
     }
 
     /**
+     * Get the total image upload count for the authenticated user.
+     */
+    public function getImageUploadCount(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $count = DB::table('message_attachments')
+            ->join('messages', 'messages.id', '=', 'message_attachments.message_id')
+            ->where('messages.sender_id', $user->id)
+            ->where('message_attachments.type', 'image')
+            ->count();
+
+        return response()->json([
+            'count' => $count,
+            'limit' => 20,
+            'remaining' => max(0, 20 - $count),
+        ]);
+    }
+
+    /**
      * Store new message.
      */
     public function store(Request $request): JsonResponse
@@ -77,10 +97,10 @@ class MessageController extends Controller
             'reply_to_id'  => 'nullable|string|max:30',
             'order_id'     => 'nullable|string|max:30',
             'screenplate_request_id' => 'nullable|string|max:20',
-            'attachments'  => 'nullable|array|max:5',
+            'attachments'  => 'nullable|array|max:20',
             'attachments.*.file' => [
-                'nullable', 'file', 'max:10240',           // 10 MB in KB
-                'mimes:jpeg,png,gif,pdf,doc,docx,xls,xlsx',
+                'nullable', 'file', 'max:5120',           // 5 MB in KB (reduced from 10MB)
+                'mimes:jpeg,jpg,png,webp,pdf,doc,docx,csv,xls,xlsx',
             ],
             'attachments.*.type' => 'required|in:image,file',
             'attachments.*.url'  => 'nullable|string|max:500',
@@ -90,6 +110,59 @@ class MessageController extends Controller
         $user = $request->user();
         $senderId = $user->id;
         $senderType = $user->role === 'customer' ? 'customer' : 'employee';
+
+        // ─── 20-Image Upload Limit (Customers Only) ───
+        $attachments = $request->input('attachments', []);
+        $newImageCount = collect($attachments)->where('type', 'image')->count();
+
+        if ($senderType === 'customer' && $newImageCount > 0) {
+            $existingImageCount = DB::table('message_attachments')
+                ->join('messages', 'messages.id', '=', 'message_attachments.message_id')
+                ->where('messages.sender_id', $senderId)
+                ->where('message_attachments.type', 'image')
+                ->count();
+
+            if (($existingImageCount + $newImageCount) > 20) {
+                return response()->json([
+                    'message' => 'You have reached the 20-image upload limit. Please wait for an admin to review and manage your uploads.',
+                    'error_code' => 'IMAGE_LIMIT_EXCEEDED',
+                    'current_count' => $existingImageCount,
+                    'limit' => 20,
+                ], 422);
+            }
+        }
+
+        // ─── Validate individual file sizes (server-side double-check) ───
+        foreach ($attachments as $index => $att) {
+            if ($request->hasFile("attachments.{$index}.file")) {
+                $file = $request->file("attachments.{$index}.file");
+                $type = $att['type'];
+
+                // Block video files
+                if (str_starts_with($file->getMimeType(), 'video/')) {
+                    return response()->json([
+                        'message' => 'Video uploads are not allowed.',
+                        'error_code' => 'VIDEO_NOT_ALLOWED',
+                    ], 422);
+                }
+
+                // Image: max 3MB
+                if ($type === 'image' && $file->getSize() > (3 * 1024 * 1024)) {
+                    return response()->json([
+                        'message' => "Image \"{$file->getClientOriginalName()}\" exceeds the 3MB limit.",
+                        'error_code' => 'IMAGE_TOO_LARGE',
+                    ], 422);
+                }
+
+                // Document: max 5MB
+                if ($type === 'file' && $file->getSize() > (5 * 1024 * 1024)) {
+                    return response()->json([
+                        'message' => "Document \"{$file->getClientOriginalName()}\" exceeds the 5MB limit.",
+                        'error_code' => 'DOC_TOO_LARGE',
+                    ], 422);
+                }
+            }
+        }
 
         // Automatically enforce that customers message the admin, 
         // regardless of frontend input, prioritizing database security natively.
@@ -109,7 +182,6 @@ class MessageController extends Controller
         }
 
         $msgId = 'msg_' . Str::random(10);
-        $attachments = $request->input('attachments', []);
 
         DB::transaction(function () use ($msgId, $convId, $senderId, $senderType, $receiverId, $receiverType, $validated, $attachments, $request) {
             // Ensure conversation exists

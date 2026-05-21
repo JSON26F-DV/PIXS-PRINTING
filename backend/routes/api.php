@@ -11,6 +11,7 @@ use App\Http\Controllers\DeliveryMethodController;
 use App\Http\Controllers\MessageController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OrderController;
+use App\Http\Controllers\DiscountController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ScreenplateRequestController;
 use App\Http\Controllers\User\UserController;
@@ -82,11 +83,22 @@ Route::middleware(['auth:sanctum', 'role:customer'])->prefix('customer')->group(
     Route::get('/orders/{id}', [OrderController::class, 'show']);
     Route::post('/orders', [OrderController::class, 'store']);
     Route::patch('/orders/{id}', [OrderController::class, 'update']);
+
+    // Discounts
+    Route::get('/discounts/mine', [DiscountController::class, 'mine']);
+    Route::post('/discounts/verify', [DiscountController::class, 'verify']);
+});
+
+// Admin Discount Routes
+Route::middleware(['auth:sanctum', 'role:admin'])->prefix('admin')->group(function () {
+    Route::get('/discounts', [DiscountController::class, 'index']);
+    Route::post('/discounts', [DiscountController::class, 'store']);
 });
 
 // Messaging & Notifications
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/messages', [MessageController::class, 'index']);
+    Route::get('/messages/image-count', [MessageController::class, 'getImageUploadCount']);
     Route::post('/messages/send', [MessageController::class, 'store']);
     Route::patch('/messages/mark-read', [MessageController::class, 'markConversationAsRead']);
 

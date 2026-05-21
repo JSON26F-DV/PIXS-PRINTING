@@ -26,6 +26,16 @@ const GalleryView: React.FC<GalleryViewProps> = ({
 }) => {
   const [fullscreenOpen, setFullscreenOpen] = React.useState(false)
   const [fullscreenIndex, setFullscreenIndex] = React.useState(0)
+  const [windowWidth, setWindowWidth] = React.useState(window.innerWidth)
+
+  React.useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth)
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
+  const isSmallMobile = windowWidth <= 430
+  const showProtocol = !isMobile || (isMobile && !isSmallMobile)
 
   // Extract all attachments across all messages
 
@@ -167,7 +177,7 @@ const GalleryView: React.FC<GalleryViewProps> = ({
         </section>
       </div>
 
-      {!isMobile && (
+      {showProtocol && (
         <div className="border-t border-slate-50 bg-slate-50/10 p-8">
           <div className="space-y-3 rounded-[24px] bg-slate-900 p-5 text-white">
             <p className="text-pixs-mint text-[10px] leading-none font-black tracking-widest uppercase italic">

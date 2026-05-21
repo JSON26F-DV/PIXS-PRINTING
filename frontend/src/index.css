@@ -161,11 +161,6 @@
   background: #39ff14; /* neogreen */
   border-radius: 99px;
 }
-
-.scrollbar-neogreen::-webkit-scrollbar-thumb:hover {
-  background: #32e612;
-}
-
 .scrollbar-neogreen {
   scrollbar-width: thin;
   scrollbar-color: #39ff14 transparent;

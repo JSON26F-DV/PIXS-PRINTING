@@ -10,6 +10,7 @@ use App\Models\OrderItem;
 use App\Models\OrderItemColor;
 use App\Models\Product;
 use App\Models\ProductReview;
+use App\Models\Discount;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -268,6 +269,7 @@ class OrderController extends Controller
                 'payment_method_id' => 'required|string',
                 'delivery_method_id' => 'required|string|exists:delivery_methods,id',
                 'production_notes' => 'nullable|string',
+                'discount_id' => 'nullable|string|exists:discounts,id',
             ]);
         } catch (ValidationException $e) {
             Log::warning('Order validation failed', ['errors' => $e->errors()]);
@@ -295,6 +297,46 @@ class OrderController extends Controller
 
                 // STEP 3: Calculate totals
                 $totalAmount = $cartItems->sum('total_cart_price');
+                $discountId = $validated['discount_id'] ?? null;
+                $totalDiscountAmount = 0;
+
+                if ($discountId) {
+                    $discount = Discount::find($discountId);
+                    if ($discount && !$discount->already_used) {
+                        // Basic validation
+                        $isValid = true;
+                        if ($discount->customer_id && $discount->customer_id !== $user->id) $isValid = false;
+                        if ($discount->expires_at && $discount->expires_at->isPast()) $isValid = false;
+                        if ($totalAmount < $discount->min_spend) $isValid = false;
+
+                        if ($isValid) {
+                            if ($discount->product_id) {
+                                $relevantItems = $cartItems->where('product_id', $discount->product_id);
+                                if ($relevantItems->count() > 0) {
+                                    $relevantSubtotal = $relevantItems->sum('total_cart_price');
+                                    if ($discount->type === 'fixed') {
+                                        $totalDiscountAmount = min($discount->value, $relevantSubtotal);
+                                    } else {
+                                        $totalDiscountAmount = $relevantSubtotal * ($discount->value / 100);
+                                    }
+                                }
+                            } else {
+                                if ($discount->type === 'fixed') {
+                                    $totalDiscountAmount = min($discount->value, $totalAmount);
+                                } else {
+                                    $totalDiscountAmount = $totalAmount * ($discount->value / 100);
+                                }
+                            }
+
+                            if ($totalDiscountAmount > 0) {
+                                $discount->already_used = true;
+                                $discount->save();
+                            }
+                        }
+                    }
+                }
+
+                $finalAmount = max(0, $totalAmount - $totalDiscountAmount);
 
                 // STEP 4: Generate order ID
                 $orderId = 'ORD-'.strtoupper(Str::random(10));
@@ -307,7 +349,9 @@ class OrderController extends Controller
                     'payment_method_id' => $validated['payment_method_id'],
                     'delivery_method_id' => $validated['delivery_method_id'],
                     'production_notes' => $validated['production_notes'] ?? null,
-                    'total_amount' => $totalAmount,
+                    'discount_id' => $discountId,
+                    'total_discount_amount' => $totalDiscountAmount,
+                    'total_amount' => $finalAmount,
                     'status' => 'PENDING',
                     'rating' => 0,
                     'feedback' => null,
@@ -384,6 +428,28 @@ class OrderController extends Controller
                     'message' => "Order {$orderId} has been successfully placed.",
                     'type' => 'success',
                     'is_read' => false,
+                ]);
+
+                // STEP 9.5: Automatically notify Admin via Chat
+                $adminId = '1'; // Default admin
+                $convId = $adminId . '_' . $user->id;
+                DB::table('conversations')->insertOrIgnore([
+                    'id' => $convId,
+                    'created_at' => now(),
+                    'updated_at' => now()
+                ]);
+
+                DB::table('messages')->insert([
+                    'id' => 'msg_' . Str::random(10),
+                    'conversation_id' => $convId,
+                    'sender_id' => $user->id,
+                    'sender_type' => 'customer',
+                    'receiver_id' => $adminId,
+                    'receiver_type' => 'employee',
+                    'message' => 'review your shipping address',
+                    'order_id' => $orderId,
+                    'created_at' => now(),
+                    'updated_at' => now()
                 ]);
 
                 // STEP 10: Return JSON response (201)

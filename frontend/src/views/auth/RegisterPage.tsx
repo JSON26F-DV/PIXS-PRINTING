@@ -1,44 +1,18 @@
-import React, { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
-import axios from 'axios'
-import axiosInstance from '../../lib/axiosInstance'
-import {
-  User,
-  Mail,
-  Lock,
-  ShieldCheck,
-  ArrowRight,
-  Calendar,
-  Building2,
-  Eye,
-  EyeOff,
-  CheckCircle2,
-  AlertCircle,
-} from 'lucide-react'
-import { motion } from 'framer-motion'
-import { useAuth } from '../../context/AuthContext'
-import type { RegisterFormData } from '../../context/AuthContext'
-import CustomerNavbar from '../../components/customer/CustomerNavbar'
+import React, { useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { useAuth } from '../../hooks/useAuth'
+import type { RegisterFormData } from '../../hooks/useAuth'
+import toast, { Toaster } from 'react-hot-toast'
+import { motion, AnimatePresence } from 'framer-motion'
+import { clsx } from 'clsx'
+import AuthNavbar from '../../components/auth/AuthNavbar'
 import Footer from '../../components/Footer/Footer'
 
-function validatePasswordClient(password: string): string | null {
-  if (password.length < 8) {
-    return 'Password must be at least 8 characters.'
-  }
-  if (!/[a-zA-Z]/.test(password)) {
-    return 'Password must include at least one letter.'
-  }
-  if (!/[0-9]/.test(password)) {
-    return 'Password must include at least one number.'
-  }
-  return null
-}
-
 const RegisterPage: React.FC = () => {
-  const { register, loading: isSubmitting, error, fieldErrors } = useAuth()
-  const [apiStatus, setApiStatus] = useState<
-    'checking' | 'ok' | 'offline' | null
-  >(null)
+  const { register, loading, error, fieldErrors } = useAuth()
+  const navigate = useNavigate()
+  
+  const [step, setStep] = useState(1)
   const [formData, setFormData] = useState<RegisterFormData>({
     first_name: '',
     last_name: '',
@@ -49,494 +23,360 @@ const RegisterPage: React.FC = () => {
     gender: undefined,
     company_name: '',
   })
-  const [showPassword, setShowPassword] = useState(false)
-  const [agreedToTerms, setAgreedToTerms] = useState(false)
-  const [localError, setLocalError] = useState<string | null>(null)
 
-  const displayError = localError || error
-  const passwordsMatch =
-    !formData.password_confirmation ||
-    formData.password === formData.password_confirmation
+  const [submitError, setSubmitError] = useState<string | null>(null)
 
-  const getFieldError = (field: keyof RegisterFormData | string) =>
-    fieldErrors[field]?.[0]
-
-  const handleInputChange = (
+  const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
     const { name, value } = e.target
     setFormData((prev) => ({
       ...prev,
-      [name]:
-        name === 'age' ? (value ? Number(value) : undefined) : value,
+      [name]: name === 'age' ? (value ? parseInt(value) : undefined) : value,
     }))
   }
 
-  useEffect(() => {
-    let cancelled = false
-    const checkApi = async () => {
-      setApiStatus('checking')
-      try {
-        await axiosInstance.get('/api/delivery-methods', { timeout: 5000 })
-        if (!cancelled) setApiStatus('ok')
-      } catch {
-        if (!cancelled) setApiStatus('offline')
+  const nextStep = () => {
+    if (step === 1) {
+      if (!formData.first_name || !formData.last_name) {
+        toast.error('First Name and Last Name are required.')
+        return
+      }
+    } else if (step === 2) {
+      if (!formData.email) {
+        toast.error('Email Address is required.')
+        return
+      }
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      if (!emailRegex.test(formData.email)) {
+        toast.error('Please enter a valid email address.')
+        return
       }
     }
-    checkApi()
-    return () => {
-      cancelled = true
-    }
-  }, [])
-
-  const handleOAuth = (provider: 'google' | 'facebook') => {
-    const apiUrl =
-      import.meta.env.VITE_API_URL ||
-      import.meta.env.VITE_BACKEND_URL ||
-      ''
-    window.location.href = `${apiUrl}/api/auth/${provider}`
+    setStep((s) => s + 1)
   }
+
+  const prevStep = () => setStep((s) => s - 1)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setLocalError(null)
-
-    if (!agreedToTerms) {
-      const msg =
-        'Please accept the Terms and Conditions of PIXS Printing Shop.'
-      setLocalError(msg)
-      alert(`Registration blocked:\n${msg}`)
+    if (!formData.password || !formData.password_confirmation) {
+      toast.error('Passwords are required.')
       return
     }
-
     if (formData.password !== formData.password_confirmation) {
-      const msg = 'Passwords do not match.'
-      setLocalError(msg)
-      alert(`Registration blocked:\n${msg}`)
+      toast.error('Passwords do not match.')
       return
     }
 
     try {
+      setSubmitError(null)
+      toast.loading('Registering account...', { id: 'register' })
       await register(formData)
-    } catch (err: unknown) {
-      let message = 'Registration failed.'
-      if (axios.isAxiosError(err)) {
-        if (!err.response) {
-          message =
-            'Cannot reach Laravel API.\n\n' +
-            '1. Start XAMPP → MySQL/MariaDB\n' +
-            '2. In backend/: php artisan serve\n' +
-            '3. In frontend/: npm run dev\n\n' +
-            `Details: ${err.message}`
-        } else {
-          const data = err.response.data as {
-            message?: string
-            errors?: Record<string, string[]>
-          }
-          if (data.errors) {
-            const lines = Object.entries(data.errors)
-              .map(([k, v]) => `${k}: ${v.join(', ')}`)
-              .join('\n')
-            message = lines || data.message || message
-          } else {
-            message = data.message || `HTTP ${err.response.status}`
-          }
-        }
-      } else if (err instanceof Error) {
-        message = err.message
+      toast.success('Registration successful!', { id: 'register' })
+      navigate('/login')
+    } catch {
+      setSubmitError(error || 'Registration failed. Please check your inputs.')
+      toast.error('Registration failed.', { id: 'register' })
+      
+      if (fieldErrors?.email || fieldErrors?.company_name) {
+        setStep(2)
+      } else if (fieldErrors?.first_name || fieldErrors?.last_name) {
+        setStep(1)
       }
-      setLocalError(message)
-      alert(`Registration error:\n\n${message}`)
     }
   }
 
+  const handleOAuth = (provider: 'google' | 'facebook') => {
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+    window.location.href = `${apiUrl}/api/auth/${provider}`
+  }
+
+  const variants = {
+    initial: (direction: number) => ({ x: direction > 0 ? 500 : -500, opacity: 0 }),
+    animate: { x: 0, opacity: 1 },
+    exit: (direction: number) => ({ x: direction < 0 ? 500 : -500, opacity: 0 }),
+  }
+
   return (
-    <div className="flex min-h-screen flex-col bg-white">
-      <CustomerNavbar />
-
-      <main className="flex flex-grow items-center justify-center bg-slate-50 p-6 pt-24 pb-12">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="relative grid w-full max-w-[1100px] grid-cols-1 overflow-hidden rounded-[48px] border border-slate-100 bg-white shadow-2xl md:grid-cols-2"
-        >
-          {/* Left: Brand panel */}
-          <div className="relative hidden flex-col justify-between bg-slate-900 p-16 text-white md:flex">
-            <motion.div className="pointer-events-none absolute inset-0 opacity-10">
-              <div className="absolute -top-24 -left-24 h-96 w-96 rounded-full border-[40px] border-pixs-mint" />
-              <div className="absolute -right-24 -bottom-24 h-64 w-64 rounded-full bg-pixs-mint" />
-            </motion.div>
-
-            <div className="relative z-10">
-              <div className="bg-pixs-mint mb-10 flex h-14 w-14 items-center justify-center rounded-[20px] text-3xl font-black text-slate-900 shadow-lg shadow-pixs-mint/20">
-                P
-              </div>
-              <h1 className="text-5xl leading-tight font-black tracking-tighter uppercase italic">
-                JOIN <span className="text-slate-400">PIXS</span>
-                <br />
-                <span className="text-pixs-mint">CUSTOMER HUB</span>
-              </h1>
-              <p className="mt-8 text-[10px] font-black tracking-[8px] text-slate-400 uppercase">
-                Customer Enrollment / v8.2.0
-              </p>
+    <div className="flex min-h-screen flex-col bg-slate-50">
+      <AuthNavbar />
+      
+      <main className="flex-grow flex items-center justify-center p-4 md:p-8 md:pt-15! pt-10! mt-10! md:mt-20! pb-12">
+        <Toaster position="top-right" />
+        
+        {/* Google-like wide rectangle wrapper */}
+        <div className="w-full border border-slate-300 max-w-[1040px] bg-white rounded-[32px] md:rounded-[40px] shadow-slate-200 overflow-hidden relative flex flex-col md:flex-row min-h-[500px]">
+          
+          {/* Left Column (Labels, Title) */}
+          <div className="w-full md:w-5/12 p-8 md:p-14 flex flex-col justify-start relative">
+            <div className="mb-4">
+               {/* PIXS Mint Logo / G-like logo area */}
+               <div className="bg-pixs-mint flex h-12 w-12 items-center justify-center rounded-2xl text-2xl font-black text-slate-900 shadow-lg shadow-pixs-mint/20 mb-6">
+                 P
+               </div>
             </div>
 
-            <div className="relative z-10 space-y-8">
-              <div className="flex items-center gap-4">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/5 ring-1 ring-white/10">
-                  <ShieldCheck className="text-pixs-mint" size={20} />
-                </div>
-                <div>
-                  <p className="text-xs font-black tracking-widest uppercase italic">
-                    Secure Registration
-                  </p>
-                  <p className="text-[10px] text-slate-400">
-                    Bcrypt hashing · 30-day session tokens
-                  </p>
-                </div>
-              </div>
+            <h1 className="text-3xl md:text-5xl font-black text-slate-900 tracking-tighter mb-4 leading-tight italic uppercase">
+              Create a PIXS<br/>Account
+            </h1>
+            
+            <p className="text-base md:text-lg text-slate-600 font-medium">
+              {step === 1 && "Enter your name"}
+              {step === 2 && "Basic information"}
+              {step === 3 && "Set your passwords"}
+            </p>
 
-              <motion.div className="border-t border-white/10 pt-8">
-                <p className="font-mono text-[9px] leading-relaxed text-slate-500 uppercase">
-                  Create a customer account to browse products, place orders,
-                  track production, and manage delivery addresses. Employee
-                  accounts are provisioned by administrators only.
-                </p>
-              </motion.div>
-            </div>
-          </div>
-
-          {/* Right: Registration form */}
-          <div className="flex flex-col justify-center p-10 md:p-16 lg:p-20">
-            <div className="mb-10">
-              <h2 className="text-4xl font-black tracking-tighter text-slate-900 uppercase italic">
-                Create <span className="text-pixs-mint">Account</span>
-              </h2>
-              <p className="mt-3 text-[10px] font-black tracking-[4px] text-slate-400 uppercase">
-                Customer credentials only
-              </p>
-            </div>
-
-            {apiStatus === 'offline' && (
-              <div className="mb-6 border-l-4 border-amber-500 bg-amber-50 p-5">
-                <p className="text-[10px] font-black tracking-widest text-amber-800 uppercase">
-                  API offline — start XAMPP MySQL, then run{' '}
-                  <span className="font-mono">php artisan serve</span> in backend/
-                </p>
-              </div>
-            )}
-
-            {apiStatus === 'ok' && (
-              <p className="mb-4 text-[9px] font-bold tracking-widest text-emerald-600 uppercase">
-                Laravel API connected
-              </p>
-            )}
-
-            {displayError && (
-              <motion.div
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="mb-6 border-l-4 border-rose-500 bg-rose-50 p-5"
-              >
-                <div className="flex items-center gap-2">
-                  <AlertCircle size={14} className="text-rose-500" />
-                  <p className="text-[10px] font-black tracking-widest text-rose-700 uppercase italic">
-                    {displayError}
-                  </p>
-                </div>
-              </motion.div>
-            )}
-
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black tracking-[3px] text-slate-400 uppercase">
-                    First Name <span className="text-rose-400">*</span>
-                  </label>
-                  <div className="group relative">
-                    <User
-                      className="group-focus-within:text-pixs-mint absolute top-1/2 left-4 -translate-y-1/2 text-slate-300 transition-colors"
-                      size={18}
-                    />
-                    <input
-                      name="first_name"
-                      value={formData.first_name}
-                      onChange={handleInputChange}
-                      className="focus:border-pixs-mint w-full rounded-[20px] border border-slate-100 bg-slate-50 py-4 pr-4 pl-12 text-sm font-bold text-slate-900 transition-all focus:bg-white focus:outline-none focus:ring-4 focus:ring-pixs-mint/5"
-                      placeholder="Juan"
-                      required
-                      autoComplete="given-name"
-                    />
-                  </div>
-                  {getFieldError('first_name') && (
-                    <p className="text-[9px] font-bold text-rose-600 uppercase">
-                      {getFieldError('first_name')}
-                    </p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black tracking-[3px] text-slate-400 uppercase">
-                    Last Name <span className="text-rose-400">*</span>
-                  </label>
-                  <input
-                    name="last_name"
-                    value={formData.last_name}
-                    onChange={handleInputChange}
-                    className="focus:border-pixs-mint w-full rounded-[20px] border border-slate-100 bg-slate-50 px-4 py-4 text-sm font-bold text-slate-900 transition-all focus:bg-white focus:outline-none focus:ring-4 focus:ring-pixs-mint/5"
-                    placeholder="Dela Cruz"
-                    required
-                    autoComplete="family-name"
-                  />
-                  {getFieldError('last_name') && (
-                    <p className="text-[9px] font-bold text-rose-600 uppercase">
-                      {getFieldError('last_name')}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-[10px] font-black tracking-[3px] text-slate-400 uppercase">
-                  Email <span className="text-rose-400">*</span>
-                </label>
-                <div className="group relative">
-                  <Mail
-                    className="group-focus-within:text-pixs-mint absolute top-1/2 left-4 -translate-y-1/2 text-slate-300 transition-colors"
-                    size={18}
-                  />
-                  <input
-                    name="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={handleInputChange}
-                    className="focus:border-pixs-mint w-full rounded-[20px] border border-slate-100 bg-slate-50 py-4 pr-4 pl-12 text-sm font-bold text-slate-900 transition-all focus:bg-white focus:outline-none focus:ring-4 focus:ring-pixs-mint/5"
-                    placeholder="you@example.com"
-                    required
-                    autoComplete="email"
-                  />
-                </div>
-                {getFieldError('email') && (
-                  <p className="text-[9px] font-bold text-rose-600 uppercase">
-                    {getFieldError('email')}
-                  </p>
-                )}
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black tracking-[3px] text-slate-400 uppercase">
-                    Age <span className="text-slate-300">(optional)</span>
-                  </label>
-                  <div className="group relative">
-                    <Calendar
-                      className="group-focus-within:text-pixs-mint absolute top-1/2 left-4 -translate-y-1/2 text-slate-300 transition-colors"
-                      size={18}
-                    />
-                    <input
-                      name="age"
-                      type="number"
-                      min={1}
-                      max={120}
-                      value={formData.age ?? ''}
-                      onChange={handleInputChange}
-                      className="focus:border-pixs-mint w-full rounded-[20px] border border-slate-100 bg-slate-50 py-4 pr-4 pl-12 text-sm font-bold text-slate-900 transition-all focus:bg-white focus:outline-none focus:ring-4 focus:ring-pixs-mint/5"
-                      placeholder="21"
-                    />
-                  </div>
-                  {getFieldError('age') && (
-                    <p className="text-[9px] font-bold text-rose-600 uppercase">
-                      {getFieldError('age')}
-                    </p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black tracking-[3px] text-slate-400 uppercase">
-                    Gender <span className="text-slate-300">(optional)</span>
-                  </label>
-                  <select
-                    name="gender"
-                    value={formData.gender ?? ''}
-                    onChange={handleInputChange}
-                    className="focus:border-pixs-mint w-full cursor-pointer rounded-[20px] border border-slate-100 bg-slate-50 px-4 py-4 text-sm font-bold text-slate-900 transition-all focus:bg-white focus:outline-none focus:ring-4 focus:ring-pixs-mint/5"
-                  >
-                    <option value="">Select</option>
-                    <option value="male">Male</option>
-                    <option value="female">Female</option>
-                    <option value="other">Other</option>
-                  </select>
-                  {getFieldError('gender') && (
-                    <p className="text-[9px] font-bold text-rose-600 uppercase">
-                      {getFieldError('gender')}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-[10px] font-black tracking-[3px] text-slate-400 uppercase">
-                  Company <span className="text-slate-300">(optional)</span>
-                </label>
-                <div className="group relative">
-                  <Building2
-                    className="group-focus-within:text-pixs-mint absolute top-1/2 left-4 -translate-y-1/2 text-slate-300 transition-colors"
-                    size={18}
-                  />
-                  <input
-                    name="company_name"
-                    value={formData.company_name ?? ''}
-                    onChange={handleInputChange}
-                    className="focus:border-pixs-mint w-full rounded-[20px] border border-slate-100 bg-slate-50 py-4 pr-4 pl-12 text-sm font-bold text-slate-900 transition-all focus:bg-white focus:outline-none focus:ring-4 focus:ring-pixs-mint/5"
-                    placeholder="Your shop or brand"
-                    autoComplete="organization"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black tracking-[3px] text-slate-400 uppercase">
-                    Password <span className="text-rose-400">*</span>
-                  </label>
-                  <div className="group relative">
-                    <Lock
-                      className="group-focus-within:text-pixs-mint absolute top-1/2 left-4 -translate-y-1/2 text-slate-300 transition-colors"
-                      size={18}
-                    />
-                    <input
-                      name="password"
-                      type={showPassword ? 'text' : 'password'}
-                      value={formData.password}
-                      onChange={handleInputChange}
-                      className="focus:border-pixs-mint w-full rounded-[20px] border border-slate-100 bg-slate-50 py-4 pr-12 pl-12 text-sm font-bold text-slate-900 transition-all focus:bg-white focus:outline-none focus:ring-4 focus:ring-pixs-mint/5"
-                      placeholder="••••••••"
-                      required
-                      autoComplete="new-password"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute top-1/2 right-4 -translate-y-1/2 text-slate-300 transition-colors hover:text-slate-900"
-                      aria-label={
-                        showPassword ? 'Hide password' : 'Show password'
-                      }
-                    >
-                      {showPassword ? (
-                        <EyeOff size={18} />
-                      ) : (
-                        <Eye size={18} />
-                      )}
-                    </button>
-                  </div>
-                  {getFieldError('password') && (
-                    <p className="text-[9px] font-bold text-rose-600 uppercase">
-                      {getFieldError('password')}
-                    </p>
-                  )}
-                  <p className="text-[8px] font-bold tracking-wider text-slate-400 uppercase">
-                    Min 8 chars · letters, numbers & symbols
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black tracking-[3px] text-slate-400 uppercase">
-                    Confirm Password <span className="text-rose-400">*</span>
-                  </label>
-                  <div className="relative">
-                    <div
-                      className={`absolute top-1/2 left-4 -translate-y-1/2 ${passwordsMatch && formData.password_confirmation ? 'text-pixs-mint' : 'text-slate-300'}`}
-                    >
-                      {passwordsMatch && formData.password_confirmation ? (
-                        <CheckCircle2 size={18} />
-                      ) : (
-                        <Lock size={18} />
-                      )}
-                    </div>
-                    <input
-                      name="password_confirmation"
-                      type={showPassword ? 'text' : 'password'}
-                      value={formData.password_confirmation}
-                      onChange={handleInputChange}
-                      className={`focus:border-pixs-mint w-full rounded-[20px] border bg-slate-50 py-4 pr-4 pl-12 text-sm font-bold text-slate-900 transition-all focus:bg-white focus:outline-none focus:ring-4 focus:ring-pixs-mint/5 ${passwordsMatch ? 'border-slate-100' : 'border-rose-300'}`}
-                      placeholder="••••••••"
-                      required
-                      autoComplete="new-password"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <label className="flex cursor-pointer items-start gap-3 py-1">
-                <input
-                  type="checkbox"
-                  checked={agreedToTerms}
-                  onChange={(e) => setAgreedToTerms(e.target.checked)}
-                  className="text-pixs-mint focus:ring-pixs-mint mt-0.5 h-5 w-5 rounded-lg border-slate-200"
-                />
-                <span className="text-[9px] leading-relaxed font-black tracking-[1px] text-slate-400 uppercase">
-                  I agree to the Terms and Conditions and Privacy Policy of
-                  PIXS Printing Shop.
-                </span>
-              </label>
-
-              <button
-                type="submit"
-                disabled={isSubmitting || !passwordsMatch || !agreedToTerms}
-                className="group relative flex w-full items-center justify-center gap-4 rounded-[28px] bg-slate-900 py-5 text-xs font-black tracking-[5px] text-white uppercase shadow-2xl transition-all hover:bg-slate-800 active:scale-[0.98] disabled:opacity-50"
-              >
-                {isSubmitting ? (
-                  <div className="h-6 w-6 animate-spin rounded-full border-2 border-white/20 border-t-white" />
-                ) : (
-                  <>
-                    Create Account
-                    <ArrowRight
-                      size={18}
-                      className="transition-transform group-hover:translate-x-2"
-                    />
-                  </>
-                )}
-              </button>
-            </form>
-
-            <div className="relative my-8">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-slate-100" />
-              </div>
-              <div className="relative flex justify-center">
-                <span className="bg-white px-3 text-[9px] font-black tracking-widest text-slate-400 uppercase">
-                  Or continue with
-                </span>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={() => handleOAuth('google')}
-                className="rounded-[20px] border border-slate-100 bg-slate-50 py-3 text-[10px] font-black tracking-widest text-slate-600 uppercase transition-all hover:bg-white hover:shadow-md"
-              >
-                Google
-              </button>
-              <button
-                type="button"
-                onClick={() => handleOAuth('facebook')}
-                className="rounded-[20px] border border-slate-100 bg-slate-50 py-3 text-[10px] font-black tracking-widest text-slate-600 uppercase transition-all hover:bg-white hover:shadow-md"
-              >
-                Facebook
-              </button>
-            </div>
-
-            <div className="mt-10 text-center">
-              <p className="text-[10px] font-bold tracking-widest text-slate-400 uppercase">
+            {/* Only visible on desktop, moved to the bottom of the left column */}
+            <div className="hidden md:block mt-auto pt-8">
+              <p className="text-sm font-bold text-slate-500">
                 Already have an account?{' '}
-                <Link to="/login" className="text-pixs-mint hover:underline">
-                  Sign in
+                <Link to="/login" className="text-[#1a73e8] hover:underline hover:text-[#1557b0] transition-colors">
+                  Sign in instead
                 </Link>
               </p>
             </div>
           </div>
-        </motion.div>
+
+          {/* Right Column (Inputs) */}
+          <div className="w-full md:w-7/12 p-8 md:p-14 md:pl-8 flex flex-col justify-between">
+            <div>
+              {(error || submitError) && (
+                <div className="mb-6 rounded-2xl bg-rose-50 p-4 border border-rose-100">
+                  <p className="text-xs font-bold text-rose-600">
+                    {typeof error === 'string' ? error : submitError}
+                  </p>
+                  {fieldErrors && Object.entries(fieldErrors).map(([key, msgs]) => (
+                    <p key={key} className="text-[10px] text-rose-500 italic mt-1">
+                      {key}: {msgs.join(', ')}
+                    </p>
+                  ))}
+                </div>
+              )}
+
+              <div className="relative min-h-[240px]">
+                <AnimatePresence mode="wait" custom={1}>
+                  {step === 1 && (
+                    <motion.div
+                      key="step1"
+                      custom={1}
+                      variants={variants}
+                      initial="initial"
+                      animate="animate"
+                      exit="exit"
+                      transition={{ duration: 0.3 }}
+                      className="space-y-4 pt-2"
+                    >
+                      {/* Floating-like input groups */}
+                      <div className="relative border border-slate-300 rounded-xl px-4 py-2 focus-within:border-[#1a73e8] focus-within:ring-1 focus-within:ring-[#1a73e8] transition-all bg-white">
+                        <label className="text-xs font-medium text-slate-500">First name</label>
+                        <input
+                          name="first_name"
+                          type="text"
+                          required
+                          className="w-full bg-transparent text-sm font-medium text-slate-900 outline-none mt-1 py-1"
+                          value={formData.first_name}
+                          onChange={handleChange}
+                        />
+                      </div>
+                      
+                      <div className="relative border border-slate-300 rounded-xl px-4 py-2 focus-within:border-[#1a73e8] focus-within:ring-1 focus-within:ring-[#1a73e8] transition-all bg-white">
+                        <label className="text-xs font-medium text-slate-500">Last name</label>
+                        <input
+                          name="last_name"
+                          type="text"
+                          required
+                          className="w-full bg-transparent text-sm font-medium text-slate-900 outline-none mt-1 py-1"
+                          value={formData.last_name}
+                          onChange={handleChange}
+                        />
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {step === 2 && (
+                    <motion.div
+                      key="step2"
+                      custom={1}
+                      variants={variants}
+                      initial="initial"
+                      animate="animate"
+                      exit="exit"
+                      transition={{ duration: 0.3 }}
+                      className="space-y-4 pt-2"
+                    >
+                      <div className="relative border border-slate-300 rounded-xl px-4 py-2 focus-within:border-[#1a73e8] focus-within:ring-1 focus-within:ring-[#1a73e8] transition-all bg-white">
+                        <label className="text-xs font-medium text-slate-500">Email Address</label>
+                        <input
+                          name="email"
+                          type="email"
+                          required
+                          className="w-full bg-transparent text-sm font-medium text-slate-900 outline-none mt-1 py-1"
+                          value={formData.email}
+                          onChange={handleChange}
+                        />
+                      </div>
+
+                      <div className="relative border border-slate-300 rounded-xl px-4 py-2 focus-within:border-[#1a73e8] focus-within:ring-1 focus-within:ring-[#1a73e8] transition-all bg-white">
+                        <label className="text-xs font-medium text-slate-500">Company Name</label>
+                        <input
+                          name="company_name"
+                          type="text"
+                          className="w-full bg-transparent text-sm font-medium text-slate-900 outline-none mt-1 py-1"
+                          value={formData.company_name}
+                          onChange={handleChange}
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="relative border border-slate-300 rounded-xl px-4 py-2 focus-within:border-[#1a73e8] focus-within:ring-1 focus-within:ring-[#1a73e8] transition-all bg-white">
+                          <label className="text-xs font-medium text-slate-500">Age</label>
+                          <input
+                            name="age"
+                            type="number"
+                            className="w-full bg-transparent text-sm font-medium text-slate-900 outline-none mt-1 py-1"
+                            value={formData.age || ''}
+                            onChange={handleChange}
+                          />
+                        </div>
+                        <div className="relative border border-slate-300 rounded-xl px-4 py-2 focus-within:border-[#1a73e8] focus-within:ring-1 focus-within:ring-[#1a73e8] transition-all bg-white">
+                          <label className="text-xs font-medium text-slate-500 flex justify-between w-full">Gender</label>
+                          <select
+                            name="gender"
+                            className="w-full bg-transparent text-sm font-medium text-slate-900 outline-none mt-1 py-1 cursor-pointer appearance-none"
+                            value={formData.gender || ''}
+                            onChange={handleChange}
+                          >
+                            <option value="">Select</option>
+                            <option value="male">Male</option>
+                            <option value="female">Female</option>
+                            <option value="other">Other</option>
+                          </select>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {step === 3 && (
+                    <motion.div
+                      key="step3"
+                      custom={1}
+                      variants={variants}
+                      initial="initial"
+                      animate="animate"
+                      exit="exit"
+                      transition={{ duration: 0.3 }}
+                      className="space-y-4 pt-2"
+                    >
+                      <div className="relative border border-slate-300 rounded-xl px-4 py-2 focus-within:border-[#1a73e8] focus-within:ring-1 focus-within:ring-[#1a73e8] transition-all bg-white">
+                        <label className="text-xs font-medium text-slate-500">Password</label>
+                        <input
+                          name="password"
+                          type="password"
+                          required
+                          className="w-full bg-transparent text-sm font-medium text-slate-900 outline-none mt-1 py-1"
+                          value={formData.password}
+                          onChange={handleChange}
+                        />
+                      </div>
+
+                      <div className="relative border border-slate-300 rounded-xl px-4 py-2 focus-within:border-[#1a73e8] focus-within:ring-1 focus-within:ring-[#1a73e8] transition-all bg-white">
+                        <label className="text-xs font-medium text-slate-500">Confirm Password</label>
+                        <input
+                          name="password_confirmation"
+                          type="password"
+                          required
+                          className="w-full bg-transparent text-sm font-medium text-slate-900 outline-none mt-1 py-1"
+                          value={formData.password_confirmation}
+                          onChange={handleChange}
+                        />
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              {/* Progress Bar (Dots style or simple line, Google uses subtle indicator or we can just keep the line) */}
+              <div className="flex gap-1.5 mt-8 mb-4 max-w-[80px]">
+                {[1, 2, 3].map((i) => (
+                  <div 
+                    key={i} 
+                    className={clsx(
+                      "h-1 flex-1 rounded-full transition-all duration-500",
+                      step >= i ? "bg-[#1a73e8]" : "bg-slate-200"
+                    )}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Bottom Actions */}
+            <div className="mt-8 flex items-center justify-between">
+              {step > 1 ? (
+                <button
+                  type="button"
+                  onClick={prevStep}
+                  className="px-6 py-2 text-sm font-bold text-[#1a73e8] hover:bg-[#1a73e8]/10 rounded-full transition-colors active:scale-95"
+                >
+                  Back
+                </button>
+              ) : (
+                <div />
+              )}
+              
+              {step < 3 ? (
+                <button
+                  type="button"
+                  onClick={nextStep}
+                  className="px-6 py-2.5 text-sm font-bold text-white bg-[#1a73e8] hover:bg-[#1557b0] rounded-full transition-colors shadow-sm active:scale-95"
+                >
+                  Next
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleSubmit}
+                  disabled={loading}
+                  className="px-6 py-2.5 text-sm font-bold text-white bg-[#1a73e8] hover:bg-[#1557b0] rounded-full transition-colors shadow-sm active:scale-95 disabled:opacity-50"
+                >
+                  {loading ? 'Wait...' : 'Register'}
+                </button>
+              )}
+            </div>
+
+            {/* Mobile login link */}
+            <div className="md:hidden mt-8 pt-6 border-t border-slate-100 text-center text-sm font-bold text-slate-500">
+              Already have an account?{' '}
+              <Link
+                to="/login"
+                className="text-[#1a73e8] hover:underline"
+              >
+                Sign in
+              </Link>
+            </div>
+            
+            {/* Social Oauth Buttons (kept minimal if needed or just remove, but let's keep them below on step 1) */}
+            {step === 1 && (
+              <div className="mt-6 pt-6 border-t border-slate-100">
+                <div className="flex gap-4 flex-col sm:flex-row">
+                  <button
+                    onClick={() => handleOAuth('google')}
+                    className="flex-1 flex items-center justify-center gap-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-full py-2.5 text-xs font-bold text-slate-700 transition-colors"
+                  >
+                    Google
+                  </button>
+                  <button
+                    onClick={() => handleOAuth('facebook')}
+                    className="flex-1 flex items-center justify-center gap-2 bg-[#1877F2]/5 hover:bg-[#1877F2]/10 border border-[#1877F2]/10 rounded-full py-2.5 text-xs font-bold text-[#1877F2] transition-colors"
+                  >
+                    Facebook
+                  </button>
+                </div>
+              </div>
+            )}
+
+          </div>
+        </div>
       </main>
 
       <Footer />

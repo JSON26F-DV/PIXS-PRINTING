@@ -16,7 +16,7 @@ import {
   Package,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { useDiscovery } from '../../context/DiscoveryContext'
 import DiscoveryModal from './DiscoveryModal'
@@ -60,6 +60,7 @@ const CustomerNavbar: React.FC = () => {
   const { getCartCount } = useCartStore()
   const { unreadCount } = useNotificationStore()
   const location = useLocation()
+  const navigate = useNavigate()
   const isActive = (path: string) => location.pathname === path
 
   const plateStatus = 'Ready'
@@ -93,7 +94,7 @@ const CustomerNavbar: React.FC = () => {
             {/* Tablet-only Search and Address Icons */}
             <div className="hidden items-center gap-2 md:flex min-[1251px]:!hidden">
               <button
-                onClick={() => openDiscovery()}
+                onClick={() => user?.isLoggedIn ? openDiscovery() : navigate('/login')}
                 className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-50 text-slate-400 transition-colors hover:bg-slate-100"
               >
                 <Search size={18} strokeWidth={2.5} />
@@ -132,7 +133,7 @@ const CustomerNavbar: React.FC = () => {
             <div className="CustomerNavbarSearch relative w-full">
               <div className="group-focus-within:text-pixs-mint absolute top-1/2 left-6 -translate-y-1/2 text-slate-300 transition-colors" />
               <button
-                onClick={() => openDiscovery()}
+                onClick={() => user?.isLoggedIn ? openDiscovery() : navigate('/login')}
                 className="CustomerNavbarSearchInput hover:border-pixs-mint/30 group w-full overflow-hidden rounded-[24px] border border-slate-100/50 bg-slate-50 py-4 pr-6 pl-16 text-left shadow-inner transition-all hover:bg-white"
               >
                 <span className="max-w-[120px] overflow-hidden text-[10px] font-black tracking-[4px] text-ellipsis whitespace-nowrap text-slate-400 uppercase italic opacity-50 group-hover:text-slate-500 min-[1251px]:max-w-none">
@@ -140,7 +141,7 @@ const CustomerNavbar: React.FC = () => {
                 </span>
               </button>
               <button
-                onClick={() => openDiscovery()}
+                onClick={() => user?.isLoggedIn ? openDiscovery() : navigate('/login')}
                 className="CustomerNavbarSearchButton hover:bg-pixs-mint absolute top-1/2 right-2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-xl bg-slate-100 transition-colors"
               >
                 <Search
@@ -342,15 +343,32 @@ const CustomerNavbar: React.FC = () => {
 
           {/* 🔍 Search Bar */}
           <div className="px-4 pb-4">
-            <button
-              onClick={() => openDiscovery()}
-              className="hover:border-pixs-mint flex h-12 w-full items-center gap-4 rounded-[16px] border-2 border-slate-100 bg-white px-5 shadow-inner transition-transform active:scale-[0.98]"
-            >
-              <Search size={18} className="text-slate-300" strokeWidth={3} />
-              <span className="flex-1 bg-transparent text-left text-[10px] font-black tracking-[4px] text-slate-900 uppercase italic opacity-30">
-                Search Data Matrix...
-              </span>
-            </button>
+            {user?.isLoggedIn ? (
+              <button
+                onClick={() => openDiscovery()}
+                className="hover:border-pixs-mint flex h-12 w-full items-center gap-4 rounded-[16px] border-2 border-slate-100 bg-white px-5 shadow-inner transition-transform active:scale-[0.98]"
+              >
+                <Search size={18} className="text-slate-300" strokeWidth={3} />
+                <span className="flex-1 bg-transparent text-left text-[10px] font-black tracking-[4px] text-slate-900 uppercase italic opacity-30">
+                  Search Data Matrix...
+                </span>
+              </button>
+            ) : (
+              <div className="flex items-center gap-3 w-full">
+                <Link
+                  to="/login"
+                  className="flex flex-1 items-center justify-center rounded-[16px] border border-slate-100 bg-slate-50 py-3.5 text-[10px] font-black tracking-[4px] text-slate-900 uppercase italic transition-all active:scale-95"
+                >
+                  Sign In
+                </Link>
+                <Link
+                  to="/register"
+                  className="flex flex-1 items-center justify-center rounded-[16px] border border-white/10 bg-slate-900 py-3.5 text-[10px] font-black tracking-[4px] text-white uppercase italic shadow-lg transition-all active:scale-95"
+                >
+                  Join Now
+                </Link>
+              </div>
+            )}
           </div>
         </div>
       )}

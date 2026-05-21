@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { clsx } from 'clsx'
 import { useAuth } from '../../hooks/useAuth'
 
 // Local Components
@@ -45,6 +46,16 @@ const MessengerPage: React.FC = () => {
   const { user } = useAuth()
   const [messages, setMessages] = useState<IMessage[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [imageUploadCount, setImageUploadCount] = useState(0)
+
+  const fetchImageCount = async () => {
+    try {
+      const res = await axiosInstance.get('/api/messages/image-count')
+      setImageUploadCount(res.data.count)
+    } catch (error) {
+      console.error('Failed to fetch image count', error)
+    }
+  }
 
   useEffect(() => {
     const fetchMessages = async () => {
@@ -82,6 +93,7 @@ const MessengerPage: React.FC = () => {
     }
     if (user && user.id) {
       fetchMessages()
+      fetchImageCount()
     } else {
       setIsLoading(false)
     }
@@ -97,17 +109,21 @@ const MessengerPage: React.FC = () => {
   }
 
   // Initialize gallery to true for desktop mode reveal
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth)
   const [isGalleryOpen, setIsGalleryOpen] = useState(window.innerWidth >= 1024)
   const [activeReplyTo, setActiveReplyTo] = useState<IMessage | null>(null)
 
   // Auto-manage gallery visibility based on terminal viewport
   useEffect(() => {
     const handleResize = () => {
+      setWindowWidth(window.innerWidth)
       if (window.innerWidth >= 1024) setIsGalleryOpen(true)
     }
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)
   }, [])
+
+  const isSmallMobile = windowWidth <= 430
 
   // Persistence Protocol
   useEffect(() => {
@@ -167,6 +183,11 @@ const MessengerPage: React.FC = () => {
           'Content-Type': 'multipart/form-data',
         },
       })
+
+      // Refresh image count after successful send if attachments contained images
+      if (attachments.some(a => a.type === 'image')) {
+        fetchImageCount()
+      }
     } catch (error) {
       console.error('Message failed to send', error)
       // Ideally flag message as failed here
@@ -262,7 +283,7 @@ const MessengerPage: React.FC = () => {
             </div>
 
             <main className="relative flex flex-1 overflow-hidden pt-[80px] pb-[196px] md:pt-[176px] md:pb-[116px]">
-              <div className="flex flex-1 flex-col">
+              <div className="flex flex-1 flex-col px-0.5 min-[360px]:px-1 min-[414px]:px-1 sm:px-0">
                 <MessageList
                   messages={messages}
                   onReact={handleReaction}
@@ -297,6 +318,8 @@ const MessengerPage: React.FC = () => {
                 onSend={handleSendMessage}
                 activeReplyTo={activeReplyTo}
                 onCancelReply={() => setActiveReplyTo(null)}
+                totalImageUploads={imageUploadCount}
+                isEmployee={user?.account_type === 'employee'}
               />
             </div>
           </div>
@@ -306,24 +329,50 @@ const MessengerPage: React.FC = () => {
       {/* Gallery Modal for Mobile */}
       <AnimatePresence>
         {isGalleryOpen && (
-          <motion.div
-            initial={{ y: '100%' }}
-            animate={{ y: 0 }}
-            exit={{ y: '100%' }}
-            className="fixed inset-0 z-50 bg-white lg:hidden"
-          >
-            <GalleryView
-              messages={messages}
-              onClose={() => setIsGalleryOpen(false)}
-              isMobile
-            />
-          </motion.div>
+          <div className="fixed inset-0 z-50 flex items-center justify-center lg:hidden">
+            {!isSmallMobile && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+                onClick={() => setIsGalleryOpen(false)}
+              />
+            )}
+            <motion.div
+              initial={
+                isSmallMobile
+                  ? { y: '100%' }
+                  : { opacity: 0, scale: 0.9, y: 20 }
+              }
+              animate={
+                isSmallMobile ? { y: 0 } : { opacity: 1, scale: 1, y: 0 }
+              }
+              exit={
+                isSmallMobile
+                  ? { y: '100%' }
+                  : { opacity: 0, scale: 0.9, y: 20 }
+              }
+              className={clsx(
+                'relative bg-white shadow-2xl transition-all duration-300',
+                isSmallMobile
+                  ? 'fixed inset-0 h-full w-full'
+                  : 'h-[85vh] w-[90%] max-w-[440px] overflow-hidden rounded-[32px]',
+              )}
+            >
+              <GalleryView
+                messages={messages}
+                onClose={() => setIsGalleryOpen(false)}
+                isMobile
+              />
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
 
       <div
         id="messenger-portal-root"
-        className="pointer-events-none fixed inset-0 z-[9999]"
+        className="pointer-events-none fixed inset-0 z-[10000]"
       />
     </div>
   )

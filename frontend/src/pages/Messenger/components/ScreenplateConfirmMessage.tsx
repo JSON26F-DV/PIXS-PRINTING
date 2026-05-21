@@ -133,10 +133,15 @@ const ScreenplateConfirmMessage: React.FC<ScreenplateConfirmMessageProps> = ({ r
         <div className="p-6">
             <div 
                 className="group relative h-52 w-full rounded-2xl overflow-hidden cursor-pointer border border-white/10"
-                onClick={() => onImageClick(request.reference_image!)}
+                onClick={() => {
+                    const url = request.reference_image?.startsWith('data:') 
+                        ? request.reference_image 
+                        : `/src/assets/message_media/${request.reference_image}`;
+                    onImageClick(url);
+                }}
             >
                 <img 
-                    src={request.reference_image} 
+                    src={request.reference_image?.startsWith('data:') ? request.reference_image : `/src/assets/message_media/${request.reference_image}`} 
                     className="w-full h-full object-cover transition-transform group-hover:scale-105" 
                 />
                 <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">

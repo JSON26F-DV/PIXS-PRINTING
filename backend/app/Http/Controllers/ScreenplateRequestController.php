@@ -66,14 +66,14 @@ class ScreenplateRequestController extends Controller
 
                     $fileName = 'SPR_' . time() . '_' . Str::random(5) . '.' . $type;
                     
-                    // Specific path request: frontend/public/images/screenplate_request
-                    $savePath = base_path('../frontend/public/images/screenplate_request');
+                    // Specific path request: frontend/src/assets/message_media
+                    $savePath = base_path('../frontend/src/assets/message_media');
                     if (!file_exists($savePath)) {
                         mkdir($savePath, 0755, true);
                     }
                     
                     file_put_contents($savePath . '/' . $fileName, $imageData);
-                    $imagePath = '/images/screenplate_request/' . $fileName;
+                    $imagePath = $fileName;
                 } catch (\Throwable $e) {
                     Log::error('Image saving failed', ['error' => $e->getMessage()]);
                     // Fallback or handle error

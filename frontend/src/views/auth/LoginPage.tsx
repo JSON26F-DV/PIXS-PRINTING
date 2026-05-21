@@ -2,14 +2,13 @@ import React, { useState } from 'react'
 import {
   Lock,
   Mail,
-  ArrowRight,
   Eye,
   EyeOff,
   ShieldCheck,
 } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useAuth } from '../../context/AuthContext'
-import CustomerNavbar from '../../components/customer/CustomerNavbar'
+import AuthNavbar from '../../components/auth/AuthNavbar'
 import Footer from '../../components/Footer/Footer'
 import { Link } from 'react-router-dom'
 
@@ -52,13 +51,75 @@ const LoginPage: React.FC = () => {
 
   return (
     <div className="flex min-h-screen flex-col bg-white">
-      <CustomerNavbar />
+      <style>{`
+        .cssbuttons-io-button {
+          background: #75eea5;
+          color: white;
+          font-family: inherit;
+          padding: 0.35em;
+          padding-left: 1.2em;
+          font-size: 17px;
+          font-weight: 500;
+          border-radius: 15px;
+          border: none;
+          letter-spacing: 0.05em;
+          display: flex;
+          align-items: center;
+          box-shadow: inset 0 0 1.6em -0.6em #75eea5;
+          overflow: hidden;
+          position: relative;
+          height: 3.2em;
+          padding-right: 3.3em;
+          justify-content: center;
+          cursor: pointer;
+          width: 100%;
+        }
+
+        .cssbuttons-io-button .icon {
+          background: white;
+          margin-left: 1em;
+          position: absolute;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          height: 2.6em;
+          width: 2.6em;
+          border-radius: 12px;
+          box-shadow: 0.1em 0.1em 0.6em 0.2em rgba(117, 238, 165, 0.4);
+          right: 0.3em;
+          transition: all 0.3s;
+        }
+
+        .cssbuttons-io-button:hover .icon {
+          width: calc(100% - 0.6em);
+        }
+
+        .cssbuttons-io-button .icon svg {
+          width: 1.1em;
+          transition: transform 0.3s;
+          color: #75eea5;
+        }
+
+        .cssbuttons-io-button:hover .icon svg {
+          transform: translateX(0.1em);
+        }
+
+        .cssbuttons-io-button:active .icon {
+          transform: scale(0.95);
+        }
+        
+        .cssbuttons-io-button:disabled {
+          opacity: 0.7;
+          cursor: not-allowed;
+        }
+      `}</style>
+      <AuthNavbar />
 
       <main className="flex flex-grow items-center justify-center bg-slate-50 p-6 pt-24 pb-12">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="relative grid w-full max-w-[1100px] grid-cols-1 overflow-hidden rounded-[48px] border border-slate-100 bg-white shadow-2xl md:grid-cols-2"
+          className="relative grid w-full max-w-[1100px] grid-cols-1 overflow-hidden rounded-[28px] border border-slate-100 bg-white shadow-2xl md:grid-cols-2"
         >
           {/* Left Side: Industrial Visuals */}
           <div className="relative hidden flex-col justify-between bg-slate-900 p-16 text-white md:flex">
@@ -151,7 +212,7 @@ const LoginPage: React.FC = () => {
                       setEmail(e.target.value)
                       clearErrors()
                     }}
-                    className={`focus:border-pixs-mint w-full rounded-[24px] border bg-slate-50 py-5 pr-6 pl-14 text-sm font-bold text-slate-900 transition-all focus:bg-white focus:outline-none focus:ring-4 focus:ring-pixs-mint/5 ${
+                    className={`focus:border-pixs-mint w-full rounded-[15px] border bg-slate-50 py-5 pr-6 pl-14 text-sm font-bold text-slate-900 transition-all focus:bg-white focus:outline-none focus:ring-4 focus:ring-pixs-mint/5 ${
                       emailError ? 'border-rose-300' : 'border-slate-100'
                     }`}
                     placeholder="name@email.com"
@@ -192,7 +253,7 @@ const LoginPage: React.FC = () => {
                       setPassword(e.target.value)
                       clearErrors()
                     }}
-                    className={`focus:border-pixs-mint w-full rounded-[24px] border bg-slate-50 py-5 pr-14 pl-14 text-sm font-bold text-slate-900 transition-all focus:bg-white focus:outline-none focus:ring-4 focus:ring-pixs-mint/5 ${
+                    className={`focus:border-pixs-mint w-full rounded-[15px] border bg-slate-50 py-5 pr-14 pl-14 text-sm font-bold text-slate-900 transition-all focus:bg-white focus:outline-none focus:ring-4 focus:ring-pixs-mint/5 ${
                       passwordError ? 'border-rose-300' : 'border-slate-100'
                     }`}
                     placeholder="••••••••••••"
@@ -241,29 +302,37 @@ const LoginPage: React.FC = () => {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="group relative flex w-full items-center justify-center gap-4 rounded-[28px] bg-slate-900 py-6 text-xs font-black tracking-[5px] text-white uppercase shadow-2xl transition-all hover:bg-slate-800 active:scale-[0.98] disabled:opacity-50"
+                className="cssbuttons-io-button"
               >
                 {isLoading ? (
-                  <div className="h-6 w-6 animate-spin rounded-full border-2 border-white/20 border-t-white" />
+                  <div className="h-6 w-6 animate-spin rounded-full border-2 border-white/20 border-t-white relative z-10" />
                 ) : (
                   <>
-                    Sign In{' '}
-                    <ArrowRight
-                      size={18}
-                      className="transition-transform group-hover:translate-x-2"
-                    />
+                    <span className="relative z-10 font-bold uppercase tracking-widest text-xs">Sign In</span>
+                    <div className="icon">
+                      <svg height="24" width="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M0 0h24v24H0z" fill="none"></path>
+                        <path d="M16.172 11l-5.364-5.364 1.414-1.414L20 12l-7.778 7.778-1.414-1.414L16.172 13H4v-2z" fill="currentColor"></path>
+                      </svg>
+                    </div>
                   </>
                 )}
               </button>
             </form>
 
-            <div className="mt-12 text-center">
+            <div className="mt-12 text-center space-y-6">
               <p className="text-[10px] font-bold tracking-widest text-slate-400 uppercase">
                 New to the platform?{' '}
                 <Link to="/register" className="text-pixs-mint hover:underline">
                   Create an Account
                 </Link>
               </p>
+              
+              <div className="md:hidden">
+                <Link to="/" className="inline-flex items-center gap-2 text-[10px] font-bold tracking-widest text-slate-400 hover:text-slate-600 uppercase transition-colors">
+                  &larr; Back to Landing Page
+                </Link>
+              </div>
             </div>
           </div>
         </motion.div>
