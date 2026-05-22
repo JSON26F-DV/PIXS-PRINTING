@@ -161,6 +161,13 @@ const ProductDetailInner: React.FC<{
       return
     }
 
+    // Protocol: Check stock availability against minimum order requirements
+    if (computed.stockForVariant < product.min_order) {
+      alert('Insufficient stock for this variant. Please select another.')
+      window.location.reload()
+      return
+    }
+
     const colorIdPart =
       computed.selectedColors
         .map((c) => c.id)
