@@ -280,7 +280,7 @@ class OrderController extends Controller
         try {
             return DB::transaction(function () use ($validated, $user) {
                 // STEP 2: Load cart items with relations
-                $cartItems = CartItem::with(['colors', 'variant', 'screenplate'])
+                $cartItems = CartItem::with(['colors', 'variant', 'screenplate', 'product'])
                     ->whereIn('id', $validated['cart_item_ids'])
                     ->get();
 
@@ -293,6 +293,27 @@ class OrderController extends Controller
 
                 if ($cartItems->count() !== count($validated['cart_item_ids'])) {
                     return response()->json(['message' => 'Some cart items were not found or do not belong to you.'], 400);
+                }
+
+                // STEP 1.5: Stock validation — check each selected cart item against variant stock
+                $stockErrors = [];
+                foreach ($cartItems as $cartItem) {
+                    if ($cartItem->variant && $cartItem->quantity > $cartItem->variant->stock) {
+                        $stockErrors[] = [
+                            'cart_item_id' => $cartItem->id,
+                            'product_name' => $cartItem->product?->name ?? 'Unknown Product',
+                            'variant_id' => $cartItem->variant_id,
+                            'requested' => $cartItem->quantity,
+                            'available' => $cartItem->variant->stock,
+                        ];
+                    }
+                }
+
+                if (! empty($stockErrors)) {
+                    return response()->json([
+                        'message' => 'INSUFFICIENT_STOCK',
+                        'stock_errors' => $stockErrors,
+                    ], 422);
                 }
 
                 // STEP 3: Calculate totals
@@ -316,22 +337,26 @@ class OrderController extends Controller
                         }
 
                         if ($isValid) {
-                            if ($discount->product_id) {
+                            if ($discount->variant_id) {
+                                $relevantItems = $cartItems->where('variant_id', $discount->variant_id);
+                                if ($relevantItems->count() > 0) {
+                                    $relevantSubtotal = $relevantItems->sum('total_cart_price');
+                                    $totalDiscountAmount = $discount->type === 'fixed'
+                                        ? min($discount->value, $relevantSubtotal)
+                                        : $relevantSubtotal * ($discount->value / 100);
+                                }
+                            } elseif ($discount->product_id) {
                                 $relevantItems = $cartItems->where('product_id', $discount->product_id);
                                 if ($relevantItems->count() > 0) {
                                     $relevantSubtotal = $relevantItems->sum('total_cart_price');
-                                    if ($discount->type === 'fixed') {
-                                        $totalDiscountAmount = min($discount->value, $relevantSubtotal);
-                                    } else {
-                                        $totalDiscountAmount = $relevantSubtotal * ($discount->value / 100);
-                                    }
+                                    $totalDiscountAmount = $discount->type === 'fixed'
+                                        ? min($discount->value, $relevantSubtotal)
+                                        : $relevantSubtotal * ($discount->value / 100);
                                 }
                             } else {
-                                if ($discount->type === 'fixed') {
-                                    $totalDiscountAmount = min($discount->value, $totalAmount);
-                                } else {
-                                    $totalDiscountAmount = $totalAmount * ($discount->value / 100);
-                                }
+                                $totalDiscountAmount = $discount->type === 'fixed'
+                                    ? min($discount->value, $totalAmount)
+                                    : $totalAmount * ($discount->value / 100);
                             }
 
                             if ($totalDiscountAmount > 0) {

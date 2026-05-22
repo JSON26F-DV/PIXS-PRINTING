@@ -27,6 +27,7 @@ class DiscountController extends Controller
         $validated = $request->validate([
             'customer_id' => 'nullable|string|exists:customers,id',
             'product_id' => 'nullable|string|exists:products,id',
+            'variant_id' => 'nullable|string|exists:product_variants,variant_id',
             'type' => 'required|in:fixed,percentage',
             'value' => 'required|numeric|min:0',
             'min_spend' => 'nullable|numeric|min:0',
@@ -37,12 +38,14 @@ class DiscountController extends Controller
             'id' => 'dsc_'.Str::random(10),
             'customer_id' => $validated['customer_id'] ?? null,
             'product_id' => $validated['product_id'] ?? null,
+            'variant_id' => $validated['variant_id'] ?? null,
             'code' => strtoupper(Str::random(8)),
             'type' => $validated['type'],
             'value' => $validated['value'],
             'min_spend' => $validated['min_spend'] ?? 0,
             'expires_at' => $validated['expires_at'] ?? null,
             'already_used' => false,
+            'created_at' => now(),
         ]);
 
         return response()->json([
@@ -58,16 +61,9 @@ class DiscountController extends Controller
     {
         $user = $request->user();
 
-        $discounts = Discount::where(function ($query) use ($user) {
-            $query->where('customer_id', $user->id)
-                ->orWhereNull('customer_id');
-        })
-            ->where('already_used', false)
-            ->where(function ($query) {
-                $query->whereNull('expires_at')
-                    ->orWhere('expires_at', '>', now());
-            })
-            ->with('product')
+        $discounts = Discount::with(['product', 'variant'])
+            ->whereNull('customer_id')
+            ->orWhere('customer_id', $user->id)
             ->get();
 
         return response()->json([

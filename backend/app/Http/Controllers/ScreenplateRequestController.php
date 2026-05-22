@@ -52,7 +52,7 @@ class ScreenplateRequestController extends Controller
                         $imageData = substr($imageData, strpos($imageData, ',') + 1);
                         $type = strtolower($type[1]); // jpg, png, etc
 
-                        if (! in_array($type, ['jpg', 'jpeg', 'gif', 'png', 'webp'])) {
+                        if (! in_array($type, ['jpg', 'jpeg', 'png', 'webp'])) {
                             throw new \Exception('invalid image type');
                         }
                         $imageData = base64_decode($imageData);
@@ -66,8 +66,7 @@ class ScreenplateRequestController extends Controller
 
                     $fileName = 'SPR_'.time().'_'.Str::random(5).'.'.$type;
 
-                    // Specific path request: frontend/src/assets/message_media
-                    $savePath = base_path('../frontend/src/assets/message_media');
+                    $savePath = base_path('../frontend/public/images/screenplate_request');
                     if (! file_exists($savePath)) {
                         mkdir($savePath, 0755, true);
                     }

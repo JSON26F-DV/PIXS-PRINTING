@@ -24,7 +24,7 @@ class MessageController extends Controller
             'id', 'conversation_id', 'sender_id', 'sender_type',
             'receiver_id', 'receiver_type', 'message',
             'reply_to_id', 'is_edited', 'is_deleted', 'is_read',
-            'order_id', 'screenplate_request_id',
+            'order_id', 'screenplate_request_id', 'is_confirm',
             'created_at', 'updated_at',
         ];
 
@@ -266,5 +266,27 @@ class MessageController extends Controller
             ->update(['is_read' => 1, 'updated_at' => now()]);
 
         return response()->json(['message' => 'Marked as read.']);
+    }
+
+    /**
+     * Mark a message as confirmed (is_confirm = 1).
+     */
+    public function confirmMessage(string $id): JsonResponse
+    {
+        $user = request()->user();
+
+        $updated = DB::table('messages')
+            ->where('id', $id)
+            ->where(function ($q) use ($user) {
+                $q->where('sender_id', $user->id)
+                    ->orWhere('receiver_id', $user->id);
+            })
+            ->update(['is_confirm' => 1, 'updated_at' => now()]);
+
+        if ($updated === 0) {
+            return response()->json(['message' => 'Message not found or unauthorized.'], 404);
+        }
+
+        return response()->json(['message' => 'Confirmed.']);
     }
 }

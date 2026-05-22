@@ -20,6 +20,8 @@ class Order extends Model
         'address_id',
         'payment_method_id',
         'total_amount',
+        'discount_id',
+        'total_discount_amount',
         'status',
         'delivery_method_id',
         'production_notes',

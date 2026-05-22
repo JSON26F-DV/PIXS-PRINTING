@@ -101,6 +101,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/messages/image-count', [MessageController::class, 'getImageUploadCount']);
     Route::post('/messages/send', [MessageController::class, 'store']);
     Route::patch('/messages/mark-read', [MessageController::class, 'markConversationAsRead']);
+    Route::patch('/messages/{id}/confirm', [MessageController::class, 'confirmMessage']);
 
     // Notifications
     Route::post('/notifications', [NotificationController::class, 'store']);

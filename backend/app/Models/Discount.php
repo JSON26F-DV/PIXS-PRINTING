@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class Discount extends Model
 {
+    public $timestamps = false;
+
     protected $table = 'discounts';
 
     protected $primaryKey = 'id';
@@ -18,6 +20,7 @@ class Discount extends Model
         'id',
         'customer_id',
         'product_id',
+        'variant_id',
         'code',
         'type',
         'value',
@@ -41,6 +44,11 @@ class Discount extends Model
     public function product()
     {
         return $this->belongsTo(Product::class, 'product_id');
+    }
+
+    public function variant()
+    {
+        return $this->belongsTo(ProductVariant::class, 'variant_id', 'variant_id');
     }
 
     public function orders()
