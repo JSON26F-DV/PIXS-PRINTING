@@ -28,6 +28,7 @@ export interface IMessage {
   receiverId?: string
   order_id?: string
   screenplate_request_id?: string
+  is_confirm?: number
 }
 
 interface ApiMessage {
@@ -40,6 +41,7 @@ interface ApiMessage {
   attachments?: { type: 'image' | 'file'; url: string; name: string }[];
   order_id?: string
   screenplate_request_id?: string
+  is_confirm?: number
 }
 
 const MessengerPage: React.FC = () => {
@@ -81,7 +83,8 @@ const MessengerPage: React.FC = () => {
             senderId: m.sender_id,
             receiverId: m.receiver_id,
             order_id: m.order_id,
-            screenplate_request_id: m.screenplate_request_id
+            screenplate_request_id: m.screenplate_request_id,
+            is_confirm: m.is_confirm
           }
         })
         setMessages(formatted)

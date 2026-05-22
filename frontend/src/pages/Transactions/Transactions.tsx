@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import {
   ShieldCheck,
@@ -15,6 +15,7 @@ import toast from 'react-hot-toast'
 import type { CartItem } from '../../types/cart'
 import AbortConfirmModal from '../../components/Transactions/AbortConfirmModal'
 import PurchaseSuccessModal from '../../components/Transactions/PurchaseSuccessModal'
+import StockAlertModal from '../../components/Transactions/StockAlertModal'
 import { orderApi } from '../../api/orders.api'
 import { cartService } from '../AddToCart/services/cartService'
 
@@ -23,6 +24,7 @@ import PaymentSection from '../../components/Transactions/PaymentSection'
 import DeliverySection from '../../components/Transactions/DeliverySection'
 import ReceiptSection from '../../components/Transactions/ReceiptSection'
 import ExtraNotesSection from '../../components/Transactions/ExtraNotesSection'
+import Discount from './components/Discount'
 
 import { useCustomerAddressStore } from '../../store/useCustomerAddressStore'
 import { usePaymentMethodStore } from '../../store/usePaymentMethodStore'
@@ -82,12 +84,7 @@ export interface IDeliveryMethod {
   type?: string
 }
 
-export interface IDiscount {
-  id: string
-  title: string
-  discount_type: string
-  discount_value: number
-}
+import type { IDiscountItem } from './components/Discount'
 
 const Transactions: React.FC = () => {
   const navigate = useNavigate()
@@ -112,14 +109,41 @@ const Transactions: React.FC = () => {
   const [isAbortModalOpen, setIsAbortModalOpen] = useState(false)
   const [checkoutItems, setCheckoutItems] = useState<CartItem[]>([])
 
-  // Discount System (Disabled)
-  const [selectedDiscountId, setSelectedDiscountId] = useState<string | null>(null)
-  const [discountAmount] = useState(0)
+  // Discount System
+  const [selectedDiscount, setSelectedDiscount] = useState<IDiscountItem | null>(null)
+
+  const discountAmount = useMemo(() => {
+    if (!selectedDiscount) return 0
+
+    let matchingItems = checkoutItems
+    if (selectedDiscount.variant_id) {
+      matchingItems = checkoutItems.filter((i) => i.variant.id === selectedDiscount.variant_id)
+    } else if (selectedDiscount.product_id) {
+      matchingItems = checkoutItems.filter((i) => i.productId === selectedDiscount.product_id)
+    }
+
+    if (matchingItems.length === 0) return 0
+
+    const matchSubtotal = matchingItems.reduce(
+      (acc, item) => acc + (item.totalCartPrice ?? item.quantity * item.variant.unitPrice),
+      0,
+    )
+
+    if (selectedDiscount.type === 'fixed') {
+      return selectedDiscount.value
+    }
+
+    return matchSubtotal * (selectedDiscount.value / 100)
+  }, [selectedDiscount, checkoutItems])
  
   // Order Submission State
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false)
   const [lastOrderId, setLastOrderId] = useState('')
   const [lastOrderTotal, setLastOrderTotal] = useState(0)
+
+  // Stock Alert State
+  const [isStockAlertOpen, setIsStockAlertOpen] = useState(false)
+  const [stockAlertItems, setStockAlertItems] = useState<{ name: string; requested: number; available: number }[]>([])
 
 
   // Initial Data Load
@@ -179,7 +203,7 @@ const Transactions: React.FC = () => {
     }
   }, [paymentMethods, selectedPaymentId])
 
-  const availableDiscounts: IDiscount[] = []
+  const availableDiscounts: IDiscountItem[] = []
 
   const handleAbortSequence = () => {
     localStorage.removeItem('pixs_checkout_node')
@@ -204,14 +228,31 @@ const Transactions: React.FC = () => {
         return
     }
 
+    // Stock validation: check if any selected item quantity exceeds available stock
+    const lowStockItems = checkoutItems.filter(
+      (item) => item.quantity > (item.variant?.stock ?? 0)
+    )
+    if (lowStockItems.length > 0) {
+      setStockAlertItems(
+        lowStockItems.map((item) => ({
+          name: item.productName,
+          requested: item.quantity,
+          available: item.variant?.stock ?? 0,
+        }))
+      )
+      setIsStockAlertOpen(true)
+      return
+    }
+
     setIsProcessing(true)
 
-    const payload = {
+    const payload: import('../../api/orders.api').CreateOrderPayload = {
       cart_item_ids: checkoutItems.map(i => i.id),
       address_id: selectedAddr.id,
       payment_method_id: selectedPay!.id,
       delivery_method_id: delMeta?.id || selectedDeliveryId,
-      production_notes: notes
+      production_notes: notes,
+      discount_id: selectedDiscount?.id ?? null,
     };
 
     console.log('Final Order Payload:', payload)
@@ -274,8 +315,23 @@ const Transactions: React.FC = () => {
       }, 3000)
     } catch (err) {
       console.error('Purchase Error:', err)
-      const errorResponse = err as { errors?: { message: string }[]; response?: { data?: { message?: string } } };
-      const msg = errorResponse.errors?.[0]?.message || errorResponse.response?.data?.message || 'Failed to place order.'
+
+      const axiosErr = err as { response?: { data?: { message?: string; stock_errors?: { product_name: string; requested: number; available: number }[] } } };
+      const backendData = axiosErr.response?.data
+
+      if (backendData?.message === 'INSUFFICIENT_STOCK' && backendData?.stock_errors) {
+        setStockAlertItems(
+          backendData.stock_errors.map((item) => ({
+            name: item.product_name,
+            requested: item.requested,
+            available: item.available,
+          }))
+        )
+        setIsStockAlertOpen(true)
+        return
+      }
+
+      const msg = backendData?.message || 'Failed to place order.'
       toast.error(msg)
       fetchNotifications() // fetch real-time failed notification
     } finally {
@@ -412,6 +468,12 @@ const Transactions: React.FC = () => {
 
             <div className="h-px w-full bg-slate-100" />
 
+            <Discount
+              selectedId={selectedDiscount?.id ?? null}
+              onSelect={(d) => setSelectedDiscount(d)}
+              cartItems={checkoutItems}
+            />
+
             {/* 🎁 LOYALTY VOUCHER HUB  (Temporarily Disabled) */}
             <div className="hidden LoyaltySection space-y-8">
               <div className="flex items-center justify-between">
@@ -428,19 +490,19 @@ const Transactions: React.FC = () => {
 
               {availableDiscounts.length > 0 ? (
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  {availableDiscounts.map((discount: IDiscount) => (
+                  {availableDiscounts.map((discount) => (
                     <div
                       key={discount.id}
                       onClick={() =>
-                        setSelectedDiscountId(
-                          selectedDiscountId === discount.id
+                        setSelectedDiscount(
+                          selectedDiscount?.id === discount.id
                             ? null
-                            : discount.id,
+                            : discount,
                         )
                       }
                       className={cn(
                         'group relative flex cursor-pointer items-center gap-4 rounded-[28px] border p-4 transition-all',
-                        selectedDiscountId === discount.id
+                        selectedDiscount?.id === discount.id
                           ? 'scale-[1.02] border-slate-900 bg-slate-900 shadow-2xl'
                           : 'hover:border-pixs-mint border-slate-100 bg-white hover:bg-slate-50',
                       )}
@@ -448,7 +510,7 @@ const Transactions: React.FC = () => {
                       <div
                         className={cn(
                           'flex h-12 w-12 items-center justify-center rounded-[18px] transition-colors',
-                          selectedDiscountId === discount.id
+                          selectedDiscount?.id === discount.id
                             ? 'bg-pixs-mint shadow-pixs-mint/20 font-black text-slate-900 shadow-lg'
                             : 'group-hover:text-pixs-mint bg-slate-50 text-slate-400',
                         )}
@@ -459,29 +521,29 @@ const Transactions: React.FC = () => {
                         <h4
                           className={cn(
                             'text-xs font-black tracking-widest uppercase italic',
-                            selectedDiscountId === discount.id
+                            selectedDiscount?.id === discount.id
                               ? 'text-white'
                               : 'line-clamp-1 text-slate-900',
                           )}
                         >
-                          {discount.title}
+                          {discount.code}
                         </h4>
                         <p
                           className={cn(
                             'mt-1 text-[8px] font-bold tracking-widest uppercase',
-                            selectedDiscountId === discount.id
+                            selectedDiscount?.id === discount.id
                               ? 'text-white/40'
                               : 'text-slate-400',
                           )}
                         >
-                          {discount.discount_type === 'unit'
-                            ? `₱${discount.discount_value} OFF PER UNIT`
-                            : discount.discount_type === 'percentage'
-                              ? `${discount.discount_value}% OFF TOTAL`
+                          {discount.type === 'fixed'
+                            ? `₱${discount.value} OFF PER UNIT`
+                            : discount.type === 'percentage'
+                              ? `${discount.value}% OFF TOTAL`
                               : 'VOUCHER ACTIVE'}
                         </p>
                       </div>
-                      {selectedDiscountId === discount.id && (
+                      {selectedDiscount?.id === discount.id && (
                         <div className="bg-pixs-mint absolute top-2 right-2 flex h-6 w-6 items-center justify-center rounded-full text-slate-900">
                           <CheckCircle2 size={12} strokeWidth={4} />
                         </div>
@@ -505,6 +567,7 @@ const Transactions: React.FC = () => {
               <ReceiptSection
                 items={checkoutItems}
                 discountAmount={discountAmount}
+                discountLabel={selectedDiscount?.code ?? null}
               />
 
               <div className="mt-8 space-y-4">
@@ -565,6 +628,12 @@ const Transactions: React.FC = () => {
         orderId={lastOrderId}
         totalAmount={lastOrderTotal}
         onClose={() => navigate('/orders')}
+      />
+
+      <StockAlertModal
+        isOpen={isStockAlertOpen}
+        items={stockAlertItems}
+        onClose={() => setIsStockAlertOpen(false)}
       />
     </div>
   )

@@ -263,7 +263,8 @@ const AddToCartPage: React.FC = () => {
     }
 
     if (hasInsufficientStockVariant) {
-      toast.error('Some selected items have insufficient stock. Please select a different size or remove them.')
+      alert('Some selected products are sold out. Please update your cart.')
+      window.location.reload()
       return
     }
 
@@ -281,8 +282,8 @@ const AddToCartPage: React.FC = () => {
 
         const freshStock = Number(freshVariant.stock) || 0
         if (freshStock < item.minOrder) {
-          toast.error(`"${item.productName}" is now sold out. Please update your cart.`)
-          navigate('/cart')
+          alert(`"${item.productName}" is sold out. Please update your cart.`)
+          window.location.reload()
           return
         }
       }

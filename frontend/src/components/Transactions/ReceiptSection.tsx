@@ -49,11 +49,13 @@ interface CartItem {
 interface ReceiptSectionProps {
   items: CartItem[]
   discountAmount?: number
+  discountLabel?: string | null
 }
 
 const ReceiptSection: React.FC<ReceiptSectionProps> = ({
   items,
   discountAmount = 0,
+  discountLabel = null,
 }) => {
   const cartItems = items
 
@@ -61,7 +63,7 @@ const ReceiptSection: React.FC<ReceiptSectionProps> = ({
     (acc, item) => acc + (item.totalCartPrice ?? item.quantity * item.variant.unitPrice),
     0,
   )
-  const total = subtotal - discountAmount
+  const total = Math.max(0, subtotal - discountAmount)
 
   return (
     <div className="ReceiptSection space-y-8 rounded-[32px] border border-slate-100 bg-white/80 p-8 shadow-2xl backdrop-blur-xl">
@@ -142,7 +144,7 @@ const ReceiptSection: React.FC<ReceiptSectionProps> = ({
         {discountAmount > 0 && (
           <div className="animate-in slide-in-from-right-2 flex items-center justify-between text-[11px] font-black tracking-widest text-emerald-500 uppercase italic">
             <div className="flex items-center gap-2">
-              <span>Voucher Applied</span>
+              <span>{discountLabel ?? 'Voucher Applied'}</span>
               <Tag size={12} className="text-emerald-300" />
             </div>
             <span className="font-black">

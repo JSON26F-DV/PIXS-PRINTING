@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { Layers, Clock, CheckCircle2, XCircle, Info } from 'lucide-react'
+import BoxFallback from '../../../components/common/BoxFallback'
 import axiosInstance from '../../../lib/axiosInstance'
 import { clsx } from 'clsx'
 
@@ -29,6 +30,7 @@ interface ScreenplateConfirmMessageProps {
 const ScreenplateConfirmMessage: React.FC<ScreenplateConfirmMessageProps> = ({ requestId, isCustomer, onImageClick }) => {
   const [request, setRequest] = useState<ScreenplateRequest | null>(null)
   const [loading, setLoading] = useState(true)
+  const [refImageError, setRefImageError] = useState(false)
 
   useEffect(() => {
     let mounted = true
@@ -129,30 +131,35 @@ const ScreenplateConfirmMessage: React.FC<ScreenplateConfirmMessageProps> = ({ r
       </div>
 
       {/* Reference Image (Main Visual) */}
-      {request.reference_image && (
-        <div className="p-6">
+      <div className="p-6">
+        {request.reference_image && !refImageError ? (
             <div 
                 className="group relative h-52 w-full rounded-2xl overflow-hidden cursor-pointer border border-white/10"
                 onClick={() => {
                     const url = request.reference_image?.startsWith('data:') 
                         ? request.reference_image 
-                        : `/src/assets/message_media/${request.reference_image}`;
-                    onImageClick(url);
+                        : (request.reference_image ? `/images/screenplate_request/${request.reference_image}` : '');
+                    if (url) onImageClick(url);
                 }}
             >
                 <img 
-                    src={request.reference_image?.startsWith('data:') ? request.reference_image : `/src/assets/message_media/${request.reference_image}`} 
+                    src={request.reference_image?.startsWith('data:') ? request.reference_image : `/images/screenplate_request/${request.reference_image}`} 
+                    onError={() => setRefImageError(true)}
                     className="w-full h-full object-cover transition-transform group-hover:scale-105" 
                 />
                 <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                     <span className="text-[9px] font-black uppercase text-white tracking-widest bg-slate-900/60 px-4 py-2 rounded-full backdrop-blur-md border border-white/10">View Reference</span>
                 </div>
             </div>
-        </div>
-      )}
+        ) : (
+            <div className="h-52 w-full rounded-2xl overflow-hidden border border-white/10">
+                <BoxFallback className="flex h-full w-full items-center justify-center bg-white/5" iconClassName="h-10 w-10 opacity-20" />
+            </div>
+        )}
+      </div>
 
       {/* Comment / Alignment / Status */}
-      <div className="px-6 pb-6 space-y-4">
+      <div className="px-6 pb-6 space-y-4 pt-4">
         {request.comment && (
             <div className="p-4 rounded-2xl bg-white/5 border border-white/5 italic">
                 <p className="text-[10px] font-bold opacity-70 leading-relaxed">"{request.comment}"</p>

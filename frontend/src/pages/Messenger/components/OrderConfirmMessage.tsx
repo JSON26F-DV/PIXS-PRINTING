@@ -3,17 +3,20 @@ import { Check, MapPin, Phone } from 'lucide-react'
 import { orderApi } from '../../../api/orders.api'
 import type { Order } from '../../Order/components/OrderCard'
 import { clsx } from 'clsx'
+import axiosInstance from '../../../lib/axiosInstance'
 
 interface OrderConfirmMessageProps {
+  messageId: string
   orderId: string
   isCustomer: boolean
+  isConfirm?: number
 }
 
-const OrderConfirmMessage: React.FC<OrderConfirmMessageProps> = ({ orderId, isCustomer }) => {
+const OrderConfirmMessage: React.FC<OrderConfirmMessageProps> = ({ messageId, orderId, isCustomer, isConfirm }) => {
   const [order, setOrder] = useState<Order | null>(null)
   const [loading, setLoading] = useState(true)
   const [confirmed, setConfirmed] = useState(() => {
-    return localStorage.getItem(`confirmed_order_${orderId}`) === 'true'
+    return isConfirm === 1 || localStorage.getItem(`confirmed_order_${orderId}`) === 'true'
   })
 
   useEffect(() => {
@@ -32,9 +35,14 @@ const OrderConfirmMessage: React.FC<OrderConfirmMessageProps> = ({ orderId, isCu
     return () => { mounted = false }
   }, [orderId])
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     setConfirmed(true)
     localStorage.setItem(`confirmed_order_${orderId}`, 'true')
+    try {
+      await axiosInstance.patch(`/api/messages/${messageId}/confirm`)
+    } catch (err) {
+      console.error('Failed to confirm message:', err)
+    }
   }
 
   if (loading) {

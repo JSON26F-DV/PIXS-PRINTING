@@ -19,6 +19,7 @@ const TABS = [
   { id: 'to-ship', label: 'Processing', status: 'PROCESSING' },
   { id: 'to-receive', label: 'To Receive', status: 'SHIPPED' },
   { id: 'to-review', label: 'To Review', status: 'DELIVERED' },
+  { id: 'unpaid', label: 'Unpaid', status: 'UNPAID' },
   { id: 'screenplates', label: 'Screenplates', status: 'SCREENPLATE' },
   {
     id: 'return-cancellation',
@@ -332,24 +333,7 @@ const OrderPage: React.FC = () => {
       {/* Main Content */}
       <div className="order-content-container mx-auto max-w-7xl space-y-12 px-6 pb-32 md:px-16">
         {/* Search & Filters */}
-        <div className="sticky top-[80px] z-[40] -mx-4 flex flex-col items-center justify-between gap-4 rounded-b-3xl border-b border-transparent bg-white/90 px-6 py-4 shadow-sm backdrop-blur-xl lg:top-[100px] lg:flex-row lg:rounded-3xl lg:border lg:bg-white/80 lg:shadow-none">
-          {/* Scrollable Tabs */}
-          <div className="order-tabs no-scrollbar -mb-2 flex w-full items-center gap-2 overflow-x-auto scroll-smooth pb-2 lg:w-auto">
-            {TABS.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`order-tab-button rounded-2xl px-6 py-3 text-[10px] font-black tracking-widest whitespace-nowrap uppercase italic transition-all active:scale-95 ${
-                  activeTab === tab.id
-                    ? 'order-tab-active text-pixs-mint bg-slate-900 shadow-xl shadow-slate-200'
-                    : 'bg-slate-50 text-slate-400 hover:bg-slate-100 hover:text-slate-900'
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-
+        <div className="sticky top-[80px] z-[40] -mx-4 flex flex-col items-center gap-4 rounded-b-3xl border-b border-transparent bg-white/90 px-6 py-4 shadow-sm backdrop-blur-xl lg:top-[100px] lg:rounded-3xl lg:border lg:bg-white/80 lg:shadow-none">
           {/* Search Input */}
           <div className="group relative w-full lg:w-96">
             <Search
@@ -363,6 +347,23 @@ const OrderPage: React.FC = () => {
               onChange={(e) => setSearchQuery(e.target.value)}
               className="focus:border-pixs-mint w-full rounded-2xl border border-slate-100 bg-slate-50 py-4 pr-6 pl-14 text-xs font-bold text-slate-900 shadow-inner transition-all focus:bg-white focus:outline-none"
             />
+          </div>
+
+          {/* Scrollable Tabs */}
+          <div className="order-tabs no-scrollbar flex w-full items-center gap-2 overflow-x-auto scroll-smooth">
+            {TABS.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`order-tab-button rounded-2xl px-6 py-3 text-[10px] font-black tracking-widest whitespace-nowrap uppercase italic transition-all active:scale-95 ${
+                  activeTab === tab.id
+                    ? 'order-tab-active text-pixs-mint bg-slate-900 shadow-xl shadow-slate-200'
+                    : 'bg-slate-50 text-slate-400 hover:bg-slate-100 hover:text-slate-900'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
           </div>
         </div>
 

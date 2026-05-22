@@ -25,6 +25,7 @@ import ProductInfoCard from './components/ProductInfoCard'
 import PriceCalculatorUI from './components/PriceCalculatorUI'
 import ProductReviews from './components/ProductReviews'
 import FullscreenGalleryModal from '../../components/common/FullscreenGalleryModal'
+import StockAlertModal from '../../components/Transactions/StockAlertModal'
 
 // ─── Loading State UI Protocol ────────────────────────────────────────────────
 const Skeleton: React.FC<{ className?: string }> = ({ className }) => (
@@ -64,6 +65,10 @@ const ProductDetailInner: React.FC<{
   // Gallery Modal State Protocol
   const [isGalleryOpen, setIsGalleryOpen] = useState(false)
   const [galleryIndex, setGalleryIndex] = useState(0)
+
+  // Stock Alert State
+  const [isStockAlertOpen, setIsStockAlertOpen] = useState(false)
+  const [stockAlertItems, setStockAlertItems] = useState<{ name: string; requested: number; available: number }[]>([])
 
   // Automatic Top-0 Scroll Protocol
   useLayoutEffect(() => {
@@ -161,10 +166,14 @@ const ProductDetailInner: React.FC<{
       return
     }
 
-    // Protocol: Check stock availability against minimum order requirements
-    if (computed.stockForVariant < product.min_order) {
-      alert('Insufficient stock for this variant. Please select another.')
-      window.location.reload()
+    // Protocol: Check stock availability against requested quantity
+    if (state.quantity > computed.stockForVariant) {
+      setStockAlertItems([{
+        name: product.name,
+        requested: state.quantity,
+        available: computed.stockForVariant,
+      }])
+      setIsStockAlertOpen(true)
       return
     }
 
@@ -396,6 +405,13 @@ const ProductDetailInner: React.FC<{
           </div>
         </div>
       </div>
+
+      {/* Stock Alert Modal */}
+      <StockAlertModal
+        isOpen={isStockAlertOpen}
+        items={stockAlertItems}
+        onClose={() => setIsStockAlertOpen(false)}
+      />
 
       {/* Cinematic Fullscreen Viewing Hub */}
       <FullscreenGalleryModal

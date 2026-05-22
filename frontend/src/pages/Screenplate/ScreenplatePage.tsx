@@ -24,6 +24,66 @@ import BoxFallback from '../../components/common/BoxFallback'
 import axiosInstance from '../../lib/axiosInstance.ts'
 import { useNotificationStore } from '../../store/useNotificationStore'
 
+// ─── Image Upload Alert Modal ─────────────────────────────────────────────────
+
+interface ImageUploadAlertProps {
+  open: boolean
+  onClose: () => void
+  message: string
+}
+
+const ImageUploadAlert: React.FC<ImageUploadAlertProps> = ({ open, onClose, message }) => {
+  if (!open) return null
+
+  return (
+    <div
+      className="fixed inset-0 z-[110] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
+    >
+      <div className="relative flex w-full max-w-sm flex-col rounded-[28px] border border-slate-100 bg-white shadow-2xl">
+        <div className="px-8 pt-8 pb-6">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-rose-100">
+            <FiAlertTriangle className="text-rose-600" size={24} />
+          </div>
+          <p className="text-center text-[10px] font-black tracking-[4px] text-slate-400 uppercase">
+            Invalid File
+          </p>
+          <h2 className="mt-1 text-center text-2xl font-black tracking-tighter text-slate-900 uppercase italic">
+            Upload Failed
+          </h2>
+          <p className="mt-3 text-center text-sm font-medium text-slate-600">
+            {message}
+          </p>
+          <div className="mt-6 rounded-[14px] bg-slate-50 p-4">
+            <p className="text-[10px] font-black tracking-widest text-slate-500 uppercase">
+              Allowed Formats
+            </p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {['JPG', 'JPEG', 'PNG', 'WebP'].map((fmt) => (
+                <span key={fmt} className="rounded-lg bg-slate-200 px-3 py-1 text-[10px] font-black tracking-widest text-slate-700 uppercase">
+                  {fmt}
+                </span>
+              ))}
+            </div>
+            <p className="mt-3 text-[10px] font-black tracking-widest text-slate-500 uppercase">
+              Max Size
+            </p>
+            <p className="mt-1 text-sm font-bold text-slate-900">3 MB</p>
+          </div>
+        </div>
+        <div className="border-t border-slate-100 px-8 py-6">
+          <button
+            onClick={onClose}
+            className="w-full rounded-[14px] border-2 border-slate-900 bg-slate-900 py-3.5 text-[10px] font-black tracking-[3px] text-white uppercase italic shadow-xl transition-all hover:scale-105 active:scale-95"
+          >
+            Got It
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── Review Modal ────────────────────────────────────────────────────────────
 
 interface ReviewModalProps {
@@ -216,6 +276,8 @@ const ScreenplatePage: React.FC = () => {
   // Modal state
   const [reviewOpen, setReviewOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [uploadAlertOpen, setUploadAlertOpen] = useState(false)
+  const [uploadAlertMessage, setUploadAlertMessage] = useState('')
   const { fetchNotifications } = useNotificationStore()
 
   const dropdownRef = useRef<HTMLDivElement>(null)
@@ -324,13 +386,30 @@ const ScreenplatePage: React.FC = () => {
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (file) {
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        setReferenceImage(reader.result as string)
-      }
-      reader.readAsDataURL(file)
+    if (!file) return
+
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp']
+    const maxSize = 3 * 1024 * 1024 // 3MB
+
+    if (!allowedTypes.includes(file.type)) {
+      setUploadAlertMessage('Only JPG, JPEG, PNG, and WebP files are allowed.')
+      setUploadAlertOpen(true)
+      e.target.value = ''
+      return
     }
+
+    if (file.size > maxSize) {
+      setUploadAlertMessage('File size exceeds the 3 MB limit. Please choose a smaller file.')
+      setUploadAlertOpen(true)
+      e.target.value = ''
+      return
+    }
+
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      setReferenceImage(reader.result as string)
+    }
+    reader.readAsDataURL(file)
   }
 
   const handleSelectVariant = (product: IProduct, variant: IProductVariant) => {
@@ -464,6 +543,13 @@ const ScreenplatePage: React.FC = () => {
 
   return (
     <div className="ScreenplatePage relative flex min-h-[calc(100vh-6rem)] flex-col items-center overflow-hidden bg-slate-50 mt-0 lg:mt-15">
+      {/* Image Upload Alert */}
+      <ImageUploadAlert
+        open={uploadAlertOpen}
+        onClose={() => setUploadAlertOpen(false)}
+        message={uploadAlertMessage}
+      />
+
       {/* Review Modal */}
       <ReviewModal
         open={reviewOpen}
@@ -771,7 +857,7 @@ const ScreenplatePage: React.FC = () => {
                       type="file"
                       name="file_upload"
                       className="hidden"
-                      accept="image/*"
+                      accept=".jpg,.jpeg,.png,.webp"
                       onChange={handleImageUpload}
                     />
                   </label>
@@ -788,7 +874,7 @@ const ScreenplatePage: React.FC = () => {
                         <input
                           type="file"
                           className="hidden"
-                          accept="image/*"
+                          accept=".jpg,.jpeg,.png,.webp"
                           onChange={handleImageUpload}
                         />
                       </label>

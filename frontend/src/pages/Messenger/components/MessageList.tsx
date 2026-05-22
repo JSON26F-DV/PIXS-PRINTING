@@ -222,7 +222,7 @@ const MessageBubble: React.FC<{
 
           {message.order_id && !isEditing && (
             <div className="mt-2 group-last:mb-0">
-               <OrderConfirmMessage orderId={message.order_id} isCustomer={isCustomer} />
+               <OrderConfirmMessage messageId={message.id} orderId={message.order_id} isCustomer={isCustomer} isConfirm={message.is_confirm} />
             </div>
           )}
 

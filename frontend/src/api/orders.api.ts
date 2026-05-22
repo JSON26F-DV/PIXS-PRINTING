@@ -8,6 +8,7 @@ export interface CreateOrderPayload {
     payment_method_id: string
     delivery_method_id: string
     production_notes?: string
+    discount_id?: string | null
 }
 
 function handleApiError(error: unknown): never {
@@ -33,12 +34,8 @@ export const orderApi = {
      * Create a new order.
      */
     createOrder: async (orderData: CreateOrderPayload) => {
-        try {
-            const response = await axiosInstance.post(`/api/customer/orders`, orderData)
-            return response.data
-        } catch (error) {
-            return handleApiError(error)
-        }
+        const response = await axiosInstance.post(`/api/customer/orders`, orderData)
+        return response.data
     },
 
     /**
