@@ -156,6 +156,13 @@ class ProductController extends Controller
                     'gallery' => $product->gallery->pluck('image_url')->toArray(),
                 ];
 
+                // Override is_in_stock: only true if at least one variant has stock >= min_order
+                $data['is_in_stock'] = $data['is_in_stock']
+                    && (
+                        $product->variants->isEmpty()
+                        || $product->variants->contains(fn ($v) => (int) $v->stock >= (int) $product->min_order)
+                    );
+
                 if ($isLoggedIn) {
                     $data['base_price'] = (float) $product->base_price;
                 } else {
@@ -230,6 +237,13 @@ class ProductController extends Controller
                     'created_at' => $r->created_at->toISOString(),
                 ])->toArray(),
             ];
+
+            // Override is_in_stock: only true if at least one variant has stock >= min_order
+            $data['is_in_stock'] = $data['is_in_stock']
+                && (
+                    $product->variants->isEmpty()
+                    || $product->variants->contains(fn ($v) => (int) $v->stock >= (int) $product->min_order)
+                );
 
             if ($isLoggedIn) {
                 $data['base_price'] = (float) $product->base_price;

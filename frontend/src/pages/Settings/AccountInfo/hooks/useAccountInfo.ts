@@ -109,7 +109,7 @@ export const useAccountInfo = () => {
 
   const uploadProfilePicture = async (
     file: File,
-  ): Promise<{ success: boolean; url?: string }> => {
+  ): Promise<{ success: boolean; url?: string; error?: string }> => {
     try {
       const formData = new FormData()
       formData.append('profile_picture', file)
@@ -124,8 +124,10 @@ export const useAccountInfo = () => {
       setAccount((prev) => (prev ? { ...prev, profilePicture: url } : null))
       return { success: true, url }
     } catch (err) {
-      console.error(err)
-      return { success: false }
+      const message =
+        (err as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message || 'Failed to upload profile picture'
+      return { success: false, error: message }
     }
   }
 

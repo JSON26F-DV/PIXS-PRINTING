@@ -19,8 +19,27 @@ const CartProductCard: React.FC<CartProductCardProps> = ({
   onUpdateQuantity,
   onRemove,
 }) => {
+  const isSoldOut = item.variant.stock < item.minOrder
+
   return (
-    <article className="CartProductCard rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+    <article
+      className={`CartProductCard relative rounded-2xl border p-4 shadow-sm transition-all ${
+        isSoldOut
+          ? 'cursor-not-allowed border-slate-200 bg-slate-100'
+          : 'border-slate-200 bg-white'
+      }`}
+    >
+      {/* Sold Out Overlay */}
+      {isSoldOut && (
+        <div className="absolute inset-0 z-20 flex items-center justify-center rounded-2xl bg-white/60 backdrop-blur-sm">
+          <div className="rounded-2xl bg-slate-900/90 px-8 py-4 shadow-2xl">
+            <span className="text-sm font-black tracking-[6px] text-white uppercase italic">
+              Sold Out
+            </span>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-start gap-4">
         <img
           src={item.productImage}
@@ -41,7 +60,7 @@ const CartProductCard: React.FC<CartProductCardProps> = ({
             </div>
             <button
               onClick={onRemove}
-              className="RemoveButton text-sm font-medium text-rose-600 hover:text-rose-700"
+              className="RemoveButton relative z-30 text-sm font-medium text-rose-600 hover:text-rose-700"
             >
               Remove
             </button>
@@ -60,7 +79,7 @@ const CartProductCard: React.FC<CartProductCardProps> = ({
           <QuantityPicker
             quantity={item.quantity}
             minOrder={item.minOrder}
-            currentStock={item.currentStock}
+            currentStock={item.variant.stock}
             onChange={onUpdateQuantity}
           />
 

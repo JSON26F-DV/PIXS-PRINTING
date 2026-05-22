@@ -12,6 +12,7 @@ class DeletedAccount extends Model
      * @var string
      */
     protected $table = 'deleted_accounts';
+
     public $timestamps = false;
 
     /**

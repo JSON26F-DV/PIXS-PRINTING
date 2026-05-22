@@ -11,6 +11,7 @@ import {
 import toast from 'react-hot-toast'
 import {
   getColors,
+  getProductById,
 } from '../../api/products.api'
 import { useCart } from './hooks/useCart'
 import type { CartColorInfo, CartItem } from '../../types/cart'
@@ -156,6 +157,11 @@ const AddToCartPage: React.FC = () => {
       const printPrice = merged.plate?.printPricePerUnit ?? 0
       merged.totalCartPrice = quantity * unitPrice + quantity * printPrice
 
+      // Auto-deselect if variant no longer has sufficient stock
+      if (merged.variant.stock < merged.minOrder) {
+        merged.selected = false
+      }
+
       return merged
     },
     [pendingMap],
@@ -227,6 +233,11 @@ const AddToCartPage: React.FC = () => {
     (item) => item.quantity < item.minOrder
   )
 
+  // Prevent checkout if a selected variant's stock is below min_order
+  const hasInsufficientStockVariant = selectedItems.some(
+    (item) => item.variant.stock < item.minOrder
+  )
+
   // ─── Checkout: flush all pending to backend then navigate ─────────────────
   const handleCheckout = async () => {
     if (selectedItems.length === 0) {
@@ -248,6 +259,36 @@ const AddToCartPage: React.FC = () => {
       toast.error(
         'Some selected products have incompatible sizes for their assigned screenplates.',
       )
+      return
+    }
+
+    if (hasInsufficientStockVariant) {
+      toast.error('Some selected items have insufficient stock. Please select a different size or remove them.')
+      return
+    }
+
+    // Re-validate stock against live backend data before proceeding
+    try {
+      for (const item of selectedItems) {
+        const res = await getProductById(item.productId)
+        const freshProduct = res.data
+        if (!freshProduct) continue
+
+        const freshVariant = freshProduct.variants?.find(
+          (v: { variant_id: string; stock: number }) => v.variant_id === item.variant.id
+        )
+        if (!freshVariant) continue
+
+        const freshStock = Number(freshVariant.stock) || 0
+        if (freshStock < item.minOrder) {
+          toast.error(`"${item.productName}" is now sold out. Please update your cart.`)
+          navigate('/cart')
+          return
+        }
+      }
+    } catch (err) {
+      console.error('Stock validation failed:', err)
+      toast.error('Unable to verify stock. Please try again.')
       return
     }
 
@@ -293,6 +334,9 @@ const AddToCartPage: React.FC = () => {
     if (!productVariant) return
 
     const stock = Number(productVariant.stock) || 0
+
+    // Prevent selecting variant with insufficient stock
+    if (stock < item.minOrder) return
 
     // Clamp Quantity on Variant Change
     let currentQty = item.quantity
@@ -429,25 +473,45 @@ const AddToCartPage: React.FC = () => {
                 const shortDescription =
                   productMeta?.short_description ?? 'No short description available.'
                 const isSelected = item.selected
+                const isSoldOut = item.variant.stock < item.minOrder
 
                 return (
                   <article
                     key={item.id}
-                    onClick={() => toggleSelection(item.id, isSelected)}
-                    className={`CartProductCard relative cursor-pointer rounded-[24px] border p-5 shadow-sm transition-all md:p-6 ${
-                      isSelected
-                        ? 'border-pixs-mint bg-white ring-4 ring-pixs-mint/5'
-                        : 'border-slate-100 bg-slate-50 opacity-60'
+                    onClick={() => !isSoldOut && toggleSelection(item.id, isSelected)}
+                    className={`CartProductCard relative rounded-[24px] border p-5 shadow-sm transition-all md:p-6 ${
+                      isSoldOut
+                        ? 'cursor-not-allowed border-slate-200 bg-slate-100'
+                        : 'cursor-pointer'
+                    } ${
+                      isSoldOut
+                        ? ''
+                        : isSelected
+                          ? 'border-pixs-mint bg-white ring-4 ring-pixs-mint/5'
+                          : 'border-slate-100 bg-slate-50 opacity-60'
                     }`}
                   >
-                    {/* Selection indicator */}
-                    <div className="absolute top-4 left-4 z-10 flex h-6 w-6 items-center justify-center rounded-full transition-all">
-                      {isSelected ? (
-                        <CheckCircle2 className="text-pixs-mint" size={24} />
-                      ) : (
-                        <Circle className="text-slate-300" size={24} />
-                      )}
-                    </div>
+                    {/* Sold Out Overlay */}
+                    {isSoldOut && (
+                      <div className="absolute inset-0 z-20 flex items-center justify-center rounded-[24px] bg-white/60 backdrop-blur-sm">
+                        <div className="rounded-2xl bg-slate-900/90 px-8 py-4 shadow-2xl">
+                          <span className="text-sm font-black tracking-[6px] text-white uppercase italic">
+                            Sold Out
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Selection indicator (hidden when sold out) */}
+                    {!isSoldOut && (
+                      <div className="absolute top-4 left-4 z-10 flex h-6 w-6 items-center justify-center rounded-full transition-all">
+                        {isSelected ? (
+                          <CheckCircle2 className="text-pixs-mint" size={24} />
+                        ) : (
+                          <Circle className="text-slate-300" size={24} />
+                        )}
+                      </div>
+                    )}
 
                     <div className="flex flex-col gap-4 pl-8 md:flex-row md:items-start">
                       <CartProductImage
@@ -477,7 +541,7 @@ const AddToCartPage: React.FC = () => {
                               e.stopPropagation()
                               removeItem(item.id)
                             }}
-                            className="CartProductRemoveButton inline-flex items-center gap-1 rounded-xl border border-rose-100 bg-rose-50 px-3 py-2 text-xs font-black tracking-wider text-rose-600 uppercase transition hover:bg-rose-100"
+                            className="CartProductRemoveButton relative z-30 inline-flex items-center gap-1 rounded-xl border border-rose-100 bg-rose-50 px-3 py-2 text-xs font-black tracking-wider text-rose-600 uppercase transition hover:bg-rose-100"
                           >
                             <Trash2 size={14} />
                             Remove
@@ -666,14 +730,14 @@ const AddToCartPage: React.FC = () => {
               </p>
               <button
                 onClick={handleCheckout}
-                disabled={selectedItems.length === 0 || hasMissingColor || hasLowQuantityItem}
+                disabled={selectedItems.length === 0 || hasMissingColor || hasLowQuantityItem || hasInsufficientStockVariant}
                 className={`CartCheckoutButton mt-6 w-full rounded-3xl border px-8 py-4 text-[10px] font-black tracking-[4px] uppercase italic shadow-2xl transition-all active:scale-95 ${
-                  selectedItems.length > 0 && !hasMissingColor && !hasLowQuantityItem
+                  selectedItems.length > 0 && !hasMissingColor && !hasLowQuantityItem && !hasInsufficientStockVariant
                     ? 'border-white/10 bg-slate-900 text-white hover:scale-105'
                     : 'cursor-not-allowed border-slate-200 bg-slate-100 text-slate-300 shadow-none'
                 }`}
               >
-                {hasMissingColor ? 'Complete Config' : hasLowQuantityItem ? 'Fix Quantities' : 'Checkout Selected'}
+                {hasMissingColor ? 'Complete Config' : hasInsufficientStockVariant ? 'Insufficient Stock' : hasLowQuantityItem ? 'Fix Quantities' : 'Checkout Selected'}
               </button>
             </aside>
           </div>
@@ -706,14 +770,14 @@ const AddToCartPage: React.FC = () => {
 
           <button
             onClick={handleCheckout}
-            disabled={selectedItems.length === 0 || hasMissingColor || hasLowQuantityItem}
+            disabled={selectedItems.length === 0 || hasMissingColor || hasLowQuantityItem || hasInsufficientStockVariant}
             className={`flex h-12 items-center justify-center rounded-2xl px-6 text-[10px] font-black tracking-[2px] uppercase italic shadow-lg transition-all active:scale-95 ${
-              selectedItems.length > 0 && !hasMissingColor && !hasLowQuantityItem
+              selectedItems.length > 0 && !hasMissingColor && !hasLowQuantityItem && !hasInsufficientStockVariant
                 ? 'bg-slate-900 text-white'
                 : 'bg-slate-100 text-slate-300 shadow-none'
             }`}
           >
-            {hasMissingColor ? 'Fix Entry' : hasLowQuantityItem ? 'Fix Qtys' : 'Checkout'}
+            {hasMissingColor ? 'Fix Entry' : hasInsufficientStockVariant ? 'No Stock' : hasLowQuantityItem ? 'Fix Qtys' : 'Checkout'}
           </button>
         </div>
       </div>

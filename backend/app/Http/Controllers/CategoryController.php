@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -11,8 +10,6 @@ class CategoryController extends Controller
 {
     /**
      * Display a listing of the categories.
-     *
-     * @return \Illuminate\Http\JsonResponse
      */
     public function index(): JsonResponse
     {
@@ -26,16 +23,16 @@ class CategoryController extends Controller
 
             return response()->json([
                 'status' => 'success',
-                'data'   => $categories,
+                'data' => $categories,
             ]);
         } catch (\Throwable $e) {
             Log::error('CategoryController@index failed', [
                 'message' => $e->getMessage(),
-                'trace'   => $e->getTraceAsString(),
+                'trace' => $e->getTraceAsString(),
             ]);
 
             return response()->json([
-                'status'  => 'error',
+                'status' => 'error',
                 'message' => 'Failed to load categories.',
             ], 500);
         }

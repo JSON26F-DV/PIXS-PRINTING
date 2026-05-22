@@ -4,13 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Models\CartItem;
 use App\Models\Customer;
+use App\Models\Discount;
 use App\Models\Notification;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\OrderItemColor;
 use App\Models\Product;
 use App\Models\ProductReview;
-use App\Models\Discount;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -108,7 +108,7 @@ class OrderController extends Controller
     public function show(Request $request, $id): JsonResponse
     {
         $user = $request->user();
-        
+
         $order = Order::with([
             'items',
             'items.product',
@@ -117,10 +117,10 @@ class OrderController extends Controller
             'items.screenplate',
             'address',
         ])
-        ->where('id', $id)
-        ->first();
+            ->where('id', $id)
+            ->first();
 
-        if (!$order) {
+        if (! $order) {
             return response()->json(['message' => 'Order not found'], 404);
         }
 
@@ -149,7 +149,7 @@ class OrderController extends Controller
                 'postal_code' => $order->address->postal_code,
                 'contact_number' => $order->address->contact_number,
             ] : null,
-            'order_items' => $order->items->map(function ($item) use ($order) {
+            'order_items' => $order->items->map(function ($item) {
                 $order_item_colors = $item->colors ? $item->colors->map(function ($c) {
                     return [
                         'id' => $c->color_id,
@@ -302,12 +302,18 @@ class OrderController extends Controller
 
                 if ($discountId) {
                     $discount = Discount::find($discountId);
-                    if ($discount && !$discount->already_used) {
+                    if ($discount && ! $discount->already_used) {
                         // Basic validation
                         $isValid = true;
-                        if ($discount->customer_id && $discount->customer_id !== $user->id) $isValid = false;
-                        if ($discount->expires_at && $discount->expires_at->isPast()) $isValid = false;
-                        if ($totalAmount < $discount->min_spend) $isValid = false;
+                        if ($discount->customer_id && $discount->customer_id !== $user->id) {
+                            $isValid = false;
+                        }
+                        if ($discount->expires_at && $discount->expires_at->isPast()) {
+                            $isValid = false;
+                        }
+                        if ($totalAmount < $discount->min_spend) {
+                            $isValid = false;
+                        }
 
                         if ($isValid) {
                             if ($discount->product_id) {
@@ -359,6 +365,10 @@ class OrderController extends Controller
                     'complaint' => null,
                 ]);
 
+                // Update Customer Lifetime Value and Order Count
+                $user->increment('orders');
+                $user->increment('total_orders_value', $finalAmount);
+
                 // STEP 6: For each cart_item, create order_item row
                 foreach ($cartItems as $cartItem) {
                     $orderItem = OrderItem::create([
@@ -372,20 +382,7 @@ class OrderController extends Controller
                         'plate_price' => $cartItem->plate_price,
                     ]);
 
-                    // total_sold Increment & is_in_stock Evaluator
-                    if ($cartItem->product_id) {
-                        DB::statement('
-                            UPDATE products 
-                            SET 
-                                total_sold = total_sold + ?,
-                                is_in_stock = IF((SELECT SUM(stock) FROM product_variants WHERE product_id = products.id) > 0, 1, 0)
-                            WHERE id = ?
-                        ', [
-                            $cartItem->quantity,
-                            $cartItem->product_id,
-                        ]);
-                    }
-                    // Accurate Stock Deductions strictly rely upon dynamically targeted variants now natively
+                    // Deduct variant stock first, then re-evaluate is_in_stock
                     if ($cartItem->variant_id) {
                         DB::statement('
                             UPDATE product_variants 
@@ -394,6 +391,26 @@ class OrderController extends Controller
                         ', [
                             $cartItem->quantity,
                             $cartItem->variant_id,
+                        ]);
+                    }
+
+                    // Increment total_sold & set is_in_stock = 0 if no variant has stock >= min_order
+                    if ($cartItem->product_id) {
+                        DB::statement('
+                            UPDATE products 
+                            SET 
+                                total_sold = total_sold + ?,
+                                is_in_stock = (
+                                    SELECT EXISTS(
+                                        SELECT 1 FROM product_variants 
+                                        WHERE product_id = products.id 
+                                        AND stock >= products.min_order
+                                    )
+                                )
+                            WHERE id = ?
+                        ', [
+                            $cartItem->quantity,
+                            $cartItem->product_id,
                         ]);
                     }
 
@@ -432,15 +449,15 @@ class OrderController extends Controller
 
                 // STEP 9.5: Automatically notify Admin via Chat
                 $adminId = '1'; // Default admin
-                $convId = $adminId . '_' . $user->id;
+                $convId = $adminId.'_'.$user->id;
                 DB::table('conversations')->insertOrIgnore([
                     'id' => $convId,
                     'created_at' => now(),
-                    'updated_at' => now()
+                    'updated_at' => now(),
                 ]);
 
                 DB::table('messages')->insert([
-                    'id' => 'msg_' . Str::random(10),
+                    'id' => 'msg_'.Str::random(10),
                     'conversation_id' => $convId,
                     'sender_id' => $user->id,
                     'sender_type' => 'customer',
@@ -449,13 +466,13 @@ class OrderController extends Controller
                     'message' => 'review your shipping address',
                     'order_id' => $orderId,
                     'created_at' => now(),
-                    'updated_at' => now()
+                    'updated_at' => now(),
                 ]);
 
                 // STEP 10: Return JSON response (201)
                 return response()->json([
                     'id' => $orderId,
-                    'total_amount' => $totalAmount,
+                    'total_amount' => $finalAmount,
                     'status' => 'PENDING',
                 ], 201);
             });

@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -16,8 +16,8 @@ class MessageController extends Controller
     {
         $user = $request->user();
         $perPage = min((int) $request->query('per_page', 30), 100);
-        $page    = max((int) $request->query('page', 1), 1);
-        $offset  = ($page - 1) * $perPage;
+        $page = max((int) $request->query('page', 1), 1);
+        $offset = ($page - 1) * $perPage;
 
         // Whitelist columns — original_text is intentionally excluded (spec: never expose to client)
         $safeColumns = [
@@ -33,7 +33,7 @@ class MessageController extends Controller
                 ->select($safeColumns)
                 ->where(function ($q) use ($user) {
                     $q->where('sender_id', $user->id)
-                      ->orWhere('receiver_id', $user->id);
+                        ->orWhere('receiver_id', $user->id);
                 })
                 ->orderBy('created_at', 'asc')
                 ->limit($perPage)
@@ -52,16 +52,17 @@ class MessageController extends Controller
 
         // Batch-fetch attachments and reactions (2 queries, not N+1)
         $attachmentsGrouped = DB::table('message_attachments')->whereIn('message_id', $messageIds)->get()->groupBy('message_id');
-        $reactionsGrouped   = DB::table('message_reactions')->whereIn('message_id', $messageIds)->get()->groupBy('message_id');
+        $reactionsGrouped = DB::table('message_reactions')->whereIn('message_id', $messageIds)->get()->groupBy('message_id');
 
         $messages = $messages->map(function ($msg) use ($attachmentsGrouped, $reactionsGrouped) {
             $msg->attachments = $attachmentsGrouped->get($msg->id, collect())->values();
-            $msg->reactions   = $reactionsGrouped->get($msg->id, collect())->values();
+            $msg->reactions = $reactionsGrouped->get($msg->id, collect())->values();
+
             return $msg;
         });
 
         return response()->json([
-            'data' => $messages
+            'data' => $messages,
         ]);
     }
 
@@ -91,19 +92,19 @@ class MessageController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'message'      => 'nullable|string|max:5000',  // nullable: attachment-only msgs allowed
-            'receiver_id'  => 'required|string|max:20',
-            'receiver_type'=> 'required|in:employee,customer',
-            'reply_to_id'  => 'nullable|string|max:30',
-            'order_id'     => 'nullable|string|max:30',
+            'message' => 'nullable|string|max:5000',  // nullable: attachment-only msgs allowed
+            'receiver_id' => 'required|string|max:20',
+            'receiver_type' => 'required|in:employee,customer',
+            'reply_to_id' => 'nullable|string|max:30',
+            'order_id' => 'nullable|string|max:30',
             'screenplate_request_id' => 'nullable|string|max:20',
-            'attachments'  => 'nullable|array|max:20',
+            'attachments' => 'nullable|array|max:20',
             'attachments.*.file' => [
                 'nullable', 'file', 'max:5120',           // 5 MB in KB (reduced from 10MB)
                 'mimes:jpeg,jpg,png,webp,pdf,doc,docx,csv,xls,xlsx',
             ],
             'attachments.*.type' => 'required|in:image,file',
-            'attachments.*.url'  => 'nullable|string|max:500',
+            'attachments.*.url' => 'nullable|string|max:500',
             'attachments.*.name' => 'required|string|max:255',
         ]);
 
@@ -164,7 +165,7 @@ class MessageController extends Controller
             }
         }
 
-        // Automatically enforce that customers message the admin, 
+        // Automatically enforce that customers message the admin,
         // regardless of frontend input, prioritizing database security natively.
         if ($senderType === 'customer') {
             $receiverId = '1';
@@ -176,12 +177,12 @@ class MessageController extends Controller
 
         // Conversation ID (Employee ID first, then Customer ID)
         if ($senderType === 'customer') {
-            $convId = $receiverId . '_' . $senderId;
+            $convId = $receiverId.'_'.$senderId;
         } else {
-            $convId = $senderId . '_' . $receiverId;
+            $convId = $senderId.'_'.$receiverId;
         }
 
-        $msgId = 'msg_' . Str::random(10);
+        $msgId = 'msg_'.Str::random(10);
 
         DB::transaction(function () use ($msgId, $convId, $senderId, $senderType, $receiverId, $receiverType, $validated, $attachments, $request) {
             // Ensure conversation exists
@@ -201,29 +202,29 @@ class MessageController extends Controller
                 $receiverType,
                 $validated['message'],
                 $validated['order_id'] ?? null,
-                $validated['screenplate_request_id'] ?? null
+                $validated['screenplate_request_id'] ?? null,
             ]);
 
-            if (!empty($attachments)) {
+            if (! empty($attachments)) {
                 $attachmentsData = [];
                 foreach ($attachments as $index => $att) {
                     $type = $att['type'];
                     $name = $att['name'];
-                    
+
                     if ($request->hasFile("attachments.{$index}.file")) {
                         $file = $request->file("attachments.{$index}.file");
-                        
+
                         $folder = $type === 'image' ? 'message_media' : 'message_document';
-                        $destPath = base_path('../frontend/src/assets/' . $folder);
-                        
-                        if (!file_exists($destPath)) {
+                        $destPath = base_path('../frontend/src/assets/'.$folder);
+
+                        if (! file_exists($destPath)) {
                             mkdir($destPath, 0755, true);
                         }
-                        
-                        $filename = time() . '_' . $file->getClientOriginalName();
+
+                        $filename = time().'_'.$file->getClientOriginalName();
                         $file->move($destPath, $filename);
-                        
-                        // Per requirement, save only the filename 
+
+                        // Per requirement, save only the filename
                         $name = $filename;
                     }
 
@@ -241,8 +242,8 @@ class MessageController extends Controller
         return response()->json([
             'message' => 'Message transmitted securely.',
             'data' => [
-                'id' => $msgId
-            ]
+                'id' => $msgId,
+            ],
         ]);
     }
 

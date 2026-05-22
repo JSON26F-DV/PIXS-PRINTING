@@ -140,13 +140,13 @@ const MessageBubble: React.FC<{
       animate={{ opacity: 1, y: 0, scale: 1 }}
       className={clsx(
         'group relative mb-3 md:mb-8 flex cursor-default flex-col',
-        isCustomer ? 'items-end mr-1.5 min-[360px]:mr-3.5 min-[414px]:mr-1 sm:mr-0' : 'items-start',
+        isCustomer ? 'items-end mr-2 min-[360px]:mr-3.5 min-[375px]:mr-3.5 min-[414px]:mr-3 sm:mr-0' : 'items-start',
       )}
       >
       <div
         className={clsx(
           'relative flex max-w-[80%] min-[414px]:max-w-[85%] flex-col md:max-w-[70%]',
-          isCustomer ? 'items-end mr-1.5 min-[360px]:mr-3.5 min-[414px]:mr-1 sm:mr-0' : 'items-start',
+          isCustomer ? 'items-end' : 'items-start',
         )}
       >        {/* Reply Snippet Node */}
         {message.replyTo && (
@@ -171,7 +171,7 @@ const MessageBubble: React.FC<{
         {/* Message Container */}
         <div
           className={clsx(
-            'relative rounded-[14px] min-[360px]:rounded-[16px] sm:rounded-[20px] md:rounded-[28px] text-[10px] min-[360px]:text-[11px] min-[414px]:text-[12px] sm:text-[13px] md:text-sm leading-relaxed font-bold shadow-sm transition-all',
+            'relative rounded-[14px] min-[360px]:rounded-[16px] sm:rounded-[20px] md:rounded-[28px] text-[10px] min-[360px]:text-[11px] min-[414px]:text-[12px] sm:text-[13px] md:text-sm leading-relaxed font-bold shadow-sm transition-all break-words',
             hasCard ? '' : 'px-2 py-1 min-[360px]:px-2.5 min-[360px]:py-1.5 min-[414px]:px-3 min-[414px]:py-2 sm:px-4 sm:py-3 md:px-6 md:py-4',
             message.isDeleted
               ? 'border border-slate-200 bg-slate-100 text-slate-400'

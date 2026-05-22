@@ -9,7 +9,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Order extends Model
 {
     protected $keyType = 'string';
+
     public $incrementing = false;
+
     public const UPDATED_AT = null;
 
     protected $fillable = [

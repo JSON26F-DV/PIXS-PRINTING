@@ -18,7 +18,7 @@ return new class extends Migration
             $table->string('variant_id', 30)->nullable()->index('variant_id');
 
             $table->unique(['screenplate_id', 'product_id', 'variant_id'], 'uq_sp_incompat');
-            
+
             $table->foreign('screenplate_id')->references('id')->on('screenplates')->onDelete('cascade');
         });
     }

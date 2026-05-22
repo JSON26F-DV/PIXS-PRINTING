@@ -83,13 +83,13 @@ return new class extends Migration
 
         // ─── Step 3: Ensure password columns are VARCHAR(255) ───
         if (Schema::hasTable('customers')) {
-            DB::statement("ALTER TABLE `customers` MODIFY `password` VARCHAR(255) NULL");
+            DB::statement('ALTER TABLE `customers` MODIFY `password` VARCHAR(255) NULL');
         }
         if (Schema::hasTable('employees')) {
-            DB::statement("ALTER TABLE `employees` MODIFY `password` VARCHAR(255) NOT NULL");
+            DB::statement('ALTER TABLE `employees` MODIFY `password` VARCHAR(255) NOT NULL');
         }
         if (Schema::hasTable('deleted_accounts')) {
-            DB::statement("ALTER TABLE `deleted_accounts` MODIFY `password` VARCHAR(255) NOT NULL");
+            DB::statement('ALTER TABLE `deleted_accounts` MODIFY `password` VARCHAR(255) NOT NULL');
         }
 
         // ─── Step 4: Re-hash ALL passwords to Bcrypt("password123") ───
@@ -142,7 +142,7 @@ return new class extends Migration
      */
     private function getAllForeignKeys(string $database): array
     {
-        return DB::select("
+        return DB::select('
             SELECT
                 rc.TABLE_NAME,
                 rc.CONSTRAINT_NAME,
@@ -157,6 +157,6 @@ return new class extends Migration
                 AND rc.CONSTRAINT_NAME = kcu.CONSTRAINT_NAME
             WHERE rc.CONSTRAINT_SCHEMA = ?
             ORDER BY rc.TABLE_NAME, rc.CONSTRAINT_NAME
-        ", [$database]);
+        ', [$database]);
     }
 };

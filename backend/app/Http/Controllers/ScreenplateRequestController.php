@@ -14,7 +14,7 @@ class ScreenplateRequestController extends Controller
     public function index(Request $request): JsonResponse
     {
         $user = Auth::guard('sanctum')->user();
-        if (!$user) {
+        if (! $user) {
             return response()->json(['message' => 'Unauthorized'], 401);
         }
 
@@ -30,7 +30,7 @@ class ScreenplateRequestController extends Controller
     {
         try {
             $user = Auth::guard('sanctum')->user();
-            if (!$user) {
+            if (! $user) {
                 return response()->json(['message' => 'Unauthorized'], 401);
             }
 
@@ -52,7 +52,7 @@ class ScreenplateRequestController extends Controller
                         $imageData = substr($imageData, strpos($imageData, ',') + 1);
                         $type = strtolower($type[1]); // jpg, png, etc
 
-                        if (!in_array($type, ['jpg', 'jpeg', 'gif', 'png', 'webp'])) {
+                        if (! in_array($type, ['jpg', 'jpeg', 'gif', 'png', 'webp'])) {
                             throw new \Exception('invalid image type');
                         }
                         $imageData = base64_decode($imageData);
@@ -64,15 +64,15 @@ class ScreenplateRequestController extends Controller
                         throw new \Exception('did not match data URI with image data');
                     }
 
-                    $fileName = 'SPR_' . time() . '_' . Str::random(5) . '.' . $type;
-                    
+                    $fileName = 'SPR_'.time().'_'.Str::random(5).'.'.$type;
+
                     // Specific path request: frontend/src/assets/message_media
                     $savePath = base_path('../frontend/src/assets/message_media');
-                    if (!file_exists($savePath)) {
+                    if (! file_exists($savePath)) {
                         mkdir($savePath, 0755, true);
                     }
-                    
-                    file_put_contents($savePath . '/' . $fileName, $imageData);
+
+                    file_put_contents($savePath.'/'.$fileName, $imageData);
                     $imagePath = $fileName;
                 } catch (\Throwable $e) {
                     Log::error('Image saving failed', ['error' => $e->getMessage()]);
@@ -87,7 +87,7 @@ class ScreenplateRequestController extends Controller
             }
 
             $screenplateRequest = ScreenplateRequest::create([
-                'id' => 'SPR-' . strtoupper(Str::random(10)),
+                'id' => 'SPR-'.strtoupper(Str::random(10)),
                 'customer_id' => $user->id,
                 'product_id' => $validated['product_id'],
                 'variant_id' => $validated['variant_id'],
@@ -102,7 +102,7 @@ class ScreenplateRequestController extends Controller
             return response()->json([
                 'status' => 'success',
                 'message' => 'Screenplate request created successfully.',
-                'data' => $screenplateRequest
+                'data' => $screenplateRequest,
             ], 201);
 
         } catch (\Throwable $e) {

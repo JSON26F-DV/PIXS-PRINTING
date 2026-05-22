@@ -23,7 +23,7 @@ return new class extends Migration
             $table->foreign('product_id')->references('id')->on('products')->onDelete('cascade');
             $table->foreign('customer_id')->references('id')->on('customers')->onDelete('cascade');
             $table->foreign('order_id')->references('id')->on('orders')->onDelete('cascade');
-            
+
             // Allow only one review per product per order
             $table->unique(['order_id', 'product_id']);
         });

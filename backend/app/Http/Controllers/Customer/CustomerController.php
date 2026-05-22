@@ -332,19 +332,28 @@ class CustomerController extends Controller
     /**
      * Update profile picture.
      * Saves file to frontend assets and stores only the filename in DB.
+     * Deletes the old picture from filesystem before saving the new one.
      */
     public function updateProfilePicture(Request $request): JsonResponse
     {
         $request->validate([
-            'profile_picture' => 'required|image|mimes:jpeg,png,jpg,gif|max:5120',
+            'profile_picture' => 'required|image|mimes:jpeg,png,jpg,webp|max:3072',
         ]);
 
         $customer = $request->user();
         $file = $request->file('profile_picture');
 
+        // Delete old picture from filesystem if it exists
+        $targetDir = base_path('../frontend/src/assets/profile');
+        if ($customer->profile_picture) {
+            $oldPath = $targetDir.'/'.$customer->profile_picture;
+            if (file_exists($oldPath)) {
+                @unlink($oldPath);
+            }
+        }
+
         $filename = 'profile_'.$customer->id.'_'.time().'.'.$file->getClientOriginalExtension();
 
-        $targetDir = base_path('../frontend/src/assets/profile');
         if (! file_exists($targetDir)) {
             mkdir($targetDir, 0755, true);
         }

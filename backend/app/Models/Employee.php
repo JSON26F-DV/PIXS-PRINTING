@@ -23,6 +23,7 @@ class Employee extends Authenticatable
      * @var bool
      */
     public $incrementing = false;
+
     public $timestamps = false;
 
     /**

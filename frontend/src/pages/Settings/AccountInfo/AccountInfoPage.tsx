@@ -169,7 +169,7 @@ const AccountInfoPage: React.FC = () => {
         setProfilePreview(result.url)
         toast.success('Profile picture updated')
       } else {
-        toast.error('Failed to upload profile picture')
+        toast.error(result.error || 'Failed to upload profile picture')
       }
     } catch (e) {
       console.error(e)
@@ -181,16 +181,31 @@ const AccountInfoPage: React.FC = () => {
     }
   }
 
+  const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp']
+  const MAX_FILE_SIZE = 3 * 1024 * 1024 // 3MB
+
   const handleSelectFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (file) {
-      const reader = new FileReader()
-      reader.onload = () => {
-        setTempImage(reader.result as string)
-        setIsCropping(true)
-      }
-      reader.readAsDataURL(file)
+    if (!file) return
+
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      toast.error('Only JPG, JPEG, PNG & WEBP files are allowed')
+      e.target.value = ''
+      return
     }
+
+    if (file.size > MAX_FILE_SIZE) {
+      toast.error('File size must be 3MB or less')
+      e.target.value = ''
+      return
+    }
+
+    const reader = new FileReader()
+    reader.onload = () => {
+      setTempImage(reader.result as string)
+      setIsCropping(true)
+    }
+    reader.readAsDataURL(file)
   }
 
   const onProfileUpdate = async (values: ProfileFormValues) => {
@@ -319,7 +334,7 @@ const AccountInfoPage: React.FC = () => {
               ref={fileInputRef}
               onChange={handleSelectFile}
               className="hidden"
-              accept="image/*"
+              accept=".jpg,.jpeg,.png,.webp"
             />
           </div>
 

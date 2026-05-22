@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::table('orders', function (Blueprint $table) {
             $table->string('discount_id', 30)->nullable()->after('total_amount');
             $table->decimal('total_discount_amount', 10, 2)->default(0)->after('discount_id');
-            
+
             $table->foreign('discount_id')->references('id')->on('discounts')->onDelete('set null');
         });
     }

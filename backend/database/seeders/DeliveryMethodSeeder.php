@@ -2,7 +2,7 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use App\Models\DeliveryMethod;
 use Illuminate\Database\Seeder;
 
 class DeliveryMethodSeeder extends Seeder
@@ -24,11 +24,11 @@ class DeliveryMethodSeeder extends Seeder
             [
                 'id' => 'del_003',
                 'name' => 'Store Pickup/Self-Book',
-            ]
+            ],
         ];
 
         foreach ($methods as $method) {
-            \App\Models\DeliveryMethod::updateOrCreate(['id' => $method['id']], $method);
+            DeliveryMethod::updateOrCreate(['id' => $method['id']], $method);
         }
     }
 }

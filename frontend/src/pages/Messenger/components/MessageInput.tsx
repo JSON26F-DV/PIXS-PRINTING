@@ -42,6 +42,15 @@ const MessageInput: React.FC<MessageInputProps> = ({
   const [text, setText] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
   const imageInputRef = useRef<HTMLInputElement>(null)
+  const [isMobile, setIsMobile] = useState(false)
+
+  // Handle responsive placeholder
+  React.useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768)
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
 
   // Modal alert state
   const [alertModal, setAlertModal] = useState<{
@@ -274,7 +283,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
                   handleSubmit(e)
                 }
               }}
-              placeholder="Type your message ..."
+              placeholder={isMobile ? "Message" : "Type your message ..."}
               className="max-h-[150px] min-h-[56px] w-full resize-none overflow-hidden rounded-[24px] border border-slate-100 bg-slate-50 px-6 py-4 text-sm leading-relaxed font-bold text-slate-700 shadow-inner transition-all placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-slate-900/5 focus:outline-none"
               rows={1}
             />
@@ -283,25 +292,21 @@ const MessageInput: React.FC<MessageInputProps> = ({
           <button
             type="submit"
             disabled={!text.trim()}
-            className={clsx(
-              'flex h-14 w-14 items-center justify-center rounded-[20px] shadow-xl transition-all active:scale-95 md:h-14 md:w-16',
-              text.trim()
-                ? 'text-pixs-mint bg-slate-900 shadow-slate-900/20 hover:scale-[1.05]'
-                : 'cursor-not-allowed bg-slate-100 text-slate-300 shadow-none grayscale',
-            )}
+            className="group flex h-14 w-12 items-center justify-center transition-all active:scale-90 disabled:opacity-30 disabled:grayscale"
           >
-            <Send
-              size={24}
-              className={clsx(
-                text.trim() ? 'translate-x-0.5 -translate-y-0.5' : '',
-              )}
-            />
+            <motion.div
+              whileHover={text.trim() ? { rotateX: 30, rotateY: -15, rotateZ: 10, scale: 1.1 } : {}}
+              transition={{ type: 'spring', stiffness: 400, damping: 17 }}
+            >
+              <Send
+                size={28}
+                strokeWidth={2.5}
+                style={{ color: text.trim() ? '#75eea5' : '#cbd5e1' }}
+                className="drop-shadow-sm"
+              />
+            </motion.div>
           </button>
         </form>
-
-        <p className="mt-4 text-center text-[8px] font-black tracking-[3px] text-slate-300 uppercase opacity-40">
-          PIXS INDUSTRIAL ENCRYPTED CHANNEL · {new Date().getFullYear()}
-        </p>
       </div>
     </div>
   )
