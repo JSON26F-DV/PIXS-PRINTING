@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from 'react'
 import {
   Search,
-  ArrowUpDown,
   Users,
   ShoppingBag,
   Star,
@@ -9,8 +8,8 @@ import {
   ChevronLeft,
   ChevronRight,
   TrendingUp,
-  Download,
   MoreVertical,
+  Trash2,
 } from 'lucide-react'
 import {
   ResponsiveContainer,
@@ -21,14 +20,15 @@ import {
   PieChart,
   Pie,
 } from 'recharts'
+import { motion, AnimatePresence } from 'framer-motion'
 import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 import { format, parseISO } from 'date-fns'
 import { useAuth } from '../../context/AuthContext'
+import { useAdminOrders, type Order, type OrderItem } from '../../hooks/useAdminOrders'
+import axiosInstance from '../../lib/axiosInstance'
 
-// Data Sources (Simulated relational structure)
-import rawOrders from '../../data/order.json'
-import rawUsersData from '../../data/users.json'
+
 
 // Utility for class merging
 function cn(...inputs: ClassValue[]) {
@@ -50,94 +50,63 @@ const RatingStars = ({ rating }: { rating: number }) => (
   </div>
 )
 
-// Interfaces
-interface OrderItem {
-  id: string
-  productId: string
-  productName: string
-  productImage: string
-  category: string
-  quantity: number
-  variant: {
-    unitPrice: number
-    size: string
-    id: string
-  }
-  colors: { name: string; hex: string }[]
-  plate: { name: string; setupFee: number; printPricePerUnit: number } | null
-  customRequirements?: string
-}
 
-interface Order {
-  order_id: string // Changed from id to order_id to match order.json
-  user_id: string
-  products: OrderItem[] // Changed from items to products
-  total_amount: number
-  status: string
-  created_at: string
-  updated_at?: string
-  feedback?: string
-  complaint?: string
-  rating?: number
-  discount?: {
-    discount_id: string | null
-    total_discount_amount: number
-  }
-}
 
-interface User {
-  id: string
-  name: string
-  email: string
-  role: string
-}
 
 const Orders: React.FC = () => {
   const { user } = useAuth()
-  // --- STATE ---
-  const [orders, setOrders] = useState<Order[]>(rawOrders)
-  const [users] = useState<User[]>(() => {
-    const data = rawUsersData as unknown as {
-      employees: User[]
-      customers: User[]
-    }
-    const employees = data.employees || []
-    const customers = (data.customers || []).map((c) => ({
-      ...c,
-      role: 'customer',
-    }))
-    return [...employees, ...customers]
-  })
+  
+  const {
+    orders,
+    customers,
+    orderStatusDistribution,
+    isLoading,
+    refresh
+  } = useAdminOrders()
+
 
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(
     null,
   )
-  const [globalSearch, setGlobalSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState('all')
   const [sortOption, setSortOption] = useState('date-desc')
-  const [ratingFilter, setRatingFilter] = useState('all')
+
 
   const [currentPage, setCurrentPage] = useState(1)
+  const [statusHeaderFilter, setStatusHeaderFilter] = useState('all')
+  const [customerCurrentPage, setCustomerCurrentPage] = useState(1)
+  const [customerSearch, setCustomerSearch] = useState('')
+  const [statusModal, setStatusModal] = useState<{
+    isOpen: boolean
+    orderId: string
+    newStatus: string
+  }>({ isOpen: false, orderId: '', newStatus: '' })
+  const [expandedOrderIds, setExpandedOrderIds] = useState<Set<string>>(new Set())
+  const [deleteModal, setDeleteModal] = useState<{
+    isOpen: boolean
+    orderId: string
+  }>({ isOpen: false, orderId: '' })
+  const [mobileDetailOrder, setMobileDetailOrder] = useState<Order | null>(null)
+
   const itemsPerPage = 10
+  const customersPerPage = 5
+
 
   // --- DERIVED STATE / MEMOIZED LOGIC ---
-  const customers = useMemo(() => {
-    return users
-      .filter((u) => u.role === 'customer')
-      .map((c) => {
-        const customerOrders = orders.filter((o) => o.user_id === c.id)
-        const totalSpent = customerOrders.reduce(
-          (sum, o) => sum + o.total_amount,
-          0,
-        )
-        return {
-          ...c,
-          orderCount: customerOrders.length,
-          totalSpent,
-        }
-      })
-      .sort((a, b) => b.orderCount - a.orderCount)
-  }, [users, orders])
+  const filteredCustomers = useMemo(() => {
+    return customers.filter(c => 
+      c.name.toLowerCase().includes(customerSearch.toLowerCase()) ||
+      c.email.toLowerCase().includes(customerSearch.toLowerCase())
+    )
+  }, [customers, customerSearch])
+
+  const paginatedCustomers = useMemo(() => {
+    const start = (customerCurrentPage - 1) * customersPerPage
+    return filteredCustomers.slice(start, start + customersPerPage)
+  }, [filteredCustomers, customerCurrentPage])
+
+  const customerTotalPages = Math.ceil(filteredCustomers.length / customersPerPage)
+
+
 
   const filteredOrders = useMemo(() => {
     let result = [...orders]
@@ -147,28 +116,11 @@ const Orders: React.FC = () => {
       result = result.filter((o) => o.user_id === selectedCustomerId)
     }
 
-    // Global Search
-    if (globalSearch) {
-      const q = globalSearch.toLowerCase()
-      result = result.filter((o) => {
-        const customer = users.find((u) => u.id === o.user_id)
-        return (
-          o.order_id.toLowerCase().includes(q) ||
-          customer?.name.toLowerCase().includes(q) ||
-          customer?.email.toLowerCase().includes(q)
-        )
-      })
+    // Status Header Filter
+    if (statusHeaderFilter !== 'all') {
+      result = result.filter((o) => o.status?.trim().toUpperCase() === statusHeaderFilter.toUpperCase())
     }
 
-    // Status Filter
-    if (statusFilter !== 'all') {
-      result = result.filter((o) => o.status === statusFilter)
-    }
-
-    // Rating Filter
-    if (ratingFilter !== 'all') {
-      result = result.filter((o) => o.rating === parseInt(ratingFilter))
-    }
 
     // Sorting
     result.sort((a, b) => {
@@ -186,8 +138,8 @@ const Orders: React.FC = () => {
         case 'amount-asc':
           return a.total_amount - b.total_amount
         case 'name-asc': {
-          const nameA = users.find((u) => u.id === a.user_id)?.name || ''
-          const nameB = users.find((u) => u.id === b.user_id)?.name || ''
+          const nameA = customers.find((c) => c.id === a.user_id)?.name || ''
+          const nameB = customers.find((c) => c.id === b.user_id)?.name || ''
           return nameA.localeCompare(nameB)
         }
         default:
@@ -199,11 +151,9 @@ const Orders: React.FC = () => {
   }, [
     orders,
     selectedCustomerId,
-    globalSearch,
-    statusFilter,
-    ratingFilter,
+    statusHeaderFilter,
     sortOption,
-    users,
+    customers,
   ])
 
   const paginatedOrders = useMemo(() => {
@@ -214,9 +164,14 @@ const Orders: React.FC = () => {
   const totalPages = Math.ceil(filteredOrders.length / itemsPerPage)
 
   const stats = useMemo(() => {
-    const completed = orders.filter((o) => o.status === 'Completed').length
-    const cancelled = orders.filter((o) => o.status === 'Cancelled').length
-    const ratedOrders = orders.filter((o) => (o.rating || 0) > 0)
+    const allOrders = orders || []
+    
+    // Count only orders specifically marked as "DELIVERED"
+    const deliveredCount = allOrders.filter(
+      (o) => o.status?.trim().toUpperCase() === 'DELIVERED'
+    ).length
+
+    const ratedOrders = allOrders.filter((o) => (o.rating || 0) > 0)
     const avgRating =
       ratedOrders.length > 0
         ? (
@@ -224,35 +179,18 @@ const Orders: React.FC = () => {
             ratedOrders.length
           ).toFixed(1)
         : '0.0'
+        
+    const volume = allOrders.reduce((sum, o) => sum + (o.total_amount || 0), 0)
 
     return {
-      total: orders.length,
-      completed,
-      cancelled,
+      completed: deliveredCount,
       avgRating,
+      orderVolume: volume,
     }
   }, [orders])
 
   const chartData = useMemo(() => {
-    const statusMap: Record<string, number> = {}
-    orders.forEach((o) => {
-      statusMap[o.status] = (statusMap[o.status] || 0) + 1
-    })
-
-    const statusPie = Object.entries(statusMap).map(([name, value]) => ({
-      name,
-      value,
-      color:
-        name === 'Completed'
-          ? '#10b981'
-          : name === 'Pending'
-            ? '#f59e0b'
-            : name === 'Processing'
-              ? '#3b82f6'
-              : name === 'Cancelled'
-                ? '#ef4444'
-                : '#64748b',
-    }))
+    const statusPie = orderStatusDistribution
 
     const customerBar = customers.slice(0, 5).map((c) => ({
       name: c.name.split(' ')[0],
@@ -260,157 +198,173 @@ const Orders: React.FC = () => {
     }))
 
     return { statusPie, customerBar }
-  }, [orders, customers])
+  }, [orderStatusDistribution, customers])
 
   // --- HANDLERS ---
-  const handleUpdateStatus = (orderId: string, newStatus: string) => {
-    setOrders((prev) =>
-      prev.map((o) => {
-        if (o.order_id === orderId) {
-          // Validation: Cannot update Completed -> Pending
-          if (o.status === 'Completed' && newStatus === 'Pending') return o
-          return {
-            ...o,
-            status: newStatus,
-            updated_at: new Date().toISOString(),
-          }
-        }
-        return o
-      }),
-    )
+  const handleUpdateStatus = async () => {
+    try {
+      await axiosInstance.patch(`/api/admin/orders/${statusModal.orderId}/status`, {
+        status: statusModal.newStatus.toUpperCase(),
+      })
+      refresh()
+      setStatusModal({ isOpen: false, orderId: '', newStatus: '' })
+    } catch (err) {
+      console.error('Failed to update status', err)
+      alert('Failed to update status')
+    }
   }
 
+  const handleDeleteOrder = async () => {
+    try {
+      await axiosInstance.delete(`/api/admin/orders/${deleteModal.orderId}`)
+      refresh()
+      setDeleteModal({ isOpen: false, orderId: '' })
+    } catch (err) {
+      console.error('Failed to delete order', err)
+      alert('Failed to delete order')
+    }
+  }
+
+  const toggleOrderExpansion = (orderId: string) => {
+    setExpandedOrderIds(prev => {
+      const next = new Set(prev)
+      if (next.has(orderId)) {
+        next.delete(orderId)
+      } else {
+        next.add(orderId)
+      }
+      return next
+    })
+  }
+
+
   return (
-    <div className="orders-page animate-in fade-in mx-auto flex max-w-[1700px] flex-col gap-8 px-4 pb-16 duration-500 lg:px-10">
+    <div className={cn(
+      "orders-page animate-in fade-in mx-auto flex max-w-[1700px] flex-col gap-8 px-4 pb-16 duration-500 lg:px-10",
+      isLoading && "opacity-50 pointer-events-none"
+    )}>
+      {isLoading && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-white/50 backdrop-blur-sm">
+           <div className="h-12 w-12 animate-spin rounded-full border-4 border-slate-900 border-t-emerald-500"></div>
+        </div>
+      )}
       {/* 🚀 ANALYTICS HEADER */}
-      <section className="orders-analytics grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <div className="orders-stats-card group relative overflow-hidden rounded-[24px] bg-slate-900 p-6 text-white">
+      <section className="orders-analytics grid grid-cols-2 gap-4 md:grid-cols-2 lg:grid-cols-4 lg:gap-6">
+        <div className="orders-stats-card group relative overflow-hidden rounded-[24px] bg-slate-900 p-4 sm:p-6 text-white">
           <div className="absolute -top-4 -right-4 p-4 opacity-10 transition-transform duration-500 group-hover:scale-110 group-hover:-rotate-12">
             <ShoppingBag size={80} />
           </div>
           <p className="mb-2 text-[10px] font-black tracking-[3px] uppercase opacity-70">
-            Total System Load
+            Total Orders
           </p>
-          <h3 className="text-4xl font-black tracking-tighter italic">
-            {stats.total}{' '}
-            <span className="text-xs font-bold text-[#75EEA5]">ORDERS</span>
+          <h3 className="text-2xl sm:text-3xl md:text-4xl font-black tracking-tighter italic">
+            {orders.length}{' '}
+            <span className="text-xs font-bold text-[#75EEA5]">Orders</span>
           </h3>
         </div>
-        <div className="orders-stats-card group relative overflow-hidden rounded-[24px] border border-slate-100 bg-white p-6 shadow-sm">
+        <div className="orders-stats-card group relative overflow-hidden rounded-[24px] border border-slate-100 bg-white p-4 sm:p-6 shadow-sm">
           <p className="mb-2 text-[10px] font-black tracking-[3px] text-slate-400 uppercase">
-            Yield Efficiency
+            Completion Rate
           </p>
-          <div className="flex items-baseline gap-2">
-            <h3 className="text-3xl font-black tracking-tighter text-slate-900">
-              {((stats.completed / (stats.total || 1)) * 100).toFixed(0)}%
+          <div className="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-2">
+            <h3 className="text-2xl sm:text-3xl font-black tracking-tighter text-slate-900">
+              {((stats.completed / (orders.length || 1)) * 100).toFixed(0)}%
             </h3>
             <span className="text-[10px] font-bold tracking-widest text-emerald-500 uppercase">
-              {stats.completed} Finished
+              {stats.completed} Delivered
             </span>
           </div>
         </div>
-        <div className="orders-stats-card group relative overflow-hidden rounded-[24px] border border-slate-100 bg-white p-6 shadow-sm">
+        <div className="orders-stats-card group relative overflow-hidden rounded-[24px] border border-slate-100 bg-white p-4 sm:p-6 shadow-sm">
           <p className="mb-2 text-[10px] font-black tracking-[3px] text-slate-400 uppercase">
             Satisfaction Quotient
           </p>
-          <div className="flex items-center gap-3">
-            <h3 className="text-3xl font-black tracking-tighter text-slate-900">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-3">
+            <h3 className="text-2xl sm:text-3xl font-black tracking-tighter text-slate-900">
               {stats.avgRating}
             </h3>
             <RatingStars rating={Math.floor(parseFloat(stats.avgRating))} />
           </div>
         </div>
-        <div className="orders-stats-card group relative overflow-hidden rounded-[24px] border border-slate-100 bg-white p-6 shadow-sm">
-          <div className="h-full w-full">
-            <ResponsiveContainer width="100%" height={60}>
+        <div className="orders-stats-card group relative overflow-hidden rounded-[24px] border border-slate-100 bg-white p-4 sm:p-6 shadow-sm">
+          <div className="h-[60px] w-full">
+            <ResponsiveContainer width="100%" height="100%" minWidth={0}>
               <BarChart data={chartData.customerBar}>
                 <Bar dataKey="orders" fill="#f1f5f9" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
-            <p className="mt-2 text-center text-[9px] font-bold tracking-widest text-slate-400 uppercase">
-              Activity Pulsar
-            </p>
           </div>
+          <p className="mt-2 text-center text-[9px] font-bold tracking-widest text-slate-400 uppercase">
+            Order Value (₱{stats.orderVolume.toLocaleString()})
+          </p>
         </div>
       </section>
 
-      {/* 🛠️ HEADER CONTROLS */}
-      <section className="orders-header sticky top-0 z-40 flex flex-col items-center justify-between gap-6 rounded-[32px] border border-slate-100 bg-white/80 p-6 shadow-2xl shadow-slate-200/40 backdrop-blur-xl lg:flex-row">
-        <div className="group relative w-full max-w-xl flex-1">
-          <Search
-            className="absolute top-1/2 left-6 -translate-y-1/2 text-slate-400 transition-colors group-focus-within:text-emerald-500"
-            size={18}
-          />
-          <input
-            type="text"
-            placeholder="Search Order ID, Customer Entity, or Trace Map..."
-            className="orders-search-input w-full rounded-[22px] border border-slate-100 bg-slate-50 py-4 pr-6 pl-14 font-mono text-sm font-bold text-slate-900 italic transition-all focus:border-emerald-200 focus:bg-white focus:outline-none"
-            value={globalSearch}
-            onChange={(e) => setGlobalSearch(e.target.value)}
-          />
+      {/* 🛠️ HEADER CONTROLS - Removed main search/filters as requested */}
+      <section className="orders-header flex flex-col items-center justify-between gap-6 rounded-2xl border border-slate-100 bg-white p-6 shadow-2xl shadow-slate-200/40 lg:flex-row">
+        <div className="flex items-center gap-4">
+           <ShoppingBag className="text-slate-900 shrink-0" size={24} />
+           <h2 className="text-lg md:text-xl font-black tracking-tight text-slate-900 uppercase italic leading-tight">Order Management System</h2>
         </div>
 
-        <div className="flex w-full flex-wrap items-center gap-3 lg:w-auto">
+        <div className="grid w-full grid-cols-2 gap-3 lg:flex lg:w-auto lg:items-center">
           <select
-            className="orders-filter-dropdown cursor-pointer appearance-none rounded-[20px] border border-transparent bg-slate-100 px-6 py-4 pr-10 text-[10px] font-black tracking-widest text-slate-600 uppercase italic transition-colors hover:bg-slate-200 focus:outline-none"
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
+            className="orders-filter-dropdown w-full cursor-pointer appearance-none rounded-[20px] border border-transparent bg-slate-100 px-4 py-3 md:px-6 md:py-4 pr-10 text-[10px] font-black tracking-widest text-slate-600 uppercase italic transition-colors hover:bg-slate-200 focus:outline-none"
+            value={statusHeaderFilter}
+            onChange={(e) => setStatusHeaderFilter(e.target.value)}
           >
-            <option value="all">Status: Unified</option>
-            <option value="Pending">Pending</option>
-            <option value="Processing">Processing</option>
-            <option value="Shipped">Shipped</option>
-            <option value="Completed">Completed</option>
-            <option value="Cancelled">Cancelled</option>
+            <option value="all">Filter: All Statuses</option>
+            <option value="UNPAID">Unpaid</option>
+            <option value="PENDING">Pending</option>
+            <option value="PROCESSING">Processing</option>
+            <option value="SHIPPED">Shipped</option>
+            <option value="DELIVERED">Delivered</option>
+            <option value="CANCELLED">Cancelled</option>
           </select>
 
           <select
-            className="orders-filter-dropdown cursor-pointer appearance-none rounded-[20px] border border-transparent bg-slate-100 px-6 py-4 pr-10 text-[10px] font-black tracking-widest text-slate-600 uppercase italic transition-colors hover:bg-slate-200 focus:outline-none"
-            value={ratingFilter}
-            onChange={(e) => setRatingFilter(e.target.value)}
-          >
-            <option value="all">Rating: All Nodes</option>
-            <option value="5">Rating: 5 Stars</option>
-            <option value="4">Rating: 4 Stars</option>
-            <option value="3">Rating: 3 Stars</option>
-            <option value="2">Rating: 2 Stars</option>
-            <option value="1">Rating: 1 Star</option>
-          </select>
-
-          <select
-            className="orders-sort-control cursor-pointer appearance-none rounded-[20px] border border-transparent bg-slate-100 px-6 py-4 pr-10 text-[10px] font-black tracking-widest text-slate-600 uppercase italic transition-colors hover:bg-slate-200 focus:outline-none"
+            className="orders-sort-control w-full cursor-pointer appearance-none rounded-[20px] border border-transparent bg-slate-100 px-4 py-3 md:px-6 md:py-4 pr-10 text-[10px] font-black tracking-widest text-slate-600 uppercase italic transition-colors hover:bg-slate-200 focus:outline-none"
             value={sortOption}
             onChange={(e) => setSortOption(e.target.value)}
           >
-            <option value="date-desc">Newest Epoch</option>
-            <option value="date-asc">Oldest Epoch</option>
+
+            <option value="date-desc">Newest First</option>
+            <option value="date-asc">Oldest First</option>
             <option value="amount-desc">Top Magnitude</option>
             <option value="amount-asc">Low Magnitude</option>
             <option value="name-asc">Customer A-Z</option>
           </select>
-
-          <button className="rounded-[20px] bg-slate-900 p-4 text-[#75EEA5] shadow-xl shadow-slate-900/20 transition-transform hover:scale-105 active:scale-95">
-            <Download size={20} />
-          </button>
         </div>
       </section>
 
+
       <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-12">
         {/* 👤 2️⃣ LEFT PANEL — CUSTOMER LIST */}
-        <aside className="orders-customer-sidebar flex h-[800px] flex-col overflow-hidden rounded-[40px] border border-slate-100 bg-white shadow-xl shadow-slate-200/30 lg:col-span-3">
-          <div className="border-b border-slate-50 bg-slate-50/50 p-8">
+        <aside className="orders-customer-sidebar flex h-[800px] flex-col overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-xl shadow-slate-200/30 lg:col-span-3">
+          <div className="border-b border-slate-50 bg-slate-50/50 p-6">
             <h3 className="text-lg font-black text-slate-900 uppercase italic">
-              Customer Registry
+              Customer List
             </h3>
-            <p className="mt-1 text-[10px] font-black tracking-[2px] text-slate-400 uppercase italic">
-              Active Wallet Entities
-            </p>
+            <div className="relative mt-4">
+              <Search className="absolute top-1/2 left-3 -translate-y-1/2 text-slate-400" size={14} />
+              <input 
+                type="text" 
+                placeholder="Search customers..." 
+                className="w-full rounded-xl border border-slate-200 bg-white py-2 pr-4 pl-9 text-[10px] font-bold focus:border-emerald-500 focus:outline-none"
+                value={customerSearch}
+                onChange={(e) => {
+                  setCustomerSearch(e.target.value)
+                  setCustomerCurrentPage(1)
+                }}
+              />
+            </div>
           </div>
+
 
           <div className="custom-scrollbar flex-1 space-y-4 overflow-y-auto p-6">
             <div
               className={cn(
-                'orders-customer-card group cursor-pointer rounded-[24px] border p-4 transition-all',
+                'orders-customer-card group cursor-pointer rounded-xl border p-4 transition-all mb-4',
                 !selectedCustomerId
                   ? 'orders-customer-active border-slate-900 bg-slate-900 shadow-xl'
                   : 'border-transparent bg-white hover:bg-slate-50',
@@ -435,7 +389,7 @@ const Orders: React.FC = () => {
                       !selectedCustomerId ? 'text-white' : 'text-slate-900',
                     )}
                   >
-                    Unified Feed
+                    All Customers
                   </p>
                   <p
                     className={cn(
@@ -443,17 +397,18 @@ const Orders: React.FC = () => {
                       !selectedCustomerId ? 'text-white/50' : 'text-slate-400',
                     )}
                   >
-                    Show all active nodes
+                    View all orders
                   </p>
                 </div>
               </div>
             </div>
 
-            {customers.map((customer) => (
+
+            {paginatedCustomers.map((customer) => (
               <div
                 key={customer.id}
                 className={cn(
-                  'orders-customer-card group cursor-pointer rounded-[28px] border p-5 transition-all',
+                  'orders-customer-card group cursor-pointer rounded-xl border p-5 transition-all mb-4',
                   selectedCustomerId === customer.id
                     ? 'orders-customer-active border-slate-900 bg-slate-900 shadow-2xl'
                     : 'border-slate-100 bg-white hover:border-emerald-200 hover:bg-emerald-50/30',
@@ -464,13 +419,24 @@ const Orders: React.FC = () => {
                   <div className="relative">
                     <div
                       className={cn(
-                        'flex h-14 w-14 items-center justify-center rounded-[22px] text-lg font-black shadow-inner',
+                        'flex h-14 w-14 items-center justify-center overflow-hidden rounded-[22px] shadow-inner',
                         selectedCustomerId === customer.id
-                          ? 'bg-white text-slate-900'
-                          : 'bg-slate-100 text-slate-300',
+                          ? 'bg-white text-slate-900 font-black text-lg'
+                          : 'bg-slate-100 text-slate-300 font-black text-lg',
                       )}
                     >
-                      {customer.name.charAt(0)}
+                      {customer.profile_picture ? (
+                        <img 
+                          src={`/src/assets/profile/${customer.profile_picture}`} 
+                          alt="" 
+                          className="h-full w-full object-cover"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = 'none'
+                          }}
+                        />
+                      ) : (
+                        <span>{customer.name.charAt(0)}</span>
+                      )}
                     </div>
                     <div className="absolute -right-1 -bottom-1 h-4 w-4 rounded-full border-4 border-white bg-emerald-500"></div>
                   </div>
@@ -507,7 +473,7 @@ const Orders: React.FC = () => {
                           : 'text-slate-400',
                       )}
                     >
-                      Load
+                      Orders
                     </p>
                     <p
                       className={cn(
@@ -529,7 +495,7 @@ const Orders: React.FC = () => {
                           : 'text-slate-400',
                       )}
                     >
-                      Yield
+                      Total Spent
                     </p>
                     <p
                       className={cn(
@@ -546,52 +512,143 @@ const Orders: React.FC = () => {
               </div>
             ))}
           </div>
+
+          {/* Customer List Pagination */}
+          <div className="flex items-center justify-center gap-2 border-t border-slate-100 bg-slate-50/50 p-4">
+            <button
+              onClick={() => setCustomerCurrentPage(p => Math.max(1, p - 1))}
+              disabled={customerCurrentPage === 1}
+              className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 disabled:opacity-30"
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <span className="text-[10px] font-black text-slate-500 uppercase">
+              {customerCurrentPage} / {customerTotalPages || 1}
+            </span>
+            <button
+              onClick={() => setCustomerCurrentPage(p => Math.min(customerTotalPages, p + 1))}
+              disabled={customerCurrentPage === customerTotalPages}
+              className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 disabled:opacity-30"
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
+
         </aside>
 
         {/* 📦 3️⃣ MAIN PANEL — ORDERS TABLE VIEW */}
         <main className="orders-main-panel space-y-8 lg:col-span-9">
-          <div className="overflow-hidden rounded-[44px] border border-slate-100 bg-white shadow-2xl shadow-slate-200/40">
-            <div className="flex items-center justify-between border-b border-slate-100 p-8">
+          <div className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-2xl shadow-slate-200/40">
+            <div className="flex flex-col md:flex-row items-center justify-between border-b border-slate-100 p-8 gap-4">
               <div>
                 <h3 className="text-lg font-black text-slate-900 uppercase italic">
-                  Immutable Payload Ledger
+                  Order Details
                 </h3>
                 <p className="mt-1 text-[10px] font-black tracking-[2px] text-slate-400 uppercase italic">
                   {selectedCustomerId
-                    ? `Trace: ${customers.find((c) => c.id === selectedCustomerId)?.name}`
-                    : 'Trace: Unified Global Registry'}
+                    ? `Viewing: ${customers.find((c) => c.id === selectedCustomerId)?.name}`
+                    : 'Viewing: All Orders'}
                 </p>
               </div>
               <div className="flex items-center gap-4">
                 <div className="rounded-full border border-slate-100 bg-slate-50 px-5 py-2 text-[10px] font-black tracking-[2px] text-slate-500 uppercase">
-                  Filter Impact: {filteredOrders.length} Nodes
+                  Showing {filteredOrders.length} Orders
                 </div>
               </div>
             </div>
 
-            <div className="custom-scrollbar overflow-x-auto">
+            {/* 📱 MOBILE VIEW: 2 COLUMN GRID */}
+            <div className="grid grid-cols-2 gap-3 p-4 lg:hidden">
+              {paginatedOrders.map((order) => {
+                const customer = customers.find((c) => c.id === order.user_id)
+                return (
+                  <motion.div
+                    key={order.order_id}
+                    whileHover={{ scale: 1.01 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => setMobileDetailOrder(order)}
+                    className="group relative flex flex-col overflow-hidden rounded-xl border border-slate-100 bg-white p-3 shadow-sm transition-all hover:shadow-md"
+                  >
+                    <div className="mb-2 flex items-start justify-between">
+                      <div className="flex flex-col overflow-hidden">
+                        <span className="text-[8px] font-bold text-slate-400">#{order.order_id.slice(-6)}</span>
+                        <h4 className="text-[10px] font-black text-slate-900 uppercase italic truncate">
+                          {customer?.name || 'Unknown'}
+                        </h4>
+                      </div>
+                      <div className={cn(
+                        "rounded-full px-1.5 py-0.5 text-[7px] font-black uppercase shrink-0",
+                        order.status?.toUpperCase() === 'DELIVERED' ? 'bg-emerald-50 text-emerald-600' :
+                        order.status?.toUpperCase() === 'PENDING' ? 'bg-amber-50 text-amber-600' :
+                        order.status?.toUpperCase() === 'UNPAID' ? 'bg-slate-100 text-slate-600' :
+                        order.status?.toUpperCase() === 'PROCESSING' ? 'bg-blue-50 text-blue-600' :
+                        order.status?.toUpperCase() === 'CANCELLED' ? 'bg-rose-50 text-rose-600' :
+                        'bg-slate-50 text-slate-400'
+                      )}>
+                        {order.status?.toUpperCase()}
+                      </div>
+                    </div>
+                    
+                    <div className="mb-2 flex items-center justify-between">
+                      <div className="flex -space-x-1.5">
+                        {order.products.slice(0, 2).map((p, i) => (
+                          <div key={i} className="h-5 w-5 overflow-hidden rounded-full border border-white bg-slate-100">
+                             {p.productImage && <img src={p.productImage} className="h-full w-full object-cover" alt="" />}
+                          </div>
+                        ))}
+                        {order.products.length > 2 && (
+                          <div className="flex h-5 w-5 items-center justify-center rounded-full border border-white bg-slate-900 text-[6px] font-black text-white">
+                            +{order.products.length - 2}
+                          </div>
+                        )}
+                      </div>
+                      <span className="text-[11px] font-black text-slate-900">₱{order.total_amount.toLocaleString()}</span>
+                    </div>
+
+                    <div className="mt-auto border-t border-slate-50 pt-2 flex items-center justify-between">
+                       <span className="text-[7px] font-bold text-slate-400">
+                          {format(parseISO(order.created_at), 'MMM dd')}
+                       </span>
+                       <div className="flex gap-0.5">
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setDeleteModal({ isOpen: true, orderId: order.order_id })
+                            }}
+                            className="rounded p-1 text-rose-400 hover:bg-rose-50"
+                          >
+                             <Trash2 size={10} />
+                          </button>
+                       </div>
+                    </div>
+                  </motion.div>
+                )
+              })}
+            </div>
+
+            <div className="custom-scrollbar hidden overflow-x-auto lg:block">
               <table className="orders-table w-full border-collapse text-left">
                 <thead>
                   <tr className="border-b border-slate-100 bg-slate-50/50">
                     <th className="px-8 py-6 text-[10px] font-black tracking-widest text-slate-400 uppercase">
-                      Trace ID
+                      Order ID
                     </th>
                     {!selectedCustomerId && (
                       <th className="px-8 py-6 text-[10px] font-black tracking-widest text-slate-400 uppercase">
-                        Customer Entity
+                        Customer
                       </th>
                     )}
                     <th className="px-8 py-6 text-[10px] font-black tracking-widest text-slate-400 uppercase">
-                      Payload Items
+                      Items
                     </th>
                     <th className="px-8 py-6 text-[10px] font-black tracking-widest text-slate-400 uppercase">
-                      Gross Value
+                      Total Amount
                     </th>
                     <th className="px-8 py-6 text-[10px] font-black tracking-widest text-slate-400 uppercase">
-                      Status Hub
+                      Status
                     </th>
                     <th className="px-8 py-6 text-[10px] font-black tracking-widest text-slate-400 uppercase">
-                      Entry Epoch
+                      Date
                     </th>
                     <th className="px-8 py-6 text-right text-[10px] font-black tracking-widest text-slate-400 uppercase">
                       Action
@@ -600,10 +657,17 @@ const Orders: React.FC = () => {
                 </thead>
                 <tbody className="divide-y divide-slate-50">
                   {paginatedOrders.map((order) => {
-                    const customer = users.find((u) => u.id === order.user_id)
+                    const customer = customers.find((c) => c.id === order.user_id)
+                    const isExpanded = expandedOrderIds.has(order.order_id)
                     return (
                       <React.Fragment key={order.order_id}>
-                        <tr className="orders-row group transition-colors hover:bg-slate-50/80">
+                        <tr 
+                          className={cn(
+                            "orders-row group transition-colors hover:bg-slate-50/80 cursor-pointer",
+                            isExpanded && "bg-slate-50/50"
+                          )}
+                          onClick={() => toggleOrderExpansion(order.order_id)}
+                        >
                           <td className="px-8 py-6 font-mono text-[11px] font-bold text-slate-500">
                             {order.order_id}
                           </td>
@@ -636,42 +700,48 @@ const Orders: React.FC = () => {
                             </span>
                           </td>
                           <td className="px-8 py-6">
-                            <div className="group/status relative flex items-center gap-3">
-                              <select
-                                disabled={user?.role === 'staff'}
-                                className={cn(
-                                  'orders-status-dropdown appearance-none rounded-xl border px-4 py-2 pr-8 text-[10px] font-black uppercase transition-all',
-                                  user?.role === 'staff'
-                                    ? 'cursor-not-allowed opacity-70'
-                                    : 'cursor-pointer',
-                                  order.status === 'Completed'
-                                    ? 'border-emerald-100 bg-emerald-50 text-emerald-600'
-                                    : order.status === 'Pending'
-                                      ? 'border-amber-100 bg-amber-50 text-amber-600'
-                                      : order.status === 'Processing'
-                                        ? 'border-blue-100 bg-blue-50 text-blue-600'
-                                        : order.status === 'Cancelled'
-                                          ? 'border-rose-100 bg-rose-50 text-rose-600'
-                                          : 'border-slate-200 bg-slate-100 text-slate-600',
-                                )}
-                                value={order.status}
-                                onChange={(e) =>
-                                  handleUpdateStatus(
-                                    order.order_id,
-                                    e.target.value,
-                                  )
-                                }
-                              >
-                                <option value="Pending">Pending</option>
-                                <option value="Processing">Processing</option>
-                                <option value="Shipped">Shipped</option>
-                                <option value="Completed">Completed</option>
-                                <option value="Cancelled">Cancelled</option>
-                              </select>
-                              <MoreVertical
-                                className="pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 text-current opacity-30"
-                                size={12}
-                              />
+                            <div className="group/status relative flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
+                              <div className="relative w-fit">
+                                <select
+                                  disabled={user?.role === 'staff'}
+                                  className={cn(
+                                    'orders-status-dropdown appearance-none rounded-xl border px-4 py-2 pr-8 text-[10px] font-black uppercase transition-all',
+                                    user?.role === 'staff'
+                                      ? 'cursor-not-allowed opacity-70'
+                                      : 'cursor-pointer',
+                                    order.status?.toUpperCase() === 'DELIVERED'
+                                      ? 'border-emerald-100 bg-emerald-50 text-emerald-600'
+                                      : order.status?.toUpperCase() === 'PENDING'
+                                        ? 'border-amber-100 bg-amber-50 text-amber-600'
+                                        : order.status?.toUpperCase() === 'UNPAID'
+                                          ? 'border-slate-300 bg-slate-100 text-slate-600'
+                                          : order.status?.toUpperCase() === 'PROCESSING'
+                                            ? 'border-blue-100 bg-blue-50 text-blue-600'
+                                            : order.status?.toUpperCase() === 'CANCELLED'
+                                              ? 'border-rose-100 bg-rose-50 text-rose-600'
+                                              : 'border-slate-200 bg-slate-100 text-slate-600',
+                                  )}
+                                  value={order.status?.toUpperCase()}
+                                  onChange={(e) =>
+                                    setStatusModal({
+                                      isOpen: true,
+                                      orderId: order.order_id,
+                                      newStatus: e.target.value.toUpperCase(),
+                                    })
+                                  }
+                                >
+                                  <option value="UNPAID">Unpaid</option>
+                                  <option value="PENDING">Pending</option>
+                                  <option value="PROCESSING">Processing</option>
+                                  <option value="SHIPPED">Shipped</option>
+                                  <option value="DELIVERED">Delivered</option>
+                                  <option value="CANCELLED">Cancelled</option>
+                                </select>
+                                <MoreVertical
+                                  className="pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 text-current opacity-30"
+                                  size={12}
+                                />
+                              </div>
 
                               {/* ⚠️ DISPUTE SIGNAL */}
                               {order.complaint && (
@@ -685,170 +755,220 @@ const Orders: React.FC = () => {
                             </div>
                           </td>
                           <td className="px-8 py-6">
-                            <p className="text-xs font-black text-slate-900 italic">
-                              {format(
-                                parseISO(order.created_at),
-                                'MMM dd, yyyy',
-                              )}
-                            </p>
-                            <p className="mt-0.5 text-[10px] font-bold text-slate-400">
-                              {format(parseISO(order.created_at), 'hh:mm a')}
-                            </p>
+                            <span className="text-[10px] font-bold text-slate-500">
+                              {format(parseISO(order.created_at), 'MMM dd, yyyy')}
+                            </span>
                           </td>
                           <td className="px-8 py-6 text-right">
-                            <button className="orders-action-btn rounded-xl p-3 text-slate-400 transition-all hover:bg-slate-100 hover:text-slate-900">
-                              <ArrowUpDown size={18} />
-                            </button>
-                          </td>
-                        </tr>
-
-                        {/* ⭐ DETAILED PRODUCTION TRACE */}
-                        <tr className="bg-slate-50/30">
-                          <td
-                            colSpan={selectedCustomerId ? 6 : 7}
-                            className="px-12 py-8"
-                          >
-                            <div className="grid grid-cols-1 gap-8 border-l-4 border-slate-900 pl-8 md:grid-cols-2">
-                              <div className="space-y-6">
-                                <h4 className="text-[10px] font-black tracking-[3px] text-slate-400 uppercase">
-                                  Payload Breakdown
-                                </h4>
-                                {order.products.map((item, idx) => (
-                                  <div
-                                    key={idx}
-                                    className="flex flex-col gap-3 rounded-[28px] border border-slate-100 bg-white p-5 shadow-sm"
-                                  >
-                                    <div className="flex items-center justify-between">
-                                      <p className="text-xs font-black text-slate-900 uppercase italic">
-                                        {item.productName}
-                                      </p>
-                                      <span className="rounded bg-slate-900 px-2 py-0.5 text-[10px] font-black text-white uppercase">
-                                        {item.variant.size}
-                                      </span>
-                                    </div>
-                                    <div className="flex flex-wrap gap-2">
-                                      {item.colors.map((c, i) => (
-                                        <div
-                                          key={i}
-                                          className="flex items-center gap-1.5 rounded-full border border-slate-100 bg-slate-50 px-2 py-1"
-                                        >
-                                          <div
-                                            className="h-2 w-2 rounded-full"
-                                            style={{ backgroundColor: c.hex }}
-                                          />
-                                          <span className="text-[8px] font-bold text-slate-500 uppercase">
-                                            {c.name}
-                                          </span>
-                                        </div>
-                                      ))}
-                                    </div>
-                                    {item.plate && (
-                                      <div className="mt-1 flex items-center gap-2">
-                                        <div className="rounded bg-emerald-50 p-1 text-emerald-600">
-                                          <Download size={10} />
-                                        </div>
-                                        <p className="text-[9px] font-bold tracking-widest text-slate-500 uppercase">
-                                          Plate: {item.plate.name}
-                                        </p>
-                                      </div>
-                                    )}
-                                    {item.customRequirements && (
-                                      <div className="mt-3 rounded-2xl border border-amber-100 bg-amber-50/50 p-4">
-                                        <p className="mb-1 text-[8px] font-black tracking-widest text-amber-600 uppercase">
-                                          Production Requisition
-                                        </p>
-                                        <p className="text-[10px] font-bold text-slate-600 italic">
-                                          "{item.customRequirements}"
-                                        </p>
-                                      </div>
-                                    )}
-                                  </div>
-                                ))}
-                              </div>
-
-                              <div className="space-y-6">
-                                <div className="space-y-4">
-                                  <h4 className="text-[10px] font-black tracking-[3px] text-slate-400 uppercase">
-                                    Financial Synthesis
-                                  </h4>
-                                  <div className="rounded-[32px] bg-slate-900 p-6 text-white">
-                                    <div className="mb-4 flex items-center justify-between">
-                                      <span className="text-[10px] font-black tracking-widest uppercase opacity-60">
-                                        Gross Value
-                                      </span>
-                                      <span className="text-sm font-black italic">
-                                        ₱{order.total_amount.toLocaleString()}
-                                      </span>
-                                    </div>
-                                    {order.discount &&
-                                      order.discount.total_discount_amount >
-                                        0 && (
-                                        <div className="flex items-center justify-between text-emerald-400">
-                                          <span className="text-[10px] font-black tracking-widest uppercase">
-                                            Loyalty Discount Applied
-                                          </span>
-                                          <span className="text-sm font-black italic">
-                                            -₱
-                                            {order.discount.total_discount_amount.toLocaleString()}
-                                          </span>
-                                        </div>
-                                      )}
-                                  </div>
-                                </div>
-
-                                {(order.feedback ||
-                                  order.complaint ||
-                                  (order.rating || 0) > 0) && (
-                                  <div className="space-y-4">
-                                    <h4 className="text-[10px] font-black tracking-[3px] text-slate-400 uppercase">
-                                      Customer Audit Logic
-                                    </h4>
-
-                                    <div className="rounded-[32px] border border-emerald-100 bg-emerald-50/50 p-6">
-                                      <div className="mb-3 flex items-center gap-2">
-                                        <RatingStars
-                                          rating={order.rating || 0}
-                                        />
-                                        <span className="ml-auto text-[9px] font-black tracking-widest text-emerald-600 uppercase">
-                                          Client Rating
-                                        </span>
-                                      </div>
-                                      <p className="text-xs font-bold text-slate-700 italic">
-                                        "
-                                        {order.feedback ||
-                                          'No textual feedback provided'}
-                                        "
-                                      </p>
-                                    </div>
-
-                                    {order.complaint && (
-                                      <div className="relative overflow-hidden rounded-[32px] border border-rose-100 bg-rose-50 p-6">
-                                        <div className="absolute top-0 right-0 p-4 opacity-10">
-                                          <AlertTriangle
-                                            className="text-rose-600"
-                                            size={40}
-                                          />
-                                        </div>
-                                        <div className="mb-2 flex items-center gap-2">
-                                          <AlertTriangle
-                                            className="text-rose-600"
-                                            size={14}
-                                          />
-                                          <span className="text-[9px] font-black tracking-widest text-rose-600 uppercase">
-                                            Dispute Signal Detected
-                                          </span>
-                                        </div>
-                                        <p className="text-xs leading-relaxed font-bold text-rose-900 italic">
-                                          {order.complaint}
-                                        </p>
-                                      </div>
-                                    )}
-                                  </div>
-                                )}
-                              </div>
+                            <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+                              <button 
+                                onClick={() => setDeleteModal({ isOpen: true, orderId: order.order_id })}
+                                className="orders-action-btn rounded-xl p-3 text-rose-400 transition-all hover:bg-rose-50 hover:text-rose-600"
+                              >
+                                <Trash2 size={18} />
+                              </button>
                             </div>
                           </td>
                         </tr>
+
+                        {/* Order Item Details */}
+                        <AnimatePresence>
+                          {isExpanded && (
+                            <motion.tr 
+                              initial={{ opacity: 0, height: 0 }}
+                              animate={{ opacity: 1, height: 'auto' }}
+                              exit={{ opacity: 0, height: 0 }}
+                              className="bg-slate-50/30 overflow-hidden"
+                            >
+                              <td
+                                colSpan={selectedCustomerId ? 6 : 7}
+                                className="px-12 py-8"
+                              >
+                                <div className="grid grid-cols-1 gap-8 border-l-4 border-slate-900 pl-8 md:grid-cols-2">
+                                  {/* Items Side */}
+                                  <div className="space-y-6">
+                                    <h4 className="text-[10px] font-black tracking-[3px] text-slate-400 uppercase">
+                                      Items
+                                    </h4>
+                                    {order.products.map((item, idx) => (
+                                      <div
+                                        key={idx}
+                                        className="flex flex-col gap-4 rounded-xl border border-slate-100 bg-white p-6 shadow-sm"
+                                      >
+                                        <div className="flex items-start gap-4">
+                                          {item.productImage && (
+                                            <div className="h-20 w-20 shrink-0 overflow-hidden rounded-2xl bg-slate-50">
+                                              <img
+                                                src={item.productImage}
+                                                alt={item.productName}
+                                                className="h-full w-full object-cover"
+                                              />
+                                            </div>
+                                          )}
+                                          <div className="flex-1">
+                                            <div className="flex items-center justify-between">
+                                              <div>
+                                                <h5 className="text-sm font-black text-slate-900 uppercase italic">
+                                                  {item.productName}
+                                                </h5>
+                                                <p className="text-[10px] font-bold text-slate-400 uppercase">
+                                                  PID: {item.productId}
+                                                </p>
+                                              </div>
+                                              <div className="text-right">
+                                                <p className="text-[9px] font-black tracking-widest text-slate-400 uppercase">Quantity</p>
+                                                <p className="text-xs font-black text-slate-900">Ascending {item.quantity}</p>
+                                              </div>
+                                            </div>
+                                            {item.short_description && (
+                                              <p className="mt-2 text-xs font-medium leading-relaxed text-slate-600">
+                                                {item.short_description}
+                                              </p>
+                                            )}
+                                          </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-4 border-t border-slate-50 pt-4">
+                                          <div>
+                                            <p className="text-[8px] font-black tracking-widest text-slate-400 uppercase">Item ID</p>
+                                            <p className="font-mono text-[10px] font-bold text-slate-900">{item.id}</p>
+                                          </div>
+                                          <div>
+                                            <p className="text-[8px] font-black tracking-widest text-slate-400 uppercase">Variant ID</p>
+                                            <p className="font-mono text-[10px] font-bold text-slate-900">{item.variant.id}</p>
+                                          </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-4 border-t border-slate-50 pt-4">
+                                          <div>
+                                            <p className="text-[8px] font-black tracking-widest text-slate-400 uppercase">Created At</p>
+                                            <p className="text-[10px] font-bold text-slate-900">
+                                              {format(parseISO(item.created_at), 'MMM dd, yyyy HH:mm')}
+                                            </p>
+                                          </div>
+                                          {item.plate && (
+                                            <div>
+                                              <p className="text-[8px] font-black tracking-widest text-slate-400 uppercase">Screenplate ID</p>
+                                              <p className="font-mono text-[10px] font-bold text-slate-900">{item.plate.id}</p>
+                                            </div>
+                                          )}
+                                        </div>
+
+                                        <div className="flex flex-wrap gap-2 pt-2">
+                                          {item.colors.map((c, i) => (
+                                            <div
+                                              key={i}
+                                              className="flex items-center gap-1.5 rounded-full border border-slate-100 bg-slate-50 px-2 py-1"
+                                            >
+                                              <div
+                                                className="h-2 w-2 rounded-full"
+                                                style={{ backgroundColor: c.hex }}
+                                              />
+                                              <span className="text-[8px] font-bold text-slate-500 uppercase">
+                                                {c.name}
+                                              </span>
+                                            </div>
+                                          ))}
+                                        </div>
+
+                                        {item.customRequirements && (
+                                          <div className="mt-2 rounded-xl bg-slate-50 p-4">
+                                            <p className="text-[8px] font-black tracking-widest text-slate-400 uppercase mb-1">Production Notes</p>
+                                            <p className="text-xs font-bold text-slate-600 italic">"{item.customRequirements}"</p>
+                                          </div>
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
+
+                                  {/* Financial & Feedback Side */}
+                                  <div className="space-y-6">
+                                    <div className="space-y-4">
+                                      <h4 className="text-[10px] font-black tracking-[3px] text-slate-400 uppercase">
+                                        Financial Synthesis
+                                      </h4>
+                                      <div className="rounded-xl bg-slate-900 p-8 text-white">
+                                        {order.products.map((item, pIdx) => (
+                                          <div key={pIdx} className={cn("mb-6 space-y-2 pb-6", pIdx < order.products.length - 1 && "border-b border-white/10")}>
+                                            <p className="text-[9px] font-black tracking-[2px] text-emerald-400 uppercase italic">
+                                              {item.productName}
+                                            </p>
+                                            <div className="flex items-center justify-between">
+                                              <span className="text-[10px] font-bold uppercase opacity-50">Unit Price &times; {item.quantity}</span>
+                                              <span className="text-xs font-black italic">₱{(item.variant.unitPrice * item.quantity).toLocaleString()}</span>
+                                            </div>
+                                            {item.plate && (
+                                              <div className="flex items-center justify-between">
+                                                <span className="text-[10px] font-bold uppercase opacity-50">Plate Printing Setup</span>
+                                                <span className="text-xs font-black italic">₱{(item.plate.printPricePerUnit * item.quantity).toLocaleString()}</span>
+                                              </div>
+                                            )}
+                                          </div>
+                                        ))}
+
+                                        <div className="mt-8 flex items-center justify-between border-t border-white/20 pt-6">
+                                          <span className="text-xs font-black tracking-[3px] uppercase opacity-60">
+                                            Gross Value
+                                          </span>
+                                          <span className="text-xl font-black italic">
+                                            ₱{order.total_amount.toLocaleString()}
+                                          </span>
+                                        </div>
+                                        {order.discount &&
+                                          order.discount.total_discount_amount > 0 && (
+                                          <div className="mt-2 flex items-center justify-between text-emerald-400">
+                                            <span className="text-[10px] font-black tracking-widest uppercase">
+                                              Loyalty Discount Applied
+                                            </span>
+                                            <span className="text-sm font-black italic">
+                                              -₱{order.discount.total_discount_amount.toLocaleString()}
+                                            </span>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+
+                                    {(order.feedback || order.complaint || (order.rating || 0) > 0) && (
+                                      <div className="space-y-4">
+                                        <h4 className="text-[10px] font-black tracking-[3px] text-slate-400 uppercase">
+                                          Customer Feedback
+                                        </h4>
+                                        <div className="rounded-xl border border-emerald-100 bg-emerald-50/50 p-6">
+                                          <div className="mb-3 flex items-center gap-2">
+                                            <RatingStars rating={order.rating || 0} />
+                                            <span className="ml-auto text-[9px] font-black tracking-widest text-emerald-600 uppercase">
+                                              Client Rating
+                                            </span>
+                                          </div>
+                                          <p className="text-xs font-bold text-slate-700 italic">
+                                            "{order.feedback || 'No textual feedback provided'}"
+                                          </p>
+                                        </div>
+
+                                        {order.complaint && (
+                                          <div className="relative overflow-hidden rounded-xl border border-rose-100 bg-rose-50 p-6">
+                                            <div className="absolute top-0 right-0 p-4 opacity-10">
+                                              <AlertTriangle className="text-rose-600" size={40} />
+                                            </div>
+                                            <div className="mb-2 flex items-center gap-2">
+                                              <AlertTriangle className="text-rose-600" size={14} />
+                                              <span className="text-[9px] font-black tracking-widest text-rose-600 uppercase">
+                                                Dispute Signal Detected
+                                              </span>
+                                            </div>
+                                            <p className="text-xs leading-relaxed font-bold text-rose-900 italic">
+                                              {order.complaint}
+                                            </p>
+                                          </div>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </td>
+                            </motion.tr>
+                          )}
+                        </AnimatePresence>
                       </React.Fragment>
                     )
                   })}
@@ -862,7 +982,7 @@ const Orders: React.FC = () => {
                         <div className="flex flex-col items-center gap-4 opacity-30">
                           <ShoppingBag size={48} className="text-slate-400" />
                           <p className="text-sm font-black tracking-widest text-slate-400 uppercase italic">
-                            Payload Void Detected
+                            No Orders Found
                           </p>
                         </div>
                       </td>
@@ -875,8 +995,7 @@ const Orders: React.FC = () => {
             {/* 📄 PAGINATION */}
             <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50/30 p-8">
               <p className="text-[10px] font-black tracking-[2px] text-slate-400 uppercase">
-                Transmitting {paginatedOrders.length} of {filteredOrders.length}{' '}
-                Load Nodes
+                Displaying {paginatedOrders.length} of {filteredOrders.length} Orders
               </p>
               <div className="flex items-center gap-2">
                 <button
@@ -919,12 +1038,12 @@ const Orders: React.FC = () => {
 
           {/* 📊 PIE CHART AREA */}
           <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
-            <div className="rounded-[44px] border border-slate-100 bg-white p-8 shadow-xl">
+            <div className="rounded-2xl border border-slate-100 bg-white p-8 shadow-xl">
               <h4 className="mb-8 text-sm font-black text-slate-900 uppercase italic">
-                Load Priority Distribution
+                Order Status Distribution
               </h4>
               <div className="h-[260px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                   <PieChart>
                     <Pie
                       data={chartData.statusPie}
@@ -969,13 +1088,13 @@ const Orders: React.FC = () => {
               </div>
             </div>
 
-            <div className="relative overflow-hidden rounded-[44px] border border-slate-800 bg-slate-900 p-8 shadow-2xl">
+            <div className="relative overflow-hidden rounded-2xl border border-slate-800 bg-slate-900 p-8 shadow-2xl">
               <div className="absolute top-0 right-0 p-8 opacity-10">
                 <TrendingUp className="text-[#75EEA5]" size={100} />
               </div>
               <div className="relative z-10">
                 <h4 className="mb-8 text-sm font-black text-white uppercase italic">
-                  Top Yield Entities
+                  Top Customers
                 </h4>
                 <div className="space-y-6">
                   {customers.slice(0, 3).map((c, idx) => (
@@ -1004,7 +1123,7 @@ const Orders: React.FC = () => {
                 </div>
                 <div className="mt-10 border-t border-white/10 pt-8">
                   <p className="text-center text-[9px] font-bold tracking-[4px] text-white/30 uppercase">
-                    Load Optimization Metrics Integrated
+                    Top Customer Performance Summary
                   </p>
                 </div>
               </div>
@@ -1012,6 +1131,289 @@ const Orders: React.FC = () => {
           </div>
         </main>
       </div>
+      {/* Status Update Confirmation Modal */}
+      <AnimatePresence>
+        {statusModal.isOpen && (
+          <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-md"
+              onClick={() => setStatusModal({ ...statusModal, isOpen: false })}
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative w-full max-w-lg overflow-hidden rounded-[40px] bg-white p-8 shadow-2xl md:p-12"
+            >
+              <div className="mb-8">
+                <div className="mb-4 flex items-center gap-3">
+                  <div className="h-0.5 w-8 bg-emerald-500" />
+                  <span className="text-[10px] font-black tracking-[4px] text-emerald-500 uppercase italic">
+                    Status Synchronization
+                  </span>
+                </div>
+                <h2 className="text-3xl font-black tracking-tighter text-slate-900 uppercase italic">
+                  Apply <span className="text-emerald-500">{statusModal.newStatus}</span> Status?
+                </h2>
+                <p className="mt-4 text-xs font-bold leading-relaxed text-slate-400 uppercase italic">
+                  You are about to update Order <span className="text-slate-900 font-mono">{statusModal.orderId}</span> to the <span className="text-slate-900">{statusModal.newStatus}</span> state. This will notify the customer.
+                </p>
+              </div>
+
+              <div className="flex gap-4">
+                <button
+                  onClick={() => setStatusModal({ ...statusModal, isOpen: false })}
+                  className="flex-1 rounded-3xl border border-slate-100 py-5 text-[10px] font-black tracking-widest text-slate-400 uppercase italic transition-all hover:bg-slate-50"
+                >
+                  Regress
+                </button>
+                <button
+                  onClick={handleUpdateStatus}
+                  className="flex-1 rounded-3xl bg-slate-900 py-5 text-[10px] font-black tracking-widest text-[#75EEA5] uppercase italic shadow-xl shadow-slate-900/20 transition-all hover:scale-105 active:scale-95"
+                >
+                  Execute Update
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Delete Order Confirmation Modal */}
+      <AnimatePresence>
+        {deleteModal.isOpen && (
+          <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-md"
+              onClick={() => setDeleteModal({ ...deleteModal, isOpen: false })}
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative w-full max-w-lg overflow-hidden rounded-2xl bg-white p-8 shadow-2xl md:p-12"
+            >
+              <div className="mb-8">
+                <div className="mb-4 flex items-center gap-3">
+                  <div className="h-0.5 w-8 bg-rose-500" />
+                  <span className="text-[10px] font-black tracking-[4px] text-rose-500 uppercase italic">
+                    Critical Operation
+                  </span>
+                </div>
+                <h2 className="text-3xl font-black tracking-tighter text-slate-900 uppercase italic">
+                  Delete Order?
+                </h2>
+                <p className="mt-4 text-xs font-bold leading-relaxed text-slate-400 uppercase italic">
+                  You are about to permanently delete Order <span className="text-slate-900 font-mono">{deleteModal.orderId}</span>. This action cannot be undone.
+                </p>
+              </div>
+
+              <div className="flex gap-4">
+                <button
+                  onClick={() => setDeleteModal({ ...deleteModal, isOpen: false })}
+                  className="flex-1 rounded-xl border border-slate-100 py-5 text-[10px] font-black tracking-widest text-slate-400 uppercase italic transition-all hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeleteOrder}
+                  className="flex-1 rounded-xl bg-rose-600 py-5 text-[10px] font-black tracking-widest text-white uppercase italic shadow-xl shadow-rose-900/20 transition-all hover:bg-rose-700 hover:scale-105 active:scale-95"
+                >
+                  Delete Permanently
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Mobile Detail Modal */}
+      <AnimatePresence>
+        {mobileDetailOrder && (
+          <div className="fixed inset-0 z-[110] flex items-end sm:items-center justify-center p-0 sm:p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-md"
+              onClick={() => setMobileDetailOrder(null)}
+            />
+            <motion.div 
+              initial={{ opacity: 0, y: 100 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 100 }}
+              className="relative w-full max-w-4xl h-[85vh] sm:h-auto overflow-hidden rounded-t-[32px] sm:rounded-2xl bg-white shadow-2xl flex flex-col"
+            >
+               <div className="sticky top-0 z-20 bg-white border-b border-slate-100 p-6 flex items-center justify-between">
+                  <div>
+                    <h3 className="text-xl font-black text-slate-900 uppercase italic">Order Details</h3>
+                    <p className="text-[10px] font-bold text-slate-400">#{mobileDetailOrder.order_id}</p>
+                  </div>
+                  <button onClick={() => setMobileDetailOrder(null)} className="rounded-full bg-slate-100 p-2 text-slate-400 transition-colors hover:bg-slate-200">
+                    <ChevronRight className="rotate-90 sm:rotate-0" size={20} />
+                  </button>
+               </div>
+               
+               <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                  <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
+                    {/* Items Section (Desktop Duplicate) */}
+                    <div className="space-y-6">
+                      <h4 className="text-[10px] font-black tracking-[3px] text-slate-400 uppercase">Items</h4>
+                      {mobileDetailOrder.products.map((item: OrderItem, idx: number) => (
+                        <div key={idx} className="flex flex-col gap-4 rounded-xl border border-slate-100 bg-white p-6 shadow-sm">
+                          <div className="flex items-start gap-4">
+                            {item.productImage && (
+                              <div className="h-20 w-20 shrink-0 overflow-hidden rounded-2xl bg-slate-50">
+                                <img src={item.productImage} alt={item.productName} className="h-full w-full object-cover" />
+                              </div>
+                            )}
+                            <div className="flex-1">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <h5 className="text-sm font-black text-slate-900 uppercase italic leading-none">{item.productName}</h5>
+                                  <p className="mt-1 text-[10px] font-bold text-slate-400 uppercase">PID: {item.productId}</p>
+                                </div>
+                                <div className="text-right">
+                                  <p className="text-[9px] font-black tracking-widest text-slate-500">Qty: {item.quantity}</p>
+                                </div>
+                              </div>
+                              {item.short_description && (
+                                <p className="mt-2 text-xs font-medium leading-relaxed text-slate-600">{item.short_description}</p>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-4 border-t border-slate-50 pt-4">
+                            <div>
+                              <p className="text-[8px] font-black tracking-widest text-slate-400 uppercase">Variant Details</p>
+                              <p className="text-[10px] font-bold text-slate-900">{item.variant.size}</p>
+                            </div>
+                            <div>
+                              <p className="text-[8px] font-black tracking-widest text-slate-400 uppercase">Item ID</p>
+                              <p className="font-mono text-[9px] font-bold text-slate-900">{item.id}</p>
+                            </div>
+                          </div>
+
+                          <div className="flex flex-wrap gap-2 pt-2">
+                            {item.colors.map((c, i) => (
+                              <div key={i} className="flex items-center gap-1.5 rounded-full border border-slate-100 bg-slate-50 px-2 py-1">
+                                <div className="h-2 w-2 rounded-full" style={{ backgroundColor: c.hex }} />
+                                <span className="text-[8px] font-bold text-slate-500 uppercase">{c.name}</span>
+                              </div>
+                            ))}
+                          </div>
+
+                          {item.customRequirements && (
+                             <div className="mt-2 rounded-xl bg-slate-50 p-4 border-l-2 border-slate-900">
+                               <p className="text-[8px] font-black tracking-widest text-slate-400 uppercase mb-1 underline">Notes</p>
+                               <p className="text-xs font-bold text-slate-600 italic">"{item.customRequirements}"</p>
+                             </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Financial Side (Desktop Duplicate) */}
+                    <div className="space-y-6">
+                       <h4 className="text-[10px] font-black tracking-[3px] text-slate-400 uppercase">Financial Synthesis</h4>
+                       <div className="rounded-xl bg-slate-900 p-8 text-white">
+                          <div className="space-y-6">
+                            {mobileDetailOrder.products.map((item, pIdx) => (
+                              <div key={pIdx} className={cn("space-y-2 pb-6", pIdx < mobileDetailOrder.products.length - 1 && "border-b border-white/10")}>
+                                <p className="text-[9px] font-black tracking-[2px] text-emerald-400 uppercase italic">{item.productName}</p>
+                                <div className="flex items-center justify-between">
+                                  <span className="text-[10px] font-bold uppercase opacity-50">Unit &times; {item.quantity}</span>
+                                  <span className="text-xs font-black italic">₱{(item.variant.unitPrice * item.quantity).toLocaleString()}</span>
+                                </div>
+                                {item.plate && (
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-[10px] font-bold uppercase opacity-50">Setup Fee</span>
+                                    <span className="text-xs font-black italic">₱{(item.plate.printPricePerUnit * item.quantity).toLocaleString()}</span>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+
+                          <div className="mt-8 flex items-center justify-between border-t border-white/20 pt-6">
+                            <span className="text-xs font-black tracking-[3px] uppercase opacity-60">Gross Value</span>
+                            <span className="text-xl font-black italic">₱{mobileDetailOrder.total_amount.toLocaleString()}</span>
+                          </div>
+                          
+                          {mobileDetailOrder.discount && mobileDetailOrder.discount.total_discount_amount > 0 && (
+                            <div className="mt-2 flex items-center justify-between text-emerald-400">
+                              <span className="text-[10px] font-black tracking-widest uppercase">Loyalty Savings</span>
+                              <span className="text-sm font-black italic">-₱{mobileDetailOrder.discount.total_discount_amount.toLocaleString()}</span>
+                            </div>
+                          )}
+                       </div>
+
+                       {/* Status Selection for Mobile */}
+                       <div className="space-y-4">
+                          <h4 className="text-[10px] font-black tracking-[3px] text-slate-400 uppercase">Control Center</h4>
+                          <div className="rounded-xl border border-slate-100 bg-white p-6">
+                             <p className="mb-4 text-[10px] font-bold text-slate-400 uppercase italic">Update Lifecycle Status</p>
+                             <div className="grid grid-cols-2 gap-2">
+                                {['UNPAID', 'PENDING', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED'].map((s) => (
+                                   <button
+                                     key={s}
+                                     onClick={() => setStatusModal({ isOpen: true, orderId: mobileDetailOrder.order_id, newStatus: s })}
+                                     className={cn(
+                                       "rounded-lg border py-3 text-[9px] font-black uppercase transition-all",
+                                       mobileDetailOrder.status?.toUpperCase() === s 
+                                         ? "border-slate-900 bg-slate-900 text-white shadow-lg shadow-slate-900/10"
+                                         : "border-slate-100 bg-slate-50 text-slate-400 hover:border-slate-200"
+                                     )}
+                                   >
+                                      {s}
+                                   </button>
+                                ))}
+                             </div>
+                          </div>
+                       </div>
+
+                       {(mobileDetailOrder.feedback || mobileDetailOrder.complaint || (mobileDetailOrder.rating || 0) > 0) && (
+                         <div className="space-y-4">
+                            <h4 className="text-[10px] font-black tracking-[3px] text-slate-400 uppercase">Customer Sentiment</h4>
+                            <div className="rounded-xl border border-emerald-100 bg-emerald-50/50 p-6">
+                               <div className="mb-3 flex items-center gap-2">
+                                  <RatingStars rating={mobileDetailOrder.rating || 0} />
+                                  <span className="ml-auto text-[9px] font-black tracking-widest text-emerald-600 uppercase">Rating</span>
+                               </div>
+                               <p className="text-xs font-bold text-slate-700 italic">"{mobileDetailOrder.feedback || 'No comments'}"</p>
+                            </div>
+                         </div>
+                       )}
+                    </div>
+                  </div>
+               </div>
+               
+               <div className="p-6 border-t border-slate-100 flex gap-4 bg-slate-50/50">
+                  <button 
+                    onClick={() => {
+                        setDeleteModal({ isOpen: true, orderId: mobileDetailOrder.order_id })
+                    }}
+                    className="flex-1 rounded-xl bg-rose-600 py-4 text-[10px] font-black tracking-widest text-white uppercase italic shadow-xl shadow-rose-900/20 transition-all hover:bg-rose-700"
+                  >
+                    Terminate Order
+                  </button>
+                  <button 
+                    onClick={() => setMobileDetailOrder(null)}
+                    className="flex-1 rounded-xl bg-white border border-slate-200 py-4 text-[10px] font-black tracking-widest text-slate-600 uppercase italic transition-all hover:bg-slate-50"
+                  >
+                    Dismiss
+                  </button>
+               </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

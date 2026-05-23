@@ -15,7 +15,12 @@ use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ScreenplateRequestController;
 use App\Http\Controllers\User\UserController;
+use App\Http\Controllers\Admin\AdminDashboardController;
+use App\Http\Controllers\Admin\AdminOrderController;
 use Illuminate\Support\Facades\Route;
+
+// ... (skipping some lines for brevity if needed, but I'll replace the block)
+
 
 // Public Data Routes
 Route::get('/delivery-methods', [DeliveryMethodController::class, 'index']);
@@ -93,7 +98,11 @@ Route::middleware(['auth:sanctum', 'role:customer'])->prefix('customer')->group(
 Route::middleware(['auth:sanctum', 'role:admin'])->prefix('admin')->group(function () {
     Route::get('/discounts', [DiscountController::class, 'index']);
     Route::post('/discounts', [DiscountController::class, 'store']);
+    Route::get('/dashboard-stats', [AdminDashboardController::class, 'index']);
+    Route::get('/orders', [AdminOrderController::class, 'index']);
+    Route::patch('/orders/{id}/status', [AdminDashboardController::class, 'updateOrderStatus']);
 });
+
 
 // Messaging & Notifications
 Route::middleware('auth:sanctum')->group(function () {

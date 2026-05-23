@@ -12,8 +12,7 @@ import {
   Heart,
   Star,
 } from 'lucide-react'
-import { Link } from 'react-router-dom'
-import { useDiscovery } from '../../context/DiscoveryContext'
+import { Link, useNavigate } from 'react-router-dom'
 import CustomerNavbar from '../../components/customer/CustomerNavbar'
 import Footer from '../../components/Footer/Footer'
 
@@ -64,7 +63,7 @@ const FloatingCard: React.FC<{
 )
 
 const LandingPage: React.FC = () => {
-  const { openDiscovery } = useDiscovery()
+  const navigate = useNavigate()
 
   const fadeInUp = {
     initial: { opacity: 0, y: 20 },
@@ -253,7 +252,7 @@ const LandingPage: React.FC = () => {
               </Link>
 
               <button
-                onClick={() => openDiscovery()}
+                onClick={() => navigate('/discovery')}
                 className="flex items-center gap-3 rounded-[24px] border border-slate-200 bg-white px-10 py-5 text-xs font-black tracking-[4px] text-slate-900 uppercase italic transition-all hover:border-slate-300 hover:bg-slate-50 active:scale-95"
               >
                 View Catalog
@@ -367,7 +366,7 @@ const LandingPage: React.FC = () => {
                     The industry standard. Available in 12oz to 22oz with matte or glossy finish.
                   </p>
                   <button
-                    onClick={() => openDiscovery()}
+                    onClick={() => navigate('/discovery')}
                     className="flex items-center gap-2 text-[10px] font-black tracking-[4px] text-[#75EEA5] uppercase italic cursor-pointer"
                   >
                     Configure <ArrowRight size={14} />
@@ -385,7 +384,7 @@ const LandingPage: React.FC = () => {
                 </p>
                 <div className="absolute bottom-12 left-12 right-12 top-48 rounded-[32px] border border-slate-700 bg-slate-900/50" />
                 <button
-                  onClick={() => openDiscovery()}
+                  onClick={() => navigate('/discovery')}
                   className="absolute bottom-12 right-12 flex h-12 w-12 items-center justify-center rounded-full bg-[#75EEA5] text-slate-900 transition-transform hover:scale-110 active:scale-90"
                 >
                   <ArrowRight size={20} />
@@ -397,7 +396,7 @@ const LandingPage: React.FC = () => {
                   Eco <br /> Bags
                 </h3>
                 <button
-                  onClick={() => openDiscovery()}
+                  onClick={() => navigate('/discovery')}
                   className="mt-4 h-12 w-12 rounded-full bg-slate-900 text-[#75EEA5] flex items-center justify-center transition-transform hover:scale-110 active:scale-90"
                 >
                   <ArrowRight size={20} />
@@ -409,7 +408,7 @@ const LandingPage: React.FC = () => {
                   Paper <br /> Lids
                 </h3>
                 <button
-                  onClick={() => openDiscovery()}
+                  onClick={() => navigate('/discovery')}
                   className="mt-4 flex items-center gap-2 text-[10px] font-black tracking-[4px] text-[#75EEA5] uppercase italic cursor-pointer"
                 >
                   Configure <ArrowRight size={14} />

@@ -11,6 +11,7 @@ const AdminLayout: React.FC = () => {
   // Extract active ID from path
   const activeTab = location.pathname.split('/').pop() || 'dashboard'
 
+
   return (
     <div className="flex h-screen overflow-hidden bg-slate-50/50">
       <Sidebar
@@ -22,14 +23,16 @@ const AdminLayout: React.FC = () => {
         setActiveTab={() => {}} // Not needed with Router
       />
 
-      <div className="relative flex h-full min-w-0 flex-1 flex-col overflow-hidden">
-        <Topbar
-          onMenuClick={() => setIsMobileOpen(true)}
-          activeTab={activeTab}
-          setActiveTab={() => {}} // Not needed with Router
-        />
+      <div className="relative flex min-w-0 flex-1 flex-col">
+        <div className="shrink-0">
+          <Topbar
+            onMenuClick={() => setIsMobileOpen(true)}
+            activeTab={activeTab}
+            setActiveTab={() => {}} // Not needed with Router
+          />
+        </div>
 
-        <main className="custom-scrollbar flex-1 overflow-y-auto p-4 lg:p-8">
+        <main className="custom-scrollbar flex-1 overflow-y-auto min-h-0 p-4 lg:p-8">
           <Outlet />
         </main>
       </div>

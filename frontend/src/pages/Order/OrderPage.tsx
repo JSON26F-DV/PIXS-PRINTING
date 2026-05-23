@@ -333,32 +333,32 @@ const OrderPage: React.FC = () => {
       {/* Main Content */}
       <div className="order-content-container mx-auto max-w-7xl space-y-12 px-6 pb-32 md:px-16">
         {/* Search & Filters */}
-        <div className="sticky top-[80px] z-[40] -mx-4 flex flex-col items-center gap-4 rounded-b-3xl border-b border-transparent bg-white/90 px-6 py-4 shadow-sm backdrop-blur-xl lg:top-[100px] lg:rounded-3xl lg:border lg:bg-white/80 lg:shadow-none">
+        <div className="sticky top-[80px] z-[40] -mx-4 flex flex-col items-center gap-6 rounded-b-3xl border-b border-transparent bg-white/90 px-6 py-6 shadow-sm backdrop-blur-xl lg:top-[100px] lg:rounded-[40px] lg:border lg:bg-white/80 lg:shadow-none">
           {/* Search Input */}
-          <div className="group relative w-full lg:w-96">
+          <div className="group relative w-full flex-1">
             <Search
-              className="group-focus-within:text-pixs-mint absolute top-1/2 left-6 -translate-y-1/2 text-slate-300 transition-colors"
-              size={18}
+              className="group-focus-within:text-pixs-mint absolute top-1/2 left-8 -translate-y-1/2 text-slate-300 transition-colors"
+              size={20}
             />
             <input
               type="text"
-              placeholder="Search by ID or product..."
+              placeholder="Search by ID or product sequence..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="focus:border-pixs-mint w-full rounded-2xl border border-slate-100 bg-slate-50 py-4 pr-6 pl-14 text-xs font-bold text-slate-900 shadow-inner transition-all focus:bg-white focus:outline-none"
+              className="focus:border-pixs-mint w-full rounded-[24px] border border-slate-100 bg-slate-50/50 py-5 pr-8 pl-20 text-sm font-bold text-slate-900 shadow-inner transition-all focus:bg-white focus:outline-none"
             />
           </div>
 
           {/* Scrollable Tabs */}
-          <div className="order-tabs no-scrollbar flex w-full items-center gap-2 overflow-x-auto scroll-smooth">
+          <div className="order-tabs no-scrollbar flex w-full items-center gap-0 overflow-x-auto scroll-smooth lg:gap-1">
             {TABS.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`order-tab-button rounded-2xl px-6 py-3 text-[10px] font-black tracking-widest whitespace-nowrap uppercase italic transition-all active:scale-95 ${
+                className={`order-tab-button flex-1 rounded-2xl px-4 py-4 text-[10px] font-black tracking-widest whitespace-nowrap uppercase italic transition-all active:scale-95 md:px-6 ${
                   activeTab === tab.id
                     ? 'order-tab-active text-pixs-mint bg-slate-900 shadow-xl shadow-slate-200'
-                    : 'bg-slate-50 text-slate-400 hover:bg-slate-100 hover:text-slate-900'
+                    : 'bg-transparent text-slate-400 hover:bg-slate-50 hover:text-slate-900'
                 }`}
               >
                 {tab.label}

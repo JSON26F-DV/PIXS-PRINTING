@@ -18,7 +18,6 @@ interface StockAlertModalProps {
 const StockAlertModal: React.FC<StockAlertModalProps> = ({
   isOpen,
   items,
-  onClose,
 }) => {
   const navigate = useNavigate()
 

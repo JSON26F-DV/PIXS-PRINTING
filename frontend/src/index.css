@@ -10,8 +10,16 @@
 }
 
 @layer base {
+  html,
   body {
     @apply font-body bg-white text-slate-900;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
+  #root {
+    height: 100%;
   }
 }
 

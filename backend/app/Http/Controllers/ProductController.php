@@ -301,15 +301,14 @@ class ProductController extends Controller
                 return Product::select([
                     'products.id',
                     'products.name',
+                    'products.short_description',
                     'products.base_price',
                     'products.is_in_stock',
+                    'products.main_image',
+                    'products.ratings',
+                    'products.total_sold',
+                    'products.min_order',
                     'categories.label as category_label',
-                    DB::raw('(
-                        SELECT image_url FROM product_gallery 
-                        WHERE product_id = products.id 
-                        AND sort_order = 0 
-                        LIMIT 1
-                    ) as main_image'),
                 ])
                     ->join('categories', 'products.category_id', '=', 'categories.id')
                     ->when($categoryId, fn ($q) => $q->where('products.category_id', $categoryId))

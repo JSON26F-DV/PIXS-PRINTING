@@ -11,6 +11,7 @@ import MessengerPage from '../pages/Messenger/MessengerPage'
 import ScreenplatePage from '../pages/Screenplate/ScreenplatePage'
 import DeletedAccount from '../views/auth/DeletedAccount'
 import OrderPage from '../pages/Order/OrderPage'
+import DiscoveryPage from '../pages/Discovery/DiscoveryPage'
 import LoginPage from '../views/auth/LoginPage'
 import RegisterPage from '../views/auth/RegisterPage'
 import CustomerLayout from '../layouts/CustomerLayout'
@@ -149,6 +150,7 @@ const AppRouter: React.FC = () => {
         <Route path="/chat" element={<MessengerPage />} />
         <Route path="/screenplate" element={<ScreenplatePage />} />
         <Route path="/order" element={<OrderPage />} />
+        <Route path="/discovery" element={<DiscoveryPage />} />
       </Route>
 
       <Route path="/delete-account" element={<DeletedAccount />} />

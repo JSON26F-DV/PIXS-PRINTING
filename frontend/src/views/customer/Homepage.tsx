@@ -17,7 +17,7 @@ import { useProducts } from '../../hooks/useProducts'
 import { useSoldCounts } from '../../hooks/useSoldCounts'
 import { useHomepageFavorites } from '../../hooks/useHomepageFavorites'
 import { useCustomerScreenplates } from '../../hooks/useCustomerScreenplates'
-import { useDiscovery } from '../../context/DiscoveryContext'
+// import { useDiscovery } from '../../context/DiscoveryContext'
 import { useDebounce } from '../../hooks/useDebounce'
 
 // Components
@@ -79,7 +79,7 @@ const STATUS_OPTIONS = [
 const Homepage: React.FC = () => {
   const { user } = useAuth()
   const navigate = useNavigate()
-  const { openDiscovery } = useDiscovery()
+  // const { openDiscovery } = useDiscovery()
   const productGridRef = useRef<HTMLDivElement>(null)
 
   // Screen size detection for itemsPerPage and Filter layout
@@ -187,11 +187,9 @@ const Homepage: React.FC = () => {
 
   const handleCategoryIdSelect = useCallback(
     (id: string) => {
-      // Open DiscoveryModal with this category instead of filtering homepage directly
-      // This matches the user request for DiscoveryModal functionality
-      openDiscovery(id)
+      navigate('/discovery', { state: { categoryId: id } })
     },
-    [openDiscovery],
+    [navigate],
   )
 
   const handleSortChange = useCallback((val: string | null) => {
@@ -271,7 +269,7 @@ const Homepage: React.FC = () => {
           categories={quickCategories}
           isLoading={catLoading}
           onCategoryClick={handleCategoryIdSelect}
-          onMoreClick={() => openDiscovery()}
+          onMoreClick={() => navigate('/discovery')}
         />
       </section>
 

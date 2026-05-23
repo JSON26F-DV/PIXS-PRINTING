@@ -18,8 +18,6 @@ import {
 import { motion, AnimatePresence } from 'framer-motion'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
-import { useDiscovery } from '../../context/DiscoveryContext'
-import DiscoveryModal from './DiscoveryModal'
 import AddressSelectModal from './AddressSelectModal'
 import NotificationModal from './NotificationModal'
 import NavbarActionButton from './NavbarActionButton'
@@ -31,8 +29,6 @@ import { clsx } from 'clsx'
 
 const CustomerNavbar: React.FC = () => {
   const { user } = useAuth()
-  const { isDiscoveryOpen, initialCategory, openDiscovery, closeDiscovery } =
-    useDiscovery()
   const [isAddressModalOpen, setIsAddressModalOpen] = useState(false)
   const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false)
   const [showMobileMenu, setShowMobileMenu] = useState(false)
@@ -94,7 +90,7 @@ const CustomerNavbar: React.FC = () => {
             {/* Tablet-only Search and Address Icons */}
             <div className="hidden items-center gap-2 md:flex min-[1251px]:!hidden">
               <button
-                onClick={() => user?.isLoggedIn ? openDiscovery() : navigate('/login')}
+                onClick={() => user?.isLoggedIn ? navigate('/discovery') : navigate('/login')}
                 className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-50 text-slate-400 transition-colors hover:bg-slate-100"
               >
                 <Search size={18} strokeWidth={2.5} />
@@ -133,7 +129,7 @@ const CustomerNavbar: React.FC = () => {
             <div className="CustomerNavbarSearch relative w-full">
               <div className="group-focus-within:text-pixs-mint absolute top-1/2 left-6 -translate-y-1/2 text-slate-300 transition-colors" />
               <button
-                onClick={() => user?.isLoggedIn ? openDiscovery() : navigate('/login')}
+                onClick={() => user?.isLoggedIn ? navigate('/discovery') : navigate('/login')}
                 className="CustomerNavbarSearchInput hover:border-pixs-mint/30 group w-full overflow-hidden rounded-[24px] border border-slate-100/50 bg-slate-50 py-4 pr-6 pl-16 text-left shadow-inner transition-all hover:bg-white"
               >
                 <span className="max-w-[120px] overflow-hidden text-[10px] font-black tracking-[4px] text-ellipsis whitespace-nowrap text-slate-400 uppercase italic opacity-50 group-hover:text-slate-500 min-[1251px]:max-w-none">
@@ -141,7 +137,7 @@ const CustomerNavbar: React.FC = () => {
                 </span>
               </button>
               <button
-                onClick={() => user?.isLoggedIn ? openDiscovery() : navigate('/login')}
+                onClick={() => user?.isLoggedIn ? navigate('/discovery') : navigate('/login')}
                 className="CustomerNavbarSearchButton hover:bg-pixs-mint absolute top-1/2 right-2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-xl bg-slate-100 transition-colors"
               >
                 <Search
@@ -345,7 +341,7 @@ const CustomerNavbar: React.FC = () => {
           <div className="px-4 pb-4">
             {user?.isLoggedIn ? (
               <button
-                onClick={() => openDiscovery()}
+                onClick={() => navigate('/discovery')}
                 className="hover:border-pixs-mint flex h-12 w-full items-center gap-4 rounded-[16px] border-2 border-slate-100 bg-white px-5 shadow-inner transition-transform active:scale-[0.98]"
               >
                 <Search size={18} className="text-slate-300" strokeWidth={3} />
@@ -493,11 +489,7 @@ const CustomerNavbar: React.FC = () => {
       {/* ─────────────────────────────────────────── */}
       {/*  MODALS & OVERLAYS (unchanged)             */}
       {/* ─────────────────────────────────────────── */}
-      <DiscoveryModal
-        isOpen={isDiscoveryOpen}
-        onClose={() => closeDiscovery()}
-        initialCategory={initialCategory}
-      />
+      {/* Address Select Modal */}
 
       {/* Mobile Slide-out Menu */}
       <AnimatePresence>

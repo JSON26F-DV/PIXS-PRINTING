@@ -8,7 +8,6 @@ import {
   CornerUpRight,
   AlertTriangle,
 } from 'lucide-react'
-import { clsx } from 'clsx'
 import toast from 'react-hot-toast'
 import type { IMessage } from '../MessengerPage.tsx'
 

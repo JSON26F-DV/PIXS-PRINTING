@@ -19,7 +19,7 @@ return new class extends Migration
             $table->string('delivery_method_id', 50)->nullable();
             $table->decimal('total_amount', 10, 2)->default(0);
             $table->text('production_notes')->nullable();
-            $table->enum('status', ['PENDING', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED'])->default('PENDING');
+            $table->enum('status', ['UNPAID', 'PENDING', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED'])->default('PENDING');
             $table->text('feedback')->nullable();
             $table->text('complaint')->nullable();
             $table->unsignedTinyInteger('rating')->default(0);

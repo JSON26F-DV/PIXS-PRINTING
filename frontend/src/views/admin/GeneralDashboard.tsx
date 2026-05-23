@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import React, { useMemo, useState, useEffect } from 'react'
 import {
   BarChart,
   Bar,
@@ -28,42 +28,29 @@ import {
   TrendingDown,
 } from 'lucide-react'
 import StatCard from '../../components/StatCard'
-import orderData from '../../data/order.json'
-import requestScreenplateData from '../../data/request_screenplate.json'
-import productsData from '../../data/products.json'
-import usersData from '../../data/users.json'
-import restockLogsData from '../../data/restock_logs.json'
-import salaryData from '../../data/salary.json'
 import { useAuth } from '../../context/AuthContext'
 import { PermissionWrapper } from '../../components/guards/PermissionWrapper'
-import { SafeTerminal } from '../../utils/safeTerminal'
+import axiosInstance from '../../lib/axiosInstance'
+import { toast } from 'react-hot-toast'
 
 const cn = (...classes: (string | boolean | undefined)[]) =>
   classes.filter(Boolean).join(' ')
 
 type FilterType = 'week' | 'month' | 'year'
 
-interface RawOrder {
-  order_id: string // Changed from id
-  user_id: string
-  products: {
-    productId: string
-    productName: string
-    quantity: number
-    unitPrice: number
-  }[] // Changed from items
-  total_amount: number
-  status: string
-  created_at: string
-}
-
-interface RawRequest {
-  request_id: string
-  customer_id: string
-  calculated_total: number
-  status: string
-  created_at: string
-  product_id: string
+interface DashboardData {
+  totalRevenue: number
+  totalExpenditure: number
+  revenuePoints: { date: string; total_amount: number }[]
+  revenueTableData: { id: string; date: string; customer: string; amount: number; discount: number; status: string }[]
+  expenditurePoints: { date: string; value: number }[]
+  orderStatusData: { name: string; value: number; color: string }[]
+  pendingQueue: ItemBase[]
+  topLoyalists: { name: string; transactions: number; spent: number }[]
+  loyaltyDistribution: { name: string; transactions: number; spent: number }[]
+  recentOrders: ItemBase[]
+  totalOrders: number
+  totalCustomers: number
 }
 
 interface ItemBase {
@@ -76,18 +63,9 @@ interface ItemBase {
   itemName: string
 }
 
-interface RawUsersData {
-  employees: { id: string; name: string }[]
-  customers: { id: string; name: string }[]
-}
-
-interface RawRestockLog {
+interface DataPoint {
   date: string
-  cost: number
-}
-
-interface RawSalaryNode {
-  attendance: { date: string; computed_salary: number }[]
+  [key: string]: string | number
 }
 
 const GeneralDashboard: React.FC = () => {
@@ -98,45 +76,60 @@ const GeneralDashboard: React.FC = () => {
   >('date-desc')
   const [revenueFilter, setRevenueFilter] = useState<FilterType>('week')
   const [expenditureFilter, setExpenditureFilter] = useState<FilterType>('week')
+  const [loyaltyFilter, setLoyaltyFilter] = useState<number>(10)
 
-  const userNameMap = useMemo(() => {
-    const map: Record<string, string> = {}
-    const employees = SafeTerminal.array<{ id: string; name: string }>(
-      (usersData as unknown as RawUsersData).employees,
-    )
-    const customers = SafeTerminal.array<{ id: string; name: string }>(
-      (usersData as unknown as RawUsersData).customers,
-    )
-    ;[...employees, ...customers].forEach((u) => {
-      if (u && u.id) map[u.id] = u.name
-    })
-    return map
+  const [data, setData] = useState<DashboardData | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+
+  const fetchDashboardData = async () => {
+    try {
+      const response = await axiosInstance.get('/api/admin/dashboard-stats')
+      setData(response.data)
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error)
+      toast.error('Failed to load dashboard statistics')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchDashboardData()
   }, [])
+
+  const handleStatusUpdate = async (id: string, status: string) => {
+    try {
+      await axiosInstance.patch(`/api/admin/orders/${id}/status`, { status })
+      toast.success(`Order ${status.toLowerCase()}ed`)
+      fetchDashboardData()
+    } catch (error) {
+      console.error('Failed to update status:', error)
+      toast.error('Failed to update order status')
+    }
+  }
 
   // Time Series Aggregator
   const processTimeSeries = (
-    data: { date: string; value: number }[],
+    dataPoints: DataPoint[],
     filter: FilterType,
+    valueKey: string = 'value',
   ) => {
     if (filter === 'week') {
       const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
       const map: Record<string, number> = {}
       days.forEach((d) => (map[d] = 0))
 
-      data.forEach((item) => {
+      dataPoints.forEach((item) => {
         const d = new Date(item.date)
-        // Simplified: just match the day of the week
         const dayName = days[d.getDay()]
-        map[dayName] += item.value
+        map[dayName] += (item[valueKey] as number) || 0
       })
 
-      // Return in order starting Mon
       const ordered = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
       return ordered.map((name) => ({ name, value: map[name] }))
     }
 
     if (filter === 'month') {
-      // Group by weeks of the month (simplified: 4 weeks)
       const weeks = ['Week 1', 'Week 2', 'Week 3', 'Week 4']
       const map: Record<string, number> = {
         'Week 1': 0,
@@ -145,13 +138,13 @@ const GeneralDashboard: React.FC = () => {
         'Week 4': 0,
       }
 
-      data.forEach((item) => {
+      dataPoints.forEach((item) => {
         const d = new Date(item.date)
         const day = d.getDate()
-        if (day <= 7) map['Week 1'] += item.value
-        else if (day <= 14) map['Week 2'] += item.value
-        else if (day <= 21) map['Week 3'] += item.value
-        else map['Week 4'] += item.value
+        if (day <= 7) map['Week 1'] += (item[valueKey] as number) || 0
+        else if (day <= 14) map['Week 2'] += (item[valueKey] as number) || 0
+        else if (day <= 21) map['Week 3'] += (item[valueKey] as number) || 0
+        else map['Week 4'] += (item[valueKey] as number) || 0
       })
 
       return weeks.map((name) => ({ name, value: map[name] }))
@@ -175,10 +168,10 @@ const GeneralDashboard: React.FC = () => {
       const map: Record<string, number> = {}
       months.forEach((m) => (map[m] = 0))
 
-      data.forEach((item) => {
+      dataPoints.forEach((item) => {
         const d = new Date(item.date)
         const monthName = months[d.getMonth()]
-        map[monthName] += item.value
+        map[monthName] += (item[valueKey] as number) || 0
       })
 
       return months.map((name) => ({ name, value: map[name] }))
@@ -187,162 +180,35 @@ const GeneralDashboard: React.FC = () => {
     return []
   }
 
-  const analytics = useMemo(() => {
-    const userStats: Record<
-      string,
-      { name: string; totalSpent: number; transactions: number }
-    > = {}
-    let totalRevenueAmount = 0
-    const statusCounts = {
-      pending: 0,
-      processing: 0,
-      completed: 0,
-      cancelled: 0,
-    }
-
-    // Revenue Data points
-    const revenuePoints: { date: string; value: number }[] = []
-
-    const allItems: ItemBase[] = [
-      ...SafeTerminal.array<RawOrder>(orderData as unknown as RawOrder[]).map(
-        (o: RawOrder): ItemBase => {
-          revenuePoints.push({
-            date: o.created_at,
-            value: Number(o.total_amount || 0),
-          })
-          return {
-            id: o.order_id,
-            customerName: userNameMap[o.user_id] || 'Anonymous',
-            total: Number(o.total_amount || 0),
-            status: o.status || 'Pending',
-            type: 'Order',
-            createdAt: o.created_at,
-            itemName: o.products?.[0]?.productName || 'Order',
-          }
-        },
-      ),
-      ...SafeTerminal.array<RawRequest>(
-        requestScreenplateData as unknown as RawRequest[],
-      ).map((r: RawRequest): ItemBase => {
-        revenuePoints.push({
-          date: r.created_at,
-          value: Number(r.calculated_total || 0),
-        })
-        const product = SafeTerminal.array<{ id: string; name: string }>(
-          productsData as unknown as { id: string; name: string }[],
-        ).find((p) => p.id === r.product_id)
-        return {
-          id: r.request_id,
-          customerName:
-            userNameMap[r.customer_id] || 'Customer #' + r.customer_id,
-          total: Number(r.calculated_total || 0),
-          status: (r.status || 'pending').toUpperCase(),
-          type: 'Screenplate Req',
-          createdAt: r.created_at,
-          itemName: product?.name || 'Screenplate',
-        }
-      }),
-    ]
-
-    allItems.forEach((item) => {
-      const name = item.customerName
-      const total = item.total || 0
-      if (!userStats[name])
-        userStats[name] = { name, totalSpent: 0, transactions: 0 }
-      userStats[name].totalSpent += total
-      userStats[name].transactions += 1
-      totalRevenueAmount += total
-
-      const st = (item.status || '').toLowerCase()
-      if (st === 'pending') statusCounts.pending++
-      else if (st === 'processing') statusCounts.processing++
-      else if (st === 'completed') statusCounts.completed++
-      else if (st === 'cancelled') statusCounts.cancelled++
-    })
-
-    const chartData = Object.values(userStats)
-      .sort((a, b) => b.transactions - a.transactions)
-      .map((user) => ({
-        name: user.name,
-        transactions: user.transactions,
-        spent: user.totalSpent,
-      }))
-
-    const orderStatusData = [
-      { name: 'Pending', value: statusCounts.pending, color: '#f59e0b' },
-      { name: 'Processing', value: statusCounts.processing, color: '#3b82f6' },
-      { name: 'Complete', value: statusCounts.completed, color: '#10b981' },
-      { name: 'Cancelled', value: statusCounts.cancelled, color: '#ef4444' },
-    ].filter((s) => s.value > 0)
-
-    // Expenditure Data points
-    const expenditurePoints: { date: string; value: number }[] = []
-
-    // Restock logs
-    SafeTerminal.array<RawRestockLog>(
-      restockLogsData as unknown as RawRestockLog[],
-    ).forEach((log) => {
-      expenditurePoints.push({ date: log.date, value: Number(log.cost || 0) })
-    })
-
-    // Salary data
-    SafeTerminal.array<RawSalaryNode>(
-      salaryData as unknown as RawSalaryNode[],
-    ).forEach((sal) => {
-      SafeTerminal.array<{ date: string; computed_salary: number }>(
-        sal.attendance,
-      ).forEach((att) => {
-        expenditurePoints.push({
-          date: att.date,
-          value: Number(att.computed_salary || 0),
-        })
-      })
-    })
-
-    const totalExpenditureAmount = expenditurePoints.reduce(
-      (sum, p) => sum + p.value,
-      0,
-    )
-
-    return {
-      chartData,
-      revenuePoints,
-      expenditurePoints,
-      orderStatusData,
-      totalRevenue: totalRevenueAmount,
-      totalExpenditure: totalExpenditureAmount,
-      totalOrders: allItems.length,
-      averageOrder: totalRevenueAmount / (allItems.length || 1),
-      totalCustomers: Object.keys(userStats).length,
-      allItems: allItems.sort(
-        (a, b) =>
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-      ),
-    }
-  }, [userNameMap])
 
   const revenueChartData = useMemo(
-    () => processTimeSeries(analytics.revenuePoints, revenueFilter),
-    [analytics.revenuePoints, revenueFilter],
-  )
-  const expenditureChartData = useMemo(
-    () => processTimeSeries(analytics.expenditurePoints, expenditureFilter),
-    [analytics.expenditurePoints, expenditureFilter],
+    () =>
+      processTimeSeries(
+        data?.revenuePoints || [],
+        revenueFilter,
+        'total_amount',
+      ),
+    [data?.revenuePoints, revenueFilter],
   )
 
-  const topLoyalists = analytics.chartData
+  const expenditureChartData = useMemo(
+    () => processTimeSeries(data?.expenditurePoints || [], expenditureFilter),
+    [data?.expenditurePoints, expenditureFilter],
+  )
+
+  const filteredLoyaltyData = useMemo(() => {
+    if (!data?.loyaltyDistribution) return []
+    return data.loyaltyDistribution.slice(0, loyaltyFilter)
+  }, [data?.loyaltyDistribution, loyaltyFilter])
 
   const pendingQueue = useMemo(() => {
-    return analytics.allItems
+    if (!data) return []
+    return data.pendingQueue
       .filter((item) => {
-        const st = (item.status || '').toUpperCase()
-        const isInStatus = st === 'PENDING' || st === 'PROCESSING'
-        if (!isInStatus) return false
-
         const searchLower = queueSearch.toLowerCase()
         return (
           item.customerName.toLowerCase().includes(searchLower) ||
-          item.itemName.toLowerCase().includes(searchLower) ||
+          (item.itemName && item.itemName.toLowerCase().includes(searchLower)) ||
           item.id.toLowerCase().includes(searchLower)
         )
       })
@@ -366,7 +232,15 @@ const GeneralDashboard: React.FC = () => {
             return 0
         }
       })
-  }, [analytics.allItems, queueSearch, queueSort])
+  }, [data, queueSearch, queueSort])
+
+  if (isLoading || !data) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="h-12 w-12 animate-spin rounded-full border-4 border-blue-500 border-t-transparent"></div>
+      </div>
+    )
+  }
 
   return (
     <div className="animate-in fade-in mx-auto max-w-[1440px] space-y-8 px-4 pb-16 duration-500 lg:px-8">
@@ -382,7 +256,7 @@ const GeneralDashboard: React.FC = () => {
       <section className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Total Revenue"
-          value={analytics.totalRevenue}
+          value={data.totalRevenue}
           prefix="₱"
           trend={12}
           icon={TrendingUp}
@@ -390,7 +264,7 @@ const GeneralDashboard: React.FC = () => {
         />
         <StatCard
           title="Total Expenditure"
-          value={analytics.totalExpenditure}
+          value={data.totalExpenditure}
           prefix="₱"
           trend={-8}
           icon={TrendingDown}
@@ -398,14 +272,14 @@ const GeneralDashboard: React.FC = () => {
         />
         <StatCard
           title="Active Orders"
-          value={analytics.totalOrders}
+          value={data.totalOrders}
           trend={5}
           icon={ShoppingCart}
           variant="emerald"
         />
         <StatCard
           title="Verified Customers"
-          value={analytics.totalCustomers}
+          value={data.totalCustomers}
           icon={Users}
           variant="light"
         />
@@ -709,7 +583,10 @@ const GeneralDashboard: React.FC = () => {
                         allowedRoles={['admin', 'inventory']}
                         hideIfNoAccess
                       >
-                        <button className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-5 py-3 text-xs font-bold text-slate-600 transition-colors hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600">
+                        <button
+                          onClick={() => handleStatusUpdate(item.id, 'CANCELLED')}
+                          className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-5 py-3 text-xs font-bold text-slate-600 transition-colors hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600"
+                        >
                           <XCircle size={16} />
                           REJECT
                         </button>
@@ -719,7 +596,10 @@ const GeneralDashboard: React.FC = () => {
                         allowedRoles={['admin', 'inventory']}
                         hideIfNoAccess
                       >
-                        <button className="flex items-center gap-2 rounded-xl border border-transparent bg-slate-900 px-6 py-3 text-xs font-bold text-[#75EEA5] shadow-lg transition-all hover:-translate-y-0.5 hover:bg-slate-800">
+                        <button
+                          onClick={() => handleStatusUpdate(item.id, 'PROCESSING')}
+                          className="flex items-center gap-2 rounded-xl border border-transparent bg-slate-900 px-6 py-3 text-xs font-bold text-[#75EEA5] shadow-lg transition-all hover:-translate-y-0.5 hover:bg-slate-800"
+                        >
                           <CheckCircle2 size={16} />
                           CONFIRM
                         </button>
@@ -740,15 +620,36 @@ const GeneralDashboard: React.FC = () => {
 
           <div className="flex flex-col rounded-[32px] border border-slate-100 bg-white p-8 shadow-lg shadow-slate-200/50">
             <div className="mb-8 flex items-center justify-between">
-              <h3 className="text-lg font-bold text-slate-900">
-                Loyalty Distribution Matrix
-              </h3>
+              <div>
+                <h3 className="text-lg font-bold text-slate-900">
+                  Loyalty Distribution Matrix
+                </h3>
+                <p className="mt-1 text-[10px] font-black tracking-[2px] text-blue-500 uppercase">
+                  Customer volume Analysis
+                </p>
+              </div>
+              <div className="flex gap-1 rounded-xl border border-slate-100 bg-slate-50 p-1">
+                {([10, 20, 50] as const).map((v) => (
+                  <button
+                    key={v}
+                    onClick={() => setLoyaltyFilter(v)}
+                    className={cn(
+                      'rounded-lg px-4 py-2 text-[10px] font-black tracking-widest uppercase transition-all',
+                      loyaltyFilter === v
+                        ? 'bg-slate-900 text-white shadow-lg'
+                        : 'text-slate-400 hover:text-slate-900',
+                    )}
+                  >
+                    Top {v}
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div className="h-[320px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
-                  data={analytics.chartData}
+                  data={filteredLoyaltyData}
                   margin={{ top: 20, right: 30, left: 0, bottom: 40 }}
                 >
                   <CartesianGrid
@@ -785,7 +686,7 @@ const GeneralDashboard: React.FC = () => {
                     radius={[8, 8, 0, 0]}
                     barSize={40}
                   >
-                    {analytics.chartData.map((_, index) => (
+                    {filteredLoyaltyData.map((_, index) => (
                       <Cell
                         key={`cell-${index}`}
                         fill={index < 3 ? '#10b981' : '#cbd5e1'}
@@ -807,7 +708,7 @@ const GeneralDashboard: React.FC = () => {
               <ResponsiveContainer width="100%" height={240}>
                 <PieChart>
                   <Pie
-                    data={analytics.orderStatusData}
+                    data={data.orderStatusData}
                     cx="50%"
                     cy="50%"
                     innerRadius={70}
@@ -816,7 +717,7 @@ const GeneralDashboard: React.FC = () => {
                     dataKey="value"
                     isAnimationActive={false}
                   >
-                    {analytics.orderStatusData.map((entry, index) => (
+                    {data.orderStatusData.map((entry, index) => (
                       <Cell
                         key={`cell-${index}`}
                         fill={entry.color}
@@ -836,7 +737,7 @@ const GeneralDashboard: React.FC = () => {
               </ResponsiveContainer>
             </div>
             <div className="mt-8 space-y-4">
-              {analytics.orderStatusData.map((status) => (
+              {data.orderStatusData.map((status) => (
                 <div
                   key={status.name}
                   className="flex items-center justify-between border-b border-slate-50 pb-3 last:border-0 last:pb-0"
@@ -872,8 +773,8 @@ const GeneralDashboard: React.FC = () => {
               </p>
             </div>
 
-            <div className="custom-scrollbar relative z-10 max-h-[600px] flex-1 space-y-4 overflow-y-auto pr-2">
-              {topLoyalists.map((user, idx) => (
+            <div className="custom-scrollbar relative z-10 max-h-[440px] flex-1 space-y-4 overflow-y-auto pr-2">
+              {data.topLoyalists.map((user, idx) => (
                 <div
                   key={user.name}
                   className="group flex cursor-default flex-col justify-between gap-4 rounded-2xl border border-transparent p-4 transition-all hover:border-slate-800 hover:bg-white/5 sm:flex-row sm:items-center"
@@ -953,7 +854,7 @@ const GeneralDashboard: React.FC = () => {
               </tr>
             </thead>
             <tbody className="text-sm">
-              {analytics.allItems.slice(0, 15).map((txn) => (
+              {data.recentOrders.slice(0, 15).map((txn) => (
                 <tr
                   key={txn.id}
                   className="border-b border-slate-50 transition-colors hover:bg-slate-50/80"
@@ -973,7 +874,7 @@ const GeneralDashboard: React.FC = () => {
                     <span
                       className={cn(
                         'rounded-lg border px-3 py-1.5 text-[11px] font-bold uppercase',
-                        txn.status === 'COMPLETED'
+                        txn.status === 'COMPLETED' || txn.status === 'DELIVERED' || txn.status === 'SHIPPED'
                           ? 'border-emerald-100 bg-emerald-50 text-emerald-600'
                           : txn.status === 'PENDING'
                             ? 'border-amber-100 bg-amber-50 text-amber-600'
