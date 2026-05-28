@@ -4,6 +4,19 @@ import { motion, AnimatePresence } from 'framer-motion'
 import type { ICategory, IProduct } from './types'
 import { InputField, ImageUploader, ConfirmModal } from './UIComponents'
 import toast from 'react-hot-toast'
+import axiosInstance from '../../../lib/axiosInstance'
+import BoxFallback from '../../../components/common/BoxFallback'
+
+const cn = (...classes: (string | boolean | undefined)[]) =>
+  classes.filter(Boolean).join(' ')
+
+const CategoryImage = ({ src, alt, className }: { src: string; alt: string; className: string }) => {
+  const [error, setError] = useState(false)
+  if (error || !src) {
+    return <BoxFallback className={cn("bg-slate-100", className)} iconClassName="h-6 w-6 opacity-30" />
+  }
+  return <img src={src} alt={alt} className={className} onError={() => setError(true)} />
+}
 
 interface CategoriesSectionProps {
   categories: ICategory[]
@@ -22,32 +35,39 @@ export const CategoriesSection: React.FC<CategoriesSectionProps> = ({
     null,
   )
 
-  const handleSave = (cat: ICategory) => {
+  const handleSave = async (cat: ICategory) => {
     if (!cat.label) {
       toast.error('Category name is required.')
       return
     }
 
-    if (isAdding) {
-      if (
-        categories.some(
-          (c) => c.label.toLowerCase() === cat.label.toLowerCase(),
-        )
-      ) {
-        toast.error('Category already exists.')
-        return
+    try {
+      if (isAdding) {
+        if (
+          categories.some(
+            (c) => c.label.toLowerCase() === cat.label.toLowerCase(),
+          )
+        ) {
+          toast.error('Category already exists.')
+          return
+        }
+        const res = await axiosInstance.post('/api/admin/categories', cat)
+        setCategories((prev) => [...prev, res.data.data])
+        toast.success('Category added.')
+      } else {
+        const res = await axiosInstance.patch(`/api/admin/categories/${cat.id}`, cat)
+        setCategories((prev) => prev.map((c) => (c.id === cat.id ? res.data.data : c)))
+        toast.success('Category updated.')
       }
-      setCategories((prev) => [...prev, { ...cat, id: Date.now().toString() }])
-      toast.success('Category added.')
-    } else {
-      setCategories((prev) => prev.map((c) => (c.id === cat.id ? cat : c)))
-      toast.success('Category updated.')
+      setEditingCategory(null)
+      setIsAdding(false)
+    } catch (e) {
+      toast.error('Failed to save category.')
+      console.error(e)
     }
-    setEditingCategory(null)
-    setIsAdding(false)
   }
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!categoryToDelete) return
 
     // Safety check: is any product using this category?
@@ -60,9 +80,15 @@ export const CategoriesSection: React.FC<CategoriesSectionProps> = ({
       return
     }
 
-    setCategories((prev) => prev.filter((c) => c.id !== categoryToDelete.id))
-    toast.success('Category deleted.')
-    setCategoryToDelete(null)
+    try {
+      await axiosInstance.delete(`/api/admin/categories/${categoryToDelete.id}`)
+      setCategories((prev) => prev.filter((c) => c.id !== categoryToDelete.id))
+      toast.success('Category deleted.')
+      setCategoryToDelete(null)
+    } catch (e) {
+      toast.error('Failed to delete category.')
+      console.error(e)
+    }
   }
 
   return (
@@ -93,8 +119,8 @@ export const CategoriesSection: React.FC<CategoriesSectionProps> = ({
             className="group flex items-center gap-4 rounded-[20px] border border-slate-100 bg-slate-50/50 p-4 transition-all duration-300 hover:border-blue-200 hover:bg-white hover:shadow-xl"
           >
             <div className="h-12 w-12 flex-shrink-0 overflow-hidden rounded-xl border border-slate-200 shadow-sm">
-              <img
-                src={cat.image}
+              <CategoryImage
+                src={`/public/images/categories/${cat.image}`}
                 className="h-full w-full object-cover transition-transform group-hover:scale-105"
                 alt={cat.label}
               />
@@ -104,8 +130,7 @@ export const CategoriesSection: React.FC<CategoriesSectionProps> = ({
                 {cat.label}
               </p>
               <p className="mt-0.5 text-[10px] font-black tracking-widest text-slate-400 uppercase">
-                {products.filter((p) => p.category === cat.label).length}{' '}
-                Products
+                {cat.count || 0} Products
               </p>
             </div>
             <div className="flex gap-1.5 opacity-0 transition-opacity group-hover:opacity-100">
@@ -169,6 +194,7 @@ export const CategoriesSection: React.FC<CategoriesSectionProps> = ({
                       setEditingCategory({ ...editingCategory, image: v })
                     }
                     className="aspect-video"
+                    pathPrefix="/public/images/categories/"
                   />
                 </div>
               </div>

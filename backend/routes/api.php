@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\Admin\AdminDashboardController;
+use App\Http\Controllers\Admin\AdminOrderController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\CartController;
@@ -15,12 +17,9 @@ use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ScreenplateRequestController;
 use App\Http\Controllers\User\UserController;
-use App\Http\Controllers\Admin\AdminDashboardController;
-use App\Http\Controllers\Admin\AdminOrderController;
 use Illuminate\Support\Facades\Route;
 
 // ... (skipping some lines for brevity if needed, but I'll replace the block)
-
 
 // Public Data Routes
 Route::get('/delivery-methods', [DeliveryMethodController::class, 'index']);
@@ -94,15 +93,34 @@ Route::middleware(['auth:sanctum', 'role:customer'])->prefix('customer')->group(
     Route::post('/discounts/verify', [DiscountController::class, 'verify']);
 });
 
-// Admin Discount Routes
-Route::middleware(['auth:sanctum', 'role:admin'])->prefix('admin')->group(function () {
-    Route::get('/discounts', [DiscountController::class, 'index']);
-    Route::post('/discounts', [DiscountController::class, 'store']);
-    Route::get('/dashboard-stats', [AdminDashboardController::class, 'index']);
-    Route::get('/orders', [AdminOrderController::class, 'index']);
-    Route::patch('/orders/{id}/status', [AdminDashboardController::class, 'updateOrderStatus']);
-});
+// Admin Routes
+Route::middleware(['auth:sanctum'])->prefix('admin')->group(function () {
+    // Discount Management
+    Route::get('/discounts', [DiscountController::class, 'index'])->middleware('role:admin');
+    Route::post('/discounts', [DiscountController::class, 'store'])->middleware('role:admin');
 
+    // Dashboard
+    Route::get('/dashboard-stats', [AdminDashboardController::class, 'index'])->middleware('role:admin');
+
+    // Order Management
+    Route::get('/orders', [AdminOrderController::class, 'index'])->middleware('role:admin');
+    Route::patch('/orders/{id}/status', [AdminDashboardController::class, 'updateOrderStatus'])->middleware('role:admin');
+
+    // Product Management
+    Route::get('/products', [ProductController::class, 'adminIndex'])->middleware('role:admin');
+    Route::get('/products/{id}', [ProductController::class, 'adminShow'])->middleware('role:admin');
+    Route::get('/products/{id}/gallery', [ProductController::class, 'showGallery'])->middleware('role:admin');
+    Route::get('/products/{id}/tags', [ProductController::class, 'showTags'])->middleware('role:admin');
+    Route::get('/products/{id}/variants', [ProductController::class, 'showVariants'])->middleware('role:admin');
+    Route::post('/products', [ProductController::class, 'store'])->middleware('role:admin');
+    Route::patch('/products/{id}', [ProductController::class, 'update'])->middleware('role:admin');
+    Route::delete('/products/{id}', [ProductController::class, 'destroy'])->middleware('role:admin');
+
+    // Category Management
+    Route::post('/categories', [CategoryController::class, 'store'])->middleware('role:admin');
+    Route::patch('/categories/{id}', [CategoryController::class, 'update'])->middleware('role:admin');
+    Route::delete('/categories/{id}', [CategoryController::class, 'destroy'])->middleware('role:admin');
+});
 
 // Messaging & Notifications
 Route::middleware('auth:sanctum')->group(function () {

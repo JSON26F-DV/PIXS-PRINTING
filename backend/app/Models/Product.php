@@ -8,9 +8,13 @@ class Product extends Model
 {
     public $incrementing = false;
 
+    public $timestamps = false;
+
     protected $keyType = 'string';
 
     protected $table = 'products';
+
+    protected $guarded = [];
 
     public function category()
     {

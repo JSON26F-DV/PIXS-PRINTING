@@ -22,6 +22,7 @@ import { getHomePathForRole } from '../utils/authRouting'
 import AdminLayout from '../layouts/AdminLayout'
 import Dashboard from '../views/admin/Dashboard'
 import ProductManagement from '../views/admin/ProductManagement'
+import ManageProduct from '../views/admin/ManageProduct'
 import ScreenplateManagement from '../views/admin/ScreenplateManagement'
 import StockAnalytics from '../views/admin/StockAnalytics'
 import Accounts from '../views/admin/Accounts'
@@ -167,6 +168,8 @@ const AppRouter: React.FC = () => {
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="product" element={<ProductManagement />} />
+        <Route path="product/manage" element={<ManageProduct />} />
+        <Route path="product/manage/:product_id" element={<ManageProduct />} />
         <Route path="screenplate" element={<ScreenplateManagement />} />
         <Route path="stock" element={<StockAnalytics />} />
         <Route path="account" element={<Accounts />} />

@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Customer;
 use App\Models\Order;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 
@@ -40,7 +39,7 @@ class AdminOrderController extends Controller
         $allowedStatuses = ['UNPAID', 'PENDING', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED'];
         $deliveredOrdersCount = Order::where('status', 'DELIVERED')->count();
         $completionRate = $totalOrders > 0 ? round(($deliveredOrdersCount / $totalOrders) * 100, 2) : 0;
-        
+
         $avgRating = Order::where('rating', '>', 0)->avg('rating') ?: 0;
         $orderVolume = (float) Order::sum('total_amount');
 
@@ -71,6 +70,7 @@ class AdminOrderController extends Controller
                     'DELIVERED' => '#10b981',
                     'CANCELLED' => '#ef4444',
                 ];
+
                 return [
                     'name' => $item->status,
                     'value' => (int) $item->count,
@@ -87,7 +87,7 @@ class AdminOrderController extends Controller
         return Customer::orderBy('orders', 'desc')
             ->take(10)
             ->get()
-            ->map(fn($c) => [
+            ->map(fn ($c) => [
                 'id' => $c->id,
                 'name' => "{$c->first_name} {$c->last_name}",
                 'order_count' => $c->orders,
@@ -100,7 +100,7 @@ class AdminOrderController extends Controller
      */
     private function getCustomersList(): iterable
     {
-        return Customer::orderBy('orders', 'desc')->get()->map(fn($c) => [
+        return Customer::orderBy('orders', 'desc')->get()->map(fn ($c) => [
             'id' => $c->id,
             'name' => "{$c->first_name} {$c->last_name}",
             'first_name' => $c->first_name,
@@ -121,7 +121,7 @@ class AdminOrderController extends Controller
         return Order::with(['customer', 'items.product', 'items.variant', 'items.colors.colorDetails'])
             ->latest()
             ->get()
-            ->map(fn($o) => [
+            ->map(fn ($o) => [
                 'order_id' => (string) $o->id,
                 'user_id' => (string) $o->customer_id,
                 'total_amount' => (float) $o->total_amount,
@@ -133,7 +133,7 @@ class AdminOrderController extends Controller
                 'discount' => [
                     'total_discount_amount' => (float) $o->total_discount_amount,
                 ],
-                'products' => $o->items->map(fn($item) => [
+                'products' => $o->items->map(fn ($item) => [
                     'id' => $item->id,
                     'order_id' => $item->order_id,
                     'customer_id' => $item->customer_id,
@@ -148,7 +148,7 @@ class AdminOrderController extends Controller
                         'size' => $item->variant?->size ?? 'N/A',
                         'unitPrice' => (float) $item->unit_price,
                     ],
-                    'colors' => $item->colors->map(fn($c) => [
+                    'colors' => $item->colors->map(fn ($c) => [
                         'name' => $c->colorDetails?->name ?? 'Unknown',
                         'hex' => $c->colorDetails?->hex ?? '#000000',
                     ]),
@@ -160,7 +160,7 @@ class AdminOrderController extends Controller
                     ] : null,
                     'customRequirements' => $o->production_notes,
                     'created_at' => $o->created_at->toISOString(),
-                ])
+                ]),
             ]);
     }
 }

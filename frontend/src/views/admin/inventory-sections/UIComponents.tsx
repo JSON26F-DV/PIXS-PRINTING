@@ -196,7 +196,8 @@ export const ImageUploader: React.FC<{
   value: string
   onChange: (val: string) => void
   className?: string
-}> = ({ value, onChange, className }) => {
+  pathPrefix?: string
+}> = ({ value, onChange, className, pathPrefix }) => {
   const onDrop = (acceptedFiles: File[]) => {
     const file = acceptedFiles[0]
     const reader = new FileReader()
@@ -208,6 +209,11 @@ export const ImageUploader: React.FC<{
     onDrop,
     multiple: false,
   })
+
+  // Prepend path prefix if it is a relative plain filename (not base64, external URL, or absolute path)
+  const displaySrc = value && !value.startsWith('data:') && !value.startsWith('http') && !value.startsWith('/') && pathPrefix
+    ? `${pathPrefix}${value}`
+    : value;
 
   return (
     <div
@@ -224,7 +230,7 @@ export const ImageUploader: React.FC<{
       {value ? (
         <>
           <img
-            src={value}
+            src={displaySrc}
             className="h-full w-full object-cover transition-transform group-hover:scale-105"
             alt="Preview"
           />
@@ -250,7 +256,8 @@ export const ImageUploader: React.FC<{
 export const GalleryUploader: React.FC<{
   images: string[]
   onChange: (val: string[]) => void
-}> = ({ images = [], onChange }) => {
+  pathPrefix?: string
+}> = ({ images = [], onChange, pathPrefix }) => {
   const onDrop = (acceptedFiles: File[]) => {
     const readers = acceptedFiles.map((file: File) => {
       return new Promise<string>((resolve) => {
@@ -275,25 +282,31 @@ export const GalleryUploader: React.FC<{
     <div className="GalleryUploader space-y-4">
       <SectionTitle title="Product Gallery" />
       <div className="grid h-fit grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-6">
-        {images.map((img, idx) => (
-          <div
-            key={idx}
-            className="group relative aspect-square overflow-hidden rounded-[20px] border border-slate-200 shadow-sm"
-          >
-            <img
-              src={img}
-              className="h-full w-full object-cover transition-transform group-hover:scale-110"
-              alt={`Gallery ${idx}`}
-            />
-            <button
-              type="button"
-              onClick={() => removeImage(idx)}
-              className="absolute top-2 right-2 rounded-lg bg-white p-1.5 text-rose-500 opacity-0 shadow-sm transition-opacity group-hover:opacity-100 hover:bg-rose-500 hover:text-white"
+        {images.map((img, idx) => {
+          const displaySrc = img && !img.startsWith('data:') && !img.startsWith('http') && !img.startsWith('/') && pathPrefix
+            ? `${pathPrefix}${img}`
+            : img;
+
+          return (
+            <div
+              key={idx}
+              className="group relative aspect-square overflow-hidden rounded-[20px] border border-slate-200 shadow-sm"
             >
-              <Trash2 size={12} />
-            </button>
-          </div>
-        ))}
+              <img
+                src={displaySrc}
+                className="h-full w-full object-cover transition-transform group-hover:scale-110"
+                alt={`Gallery ${idx}`}
+              />
+              <button
+                type="button"
+                onClick={() => removeImage(idx)}
+                className="absolute top-2 right-2 rounded-lg bg-white p-1.5 text-rose-500 opacity-0 shadow-sm transition-opacity group-hover:opacity-100 hover:bg-rose-500 hover:text-white"
+              >
+                <Trash2 size={12} />
+              </button>
+            </div>
+          );
+        })}
 
         <div
           {...getRootProps()}

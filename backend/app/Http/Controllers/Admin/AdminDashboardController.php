@@ -6,8 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Customer;
 use App\Models\Order;
 use App\Models\ScreenplateRequest;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class AdminDashboardController extends Controller
@@ -21,7 +21,7 @@ class AdminDashboardController extends Controller
         $status = $request->input('status');
 
         $allowedStatuses = ['UNPAID', 'PENDING', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED'];
-        if (!in_array($status, $allowedStatuses)) {
+        if (! in_array($status, $allowedStatuses)) {
             return response()->json(['message' => 'Invalid status update'], 422);
         }
 
@@ -30,7 +30,7 @@ class AdminDashboardController extends Controller
 
         return response()->json([
             'message' => "Order {$id} status updated to {$status}",
-            'status' => $status
+            'status' => $status,
         ]);
     }
 
@@ -73,7 +73,7 @@ class AdminDashboardController extends Controller
         $orderPoints = Order::selectRaw('DATE(created_at) as date, SUM(total_amount) as total_amount')
             ->groupBy('date')
             ->get();
-            
+
         $screenplatePoints = ScreenplateRequest::selectRaw('DATE(created_at) as date, SUM(calculated_total) as total_amount')
             ->groupBy('date')
             ->get();
@@ -92,13 +92,13 @@ class AdminDashboardController extends Controller
             ->latest()
             ->take(15)
             ->get()
-            ->map(fn($o) => [
+            ->map(fn ($o) => [
                 'id' => $o->id,
                 'date' => $o->created_at->toDateTimeString(),
                 'customer' => $o->customer ? "{$o->customer->first_name} {$o->customer->last_name}" : 'Anonymous',
                 'amount' => (float) $o->total_amount,
                 'discount' => (float) $o->total_discount_amount,
-                'status' => $o->status
+                'status' => $o->status,
             ]);
 
         return [
@@ -141,6 +141,7 @@ class AdminDashboardController extends Controller
                     'DELIVERED' => '#10b981',
                     'CANCELLED' => '#ef4444',
                 ];
+
                 return [
                     'name' => $item->status,
                     'value' => (int) $item->value,
@@ -155,7 +156,7 @@ class AdminDashboardController extends Controller
             ->with(['customer', 'items.product'])
             ->latest()
             ->get()
-            ->map(fn($order) => [
+            ->map(fn ($order) => [
                 'id' => $order->id,
                 'customerName' => $order->customer ? "{$order->customer->first_name} {$order->customer->last_name}" : 'Anonymous',
                 'total' => (float) $order->total_amount,
@@ -174,7 +175,7 @@ class AdminDashboardController extends Controller
         $topLoyalists = Customer::orderBy('total_orders_value', 'desc')
             ->take(10)
             ->get()
-            ->map(fn($customer) => [
+            ->map(fn ($customer) => [
                 'name' => "{$customer->first_name} {$customer->last_name}",
                 'transactions' => $customer->orders,
                 'spent' => (float) $customer->total_orders_value,
@@ -182,7 +183,7 @@ class AdminDashboardController extends Controller
 
         $loyaltyDistribution = Customer::orderBy('orders', 'asc')
             ->get()
-            ->map(fn($customer) => [
+            ->map(fn ($customer) => [
                 'name' => "{$customer->first_name} {$customer->last_name}",
                 'transactions' => $customer->orders,
                 'spent' => (float) $customer->total_orders_value,
@@ -197,7 +198,7 @@ class AdminDashboardController extends Controller
             ->with(['customer', 'items.product'])
             ->take(25)
             ->get()
-            ->map(fn($order) => [
+            ->map(fn ($order) => [
                 'id' => $order->id,
                 'customerName' => $order->customer ? "{$order->customer->first_name} {$order->customer->last_name}" : 'Anonymous',
                 'total' => (float) $order->total_amount,
@@ -211,7 +212,7 @@ class AdminDashboardController extends Controller
             ->with('customer')
             ->take(25)
             ->get()
-            ->map(fn($req) => [
+            ->map(fn ($req) => [
                 'id' => $req->id,
                 'customerName' => $req->customer ? "{$req->customer->first_name} {$req->customer->last_name}" : 'Anonymous',
                 'total' => (float) $req->calculated_total,

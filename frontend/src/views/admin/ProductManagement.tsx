@@ -4,15 +4,9 @@ import Skeleton from 'react-loading-skeleton'
 import 'react-loading-skeleton/dist/skeleton.css'
 import { Toaster } from 'react-hot-toast'
 
-// Data
-import productsDataRaw from '../../data/products.json'
-import categoriesDataRaw from '../../data/categories.json'
-
-// Subcomponents
 import { ProductsSection } from './inventory-sections/ProductsSection'
-import { TechnicianAssignmentSection } from './inventory-sections/TechnicianAssignmentSection'
 import type { IProduct, ICategory } from './inventory-sections/types'
-import { SafeTerminal } from '../../utils/safeTerminal'
+import axiosInstance from '../../lib/axiosInstance'
 import ErrorBoundary from '../../components/common/ErrorBoundary'
 
 function ProductManagementContent() {
@@ -21,24 +15,21 @@ function ProductManagementContent() {
   const [products, setProducts] = useState<IProduct[]>([])
   const [categories, setCategories] = useState<ICategory[]>([])
 
-  const initializeData = () => {
+  const initializeData = async () => {
     try {
       setIsLoading(true)
       setLoadError(false)
 
-      const safeProducts = SafeTerminal.array<IProduct>(productsDataRaw)
-      const safeCategories = SafeTerminal.array<ICategory>(categoriesDataRaw)
+      const [productsRes, categoriesRes] = await Promise.all([
+        axiosInstance.get('/api/admin/products'),
+        axiosInstance.get('/api/categories')
+      ])
 
-      if (
-        safeProducts.length === 0 &&
-        Array.isArray(productsDataRaw) &&
-        productsDataRaw.length > 0
-      ) {
-        throw new Error('Product Data Corrupted')
-      }
+      const products = productsRes.data?.data || []
+      const categories = categoriesRes.data?.data || []
 
-      setProducts(safeProducts)
-      setCategories(safeCategories)
+      setProducts(products)
+      setCategories(categories)
     } catch (e) {
       console.error('Product Load Failed:', e)
       setLoadError(true)
@@ -117,7 +108,7 @@ function ProductManagementContent() {
               setProducts={setProducts}
               setCategories={setCategories}
             />
-            <TechnicianAssignmentSection categories={categories} />
+            {/* <TechnicianAssignmentSection categories={categories} /> */}
           </>
         )}
       </main>

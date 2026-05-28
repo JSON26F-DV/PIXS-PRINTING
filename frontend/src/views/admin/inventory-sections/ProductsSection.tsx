@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Search, Plus, Edit, Trash2, X, Package2 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useForm, useFieldArray, useWatch } from 'react-hook-form'
@@ -17,6 +18,15 @@ import {
   ConfirmModal,
 } from './UIComponents'
 import { CategoriesSection } from './CategoriesSection'
+import BoxFallback from '../../../components/common/BoxFallback'
+
+const ProductImage = ({ src, alt, className }: { src: string; alt: string; className: string }) => {
+  const [error, setError] = useState(false)
+  if (error || !src) {
+    return <BoxFallback className={cn("bg-slate-100", className)} iconClassName="h-6 w-6 opacity-30" />
+  }
+  return <img src={src} alt={alt} className={className} onError={() => setError(true)} />
+}
 
 const cn = (...classes: (string | boolean | undefined)[]) =>
   classes.filter(Boolean).join(' ')
@@ -70,6 +80,7 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
   const [editingProduct, setEditingProduct] = useState<IProduct | null>(null)
   const [isAddingProduct, setIsAddingProduct] = useState(false)
   const [productToDelete, setProductToDelete] = useState<IProduct | null>(null)
+  const navigate = useNavigate()
 
   // Debounced search
   const debouncedSearch = useMemo(
@@ -141,7 +152,7 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
                       General Reference
                     </th>
                     <th className="px-8 py-5 text-center text-[10px] font-black tracking-widest text-slate-400 uppercase">
-                      Stock Level
+                      Total Sold
                     </th>
                     <th className="px-8 py-5 pr-12 text-right text-[10px] font-black tracking-widest text-slate-400 uppercase">
                       Action
@@ -157,8 +168,9 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
                       <td className="px-8 py-6">
                         <div className="flex items-center gap-5">
                           <div className="h-14 w-14 flex-shrink-0 overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-md">
-                            <img
-                              src={p.main_image}
+                            <ProductImage
+                              src={`/public/images/products/${p.main_image}`}
+                              alt={p.name}
                               className="h-full w-full object-cover transition-transform group-hover:scale-105"
                             />
                           </div>
@@ -173,20 +185,13 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
                         </div>
                       </td>
                       <td className="px-8 py-6 text-center">
-                        <span
-                          className={cn(
-                            'rounded-lg border px-3 py-1.5 text-[9px] font-black tracking-tighter tracking-widest uppercase shadow-sm',
-                            (p.current_stock || 0) < (p.min_threshold || 0)
-                              ? 'border-rose-100 bg-rose-50 text-rose-600'
-                              : 'border-emerald-100 bg-emerald-50 text-emerald-600',
-                          )}
-                        >
-                          {p.current_stock} pcs (Target: {p.min_threshold}+)
+                        <span className="rounded-lg border px-3 py-1.5 text-[9px] font-black tracking-tighter tracking-widest uppercase shadow-sm border-blue-100 bg-blue-50 text-blue-600">
+                          {p.total_sold || 0} sold
                         </span>
                       </td>
                       <td className="space-x-2 px-8 py-6 pr-12 text-right">
                         <button
-                          onClick={() => setEditingProduct(p)}
+                          onClick={() => navigate(`/admin/product/manage/${p.id}`)}
                           className="rounded-xl border border-slate-100 bg-white p-3 text-slate-400 shadow-sm transition-all hover:border-blue-100 hover:bg-blue-50 hover:text-blue-600"
                         >
                           <Edit size={16} />
@@ -216,29 +221,7 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
 
         <div className="flex h-full flex-col space-y-8 lg:col-span-4">
           <button
-            onClick={() => {
-              setIsAddingProduct(true)
-              setEditingProduct({
-                id: `PRD-${Date.now().toString().slice(-4)}`,
-                name: '',
-                category: categories[0]?.label || 'Uncategorized',
-                short_description: '',
-                long_description: '',
-                best_for: '',
-                base_price: 0,
-                raw_material_cost: 0,
-                current_stock: 0,
-                min_threshold: 50,
-                min_order: 1,
-                main_image: 'https://placehold.co/600x600?text=Product+Image',
-                gallery: [],
-                print_method: PRINT_METHOD_OPTIONS[0],
-                tags: [],
-                is_need_screenplate: true,
-                is_need_color: true,
-                variants: [],
-              })
-            }}
+            onClick={() => navigate('/admin/product/manage')}
             className="flex items-center gap-3 rounded-[32px] bg-slate-900 px-10 py-8 text-xs font-black tracking-widest text-[#75EEA5] uppercase shadow-xl shadow-slate-900/10 transition-all hover:bg-slate-800 active:scale-95"
           >
             <Plus size={18} /> Add New Product
@@ -357,6 +340,7 @@ const ProductModal = ({
                 value={watchMainImage}
                 onChange={(val) => setValue('main_image', val)}
                 className="aspect-square"
+                pathPrefix="/public/images/products/"
               />
               {errors.main_image && (
                 <p className="mt-2 text-[10px] font-bold text-rose-500 uppercase">
@@ -368,6 +352,7 @@ const ProductModal = ({
               <GalleryUploader
                 images={watchGallery}
                 onChange={(val) => setValue('gallery', val)}
+                pathPrefix="/public/images/products_gallery/"
               />
             </div>
           </div>

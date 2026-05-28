@@ -6,5 +6,9 @@ use Illuminate\Database\Eloquent\Model;
 
 class ProductGallery extends Model
 {
+    public $timestamps = false;
+
     protected $table = 'product_gallery';
+
+    protected $guarded = [];
 }

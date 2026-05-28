@@ -26,6 +26,9 @@ export interface IProduct {
   is_need_screenplate: boolean
   is_need_color: boolean
   variants: IVariant[]
+  total_sold?: number
+  is_in_stock?: boolean
+  ratings?: number
 }
 
 export interface ICategory {
