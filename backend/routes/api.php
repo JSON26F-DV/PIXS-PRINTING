@@ -1,7 +1,9 @@
 <?php
 
+use App\Http\Controllers\Admin\AdminCustomerController;
 use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\AdminOrderController;
+use App\Http\Controllers\Admin\AdminScreenplateController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\CartController;
@@ -18,8 +20,6 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ScreenplateRequestController;
 use App\Http\Controllers\User\UserController;
 use Illuminate\Support\Facades\Route;
-
-// ... (skipping some lines for brevity if needed, but I'll replace the block)
 
 // Public Data Routes
 Route::get('/delivery-methods', [DeliveryMethodController::class, 'index']);
@@ -95,6 +95,23 @@ Route::middleware(['auth:sanctum', 'role:customer'])->prefix('customer')->group(
 
 // Admin Routes
 Route::middleware(['auth:sanctum'])->prefix('admin')->group(function () {
+    // Customers
+    Route::get('/customers', [AdminCustomerController::class, 'index'])->middleware('role:admin');
+
+    // Screenplates
+    Route::get('/screenplates', [AdminScreenplateController::class, 'index'])->middleware('role:admin');
+    Route::get('/screenplates/{id}', [AdminScreenplateController::class, 'show'])->middleware('role:admin');
+    Route::post('/screenplates', [AdminScreenplateController::class, 'store'])->middleware('role:admin');
+    Route::patch('/screenplates/{id}', [AdminScreenplateController::class, 'update'])->middleware('role:admin');
+    Route::delete('/screenplates/{id}', [AdminScreenplateController::class, 'destroy'])->middleware('role:admin');
+    Route::post('/screenplates/{id}/upload-image', [AdminScreenplateController::class, 'uploadImage'])->middleware('role:admin');
+
+    // Compatibility / Incompatible single-row endpoints
+    Route::post('/screenplates/{id}/compatibility', [AdminScreenplateController::class, 'addCompatibility'])->middleware('role:admin');
+    Route::delete('/screenplates/{id}/compatibility', [AdminScreenplateController::class, 'removeCompatibility'])->middleware('role:admin');
+    Route::post('/screenplates/{id}/incompatible', [AdminScreenplateController::class, 'addIncompatible'])->middleware('role:admin');
+    Route::delete('/screenplates/{id}/incompatible', [AdminScreenplateController::class, 'removeIncompatible'])->middleware('role:admin');
+
     // Discount Management
     Route::get('/discounts', [DiscountController::class, 'index'])->middleware('role:admin');
     Route::post('/discounts', [DiscountController::class, 'store'])->middleware('role:admin');
@@ -114,12 +131,19 @@ Route::middleware(['auth:sanctum'])->prefix('admin')->group(function () {
     Route::get('/products/{id}/variants', [ProductController::class, 'showVariants'])->middleware('role:admin');
     Route::post('/products', [ProductController::class, 'store'])->middleware('role:admin');
     Route::patch('/products/{id}', [ProductController::class, 'update'])->middleware('role:admin');
+    Route::get('/products/{id}/delete-info', [ProductController::class, 'deleteInfo'])->middleware('role:admin');
     Route::delete('/products/{id}', [ProductController::class, 'destroy'])->middleware('role:admin');
 
     // Category Management
     Route::post('/categories', [CategoryController::class, 'store'])->middleware('role:admin');
     Route::patch('/categories/{id}', [CategoryController::class, 'update'])->middleware('role:admin');
     Route::delete('/categories/{id}', [CategoryController::class, 'destroy'])->middleware('role:admin');
+
+    // Stock Analytics & Expenditures
+    Route::get('/stock-analytics', [\App\Http\Controllers\Admin\AdminStockAnalyticsController::class, 'index'])->middleware('role:admin');
+    Route::post('/expenditures', [\App\Http\Controllers\Admin\AdminStockAnalyticsController::class, 'storeExpenditure'])->middleware('role:admin');
+    Route::patch('/expenditures/{id}', [\App\Http\Controllers\Admin\AdminStockAnalyticsController::class, 'updateExpenditure'])->middleware('role:admin');
+    Route::delete('/expenditures/{id}', [\App\Http\Controllers\Admin\AdminStockAnalyticsController::class, 'destroyExpenditure'])->middleware('role:admin');
 });
 
 // Messaging & Notifications

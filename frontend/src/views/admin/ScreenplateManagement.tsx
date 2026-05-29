@@ -1,32 +1,49 @@
-import { useState, useEffect } from 'react'
-import { Layers } from 'lucide-react'
+import { useState, useEffect, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { Layers, Plus } from 'lucide-react'
 import Skeleton from 'react-loading-skeleton'
 import 'react-loading-skeleton/dist/skeleton.css'
 import { Toaster } from 'react-hot-toast'
 
-// Data
-import productsDataRaw from '../../data/products.json'
-import screenplateDataRaw from '../../data/screenplate.json'
-import usersDataRaw from '../../data/users.json'
-
-// Subcomponents
+import { getAdminCustomers } from '../../api/customers.api'
+import {
+  getAdminScreenplates,
+  deleteAdminScreenplate,
+} from '../../api/admin-screenplates.api'
 import { ScreenplateSection } from './inventory-sections/ScreenplateSection'
-import type { IProduct, IScreenplate, IUser } from './inventory-sections/types'
+import type { IScreenplate, IProduct, IUser } from './inventory-sections/types'
+import productsDataRaw from '../../data/products.json'
 
 export default function ScreenplateManagement() {
+  const navigate = useNavigate()
   const [isLoading, setIsLoading] = useState(true)
+  const [screenplates, setScreenplates] = useState<IScreenplate[]>([])
+  const [customers, setCustomers] = useState<IUser[]>([])
   const [products] = useState<IProduct[]>(productsDataRaw as IProduct[])
-  const [screenplates, setScreenplates] = useState<IScreenplate[]>(
-    screenplateDataRaw as unknown as IScreenplate[],
-  )
-  const [customers] = useState<IUser[]>(
-    usersDataRaw.customers as unknown as IUser[],
-  )
+
+  const fetchData = useCallback(async () => {
+    try {
+      const [custs, plates] = await Promise.all([
+        getAdminCustomers(),
+        getAdminScreenplates(),
+      ])
+      setCustomers(custs)
+      setScreenplates(plates)
+    } catch (err) {
+      console.error('Failed to load screenplate data', err)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
 
   useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 800)
-    return () => clearTimeout(timer)
-  }, [])
+    fetchData()
+  }, [fetchData])
+
+  const handleDelete = async (id: string) => {
+    await deleteAdminScreenplate(id)
+    setScreenplates((prev) => prev.filter((p) => p.id !== id))
+  }
 
   return (
     <div className="ScreenplateManagementPage animate-in fade-in min-h-screen bg-slate-50/50 pb-20 duration-500">
@@ -41,8 +58,16 @@ export default function ScreenplateManagement() {
             Manage industrial meshes and product compatibility matrices.
           </p>
         </div>
-        <div className="rounded-2xl bg-purple-100 p-3 text-purple-600 shadow-lg shadow-purple-200/40">
-          <Layers size={28} />
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => navigate('/admin/screenplate/manage')}
+            className="flex shrink-0 items-center gap-2 rounded-xl bg-slate-900 px-6 py-3.5 text-[10px] font-black tracking-widest text-[#75EEA5] uppercase shadow-xl shadow-slate-900/10 transition-all hover:bg-slate-800 active:scale-95"
+          >
+            <Plus size={16} /> Add New
+          </button>
+          <div className="rounded-2xl bg-purple-100 p-3 text-purple-600 shadow-lg shadow-purple-200/40">
+            <Layers size={28} />
+          </div>
         </div>
       </header>
 
@@ -54,7 +79,7 @@ export default function ScreenplateManagement() {
             customers={customers}
             screenplates={screenplates}
             products={products}
-            setScreenplates={setScreenplates}
+            onDelete={handleDelete}
           />
         )}
       </main>

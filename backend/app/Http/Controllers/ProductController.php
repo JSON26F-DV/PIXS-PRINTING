@@ -4,8 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\Product;
 use App\Models\ProductGallery;
+use App\Models\ProductReview;
 use App\Models\ProductTag;
 use App\Models\ProductVariant;
+use App\Models\ScreenplateCompatibility;
+use App\Models\ScreenplateIncompatible;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -16,6 +19,222 @@ use Illuminate\Validation\ValidationException;
 
 class ProductController extends Controller
 {
+    /**
+     * Public index: List products with filtering, sorting, and pagination.
+     */
+    public function index(Request $request): JsonResponse
+    {
+        try {
+            $query = Product::with('category');
+
+            // Category filter (by label)
+            if ($request->filled('category')) {
+                $query->whereHas('category', function ($q) use ($request) {
+                    $q->where('label', $request->category);
+                });
+            }
+
+            // Search
+            if ($request->filled('search')) {
+                $search = $request->search;
+                $query->where(function ($q) use ($search) {
+                    $q->where('name', 'LIKE', "%{$search}%")
+                        ->orWhere('id', 'LIKE', "%{$search}%");
+                });
+            }
+
+            // Price range
+            if ($request->filled('price_min')) {
+                $query->where('base_price', '>=', (float) $request->price_min);
+            }
+            if ($request->filled('price_max')) {
+                $query->where('base_price', '<=', (float) $request->price_max);
+            }
+
+            // Status filter
+            if ($request->filled('status')) {
+                $status = strtolower($request->status);
+                if ($status === 'in stock') {
+                    $query->where('is_in_stock', true);
+                } elseif ($status === 'out of stock') {
+                    $query->where('is_in_stock', false);
+                }
+            }
+
+            // In stock only
+            if ($request->boolean('in_stock_only')) {
+                $query->where('is_in_stock', true);
+            }
+
+            // Screenplate compatibility
+            if ($request->filled('screenplate_id')) {
+                $screenplateId = $request->screenplate_id;
+                $compatibleIds = ScreenplateCompatibility::where('screenplate_id', $screenplateId)
+                    ->pluck('product_id')
+                    ->unique()
+                    ->toArray();
+                $incompatibleIds = ScreenplateIncompatible::where('screenplate_id', $screenplateId)
+                    ->pluck('product_id')
+                    ->unique()
+                    ->toArray();
+
+                if (! empty($incompatibleIds)) {
+                    $compatibleIds = array_diff($compatibleIds, $incompatibleIds);
+                }
+
+                if (! empty($compatibleIds)) {
+                    $query->whereIn('id', $compatibleIds);
+                } else {
+                    $query->whereRaw('1 = 0');
+                }
+            }
+
+            // Min rating
+            if ($request->filled('min_rating')) {
+                $query->where('ratings', '>=', (float) $request->min_rating);
+            }
+
+            // Most sold filter (overrides sort if both present)
+            if ($request->boolean('most_sold')) {
+                $query->orderBy('total_sold', 'DESC');
+            }
+
+            // Sort
+            if ($request->filled('sort')) {
+                $sort = $request->sort;
+                if (! $request->boolean('most_sold')) {
+                    match ($sort) {
+                        'Price: Low to High' => $query->orderBy('base_price', 'ASC'),
+                        'Price: High to Low' => $query->orderBy('base_price', 'DESC'),
+                        'Most Sold' => $query->orderBy('total_sold', 'DESC'),
+                        'Highest Rating' => $query->orderBy('ratings', 'DESC'),
+                        'A to Z' => $query->orderBy('name', 'ASC'),
+                        'Z to A' => $query->orderBy('name', 'DESC'),
+                        default => $query->orderBy('base_price', 'ASC'),
+                    };
+                }
+            } else {
+                $query->orderBy('base_price', 'ASC');
+            }
+
+            // Pagination
+            $perPage = (int) $request->input('per_page', 20);
+            $perPage = max(1, min(100, $perPage));
+            $products = $query->paginate($perPage);
+
+            return response()->json([
+                'data' => collect($products->items())->map(fn ($p) => $this->formatProduct($p)),
+                'current_page' => $products->currentPage(),
+                'last_page' => $products->lastPage(),
+                'per_page' => $products->perPage(),
+                'total' => $products->total(),
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('ProductController@index failed', ['message' => $e->getMessage()]);
+
+            return response()->json(['message' => 'Failed to load products.'], 500);
+        }
+    }
+
+    /**
+     * Show a single product with all relations (variants, gallery, tags, reviews).
+     */
+    public function show(string $id): JsonResponse
+    {
+        try {
+            $product = Product::with(['category', 'variants', 'gallery', 'tags', 'reviews'])->find($id);
+            if (! $product) {
+                return response()->json(['message' => 'Product not found.'], 404);
+            }
+
+            $data = $this->formatProduct($product);
+            $data['variants'] = $product->variants->map(fn ($v) => [
+                'variant_id' => $v->variant_id,
+                'size' => $v->size,
+                'width' => $v->width,
+                'height' => $v->height,
+                'price' => (float) $v->price,
+                'stock' => (int) $v->stock,
+            ]);
+            $data['gallery'] = $product->gallery->sortBy('sort_order')->values()->map(
+                fn ($img) => $img->image_url
+            );
+            $data['tags'] = $product->tags->pluck('tag');
+            $data['reviews'] = $product->reviews->map(fn ($r) => [
+                'id' => $r->id,
+                'rating' => (int) $r->rating,
+                'feedback' => $r->feedback,
+                'customer_name' => $r->customer_name ?? $r->customer?->user?->name ?? 'Anonymous',
+                'created_at' => $r->created_at,
+            ]);
+
+            return response()->json(['data' => $data]);
+        } catch (\Throwable $e) {
+            Log::error('ProductController@show failed', ['message' => $e->getMessage()]);
+
+            return response()->json(['message' => 'Failed to load product.'], 500);
+        }
+    }
+
+    /**
+     * Get sold counts for all products (from actual order data).
+     */
+    public function soldCounts(): JsonResponse
+    {
+        try {
+            $soldCounts = DB::table('order_items')
+                ->join('orders', 'order_items.order_id', '=', 'orders.id')
+                ->whereIn('orders.status', ['DELIVERED', 'PROCESSING'])
+                ->select('order_items.product_id', DB::raw('SUM(order_items.quantity) as total_sold'))
+                ->groupBy('order_items.product_id')
+                ->get()
+                ->map(fn ($item) => [
+                    'product_id' => $item->product_id,
+                    'total_sold' => (int) $item->total_sold,
+                ]);
+
+            return response()->json(['data' => $soldCounts]);
+        } catch (\Throwable $e) {
+            Log::error('ProductController@soldCounts failed', ['message' => $e->getMessage()]);
+
+            return response()->json(['message' => 'Failed to load sold counts.'], 500);
+        }
+    }
+
+    /**
+     * Search products (auth-protected).
+     */
+    public function search(Request $request): JsonResponse
+    {
+        try {
+            $query = Product::with('category');
+
+            if ($request->filled('q')) {
+                $q = $request->q;
+                $query->where(function ($query) use ($q) {
+                    $query->where('name', 'LIKE', "%{$q}%")
+                        ->orWhere('id', 'LIKE', "%{$q}%");
+                });
+            }
+
+            $perPage = (int) $request->input('per_page', 20);
+            $perPage = max(1, min(100, $perPage));
+            $products = $query->paginate($perPage);
+
+            return response()->json([
+                'data' => collect($products->items())->map(fn ($p) => $this->formatProduct($p)),
+                'current_page' => $products->currentPage(),
+                'last_page' => $products->lastPage(),
+                'per_page' => $products->perPage(),
+                'total' => $products->total(),
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('ProductController@search failed', ['message' => $e->getMessage()]);
+
+            return response()->json(['message' => 'Search failed.'], 500);
+        }
+    }
+
     /**
      * Admin Index: List all products.
      */
@@ -234,6 +453,32 @@ class ProductController extends Controller
     }
 
     /**
+     * Get delete info with counts of related records.
+     */
+    public function deleteInfo(string $id): JsonResponse
+    {
+        try {
+            $product = Product::find($id);
+            if (! $product) {
+                return response()->json(['message' => 'Product not found.'], 404);
+            }
+
+            return response()->json([
+                'data' => [
+                    'gallery_count' => ProductGallery::where('product_id', $product->id)->count(),
+                    'variants_count' => ProductVariant::where('product_id', $product->id)->count(),
+                    'tags_count' => ProductTag::where('product_id', $product->id)->count(),
+                    'reviews_count' => ProductReview::where('product_id', $product->id)->count(),
+                ],
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('ProductController@deleteInfo failed', ['message' => $e->getMessage()]);
+
+            return response()->json(['message' => 'Failed to load delete info.'], 500);
+        }
+    }
+
+    /**
      * Admin Destroy: Delete product.
      */
     public function destroy(string $id): JsonResponse
@@ -247,6 +492,26 @@ class ProductController extends Controller
             $mainImage = $product->main_image;
 
             DB::transaction(function () use ($product) {
+                // Delete related gallery images and their files
+                $galleryImages = ProductGallery::where('product_id', $product->id)->get();
+                foreach ($galleryImages as $img) {
+                    $galleryPath = $this->frontendPublicPath('images/products_gallery/'.$img->image_url);
+                    if (File::exists($galleryPath)) {
+                        File::delete($galleryPath);
+                    }
+                }
+                ProductGallery::where('product_id', $product->id)->delete();
+
+                // Delete related reviews
+                ProductReview::where('product_id', $product->id)->delete();
+
+                // Delete related tags
+                ProductTag::where('product_id', $product->id)->delete();
+
+                // Delete related variants
+                ProductVariant::where('product_id', $product->id)->delete();
+
+                // Delete the product itself
                 $product->delete();
             });
 

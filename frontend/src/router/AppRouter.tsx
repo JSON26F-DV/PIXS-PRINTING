@@ -24,7 +24,9 @@ import Dashboard from '../views/admin/Dashboard'
 import ProductManagement from '../views/admin/ProductManagement'
 import ManageProduct from '../views/admin/ManageProduct'
 import ScreenplateManagement from '../views/admin/ScreenplateManagement'
+import ManageScreenplate from '../views/admin/ManageScreenplate'
 import StockAnalytics from '../views/admin/StockAnalytics'
+import ManageStock from '../views/admin/ManageStock'
 import Accounts from '../views/admin/Accounts'
 import Payroll from '../views/admin/payroll/Payroll'
 import Orders from '../views/admin/Orders'
@@ -171,7 +173,10 @@ const AppRouter: React.FC = () => {
         <Route path="product/manage" element={<ManageProduct />} />
         <Route path="product/manage/:product_id" element={<ManageProduct />} />
         <Route path="screenplate" element={<ScreenplateManagement />} />
+        <Route path="screenplate/manage" element={<ManageScreenplate />} />
+        <Route path="screenplate/manage/:id" element={<ManageScreenplate />} />
         <Route path="stock" element={<StockAnalytics />} />
+        <Route path="stock/manage/:product_id" element={<ManageStock />} />
         <Route path="account" element={<Accounts />} />
         <Route path="payroll" element={<Payroll />} />
         <Route path="orders" element={<Orders />} />

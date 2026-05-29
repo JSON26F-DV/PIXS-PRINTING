@@ -89,7 +89,7 @@ function ProductManagementContent() {
           <Skeleton height={800} borderRadius={32} />
         ) : products.length === 0 ? (
           <div className="admin-message-empty rounded-[48px] border-2 border-dashed border-slate-100 bg-white p-20 text-center shadow-2xl">
-            <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-slate-50">
+            <div className="mx-auto mb-63 flex h-20 w-20 items-center justify-center rounded-full bg-slate-50">
               <PackageOpen className="text-slate-300" size={40} />
             </div>
             <h3 className="mb-2 text-xl font-black tracking-tight text-slate-900 uppercase">

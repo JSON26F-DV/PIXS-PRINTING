@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Search, Plus, Edit, Trash2, X, Package2 } from 'lucide-react'
+import { Search, Plus, Edit, Trash2, X, Package2, AlertTriangle } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useForm, useFieldArray, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -15,15 +15,15 @@ import {
   ImageUploader,
   GalleryUploader,
   SectionTitle,
-  ConfirmModal,
 } from './UIComponents'
 import { CategoriesSection } from './CategoriesSection'
 import BoxFallback from '../../../components/common/BoxFallback'
+import axiosInstance from '../../../lib/axiosInstance'
 
 const ProductImage = ({ src, alt, className }: { src: string; alt: string; className: string }) => {
   const [error, setError] = useState(false)
   if (error || !src) {
-    return <BoxFallback className={cn("bg-slate-100", className)} iconClassName="h-6 w-6 opacity-30" />
+    return <BoxFallback className={cn("flex items-center justify-center bg-slate-100", className)} iconClassName="h-6 w-6 opacity-30" />
   }
   return <img src={src} alt={alt} className={className} onError={() => setError(true)} />
 }
@@ -113,11 +113,40 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
     setIsAddingProduct(false)
   }
 
-  const handleDeleteProduct = () => {
+  const [isDeletingProduct, setIsDeletingProduct] = useState(false)
+  const [deleteCounts, setDeleteCounts] = useState<{
+    gallery_count: number
+    variants_count: number
+    tags_count: number
+    reviews_count: number
+  } | null>(null)
+
+  const handleDeleteProduct = async () => {
     if (!productToDelete) return
-    setProducts((prev) => prev.filter((p) => p.id !== productToDelete.id))
-    toast.success('Product removed.')
-    setProductToDelete(null)
+    setIsDeletingProduct(true)
+    try {
+      await axiosInstance.delete(`/api/admin/products/${productToDelete.id}`)
+      setProducts((prev) => prev.filter((p) => p.id !== productToDelete.id))
+      toast.success('Product and all related data deleted.')
+      setProductToDelete(null)
+      setDeleteCounts(null)
+    } catch (e) {
+      toast.error('Failed to delete product from server.')
+      console.error(e)
+    } finally {
+      setIsDeletingProduct(false)
+    }
+  }
+
+  const handleShowDeleteModal = async (product: IProduct) => {
+    setProductToDelete(product)
+    setDeleteCounts(null)
+    try {
+      const res = await axiosInstance.get(`/api/admin/products/${product.id}/delete-info`)
+      setDeleteCounts(res.data.data)
+    } catch (e) {
+      console.error(e)
+    }
   }
 
   return (
@@ -197,7 +226,7 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
                           <Edit size={16} />
                         </button>
                         <button
-                          onClick={() => setProductToDelete(p)}
+                          onClick={() => handleShowDeleteModal(p)}
                           className="rounded-xl border border-slate-100 bg-white p-3 text-slate-400 shadow-sm transition-all hover:border-rose-100 hover:bg-rose-50 hover:text-rose-600"
                         >
                           <Trash2 size={16} />
@@ -249,13 +278,84 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
           />
         )}
         {productToDelete && (
-          <ConfirmModal
-            isOpen={!!productToDelete}
-            onClose={() => setProductToDelete(null)}
-            onConfirm={handleDeleteProduct}
-            title="Delete Product?"
-            message={`Are you sure you want to permanently delete "${productToDelete.name}"? This action cannot be reversed.`}
-          />
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-6">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+              onClick={() => setProductToDelete(null)}
+            />
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="relative w-full max-w-md space-y-6 rounded-[32px] bg-white p-8 shadow-2xl"
+            >
+              <div className="flex items-start gap-4 text-rose-600">
+                <div className="rounded-2xl bg-rose-50 p-3">
+                  <AlertTriangle size={28} />
+                </div>
+                <div>
+                  <h4 className="text-xl font-black tracking-tight">Delete Product?</h4>
+                  <p className="mt-1 text-sm font-semibold text-slate-500">
+                    Permanently delete <span className="text-slate-900">&quot;{productToDelete.name}&quot;</span> and ALL related data:
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-2 rounded-2xl bg-rose-50/50 p-4">
+                <p className="text-[11px] font-black tracking-widest text-rose-700 uppercase">Tables affected</p>
+                <div className="space-y-1.5 text-sm font-semibold text-slate-600">
+                  <div className="flex items-center gap-3 rounded-xl bg-white px-4 py-2.5 shadow-sm">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-rose-100 text-[10px] font-black text-rose-700">P</span>
+                    <span>products</span>
+                    <span className="ml-auto text-[10px] font-black tracking-widest text-rose-500 uppercase">1 Record</span>
+                  </div>
+                  <div className="flex items-center gap-3 rounded-xl bg-white px-4 py-2.5 shadow-sm">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-amber-100 text-[10px] font-black text-amber-700">G</span>
+                    <span>product_gallery</span>
+                    <span className="ml-auto text-[10px] font-black tracking-widest text-amber-500 uppercase">{deleteCounts?.gallery_count ?? '...'} Images</span>
+                  </div>
+                  <div className="flex items-center gap-3 rounded-xl bg-white px-4 py-2.5 shadow-sm">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-blue-100 text-[10px] font-black text-blue-700">V</span>
+                    <span>product_variants</span>
+                    <span className="ml-auto text-[10px] font-black tracking-widest text-blue-500 uppercase">{deleteCounts?.variants_count ?? '...'} Variants</span>
+                  </div>
+                  <div className="flex items-center gap-3 rounded-xl bg-white px-4 py-2.5 shadow-sm">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-purple-100 text-[10px] font-black text-purple-700">T</span>
+                    <span>product_tags</span>
+                    <span className="ml-auto text-[10px] font-black tracking-widest text-purple-500 uppercase">{deleteCounts?.tags_count ?? '...'} Tags</span>
+                  </div>
+                  <div className="flex items-center gap-3 rounded-xl bg-white px-4 py-2.5 shadow-sm">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-emerald-100 text-[10px] font-black text-emerald-700">R</span>
+                    <span>product_reviews</span>
+                    <span className="ml-auto text-[10px] font-black tracking-widest text-emerald-500 uppercase">{deleteCounts?.reviews_count ?? '...'} Reviews</span>
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-[11px] font-bold leading-relaxed text-slate-400">
+                This action cannot be undone. All related files (images) will also be permanently deleted.
+              </p>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => setProductToDelete(null)}
+                  className="flex-1 rounded-xl bg-slate-50 py-4 text-xs font-bold tracking-widest text-slate-900 uppercase transition-all hover:bg-slate-100"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeleteProduct}
+                  disabled={isDeletingProduct}
+                  className="flex-1 rounded-xl bg-rose-600 py-4 text-xs font-bold tracking-widest text-white uppercase shadow-lg shadow-rose-200 transition-all hover:-translate-y-1 disabled:opacity-50"
+                >
+                  {isDeletingProduct ? 'Deleting...' : 'Delete Forever'}
+                </button>
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </section>

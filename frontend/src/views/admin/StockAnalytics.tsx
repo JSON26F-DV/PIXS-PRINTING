@@ -1,68 +1,55 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useMemo } from 'react'
 import { Package, TrendingUp, Briefcase, AlertCircle } from 'lucide-react'
 import Skeleton from 'react-loading-skeleton'
 import 'react-loading-skeleton/dist/skeleton.css'
 import { Toaster } from 'react-hot-toast'
 
-// Data
-import productsDataRaw from '../../data/products.json'
-import categoriesDataRaw from '../../data/categories.json'
-
 // Subcomponents
 import { InventoryAnalyticsSection } from './inventory-sections/InventoryAnalyticsSection'
 import { StatCard } from './inventory-sections/UIComponents'
-import restockLogsRaw from '../../data/restock_logs.json'
-import type {
-  IProduct,
-  ICategory,
-  IRestockLog,
-} from './inventory-sections/types'
+import { useStockAnalytics } from '../../hooks/useStockAnalytics'
 
 export default function StockAnalytics() {
-  const [isLoading, setIsLoading] = useState(true)
-  const [products, setProducts] = useState<IProduct[]>(
-    productsDataRaw as IProduct[],
-  )
-  const [categories] = useState<ICategory[]>(categoriesDataRaw as ICategory[])
-  const [restockLogs, setRestockLogs] = useState<IRestockLog[]>(
-    restockLogsRaw as IRestockLog[],
-  )
+  const {
+    products,
+    setProducts,
+    expenditures,
+    isLoading,
+    addExpenditure,
+    updateExpenditure,
+    deleteExpenditure,
+  } = useStockAnalytics()
 
-  useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 800)
-    return () => clearTimeout(timer)
-  }, [])
-
-  const totalStockValue = useMemo(
-    () =>
-      products.reduce(
-        (acc, p) => acc + p.current_stock * (p.base_price || 0),
-        0,
-      ),
-    [products],
-  )
-
-  const lowStockCount = useMemo(
-    () =>
-      products.filter((p) => p.current_stock < (p.min_threshold || 0)).length,
-    [products],
+  const catalogValue = useMemo(
+    () => expenditures.reduce((acc: number, exp) => acc + Number(exp.amount), 0),
+    [expenditures],
   )
 
   const weeklySpend = useMemo(() => {
     const weekAgo = new Date()
     weekAgo.setDate(weekAgo.getDate() - 7)
-    return restockLogs
-      .filter((l) => new Date(l.date) >= weekAgo)
-      .reduce((acc, l) => acc + (l.cost || 0), 0)
-  }, [restockLogs])
+    return expenditures
+      .filter((exp) => new Date(exp.created_at) >= weekAgo)
+      .reduce((acc: number, exp) => acc + Number(exp.amount), 0)
+  }, [expenditures])
 
   const monthlySpend = useMemo(() => {
     const monthAgo = new Date()
     monthAgo.setMonth(monthAgo.getMonth() - 1)
-    return restockLogs
-      .filter((l) => new Date(l.date) >= monthAgo)
-      .reduce((acc, l) => acc + (l.cost || 0), 0)
-  }, [restockLogs])
+    return expenditures
+      .filter((exp) => new Date(exp.created_at) >= monthAgo)
+      .reduce((acc: number, exp) => acc + Number(exp.amount), 0)
+  }, [expenditures])
+
+  const lowStockCount = useMemo(() => {
+    return products.filter((p) => {
+      if (!p.variants || p.variants.length === 0) {
+        // @ts-expect-error fallback if missing properties
+        return (p.current_stock || 0) < (p.min_threshold || 0)
+      }
+      return p.variants.some((v) => v.stock < (p.min_threshold || 0))
+    }).length
+  }, [products])
 
   return (
     <div className="StockAnalyticsPage animate-in fade-in min-h-screen bg-slate-50/50 pb-20 duration-500">
@@ -90,7 +77,7 @@ export default function StockAnalytics() {
             <>
               <StatCard
                 label="Catalog Value"
-                value={`₱${totalStockValue.toLocaleString()}`}
+                value={`₱${catalogValue.toLocaleString()}`}
                 color="emerald"
                 icon={Package}
               />
@@ -124,10 +111,11 @@ export default function StockAnalytics() {
         ) : (
           <InventoryAnalyticsSection
             products={products}
-            categories={categories}
-            restockLogs={restockLogs}
+            expenditures={expenditures}
             setProducts={setProducts}
-            setRestockLogs={setRestockLogs}
+            addExpenditure={addExpenditure}
+            updateExpenditure={updateExpenditure}
+            deleteExpenditure={deleteExpenditure}
           />
         )}
       </main>
