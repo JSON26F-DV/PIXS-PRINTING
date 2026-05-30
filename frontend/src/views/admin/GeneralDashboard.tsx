@@ -31,6 +31,7 @@ import StatCard from '../../components/StatCard'
 import { useAuth } from '../../context/AuthContext'
 import { PermissionWrapper } from '../../components/guards/PermissionWrapper'
 import axiosInstance from '../../lib/axiosInstance'
+import axios from 'axios'
 import { toast } from 'react-hot-toast'
 
 const cn = (...classes: (string | boolean | undefined)[]) =>
@@ -81,20 +82,29 @@ const GeneralDashboard: React.FC = () => {
   const [data, setData] = useState<DashboardData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = async (signal?: AbortSignal) => {
     try {
-      const response = await axiosInstance.get('/api/admin/dashboard-stats')
+      const response = await axiosInstance.get('/api/admin/dashboard-stats', { signal })
       setData(response.data)
     } catch (error) {
+      if (axios.isCancel(error)) {
+        return
+      }
       console.error('Error fetching dashboard data:', error)
       toast.error('Failed to load dashboard statistics')
     } finally {
-      setIsLoading(false)
+      if (!signal || !signal.aborted) {
+        setIsLoading(false)
+      }
     }
   }
 
   useEffect(() => {
-    fetchDashboardData()
+    const controller = new AbortController()
+    fetchDashboardData(controller.signal)
+    return () => {
+      controller.abort()
+    }
   }, [])
 
   const handleStatusUpdate = async (id: string, status: string) => {

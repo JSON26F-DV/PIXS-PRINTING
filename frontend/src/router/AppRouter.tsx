@@ -26,8 +26,12 @@ import ManageProduct from '../views/admin/ManageProduct'
 import ScreenplateManagement from '../views/admin/ScreenplateManagement'
 import ManageScreenplate from '../views/admin/ManageScreenplate'
 import StockAnalytics from '../views/admin/StockAnalytics'
-import ManageStock from '../views/admin/ManageStock'
+import ManageStock from '../views/admin/management/ManageStock'
 import Accounts from '../views/admin/Accounts'
+import ManageEmployee from '../views/admin/management/ManageEmployee'
+import ManageCustomer from '../views/admin/management/ManageCustomer'
+import DeleteAccountPage from '../views/admin/management/DeleteAccountPage'
+import ManageAttendance from '../views/admin/management/ManageAttendance'
 import Payroll from '../views/admin/payroll/Payroll'
 import Orders from '../views/admin/Orders'
 import MarketingPromotions from '../views/admin/MarketingPromotions'
@@ -178,7 +182,13 @@ const AppRouter: React.FC = () => {
         <Route path="stock" element={<StockAnalytics />} />
         <Route path="stock/manage/:product_id" element={<ManageStock />} />
         <Route path="account" element={<Accounts />} />
+        <Route path="account/manage/employee" element={<ManageEmployee />} />
+        <Route path="account/manage/employee/:id" element={<ManageEmployee />} />
+        <Route path="account/manage/customer" element={<ManageCustomer />} />
+        <Route path="account/manage/customer/:id" element={<ManageCustomer />} />
+        <Route path="accounts/delete/:id" element={<DeleteAccountPage />} />
         <Route path="payroll" element={<Payroll />} />
+        <Route path="payroll/manage/:id" element={<ManageAttendance />} />
         <Route path="orders" element={<Orders />} />
         <Route path="message" element={<StaffComHub />} />
         <Route path="setting" element={<AdminSettings />} />

@@ -23,7 +23,6 @@ class Expenditure extends Model
      */
     protected $fillable = [
         'variant_id',
-        'employee_salary_id',
         'category',
         'amount',
         'description',
@@ -56,4 +55,5 @@ class Expenditure extends Model
     {
         return $this->belongsTo(ProductVariant::class, 'variant_id', 'variant_id');
     }
+
 }

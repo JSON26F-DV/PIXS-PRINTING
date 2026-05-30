@@ -1,8 +1,10 @@
 <?php
 
+use App\Http\Controllers\Admin\AdminAccountController;
 use App\Http\Controllers\Admin\AdminCustomerController;
 use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\AdminOrderController;
+use App\Http\Controllers\Admin\AdminPayrollController;
 use App\Http\Controllers\Admin\AdminScreenplateController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Auth\RegisterController;
@@ -95,6 +97,15 @@ Route::middleware(['auth:sanctum', 'role:customer'])->prefix('customer')->group(
 
 // Admin Routes
 Route::middleware(['auth:sanctum'])->prefix('admin')->group(function () {
+    // Accounts
+    Route::get('/accounts', [AdminAccountController::class, 'index'])->middleware('role:admin');
+    Route::get('/accounts/employee/{id}', [AdminAccountController::class, 'showEmployee'])->middleware('role:admin');
+    Route::put('/accounts/employee/{id}', [AdminAccountController::class, 'updateEmployee'])->middleware('role:admin');
+    Route::get('/accounts/customer/{id}', [AdminAccountController::class, 'showCustomer'])->middleware('role:admin');
+    Route::put('/accounts/customer/{id}', [AdminAccountController::class, 'updateCustomer'])->middleware('role:admin');
+    Route::delete('/accounts/delete/{id}', [AdminAccountController::class, 'deleteAccount'])->middleware('role:admin');
+    Route::post('/accounts/upload-profile-picture', [AdminAccountController::class, 'uploadProfilePicture'])->middleware('role:admin');
+
     // Customers
     Route::get('/customers', [AdminCustomerController::class, 'index'])->middleware('role:admin');
 
@@ -144,6 +155,17 @@ Route::middleware(['auth:sanctum'])->prefix('admin')->group(function () {
     Route::post('/expenditures', [\App\Http\Controllers\Admin\AdminStockAnalyticsController::class, 'storeExpenditure'])->middleware('role:admin');
     Route::patch('/expenditures/{id}', [\App\Http\Controllers\Admin\AdminStockAnalyticsController::class, 'updateExpenditure'])->middleware('role:admin');
     Route::delete('/expenditures/{id}', [\App\Http\Controllers\Admin\AdminStockAnalyticsController::class, 'destroyExpenditure'])->middleware('role:admin');
+    Route::post('/products/variants/{variant_id}/stock', [\App\Http\Controllers\Admin\AdminStockAnalyticsController::class, 'updateVariantStock'])->middleware('role:admin');
+
+    // Payroll & Attendance
+    Route::get('/payroll/today', [AdminPayrollController::class, 'today'])->middleware('role:admin');
+    Route::post('/payroll/holiday', [AdminPayrollController::class, 'holiday'])->middleware('role:admin');
+    
+    // Manage specific employee attendance
+    Route::get('/payroll/manage/{id}', [AdminPayrollController::class, 'manageShow'])->middleware('role:admin');
+    Route::post('/payroll/manage/{id}', [AdminPayrollController::class, 'manageStore'])->middleware('role:admin');
+    Route::patch('/payroll/manage/{id}/{date}/break', [AdminPayrollController::class, 'manageBreak'])->middleware('role:admin');
+    Route::delete('/payroll/manage/{id}/{date}', [AdminPayrollController::class, 'manageDestroy'])->middleware('role:admin');
 });
 
 // Messaging & Notifications

@@ -108,20 +108,17 @@ class AdminDashboardController extends Controller
         ];
     }
 
-    /**
-     * Calculate expenditure metrics and data points.
-     */
     private function getExpenditureMetrics(): array
     {
         $inventoryExpenditure = DB::table('inventory_logs')->sum('cost');
-        $salaryExpenditure = DB::table('employee_weekly_salary')->sum('weekly_total');
+        $otherExpenditure = DB::table('expenditures')->sum('amount');
 
         $inventoryPoints = DB::table('inventory_logs')->select('date', 'cost as value')->get();
-        $salaryPoints = DB::table('employee_weekly_salary')->select('week_start as date', 'weekly_total as value')->get();
+        $otherPoints = DB::table('expenditures')->select(DB::raw('DATE(created_at) as date'), 'amount as value')->get();
 
         return [
-            'total' => $inventoryExpenditure + $salaryExpenditure,
-            'points' => $inventoryPoints->concat($salaryPoints),
+            'total' => $inventoryExpenditure + $otherExpenditure,
+            'points' => $inventoryPoints->concat($otherPoints),
         ];
     }
 

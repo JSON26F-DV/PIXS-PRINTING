@@ -10,6 +10,7 @@ import {
   Settings2,
   Coffee,
   Zap,
+  Save,
 } from 'lucide-react'
 import {
   format,
@@ -26,8 +27,8 @@ import { motion as M, AnimatePresence } from 'framer-motion'
 import { clsx } from 'clsx'
 import { usePermissions } from '../../hooks/usePermissions'
 import type { Employee, AttendanceLog } from '../../types'
-import attendanceData from '../../data/attendance.json'
-import usersData from '../../data/users.json'
+import axiosInstance from '../../lib/axiosInstance'
+import { toast } from 'react-toastify'
 
 interface AttendancePillProps {
   status: string
@@ -239,15 +240,73 @@ const PayrollAttendance: React.FC = () => {
     startOfISOWeek(new Date()),
   )
   const [searchQuery, setSearchQuery] = useState<string>('')
-  const [attendance, setAttendance] = useState<AttendanceLog[]>(
-    attendanceData as unknown as AttendanceLog[],
-  )
-  const [employeesState, setEmployeesState] = useState<Employee[]>(
-    usersData.employees as unknown as Employee[],
-  )
+  const [attendance, setAttendance] = useState<AttendanceLog[]>([])
+  const [employeesState, setEmployeesState] = useState<Employee[]>([])
   const [isHolidayMode, setIsHolidayMode] = useState<boolean>(false)
   const [holidays, setHolidays] = useState<string[]>([]) // List of dates as strings 'yyyy-MM-dd'
   const [isCalculating, setIsCalculating] = useState<boolean>(false)
+  const [isSaving, setIsSaving] = useState<boolean>(false)
+  const [selectedMobileEmployee, setSelectedMobileEmployee] = useState<Employee | null>(null)
+
+  // Fetch Payroll Data
+  const fetchPayrollData = React.useCallback(async () => {
+    setIsCalculating(true)
+    try {
+      const response = await axiosInstance.get('/api/admin/payroll', {
+        params: {
+          week_start: format(currentWeekStart, 'yyyy-MM-dd'),
+        },
+      })
+      const data = response.data
+
+      const fetchedEmployees = data.employees.map((emp: unknown) => {
+        const e = emp as Employee
+        return {
+          id: e.id,
+          name: e.name,
+          role: e.role,
+          daily_rate: e.daily_rate,
+          ot_rate: e.ot_rate,
+        }
+      }) as Employee[]
+
+      const fetchedAttendance: AttendanceLog[] = []
+      const fetchedHolidays = new Set<string>()
+
+      data.employees.forEach((emp: unknown) => {
+        const e = emp as Employee & { attendance?: AttendanceLog[] }
+        if (e.attendance) {
+          e.attendance.forEach((log: AttendanceLog) => {
+            fetchedAttendance.push({
+              id: log.id,
+              employee_id: log.employee_id,
+              date: log.date,
+              status: log.status,
+              is_half_day: log.is_half_day,
+              ot_hours: log.ot_hours,
+              is_holiday: log.is_holiday,
+            })
+            if (log.is_holiday) {
+              fetchedHolidays.add(log.date)
+            }
+          })
+        }
+      })
+
+      setEmployeesState(fetchedEmployees)
+      setAttendance(fetchedAttendance)
+      setHolidays(Array.from(fetchedHolidays))
+    } catch (error: unknown) {
+      console.error('Failed to fetch payroll data:', error)
+      toast.error('Failed to load payroll data.')
+    } finally {
+      setIsCalculating(false)
+    }
+  }, [currentWeekStart])
+
+  React.useEffect(() => {
+    fetchPayrollData()
+  }, [fetchPayrollData])
 
   const { isAdmin } = usePermissions()
 
@@ -343,6 +402,29 @@ const PayrollAttendance: React.FC = () => {
   }, [processedData])
 
   // Actions
+  const handleSavePayroll = async () => {
+    setIsSaving(true)
+    try {
+      const payload = {
+        week_start: format(currentWeekStart, 'yyyy-MM-dd'),
+        payroll_data: processedData.map((item) => ({
+          employee_id: item.employee.id,
+          daily_rate: item.employee.daily_rate,
+          net_pay: item.netPay,
+          attendance: item.logs,
+        })),
+      }
+
+      await axiosInstance.post('/api/admin/payroll/save', payload)
+      toast.success('Payroll saved successfully')
+      fetchPayrollData()
+    } catch (error: unknown) {
+      console.error('Failed to save payroll:', error)
+      toast.error('Failed to save payroll. Please try again.')
+    } finally {
+      setIsSaving(false)
+    }
+  }
   const handleToggleHoliday = (date: Date) => {
     const dStr = format(date, 'yyyy-MM-dd')
     if (holidays.includes(dStr)) {
@@ -485,6 +567,20 @@ const PayrollAttendance: React.FC = () => {
         <div className="flex items-center gap-3">
           {isAdmin && (
             <button
+              onClick={handleSavePayroll}
+              disabled={isSaving}
+              className="flex items-center gap-2 rounded-2xl bg-pixs-mint px-6 py-4 text-xs font-black tracking-[2px] text-slate-900 uppercase shadow-xl transition-all hover:bg-emerald-400 active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed"
+            >
+              {isSaving ? (
+                <div className="border-t-slate-900 h-4 w-4 animate-spin rounded-full border-2 border-slate-900/30" />
+              ) : (
+                <Save size={18} />
+              )}
+              {isSaving ? 'Saving...' : 'Save Payroll'}
+            </button>
+          )}
+          {isAdmin && (
+            <button
               onClick={handlePrintSummary}
               className="flex items-center gap-2 rounded-2xl bg-slate-900 px-6 py-4 text-xs font-black tracking-[2px] text-white uppercase shadow-xl transition-all hover:bg-slate-800 active:scale-95"
             >
@@ -574,8 +670,8 @@ const PayrollAttendance: React.FC = () => {
         </M.div>
       </div>
 
-      {/* Enterprise Attendance Grid */}
-      <div className="flex min-h-[500px] flex-col overflow-hidden rounded-[40px] border border-slate-200 bg-white shadow-sm">
+      {/* Enterprise Attendance Grid (Desktop) */}
+      <div className="hidden lg:flex min-h-[500px] flex-col overflow-hidden rounded-[40px] border border-slate-200 bg-white shadow-sm">
         {/* Days Header */}
         <div className="grid grid-cols-[300px_1fr] border-b border-slate-100 bg-slate-50/50">
           <div className="flex items-center gap-2 border-r border-slate-100 p-6">
@@ -823,6 +919,143 @@ const PayrollAttendance: React.FC = () => {
           </AnimatePresence>
         </div>
       </div>
+
+      {/* Mobile Layout */}
+      <div className="flex lg:hidden flex-col gap-4">
+        {processedData.map((item) => (
+          <div
+            key={item.employee.id}
+            onClick={() => setSelectedMobileEmployee(item.employee)}
+            className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white p-4 shadow-sm active:scale-95 transition-all"
+          >
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 text-xs font-black text-slate-400">
+                {item.employee.name[0]}
+              </div>
+              <div>
+                <p className="text-sm font-black tracking-tight text-slate-900 uppercase">
+                  {item.employee.name}
+                </p>
+                <p className="text-[9px] font-bold tracking-widest text-slate-400 uppercase">
+                  {item.employee.role}
+                </p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="font-mono text-sm font-black text-slate-900">
+                ₱{item.netPay.toLocaleString()}
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Mobile Modal for Editing */}
+      <AnimatePresence>
+        {selectedMobileEmployee && (
+          <M.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-end justify-center bg-slate-900/50 p-4 pb-10 backdrop-blur-sm lg:hidden"
+            onClick={() => setSelectedMobileEmployee(null)}
+          >
+            <M.div
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="max-h-[85vh] w-full overflow-y-auto rounded-[32px] bg-white p-6 shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {(() => {
+                const item = processedData.find((d) => d.employee.id === selectedMobileEmployee.id)
+                if (!item) return null
+
+                return (
+                  <div>
+                    <div className="mb-6 flex items-center justify-between">
+                      <div>
+                        <h3 className="text-xl font-black uppercase text-slate-900">{item.employee.name}</h3>
+                        <p className="text-xs font-bold uppercase text-slate-400 tracking-widest">{item.employee.role}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-mono text-xl font-black text-pixs-mint">₱{item.netPay.toLocaleString()}</p>
+                      </div>
+                    </div>
+
+                    <div className="mb-6 rounded-2xl bg-slate-50 p-4 border border-slate-100">
+                      <p className="mb-2 text-[10px] font-black tracking-widest text-slate-400 uppercase">
+                        Daily Rate
+                      </p>
+                      <input
+                        type="number"
+                        value={item.employee.daily_rate}
+                        onChange={(e) => updateRate(item.employee.id, e.target.value)}
+                        disabled={!isAdmin}
+                        className="w-full rounded-xl border border-slate-200 bg-white py-3 px-4 font-mono text-sm font-black transition-all outline-none focus:border-pixs-mint focus:ring-2 focus:ring-pixs-mint/20"
+                      />
+                    </div>
+
+                    <div className="space-y-4">
+                      <h4 className="text-[10px] font-black tracking-widest text-slate-400 uppercase border-b pb-2">
+                        Attendance Record
+                      </h4>
+                      {weekDays.map((day) => {
+                        const log = item.logs.find((l) => isSameDay(new Date(l.date), day)) || {
+                          status: 'Pending',
+                          ot_hours: 0,
+                          is_half_day: false,
+                        }
+                        const isHoliday = holidays.includes(format(day, 'yyyy-MM-dd'))
+
+                        return (
+                          <div key={day.toString()} className="flex items-center justify-between rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
+                            <div>
+                              <p className="text-[10px] font-black tracking-widest text-slate-400 uppercase">
+                                {format(day, 'EEE')}
+                              </p>
+                              <p className="font-mono text-sm font-black text-slate-900">
+                                {format(day, 'MMM dd')}
+                              </p>
+                            </div>
+                            
+                            <div className="flex items-center gap-3">
+                               <button
+                                disabled={isHoliday || !isAdmin}
+                                onClick={() => {
+                                  const statuses: AttendanceLog['status'][] = ['Present', 'Late', 'Absent', 'Pending']
+                                  const next = statuses[(statuses.indexOf(log.status as AttendanceLog['status']) + 1) % statuses.length]
+                                  updateAttendance(item.employee.id, day, { status: next })
+                                }}
+                                className="w-20"
+                              >
+                                <AttendancePill status={log.status} isHalfDay={log.is_half_day} isHoliday={isHoliday} />
+                              </button>
+                              
+                              {log.status === 'Present' && !isHoliday && isAdmin && (
+                                <button
+                                  onClick={() => updateAttendance(item.employee.id, day, { is_half_day: !log.is_half_day })}
+                                  className={clsx(
+                                    'rounded-lg px-2 py-1 text-[8px] font-black tracking-widest uppercase transition-all',
+                                    log.is_half_day ? 'bg-amber-500 text-white' : 'bg-slate-100 text-slate-400'
+                                  )}
+                                >
+                                  Half?
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )
+              })()}
+            </M.div>
+          </M.div>
+        )}
+      </AnimatePresence>
 
       {/* Hidden Print Area */}
       <div className="hidden">

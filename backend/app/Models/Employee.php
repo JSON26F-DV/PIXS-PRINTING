@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Employee extends Authenticatable
 {
@@ -65,5 +66,15 @@ class Employee extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    public function contacts(): HasMany
+    {
+        return $this->hasMany(EmployeeContactNumber::class);
+    }
+
+    public function addresses(): HasMany
+    {
+        return $this->hasMany(EmployeeAddress::class);
     }
 }

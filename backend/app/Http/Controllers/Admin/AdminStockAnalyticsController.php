@@ -16,7 +16,7 @@ class AdminStockAnalyticsController extends Controller
     {
         // Load products with their variants
         $products = Product::with('variants')->get();
-        
+
         // Load expenditures (we will just return all or a limited set for the logs, 
         // but for calculations we might need all if we compute in frontend,
         // or we compute in backend and just send latest logs).
@@ -60,7 +60,7 @@ class AdminStockAnalyticsController extends Controller
     public function updateExpenditure(Request $request, $id)
     {
         $expenditure = Expenditure::findOrFail($id);
-        
+
         $validated = $request->validate([
             'category' => 'sometimes|string|in:Employee Salaries,Raw Materials / Products,Utilities,Office / Operational Expenses,Extra / Miscellaneous Expenses,Others',
             'amount' => 'sometimes|numeric|min:0',
@@ -90,4 +90,70 @@ class AdminStockAnalyticsController extends Controller
             'message' => 'Expenditure deleted successfully'
         ]);
     }
+
+    /**
+     * Update stock for a product variant (Add or Reduce).
+     */
+    public function updateVariantStock(Request $request, $variant_id)
+    {
+        $request->validate([
+            'action' => 'required|string|in:add,reduce',
+            'quantity' => 'required|integer|min:1',
+            'description' => 'nullable|string',
+        ]);
+
+        $variant = \App\Models\ProductVariant::where('variant_id', $variant_id)->first();
+        if (!$variant) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Product variant not found.'
+            ], 404);
+        }
+
+        $action = $request->input('action');
+        $quantity = (int) $request->input('quantity');
+
+        try {
+            \Illuminate\Support\Facades\DB::transaction(function () use ($variant, $action, $quantity, $request) {
+                if ($action === 'add') {
+                    // Update stock
+                    $variant->stock += $quantity;
+                    $variant->save();
+
+                    // Calculate expenditure amount: quantity added * price of variant
+                    $amount = $quantity * (float) $variant->price;
+
+                    // Log in expenditures table
+                    Expenditure::create([
+                        'variant_id' => $variant->variant_id,
+                        'category' => 'Raw Materials / Products',
+                        'amount' => $amount,
+                        'description' => $request->input('description') ?: "The stock for {$variant->variant_id} has been increased by {$quantity}",
+                    ]);
+                } else {
+                    // Reduce stock
+                    if ($variant->stock < $quantity) {
+                        throw new \Exception("Cannot reduce stock below 0. Current stock is {$variant->stock}.");
+                    }
+                    $variant->stock -= $quantity;
+                    $variant->save();
+                }
+            });
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Stock updated successfully.',
+                'data' => [
+                    'variant_id' => $variant->variant_id,
+                    'stock' => $variant->stock,
+                ]
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage()
+            ], 400);
+        }
+    }
 }
+

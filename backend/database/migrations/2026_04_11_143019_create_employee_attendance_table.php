@@ -13,15 +13,20 @@ return new class extends Migration
     {
         Schema::create('employee_attendance', function (Blueprint $table) {
             $table->increments('id');
-            $table->unsignedInteger('weekly_salary_id')->index('weekly_salary_id');
             $table->string('employee_id', 20);
             $table->date('date');
-            $table->enum('status', ['full', 'half', 'absent'])->default('full');
-            $table->decimal('overtime_hours', 4)->default(0);
-            $table->unsignedInteger('late_minutes')->default(0);
-            $table->decimal('hours_worked', 4)->default(0);
-            $table->decimal('computed_salary', 10)->default(0);
-            $table->boolean('is_holiday')->default(false);
+            $table->time('start_time')->nullable();
+            $table->time('end_time')->nullable();
+            $table->time('break_start')->nullable();
+            $table->time('break_end')->nullable();
+            $table->enum('status', ['pending', 'full', 'half', 'present', 'absent', 'holiday'])->default('pending');
+            $table->decimal('overtime', 4, 2)->default(0.00);
+            $table->unsignedInteger('late')->default(0);
+            $table->decimal('hours_worked', 4, 2)->default(0.00);
+            $table->decimal('total_earnings', 10, 2)->default(0.00);
+            $table->decimal('holiday_pay', 10, 2)->default(0.00);
+            $table->boolean('is_paid')->default(false);
+            $table->enum('holiday_type', ['none', 'regular', 'special_work', 'non_working'])->default('none');
 
             $table->unique(['employee_id', 'date'], 'uq_emp_date');
         });

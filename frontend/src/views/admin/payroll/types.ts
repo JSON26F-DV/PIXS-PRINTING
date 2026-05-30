@@ -24,22 +24,24 @@ export interface ProductionLog {
   completed_at: string
 }
 
-export interface PayrollRecord {
-  employee_id: string
+export interface EmployeeTodayRecord {
+  id: string
   name: string
+  email: string
   role: string
-  current_rate: number
-  ot_rate: number
-  attendance: AttendanceDay[]
-  weekly_total: number
-  logs?: ProductionLog[]
-}
-
-export interface WeeklySalaryData {
-  employee_id: string
-  week_start: string
-  attendance: AttendanceDay[]
-  weekly_total: number
+  status_today: 'pending' | 'full' | 'half' | 'present' | 'absent' | 'holiday'
+  holiday_type: 'none' | 'regular' | 'special_work' | 'non_working'
+  daily_rate: number
+  start_time: string | null
+  end_time: string | null
+  break_start: string | null
+  break_end: string | null
+  overtime: number
+  late: number
+  holiday_pay: number
+  total_earnings: number
+  is_paid: boolean
+  hours_worked?: number
 }
 
 export const calculateDailySalary = (
