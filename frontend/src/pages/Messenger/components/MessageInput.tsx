@@ -218,7 +218,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
                     Replying to {activeReplyTo.senderName}
                   </p>
                   <p className="truncate text-xs font-bold text-slate-800 italic">
-                    {activeReplyTo.text}
+                    {activeReplyTo.isDeleted ? 'this message has been removed.' : activeReplyTo.text}
                   </p>
                 </div>
               </div>

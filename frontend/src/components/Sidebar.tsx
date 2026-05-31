@@ -14,6 +14,7 @@ import {
   Activity,
   Layers,
   BarChart3,
+  QrCode,
   type LucideIcon,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
@@ -121,6 +122,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       { id: 'account', label: 'Accounts', icon: Users },
       { id: 'payroll', label: 'Attendance & Payroll', icon: CalendarCheck },
       { id: 'marketing', label: 'Marketing & Promos', icon: TicketPercent },
+      { id: 'generatecode', label: 'Payment Codes', icon: QrCode },
       { id: 'message', label: 'Enterprise Messaging', icon: MessageSquare },
       { id: 'setting', label: 'Settings', icon: Settings },
     ],

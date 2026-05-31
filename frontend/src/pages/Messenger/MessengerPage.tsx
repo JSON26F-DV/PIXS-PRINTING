@@ -12,6 +12,7 @@ import ChatHeader from './components/ChatHeader.tsx'
 import MessageList from './components/MessageList.tsx'
 import MessageInput from './components/MessageInput.tsx'
 import GalleryView from './components/GalleryView.tsx'
+import AdminControlModal from './components/AdminControlModal.tsx'
 
 import axiosInstance from '../../lib/axiosInstance.ts'
 
@@ -36,12 +37,14 @@ export interface IMessage {
   isEdited?: boolean
   originalText?: string
   isDeleted?: boolean
-  replyTo?: { id: string; text: string; senderName: string }
+  replyTo?: { id: string; text: string; senderName: string; isDeleted?: boolean }
   senderId?: string
   receiverId?: string
   order_id?: string
   screenplate_request_id?: string
   is_confirm?: number
+  payment_code_id?: string
+  is_pinned?: string | null
 }
 
 interface ApiMessage {
@@ -54,15 +57,19 @@ interface ApiMessage {
   attachments?: { type: 'image' | 'file'; url: string; name: string }[];
   reactions?: { user: string; emoji: string; user_type?: string }[];
   reply_to_id?: string;
+  is_deleted?: number;
   reply_to?: {
     id: string;
     text: string;
     sender_type: 'customer' | 'employee';
     sender_id: string;
+    is_deleted?: number;
   } | null;
   order_id?: string
   screenplate_request_id?: string
   is_confirm?: number
+  payment_code_id?: string
+  is_pinned?: string | null
 }
 
 const SidebarUserAvatar: React.FC<{
@@ -163,7 +170,8 @@ const MessengerPage: React.FC = () => {
           replyTo = {
             id: m.reply_to.id,
             text: m.reply_to.text,
-            senderName: replyIsMine ? 'You' : (m.reply_to.sender_type === 'employee' ? 'PIXS Admin' : 'Customer')
+            senderName: replyIsMine ? 'You' : (m.reply_to.sender_type === 'employee' ? 'PIXS Admin' : 'Customer'),
+            isDeleted: m.reply_to.is_deleted === 1,
           };
         }
 
@@ -180,7 +188,10 @@ const MessengerPage: React.FC = () => {
           receiverId: m.receiver_id,
           order_id: m.order_id,
           screenplate_request_id: m.screenplate_request_id,
-          is_confirm: m.is_confirm
+          is_confirm: m.is_confirm,
+          payment_code_id: m.payment_code_id,
+          is_pinned: m.is_pinned,
+          isDeleted: m.is_deleted === 1
         }
       })
       
@@ -242,6 +253,7 @@ const MessengerPage: React.FC = () => {
   const [windowWidth, setWindowWidth] = useState(window.innerWidth)
   const [isGalleryOpen, setIsGalleryOpen] = useState(false)
   const [isAccountsOpen, setIsAccountsOpen] = useState(window.innerWidth >= 1024)
+  const [isAdminControlsOpen, setIsAdminControlsOpen] = useState(false)
   const [activeReplyTo, setActiveReplyTo] = useState<IMessage | null>(null)
 
   // Auto-manage panel visibility based on terminal viewport
@@ -280,6 +292,7 @@ const MessengerPage: React.FC = () => {
   const handleSendMessage = async (
     text: string,
     attachments: { type: 'image' | 'file'; url: string; name: string; fileObj?: File }[] = [],
+    payment_code_id?: string
   ) => {
     const tempId = `msg_${Date.now()}`
     const newMessage: IMessage = {
@@ -288,8 +301,9 @@ const MessengerPage: React.FC = () => {
       senderName: 'You',
       text,
       timestamp: new Date().toISOString(),
-      attachments: attachments.map(a => ({ type: a.type, url: a.url, name: a.name })), // Safe for saving in state without non-serializable File object
+      attachments: attachments.map(a => ({ type: a.type, url: a.url, name: a.name })),
       reactions: [],
+      payment_code_id,
       replyTo: activeReplyTo
         ? {
             id: activeReplyTo.id,
@@ -318,6 +332,9 @@ const MessengerPage: React.FC = () => {
       if (newMessage.replyTo) {
         formData.append('reply_to_id', newMessage.replyTo.id)
       }
+      if (payment_code_id) {
+        formData.append('payment_code_id', payment_code_id)
+      }
 
       attachments.forEach((att, index) => {
         formData.append(`attachments[${index}][name]`, att.name)
@@ -340,11 +357,19 @@ const MessengerPage: React.FC = () => {
       }
     } catch (error) {
       console.error('Message failed to send', error)
-      // Ideally flag message as failed here
     }
   }
 
-  const handleEditMessage = (id: string, newText: string) => {
+  const handleDeleteConversation = async (targetId: string) => {
+    try {
+      await axiosInstance.delete(`/api/messages/conversation/${targetId}`)
+      setMessages([])
+    } catch (error) {
+      console.error('Failed to delete conversation', error)
+    }
+  }
+
+  const handleEditMessage = async (id: string, newText: string) => {
     setMessages((prev) =>
       prev.map((msg) => {
         if (msg.id === id) {
@@ -358,22 +383,54 @@ const MessengerPage: React.FC = () => {
         return msg
       }),
     )
+    try {
+      await axiosInstance.put(`/api/messages/${id}`, { message: newText })
+    } catch (error) {
+      console.error('Failed to edit message', error)
+    }
   }
 
-  const handleDeleteMessage = (id: string) => {
+  const handleDeleteMessage = async (id: string, isHardDelete?: boolean) => {
+    if (isHardDelete) {
+      setMessages((prev) => prev.filter((msg) => msg.id !== id))
+    } else {
+      setMessages((prev) =>
+        prev.map((msg) => {
+          if (msg.id === id) {
+            return {
+              ...msg,
+              isDeleted: true,
+              attachments: [],
+            }
+          }
+          return msg
+        }),
+      )
+    }
+    try {
+      await axiosInstance.delete(`/api/messages/${id}${isHardDelete ? '?hard=true' : ''}`)
+    } catch (error) {
+      console.error('Failed to delete message', error)
+    }
+  }
+
+  const handlePinMessage = async (id: string) => {
     setMessages((prev) =>
       prev.map((msg) => {
         if (msg.id === id) {
           return {
             ...msg,
-            text: 'This message has been removed.',
-            isDeleted: true,
-            attachments: [],
+            is_pinned: msg.is_pinned ? null : new Date().toISOString(),
           }
         }
         return msg
       }),
     )
+    try {
+      await axiosInstance.patch(`/api/messages/${id}/pin`)
+    } catch (error) {
+      console.error('Failed to pin message', error)
+    }
   }
 
   const handleReaction = async (messageId: string, emoji: string) => {
@@ -427,6 +484,7 @@ const MessengerPage: React.FC = () => {
               isGalleryOpen={isGalleryOpen}
               onToggleAccounts={handleToggleAccounts}
               isAccountsOpen={isAccountsOpen}
+              onOpenAdminControls={() => setIsAdminControlsOpen(true)}
               title={selectedUser?.name}
               subtitle={messages.length > 0 ? `Response: ${format(new Date(messages[messages.length - 1].timestamp), 'HH:mm')}` : 'No messages'}
             />
@@ -441,6 +499,8 @@ const MessengerPage: React.FC = () => {
                   onReply={setActiveReplyTo} 
                   onEdit={handleEditMessage} 
                   onDelete={handleDeleteMessage} 
+                  onPin={handlePinMessage}
+                  isAdmin={(user?.role as string) === 'admin'}
                   isLoading={isLoading} 
                   onLoadMore={loadMoreMessages}
                   isLoadingMore={isLoadingMore}
@@ -590,6 +650,8 @@ const MessengerPage: React.FC = () => {
                   onReply={setActiveReplyTo}
                   onEdit={handleEditMessage}
                   onDelete={handleDeleteMessage}
+                  onPin={handlePinMessage}
+                  isAdmin={(user?.role as string) === 'admin'}
                   isLoading={isLoading}
                   onLoadMore={loadMoreMessages}
                   isLoadingMore={isLoadingMore}
@@ -771,6 +833,15 @@ const MessengerPage: React.FC = () => {
       <div
         id="messenger-portal-root"
         className="pointer-events-none fixed inset-0 z-[10000]"
+      />
+
+      <AdminControlModal
+        isOpen={isAdminControlsOpen}
+        onClose={() => setIsAdminControlsOpen(false)}
+        messages={messages}
+        targetUser={users.find(u => u.id === selectedUserId)}
+        onDeleteConversation={handleDeleteConversation}
+        onSendMessage={handleSendMessage}
       />
     </div>
   )

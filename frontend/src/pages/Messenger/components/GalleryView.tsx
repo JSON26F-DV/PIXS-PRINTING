@@ -7,6 +7,7 @@ import {
   FileText,
   Download,
   ExternalLink,
+  Trash2,
 } from 'lucide-react'
 
 import { format } from 'date-fns'
@@ -17,12 +18,14 @@ interface GalleryViewProps {
   messages: IMessage[]
   onClose: () => void
   isMobile?: boolean
+  onDeleteMedia?: (messageId: string, filename: string) => void
 }
 
 const GalleryView: React.FC<GalleryViewProps> = ({
   messages,
   onClose,
   isMobile,
+  onDeleteMedia,
 }) => {
   const [fullscreenOpen, setFullscreenOpen] = React.useState(false)
   const [fullscreenIndex, setFullscreenIndex] = React.useState(0)
@@ -40,10 +43,12 @@ const GalleryView: React.FC<GalleryViewProps> = ({
   // Extract all attachments across all messages
 
   const allAttachments = messages
+    .filter((msg) => !msg.isDeleted)
     .flatMap((msg) =>
       (msg.attachments || []).map((at) => ({
         ...at,
         timestamp: msg.timestamp,
+        messageId: msg.id,
       })),
     )
     .sort(
@@ -112,6 +117,20 @@ const GalleryView: React.FC<GalleryViewProps> = ({
                   <div className="absolute inset-0 flex items-center justify-center bg-slate-900/40 opacity-0 transition-opacity group-hover:opacity-100">
                     <ExternalLink size={20} className="text-white" />
                   </div>
+
+                  {onDeleteMedia && (
+                    <button
+                      className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity z-10 hover:bg-red-600 shadow-md"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        if (window.confirm('Delete this media permanently?')) {
+                          onDeleteMedia(img.messageId, img.name)
+                        }
+                      }}
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  )}
                 </motion.div>
               ))}
             </div>
@@ -153,17 +172,32 @@ const GalleryView: React.FC<GalleryViewProps> = ({
                       </p>
                     </div>
                   </div>
-                  <a
-                    href={getAssetUrl(file)}
-                    download={file.name}
-                    className="block"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <Download
-                      size={16}
-                      className="text-slate-300 transition-colors group-hover:text-slate-900"
-                    />
-                  </a>
+                  <div className="flex items-center gap-2">
+                    {onDeleteMedia && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          if (window.confirm('Delete this document permanently?')) {
+                            onDeleteMedia(file.messageId, file.name)
+                          }
+                        }}
+                        className="p-1 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 transition"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    )}
+                    <a
+                      href={getAssetUrl(file)}
+                      download={file.name}
+                      className="block p-1"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Download
+                        size={16}
+                        className="text-slate-300 transition-colors group-hover:text-slate-900"
+                      />
+                    </a>
+                  </div>
                 </motion.div>
               ))}
             </div>

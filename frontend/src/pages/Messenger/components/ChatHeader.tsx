@@ -1,5 +1,5 @@
 import React from 'react'
-import { Phone, LayoutGrid, Circle, Users, ArrowLeft } from 'lucide-react'
+import { Phone, LayoutGrid, Circle, Users, ArrowLeft, Settings } from 'lucide-react'
 import { clsx } from 'clsx'
 import { useAuth } from '../../../hooks/useAuth'
 import { useNavigate } from 'react-router-dom'
@@ -9,6 +9,7 @@ interface ChatHeaderProps {
   isGalleryOpen: boolean
   onToggleAccounts?: () => void
   isAccountsOpen?: boolean
+  onOpenAdminControls?: () => void
   title?: string
   subtitle?: string
 }
@@ -18,6 +19,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
   isGalleryOpen,
   onToggleAccounts,
   isAccountsOpen,
+  onOpenAdminControls,
   title,
   subtitle,
 }) => {
@@ -94,6 +96,15 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
               title="Accounts Registry"
             >
               <Users size={16} />
+            </button>
+
+            {/* Admin Controls Modal Button */}
+            <button
+              onClick={onOpenAdminControls}
+              className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-50 text-slate-400 transition-all hover:bg-slate-100 hover:text-slate-900 active:scale-90 min-[360px]:h-10 min-[360px]:w-10"
+              title="Admin Controls"
+            >
+              <Settings size={16} />
             </button>
 
             {/* Dashboard Navigation Button */}

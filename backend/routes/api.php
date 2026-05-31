@@ -188,6 +188,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('/messages/mark-read', [MessageController::class, 'markConversationAsRead']);
     Route::patch('/messages/{id}/confirm', [MessageController::class, 'confirmMessage']);
 
+    // Admin/Sender Messaging Controls
+    Route::put('/messages/{id}', [MessageController::class, 'update']);
+    Route::delete('/messages/conversation/{targetId}', [MessageController::class, 'destroyConversation']);
+    Route::delete('/messages/{id}/attachments/{filename}', [MessageController::class, 'destroyAttachment']);
+    Route::delete('/messages/{id}', [MessageController::class, 'destroy']);
+    Route::patch('/messages/{id}/pin', [MessageController::class, 'togglePin']);
+    Route::patch('/messages/{id}/payment-code', [MessageController::class, 'managePaymentCode']);
+
     // Notifications
     Route::post('/notifications', [NotificationController::class, 'store']);
     Route::get('/notifications', [NotificationController::class, 'index']);

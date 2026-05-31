@@ -17,7 +17,10 @@ import {
   Download,
   ExternalLink,
   ArrowDown,
+  Pin,
+  Copy,
 } from 'lucide-react'
+import toast from 'react-hot-toast'
 
 import { clsx } from 'clsx'
 import { format } from 'date-fns'
@@ -34,10 +37,13 @@ interface MessageListProps {
   onReact: (messageId: string, emoji: string) => void
   onReply: (msg: IMessage) => void
   onEdit: (id: string, text: string) => void
-  onDelete: (id: string) => void
+  onDelete: (id: string, isHardDelete?: boolean) => void
+  onPin?: (id: string) => void
+  isAdmin?: boolean
   isLoading?: boolean
   onLoadMore?: () => void
   isLoadingMore?: boolean
+  scrollToMessageId?: string | null
 }
 
 const QUICK_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '😡']
@@ -103,9 +109,12 @@ const MessageBubble: React.FC<{
   onReact: (emoji: string) => void
   onReply: () => void
   onEdit: (text: string) => void
-  onDelete: () => void
+  onDelete: (isHardDelete?: boolean) => void
+  onPin?: () => void
+  isAdmin?: boolean
   onImageClick: (url: string) => void
-}> = ({ message, onReact, onReply, onEdit, onDelete, onImageClick }) => {
+  isHighlighted?: boolean
+}> = ({ message, onReact, onReply, onEdit, onDelete, onPin, isAdmin, onImageClick, isHighlighted }) => {
   const [showQuickBar, setShowQuickBar] = useState(false)
   const [showFullPicker, setShowFullPicker] = useState(false)
   const [showOptions, setShowOptions] = useState(false)
@@ -141,7 +150,8 @@ const MessageBubble: React.FC<{
         if (info.offset.x < -100 || info.offset.x > 100) onReply()
       }}
       className={clsx(
-        'group relative mb-3 md:mb-8 flex cursor-default flex-col',
+        'group relative mb-3 md:mb-8 flex cursor-default flex-col transition-colors duration-1000',
+        isHighlighted && 'bg-pixs-mint/10',
         isCustomer ? 'items-end mr-2 min-[360px]:mr-3.5 min-[375px]:mr-3.5 min-[414px]:mr-3 sm:mr-0' : 'items-start',
       )}
     >
@@ -164,7 +174,7 @@ const MessageBubble: React.FC<{
                 {message.replyTo.senderName}
               </p>
               <p className="truncate text-[10px] font-bold italic">
-                {message.replyTo.text}
+                {message.replyTo.isDeleted ? 'this message has been removed.' : message.replyTo.text}
               </p>
             </div>
           </div>
@@ -174,14 +184,20 @@ const MessageBubble: React.FC<{
         <div
           className={clsx(
             'relative rounded-[14px] min-[360px]:rounded-[16px] sm:rounded-[20px] md:rounded-[28px] text-[10px] min-[360px]:text-[11px] min-[414px]:text-[12px] sm:text-[13px] md:text-sm leading-relaxed font-bold shadow-sm transition-all break-words',
-            hasCard ? '' : 'px-2 py-1 min-[360px]:px-2.5 min-[360px]:py-1.5 min-[414px]:px-3 min-[414px]:py-2 sm:px-4 sm:py-3 md:px-6 md:py-4',
+            (hasCard && !message.isDeleted) ? '' : 'px-2 py-1 min-[360px]:px-2.5 min-[360px]:py-1.5 min-[414px]:px-3 min-[414px]:py-2 sm:px-4 sm:py-3 md:px-6 md:py-4',
             message.isDeleted
-              ? 'border border-slate-200 bg-slate-100 text-slate-400'
+              ? 'border border-slate-200 bg-slate-100 text-slate-400 font-normal italic'
               : isCustomer
-                ? `rounded-tr-[4px] ${hasCard ? '' : 'bg-slate-900 text-white shadow-slate-900/10'}`
-                : `rounded-tl-[4px] ${hasCard ? '' : 'border border-slate-100 bg-white text-slate-800 shadow-slate-100/50'}`,
+                ? `rounded-tr-[4px] ${(hasCard && !message.isDeleted) ? '' : 'bg-slate-900 text-white shadow-slate-900/10'}`
+                : `rounded-tl-[4px] ${(hasCard && !message.isDeleted) ? '' : 'border border-slate-100 bg-white text-slate-800 shadow-slate-100/50'}`,
+            message.is_pinned && 'ring-2 ring-pixs-mint'
           )}
         >
+          {message.is_pinned && (
+            <div className="absolute -top-2 -right-2 bg-pixs-mint rounded-full p-1 text-slate-900 shadow-sm z-10">
+              <Pin size={10} className="fill-current" />
+            </div>
+          )}
           {isEditing ? (
             <div className="flex min-w-[200px] flex-col gap-2">
               <textarea
@@ -209,7 +225,11 @@ const MessageBubble: React.FC<{
             </div>
           ) : (
             <>
-              {!hasCard && message.text}
+              {message.isDeleted ? (
+                <span>this message has been removed.</span>
+              ) : (
+                !hasCard && message.text
+              )}
 
               {message.isEdited && !message.isDeleted && (
                 <span
@@ -222,15 +242,37 @@ const MessageBubble: React.FC<{
             </>
           )}
 
-          {message.order_id && !isEditing && (
+          {message.order_id && !isEditing && !message.isDeleted && (
             <div className="mt-2 group-last:mb-0">
                <OrderConfirmMessage messageId={message.id} orderId={message.order_id} isCustomer={isCustomer} isConfirm={message.is_confirm} />
             </div>
           )}
 
-          {message.screenplate_request_id && !isEditing && (
+          {message.screenplate_request_id && !isEditing && !message.isDeleted && (
             <div className="mt-2 group-last:mb-0">
                <ScreenplateConfirmMessage requestId={message.screenplate_request_id} isCustomer={isCustomer} onImageClick={onImageClick} />
+            </div>
+          )}
+
+          {message.payment_code_id && !isEditing && !message.isDeleted && (
+            <div className={clsx(
+              "mt-3 flex items-center gap-2 rounded-lg p-2 border",
+              isCustomer ? "bg-slate-800/50 border-white/10" : "bg-slate-50 border-slate-200"
+            )}>
+              <span className={clsx("text-[10px] font-black uppercase", isCustomer ? "text-pixs-mint" : "text-slate-500")}>Pay Code:</span>
+              <span className="text-[12px] font-bold tracking-wider">{message.payment_code_id}</span>
+              <button 
+                onClick={() => { 
+                  navigator.clipboard.writeText(message.payment_code_id!); 
+                  toast.success('Payment code copied!'); 
+                }}
+                className={clsx(
+                  "ml-auto flex items-center gap-1 rounded px-2 py-1 text-[9px] transition",
+                  isCustomer ? "bg-white/10 hover:bg-white/20" : "bg-white hover:bg-slate-100 border border-slate-200"
+                )}
+              >
+                <Copy size={10} /> Copy
+              </button>
             </div>
           )}
 
@@ -484,6 +526,17 @@ const MessageBubble: React.FC<{
                           <Edit2 size={16} className="text-slate-400" /> Edit
                         </button>
                       )}
+                      {isAdmin && onPin && (
+                        <button
+                          onClick={() => {
+                            onPin()
+                            setShowOptions(false)
+                          }}
+                          className="flex w-full items-center gap-3 rounded-xl p-3 text-[10px] font-black tracking-widest text-emerald-600 uppercase transition-colors hover:bg-emerald-50"
+                        >
+                          <Pin size={16} className="text-emerald-500" /> {message.is_pinned ? 'Unpin' : 'Pin'}
+                        </button>
+                      )}
                       <button
                         onClick={() => {
                           onDelete()
@@ -493,6 +546,19 @@ const MessageBubble: React.FC<{
                       >
                         <Trash2 size={16} className="text-rose-400" /> Delete
                       </button>
+                      {isAdmin && (
+                        <button
+                          onClick={() => {
+                            if (window.confirm('Hard delete this message and all its files from the server?')) {
+                              onDelete(true)
+                            }
+                            setShowOptions(false)
+                          }}
+                          className="flex w-full items-center gap-3 rounded-xl p-3 text-[10px] font-black tracking-widest text-white bg-red-600 uppercase transition-colors hover:bg-red-700"
+                        >
+                          <Trash2 size={16} className="text-white" /> Delete DB
+                        </button>
+                      )}
                       <button
                         onClick={() => setShowOptions(false)}
                         className="fixed inset-0 z-[-1] border-none bg-transparent outline-none"
@@ -515,6 +581,8 @@ const MessageList: React.FC<MessageListProps> = ({
   onReply,
   onEdit,
   onDelete,
+  onPin,
+  isAdmin,
   isLoading,
   onLoadMore,
   isLoadingMore,
@@ -626,7 +694,9 @@ const MessageList: React.FC<MessageListProps> = ({
                   onReact={(emoji) => onReact(msg.id, emoji)}
                   onReply={() => onReply(msg)}
                   onEdit={(text) => onEdit(msg.id, text)}
-                  onDelete={() => onDelete(msg.id)}
+                  onDelete={(isHard) => onDelete(msg.id, isHard)}
+                  onPin={onPin ? () => onPin(msg.id) : undefined}
+                  isAdmin={isAdmin}
                   onImageClick={handleImageClick}
                 />
               )}

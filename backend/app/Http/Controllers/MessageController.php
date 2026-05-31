@@ -85,7 +85,7 @@ class MessageController extends Controller
         if ($replyToIds->isNotEmpty()) {
             $replyToMessages = DB::table('messages')
                 ->whereIn('id', $replyToIds)
-                ->select('id', 'message', 'sender_id', 'sender_type')
+                ->select('id', 'message', 'sender_id', 'sender_type', 'is_deleted')
                 ->get()
                 ->keyBy('id');
         }
@@ -109,6 +109,7 @@ class MessageController extends Controller
                     'text' => $repliedMsg->message,
                     'sender_type' => $repliedMsg->sender_type,
                     'sender_id' => $repliedMsg->sender_id,
+                    'is_deleted' => $repliedMsg->is_deleted,
                 ];
             }
 
@@ -520,5 +521,205 @@ class MessageController extends Controller
             'message' => 'Reaction saved.',
             'emoji' => $emoji,
         ]);
+    }
+
+    /**
+     * Update a message (edit text).
+     */
+    public function update(Request $request, string $id): JsonResponse
+    {
+        $validated = $request->validate([
+            'message' => 'required|string|max:5000',
+        ]);
+        $user = $request->user();
+
+        $message = DB::table('messages')->where('id', $id)->first();
+        if (!$message) return response()->json(['message' => 'Not found'], 404);
+        if ($message->sender_id !== $user->id) return response()->json(['message' => 'Unauthorized'], 403);
+        if ($message->is_deleted) return response()->json(['message' => 'Cannot edit deleted message'], 400);
+
+        $originalText = $message->is_edited ? $message->original_text : $message->message;
+
+        DB::table('messages')->where('id', $id)->update([
+            'message' => $validated['message'],
+            'is_edited' => 1,
+            'original_text' => $originalText,
+            'updated_at' => now()
+        ]);
+
+        return response()->json(['message' => 'Message updated']);
+    }
+
+    /**
+     * Soft delete a message.
+     */
+    public function destroy(string $id): JsonResponse
+    {
+        $user = request()->user();
+        $isHardDelete = request()->query('hard') === 'true';
+
+        $message = DB::table('messages')->where('id', $id)->first();
+        if (!$message) return response()->json(['message' => 'Not found'], 404);
+        if ($message->sender_id !== $user->id && $user->role !== 'admin') {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        // Hard delete requires admin role
+        if ($isHardDelete && $user->role !== 'admin') {
+            return response()->json(['message' => 'Unauthorized for hard delete'], 403);
+        }
+
+        // Delete physical files
+        $attachments = DB::table('message_attachments')->where('message_id', $id)->get();
+        foreach ($attachments as $att) {
+            if ($att->type === 'image') {
+                $destPath = base_path('../frontend/src/assets/message_media/'.$att->name);
+            } else {
+                $destPath = base_path('../frontend/src/assets/message_document/'.$att->url);
+            }
+            if (file_exists($destPath)) {
+                unlink($destPath);
+            }
+        }
+
+        // Delete related DB records
+        DB::table('message_attachments')->where('message_id', $id)->delete();
+        DB::table('message_reactions')->where('message_id', $id)->delete();
+
+        if ($isHardDelete) {
+            // Hard delete message
+            DB::table('messages')->where('id', $id)->delete();
+        } else {
+            // Soft delete message
+            DB::table('messages')->where('id', $id)->update([
+                'is_deleted' => 1,
+                'updated_at' => now()
+            ]);
+        }
+
+        return response()->json(['message' => 'Message deleted']);
+    }
+
+    /**
+     * Hard delete an entire conversation with a target user. Admin only.
+     */
+    public function destroyConversation(Request $request, string $targetId): JsonResponse
+    {
+        $user = $request->user();
+        if ($user->role !== 'admin') {
+            return response()->json(['message' => 'Admin only'], 403);
+        }
+
+        $messageIds = DB::table('messages')
+            ->where(function ($q) use ($user, $targetId) {
+                $q->where('sender_id', $user->id)
+                  ->where('receiver_id', $targetId);
+            })
+            ->orWhere(function ($q) use ($user, $targetId) {
+                $q->where('sender_id', $targetId)
+                  ->where('receiver_id', $user->id);
+            })
+            ->pluck('id');
+
+        if ($messageIds->isNotEmpty()) {
+            // Delete physical files
+            $attachments = DB::table('message_attachments')->whereIn('message_id', $messageIds)->get();
+            foreach ($attachments as $att) {
+                if ($att->type === 'image') {
+                    $destPath = base_path('../frontend/src/assets/message_media/'.$att->name);
+                } else {
+                    $destPath = base_path('../frontend/src/assets/message_document/'.$att->url);
+                }
+                if (file_exists($destPath)) {
+                    unlink($destPath);
+                }
+            }
+
+            // Delete related DB records
+            DB::table('message_attachments')->whereIn('message_id', $messageIds)->delete();
+            DB::table('message_reactions')->whereIn('message_id', $messageIds)->delete();
+
+            // Hard delete messages
+            DB::table('messages')->whereIn('id', $messageIds)->delete();
+        }
+
+        return response()->json(['message' => 'Conversation deleted successfully.']);
+    }
+
+    /**
+     * Delete an attachment from a message and filesystem. Admin only.
+     */
+    public function destroyAttachment(Request $request, string $id, string $filename): JsonResponse
+    {
+        $user = $request->user();
+        if ($user->role !== 'admin') {
+            return response()->json(['message' => 'Admin only'], 403);
+        }
+
+        $attachment = DB::table('message_attachments')
+            ->where('message_id', $id)
+            ->where('name', $filename)
+            ->first();
+
+        if (!$attachment) {
+            return response()->json(['message' => 'Attachment not found'], 404);
+        }
+
+        // Delete from DB
+        DB::table('message_attachments')->where('id', $attachment->id)->delete();
+
+        // Delete from filesystem
+        $folder = $attachment->type === 'image' ? 'message_media' : 'message_document';
+        $destPath = base_path('../frontend/src/assets/'.$folder.'/'.$attachment->url);
+
+        if (file_exists($destPath)) {
+            unlink($destPath);
+        }
+
+        return response()->json(['message' => 'Attachment deleted successfully']);
+    }
+
+    /**
+     * Toggle pinned status. Admin only.
+     */
+    public function togglePin(string $id): JsonResponse
+    {
+        $user = request()->user();
+        if ($user->role !== 'admin') return response()->json(['message' => 'Admin only'], 403);
+
+        $message = DB::table('messages')->where('id', $id)->first();
+        if (!$message) return response()->json(['message' => 'Not found'], 404);
+
+        $isPinned = $message->is_pinned ? null : now();
+
+        DB::table('messages')->where('id', $id)->update([
+            'is_pinned' => $isPinned,
+            'updated_at' => now()
+        ]);
+
+        return response()->json(['message' => 'Pin status toggled', 'is_pinned' => $isPinned]);
+    }
+
+    /**
+     * Manage payment code attachment. Admin only.
+     */
+    public function managePaymentCode(Request $request, string $id): JsonResponse
+    {
+        $user = $request->user();
+        if ($user->role !== 'admin') return response()->json(['message' => 'Admin only'], 403);
+
+        $validated = $request->validate([
+            'payment_code_id' => 'nullable|string|max:30',
+        ]);
+
+        $message = DB::table('messages')->where('id', $id)->first();
+        if (!$message) return response()->json(['message' => 'Not found'], 404);
+
+        DB::table('messages')->where('id', $id)->update([
+            'payment_code_id' => $validated['payment_code_id'],
+            'updated_at' => now()
+        ]);
+
+        return response()->json(['message' => 'Payment code updated']);
     }
 }
