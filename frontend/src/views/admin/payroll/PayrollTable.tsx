@@ -1,5 +1,5 @@
-import React from 'react'
-import { Search, Filter, ArrowUpDown, Coffee } from 'lucide-react'
+import React, { useState } from 'react'
+import { Search, Filter, ArrowUpDown, Coffee, X } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { format } from 'date-fns'
 import { type EmployeeTodayRecord } from './types'
@@ -31,6 +31,8 @@ const PayrollTable: React.FC<PayrollTableProps> = ({
   onOpenLateModal,
   onBreakUpdate,
 }) => {
+  const [selectedEmpMobile, setSelectedEmpMobile] = useState<EmployeeTodayRecord | null>(null)
+
   return (
     <div className="PayrollTableContainer animate-in fade-in space-y-8 duration-700">
       {/* 1. TOP NAV: Unified Search */}
@@ -87,7 +89,7 @@ const PayrollTable: React.FC<PayrollTableProps> = ({
       </div>
 
       {/* 2. TABLE */}
-      <div className="PayrollCalendarTable mb-12 overflow-hidden rounded-[40px] border border-slate-100 bg-white shadow-2xl shadow-slate-200/40">
+      <div className="PayrollCalendarTable mb-12 overflow-hidden rounded-[40px] border border-slate-100 bg-white shadow-2xl shadow-slate-200/40 hidden md:block">
         <div className="custom-scrollbar overflow-x-auto">
           <table className="w-full border-collapse">
             <thead>
@@ -269,6 +271,259 @@ const PayrollTable: React.FC<PayrollTableProps> = ({
           </table>
         </div>
       </div>
+
+      {/* Mobile Card Layout - Hidden on desktop */}
+      <div className="block md:hidden space-y-4">
+        <div className="flex items-center justify-between mt-4 mb-2">
+          <h3 className="text-xs font-black uppercase tracking-widest text-slate-400">Personnel Status</h3>
+          <button
+            onClick={onSetNonWorkingHoliday}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-amber-50 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-amber-600 transition-all hover:bg-amber-500 hover:text-white active:scale-95 cursor-pointer shadow-sm"
+          >
+            <Coffee size={12} />
+            Global Holiday
+          </button>
+        </div>
+
+        {data.map((emp) => (
+          <div key={emp.id} className="relative overflow-hidden rounded-[24px] border border-slate-100 bg-white p-6 shadow-lg">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 font-bold text-slate-500">
+                  {emp.name.charAt(0)}
+                </div>
+                <div>
+                  <div className="font-black text-slate-900 text-sm">{emp.name}</div>
+                  <div className="text-[10px] font-bold tracking-wider text-slate-400 uppercase">
+                    {emp.role || 'Staff'}
+                  </div>
+                </div>
+              </div>
+              <div className="flex flex-col items-end gap-1">
+                {emp.holiday_type === 'special_work' && (
+                  <span className="inline-flex rounded-full bg-purple-100 px-2 py-0.5 text-[8px] font-black uppercase tracking-widest text-purple-600 border border-purple-200">
+                    Special Day
+                  </span>
+                )}
+                {emp.holiday_type !== 'none' && emp.holiday_type !== 'special_work' && (
+                  <span className="inline-flex rounded-full bg-rose-100 px-2 py-0.5 text-[8px] font-black uppercase tracking-widest text-rose-600 border border-rose-200">
+                    Holiday
+                  </span>
+                )}
+                {(emp.status_today === 'full' || emp.status_today === 'present') && (
+                  <span className="inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-[8px] font-black uppercase tracking-widest text-emerald-600">
+                    Present
+                  </span>
+                )}
+                {emp.status_today === 'half' && (
+                  <span className="inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-[8px] font-black uppercase tracking-widest text-amber-600">
+                    Half
+                  </span>
+                )}
+                {emp.status_today === 'absent' && (
+                  <span className="inline-flex rounded-full bg-rose-100 px-2 py-0.5 text-[8px] font-black uppercase tracking-widest text-rose-600">
+                    Absent
+                  </span>
+                )}
+                {emp.status_today === 'pending' && emp.holiday_type === 'none' && (
+                  <span className="inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-[8px] font-black uppercase tracking-widest text-slate-600">
+                    Pending
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div className="mt-4 flex items-center justify-between border-t border-slate-50 pt-4">
+              <span className="text-[10px] font-bold text-slate-400">
+                Rate: ₱{Number(emp.daily_rate).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+              </span>
+              <button
+                onClick={() => setSelectedEmpMobile(emp)}
+                className="inline-flex rounded-xl bg-slate-900 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white transition-all hover:bg-slate-800"
+              >
+                Manage
+              </button>
+            </div>
+          </div>
+        ))}
+
+        {data.length === 0 && (
+          <div className="rounded-[24px] border border-slate-100 bg-white p-12 text-center text-slate-400 text-sm font-bold shadow-lg">
+            No employees found.
+          </div>
+        )}
+      </div>
+
+      {/* Mobile Modal for Employee Status Actions */}
+      {selectedEmpMobile && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
+          <div 
+            className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" 
+            onClick={() => setSelectedEmpMobile(null)}
+          />
+          <div className="relative w-full max-w-md overflow-hidden rounded-[30px] bg-white p-8 shadow-2xl animate-in slide-in-from-bottom duration-250 sm:zoom-in-95">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-6">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 font-bold text-slate-500">
+                  {selectedEmpMobile.name.charAt(0)}
+                </div>
+                <div>
+                  <h3 className="text-md font-black text-slate-900">{selectedEmpMobile.name}</h3>
+                  <p className="text-[9px] font-black tracking-widest text-slate-400 uppercase">{selectedEmpMobile.role || 'Staff'}</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setSelectedEmpMobile(null)}
+                className="rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-900 transition-all"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="space-y-6">
+              {/* Info grid */}
+              <div className="grid grid-cols-2 gap-4 rounded-2xl bg-slate-50 p-4 border border-slate-100">
+                <div>
+                  <span className="block text-[8px] font-black tracking-widest text-slate-400 uppercase">Daily Rate</span>
+                  <span className="block font-mono text-xs font-black text-slate-800 mt-0.5">
+                    ₱{Number(selectedEmpMobile.daily_rate).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+                <div>
+                  <span className="block text-[8px] font-black tracking-widest text-slate-400 uppercase">Today's Status</span>
+                  <span className="block font-mono text-xs font-black text-slate-800 mt-0.5 uppercase">
+                    {selectedEmpMobile.status_today}
+                  </span>
+                </div>
+                {selectedEmpMobile.start_time && (
+                  <div>
+                    <span className="block text-[8px] font-black tracking-widest text-slate-400 uppercase">Start Time</span>
+                    <span className="block font-mono text-xs font-black text-slate-800 mt-0.5">
+                      {selectedEmpMobile.start_time}
+                    </span>
+                  </div>
+                )}
+                {selectedEmpMobile.end_time && (
+                  <div>
+                    <span className="block text-[8px] font-black tracking-widest text-slate-400 uppercase">End Time</span>
+                    <span className="block font-mono text-xs font-black text-slate-800 mt-0.5">
+                      {selectedEmpMobile.end_time}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Actions Section */}
+              <div className="space-y-3">
+                <span className="block text-[9px] font-black tracking-widest text-slate-400 uppercase">Log Actions</span>
+                
+                {selectedEmpMobile.status_today === 'present' && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      onClick={() => {
+                        const emp = selectedEmpMobile;
+                        const lateDeduction = emp.late * (emp.daily_rate / 480);
+                        const earnings = emp.holiday_type === 'special_work'
+                          ? emp.daily_rate + emp.holiday_pay - lateDeduction
+                          : emp.daily_rate - lateDeduction;
+                        onUpdateAttendance(emp, 'full', Math.max(0, earnings), { end_time: format(new Date(), 'HH:mm'), hours_worked: 8 });
+                        setSelectedEmpMobile(null);
+                      }}
+                      className="inline-flex justify-center rounded-xl bg-emerald-500 py-3 text-[10px] font-black uppercase tracking-widest text-white shadow-md shadow-emerald-500/10 hover:bg-emerald-600 active:scale-95 transition-all animate-in fade-in"
+                    >
+                      Full
+                    </button>
+                    <button
+                      onClick={() => {
+                        const emp = selectedEmpMobile;
+                        const lateDeduction = emp.late * (emp.daily_rate / 480);
+                        const earnings = emp.holiday_type === 'special_work'
+                          ? (emp.daily_rate / 2) + emp.holiday_pay - lateDeduction
+                          : (emp.daily_rate / 2) - lateDeduction;
+                        onUpdateAttendance(emp, 'half', Math.max(0, earnings), { end_time: format(new Date(), 'HH:mm'), hours_worked: 4 });
+                        setSelectedEmpMobile(null);
+                      }}
+                      className="inline-flex justify-center rounded-xl bg-amber-500 py-3 text-[10px] font-black uppercase tracking-widest text-white shadow-md shadow-amber-500/10 hover:bg-amber-600 active:scale-95 transition-all animate-in fade-in"
+                    >
+                      Half
+                    </button>
+                    
+                    {/* Break actions inside modal */}
+                    {!selectedEmpMobile.break_start ? (
+                      <button
+                        onClick={() => {
+                          onBreakUpdate(selectedEmpMobile.id, 'start');
+                          setSelectedEmpMobile(null);
+                        }}
+                        className="col-span-2 inline-flex items-center justify-center gap-2 rounded-xl bg-amber-50 py-3 text-[10px] font-black uppercase tracking-widest text-amber-600 border border-amber-100 hover:bg-amber-100 transition-all animate-in fade-in"
+                      >
+                        <Coffee size={14} /> Start Break
+                      </button>
+                    ) : !selectedEmpMobile.break_end ? (
+                      <button
+                        onClick={() => {
+                          onBreakUpdate(selectedEmpMobile.id, 'end');
+                          setSelectedEmpMobile(null);
+                        }}
+                        className="col-span-2 inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-50 py-3 text-[10px] font-black uppercase tracking-widest text-emerald-600 border border-emerald-100 hover:bg-emerald-100 transition-all animate-in fade-in"
+                      >
+                        <Coffee size={14} /> End Break
+                      </button>
+                    ) : null}
+                  </div>
+                )}
+
+                {selectedEmpMobile.status_today === 'pending' && (
+                  <div className="flex flex-col gap-3">
+                    <button
+                      onClick={() => {
+                        onUpdateAttendance(selectedEmpMobile, 'present', 0, { start_time: format(new Date(), 'HH:mm') });
+                        setSelectedEmpMobile(null);
+                      }}
+                      className="inline-flex justify-center rounded-xl bg-emerald-500 py-3 text-[10px] font-black uppercase tracking-widest text-white shadow-md shadow-emerald-500/10 hover:bg-emerald-600 transition-all animate-in fade-in"
+                    >
+                      Present
+                    </button>
+                    <button
+                      onClick={() => {
+                        onOpenLateModal(selectedEmpMobile);
+                        setSelectedEmpMobile(null);
+                      }}
+                      className="inline-flex justify-center rounded-xl bg-amber-500 py-3 text-[10px] font-black uppercase tracking-widest text-white shadow-md shadow-amber-500/10 hover:bg-amber-600 transition-all animate-in fade-in"
+                    >
+                      Late
+                    </button>
+                    <button
+                      onClick={() => {
+                        onUpdateAttendance(selectedEmpMobile, 'absent', 0);
+                        setSelectedEmpMobile(null);
+                      }}
+                      className="inline-flex justify-center rounded-xl bg-rose-500 py-3 text-[10px] font-black uppercase tracking-widest text-white shadow-md shadow-rose-500/10 hover:bg-rose-600 transition-all animate-in fade-in"
+                    >
+                      Absent
+                    </button>
+                  </div>
+                )}
+
+                <div className="pt-2 border-t border-slate-100 flex flex-col gap-3">
+                  <Link
+                    to={`/admin/payroll/manage/${selectedEmpMobile.id}`}
+                    className="inline-flex justify-center rounded-xl bg-slate-900 py-3 text-[10px] font-black uppercase tracking-widest text-white transition-all hover:bg-slate-800 text-center animate-in fade-in"
+                  >
+                    Edit Data (Management)
+                  </Link>
+                  <button
+                    onClick={() => setSelectedEmpMobile(null)}
+                    className="w-full rounded-xl bg-slate-50 py-3 text-[10px] font-black tracking-widest text-slate-500 uppercase transition-all hover:bg-slate-100"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

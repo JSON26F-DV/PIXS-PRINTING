@@ -25,21 +25,28 @@ class DiscountController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
+            'title' => 'nullable|string|max:150',
             'customer_id' => 'nullable|string|exists:customers,id',
             'product_id' => 'nullable|string|exists:products,id',
             'variant_id' => 'nullable|string|exists:product_variants,variant_id',
+            'code' => 'nullable|string|max:50|unique:discounts,code',
             'type' => 'required|in:fixed,percentage',
             'value' => 'required|numeric|min:0',
             'min_spend' => 'nullable|numeric|min:0',
             'expires_at' => 'nullable|date',
         ]);
 
+        $code = !empty($validated['code'])
+            ? strtoupper($validated['code'])
+            : strtoupper(Str::random(8));
+
         $discount = Discount::create([
             'id' => 'dsc_'.Str::random(10),
+            'title' => $validated['title'] ?? null,
             'customer_id' => $validated['customer_id'] ?? null,
             'product_id' => $validated['product_id'] ?? null,
             'variant_id' => $validated['variant_id'] ?? null,
-            'code' => strtoupper(Str::random(8)),
+            'code' => $code,
             'type' => $validated['type'],
             'value' => $validated['value'],
             'min_spend' => $validated['min_spend'] ?? 0,
@@ -120,6 +127,65 @@ class DiscountController extends Controller
         return response()->json([
             'message' => 'Discount applied successfully.',
             'data' => $discount,
+        ]);
+    }
+
+    /**
+     * Update an existing discount code (Admin).
+     */
+    public function update(Request $request, string $id): JsonResponse
+    {
+        $discount = Discount::find($id);
+        if (!$discount) {
+            return response()->json(['message' => 'Discount not found.'], 404);
+        }
+
+        $validated = $request->validate([
+            'title' => 'nullable|string|max:150',
+            'customer_id' => 'nullable|string|exists:customers,id',
+            'product_id' => 'nullable|string|exists:products,id',
+            'variant_id' => 'nullable|string|exists:product_variants,variant_id',
+            'code' => 'required|string|max:50|unique:discounts,code,' . $id,
+            'type' => 'required|in:fixed,percentage',
+            'value' => 'required|numeric|min:0',
+            'min_spend' => 'nullable|numeric|min:0',
+            'expires_at' => 'nullable|date',
+            'already_used' => 'nullable|boolean',
+        ]);
+
+        $discount->update([
+            'title' => $validated['title'] ?? null,
+            'customer_id' => $validated['customer_id'] ?? null,
+            'product_id' => $validated['product_id'] ?? null,
+            'variant_id' => $validated['variant_id'] ?? null,
+            'code' => strtoupper($validated['code']),
+            'type' => $validated['type'],
+            'value' => $validated['value'],
+            'min_spend' => $validated['min_spend'] ?? 0,
+            'expires_at' => $validated['expires_at'] ?? null,
+            'already_used' => $validated['already_used'] ?? false,
+        ]);
+
+        return response()->json([
+            'message' => 'Discount campaign updated.',
+            'data' => Discount::with(['customer', 'product'])->find($id),
+        ]);
+    }
+
+    /**
+     * Delete an existing discount code (Admin).
+     */
+    public function destroy(string $id): JsonResponse
+    {
+        $discount = Discount::find($id);
+        if (!$discount) {
+            return response()->json(['message' => 'Discount not found.'], 404);
+        }
+
+        $discount->delete();
+
+        return response()->json([
+            'message' => 'Discount campaign deleted.',
         ]);
     }
 }

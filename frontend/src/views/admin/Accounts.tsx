@@ -68,8 +68,8 @@ const UserAvatar = ({
   if (!displaySrc) {
     return (
       <BoxFallback
-        className={cn(size, 'rounded-[22px] bg-slate-900 overflow-hidden')}
-        iconClassName="h-8 w-8 brightness-0 invert opacity-30"
+        className={cn(size, 'rounded-2xl bg-slate-900 flex items-center justify-center overflow-hidden')}
+        iconClassName="h-9 w-9 brightness-0 invert opacity-30"
       />
     )
   }
@@ -81,7 +81,7 @@ const UserAvatar = ({
       onError={() => setError(true)}
       className={cn(
         size,
-        'rounded-[22px] border-2 border-white bg-slate-100 object-cover shadow-xl ring-1 ring-slate-100',
+        'rounded-2xl border-2 border-white bg-slate-100 object-cover shadow-xl ring-1 ring-slate-100',
       )}
     />
   )

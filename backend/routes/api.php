@@ -126,6 +126,8 @@ Route::middleware(['auth:sanctum'])->prefix('admin')->group(function () {
     // Discount Management
     Route::get('/discounts', [DiscountController::class, 'index'])->middleware('role:admin');
     Route::post('/discounts', [DiscountController::class, 'store'])->middleware('role:admin');
+    Route::put('/discounts/{id}', [DiscountController::class, 'update'])->middleware('role:admin');
+    Route::delete('/discounts/{id}', [DiscountController::class, 'destroy'])->middleware('role:admin');
 
     // Dashboard
     Route::get('/dashboard-stats', [AdminDashboardController::class, 'index'])->middleware('role:admin');
@@ -171,8 +173,12 @@ Route::middleware(['auth:sanctum'])->prefix('admin')->group(function () {
 // Messaging & Notifications
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/messages', [MessageController::class, 'index']);
+    Route::get('/messages/users', [MessageController::class, 'getUsers']);
+    Route::get('/messages/orders/{id}', [MessageController::class, 'getOrderContext']);
+    Route::get('/messages/screenplate-requests/{id}', [MessageController::class, 'getScreenplateRequestContext']);
     Route::get('/messages/image-count', [MessageController::class, 'getImageUploadCount']);
     Route::post('/messages/send', [MessageController::class, 'store']);
+    Route::post('/messages/{id}/react', [MessageController::class, 'reactMessage']);
     Route::patch('/messages/mark-read', [MessageController::class, 'markConversationAsRead']);
     Route::patch('/messages/{id}/confirm', [MessageController::class, 'confirmMessage']);
 

@@ -63,6 +63,7 @@ const ManageAttendance: React.FC = () => {
   const [selectedLogDates, setSelectedLogDates] = useState<string[]>([])
   const [bulkPayModalOpen, setBulkPayModalOpen] = useState(false)
   const [rowEndTarget, setRowEndTarget] = useState<AttendanceLog | null>(null)
+  const [selectedLogMobile, setSelectedLogMobile] = useState<AttendanceLog | null>(null)
 
   // Print State & Refs
   interface PrintableReceiptRecord {
@@ -473,7 +474,7 @@ const ManageAttendance: React.FC = () => {
 
       <div className="flex flex-col gap-8">
         {/* NEW RECORD FORM */}
-        <div className="h-fit space-y-6 rounded-[30px] border border-slate-100 bg-white p-8 shadow-2xl shadow-slate-200/40 max-w-4xl">
+        <div className="h-fit space-y-6 rounded-[30px] border border-slate-100 bg-white p-8 shadow-2xl shadow-slate-200/40 max-w-4xl mx-auto w-full">
           <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
             <Calendar className="text-blue-500" size={20} />
             <h2 className="text-sm font-black tracking-widest text-slate-900 uppercase">
@@ -657,7 +658,7 @@ const ManageAttendance: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex gap-3 pt-4 border-t border-slate-100">
+          <div className="flex gap-3 pt-4 border-t border-slate-100 justify-center">
             <button
               onClick={handleNewRecordAction}
               disabled={isSaving}
@@ -674,7 +675,7 @@ const ManageAttendance: React.FC = () => {
         </div>
 
         {/* BOTTOM: HISTORY TABLE */}
-        <div className="overflow-hidden rounded-[30px] border border-slate-100 bg-white shadow-2xl shadow-slate-200/40">
+        <div className="overflow-hidden rounded-[30px] border border-slate-100 bg-white shadow-2xl shadow-slate-200/40 hidden md:block">
           <div className="bg-slate-50/80 px-6 py-4 border-b border-slate-100 flex items-center justify-between min-h-[76px]">
             <h3 className="text-xs font-black tracking-widest text-slate-900 uppercase">
               Register History
@@ -877,6 +878,261 @@ const ManageAttendance: React.FC = () => {
             </table>
           </div>
         </div>
+
+        {/* Mobile Card List for Register History */}
+        <div className="block md:hidden space-y-4">
+          <div className="bg-slate-50/80 px-6 py-4 rounded-[24px] border border-slate-100 flex items-center justify-between min-h-[60px]">
+            <h3 className="text-xs font-black tracking-widest text-slate-900 uppercase">
+              Register History
+            </h3>
+            {selectedLogDates.length > 0 && (
+              <div className="flex items-center gap-3 animate-in fade-in slide-in-from-top-1 duration-200">
+                <span className="text-[10px] font-black tracking-widest text-slate-500 uppercase">
+                  {selectedLogDates.length} selected
+                </span>
+                <button
+                  onClick={() => setBulkPayModalOpen(true)}
+                  className="flex items-center gap-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 px-4 py-2 text-[10px] font-black tracking-widest text-white uppercase shadow-lg shadow-emerald-500/20 transition-all active:scale-95"
+                >
+                  Pay Selected
+                </button>
+              </div>
+            )}
+          </div>
+
+          {logs.map((log) => (
+            <div key={log.id} className="relative overflow-hidden rounded-[24px] border border-slate-100 bg-white p-6 shadow-lg">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex items-center gap-2">
+                  {!log.is_paid ? (
+                    <input
+                      type="checkbox"
+                      checked={selectedLogDates.includes(log.date)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedLogDates([...selectedLogDates, log.date])
+                        } else {
+                          setSelectedLogDates(selectedLogDates.filter(d => d !== log.date))
+                        }
+                      }}
+                      className="rounded border-slate-200 text-slate-900 focus:ring-slate-900 w-4 h-4 cursor-pointer mr-2"
+                    />
+                  ) : (
+                    <div className="w-4 h-4 mr-2" />
+                  )}
+                  <div>
+                    <div className="font-mono text-sm font-bold text-slate-900">
+                      {format(new Date(log.date), 'MMM dd, yyyy')}
+                    </div>
+                    <div className="text-[10px] text-slate-400 font-bold uppercase mt-0.5">
+                      {log.is_paid ? (
+                        <span className="text-emerald-500">Paid</span>
+                      ) : (
+                        <span className="text-slate-400">Unpaid</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-col items-end gap-1">
+                  {log.holiday_type !== 'none' ? (
+                     <span className="inline-flex rounded bg-rose-100 px-2 py-0.5 text-[8px] font-black uppercase text-rose-600">Holiday</span>
+                  ) : log.status === 'full' || log.status === 'present' ? (
+                     <span className="inline-flex rounded bg-emerald-100 px-2 py-0.5 text-[8px] font-black uppercase text-emerald-600">Present</span>
+                  ) : log.status === 'half' ? (
+                     <span className="inline-flex rounded bg-amber-100 px-2 py-0.5 text-[8px] font-black uppercase text-amber-600">Half</span>
+                  ) : log.status === 'pending' ? (
+                     <span className="inline-flex rounded bg-slate-100 px-2 py-0.5 text-[8px] font-black uppercase text-slate-600">Pending</span>
+                  ) : (
+                     <span className="inline-flex rounded bg-rose-100 px-2 py-0.5 text-[8px] font-black uppercase text-rose-600">Absent</span>
+                  )}
+                  <span className="font-mono text-sm font-black text-slate-900 mt-1">
+                    ₱{log.total_earnings.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+              </div>
+
+              <div className="mt-4 flex items-center justify-between border-t border-slate-50 pt-4">
+                <div className="text-[10px] font-medium text-slate-400">
+                  {log.start_time || '--:--'} - {log.end_time || '--:--'}
+                </div>
+                <button
+                  onClick={() => setSelectedLogMobile(log)}
+                  className="inline-flex rounded-xl bg-slate-900 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white transition-all hover:bg-slate-800"
+                >
+                  View Actions
+                </button>
+              </div>
+            </div>
+          ))}
+
+          {logs.length === 0 && (
+            <div className="rounded-[24px] border border-slate-100 bg-white p-12 text-center text-slate-400 text-sm font-bold shadow-lg">
+              No attendance records found.
+            </div>
+          )}
+        </div>
+
+        {/* Mobile Modal for Detailed Attendance Log Actions */}
+        {selectedLogMobile && (
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
+            <div 
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" 
+              onClick={() => setSelectedLogMobile(null)}
+            />
+            <div className="relative w-full max-w-md overflow-hidden rounded-[30px] bg-white p-8 shadow-2xl animate-in slide-in-from-bottom duration-250 sm:zoom-in-95 text-left">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-6">
+                <div>
+                  <h3 className="text-md font-black text-slate-900">
+                    Log Details
+                  </h3>
+                  <p className="text-[9px] font-black tracking-widest text-slate-400 uppercase mt-0.5">
+                    {format(new Date(selectedLogMobile.date), 'MMMM dd, yyyy')}
+                  </p>
+                </div>
+                <button 
+                  onClick={() => setSelectedLogMobile(null)}
+                  className="rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-900 transition-all"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="space-y-6">
+                {/* Detailed specs */}
+                <div className="grid grid-cols-2 gap-4 rounded-2xl bg-slate-50 p-4 border border-slate-100 text-xs">
+                  <div>
+                    <span className="block text-[8px] font-black tracking-widest text-slate-400 uppercase">Start Time</span>
+                    <span className="block font-mono font-bold text-slate-800 mt-0.5">{selectedLogMobile.start_time || '--:--'}</span>
+                  </div>
+                  <div>
+                    <span className="block text-[8px] font-black tracking-widest text-slate-400 uppercase">End Time</span>
+                    <span className="block font-mono font-bold text-slate-800 mt-0.5">{selectedLogMobile.end_time || '--:--'}</span>
+                  </div>
+                  <div>
+                    <span className="block text-[8px] font-black tracking-widest text-slate-400 uppercase">Break Start</span>
+                    <span className="block font-mono font-bold text-slate-800 mt-0.5">{selectedLogMobile.break_start || '--:--'}</span>
+                  </div>
+                  <div>
+                    <span className="block text-[8px] font-black tracking-widest text-slate-400 uppercase">Break End</span>
+                    <span className="block font-mono font-bold text-slate-800 mt-0.5">{selectedLogMobile.break_end || '--:--'}</span>
+                  </div>
+                  <div>
+                    <span className="block text-[8px] font-black tracking-widest text-slate-400 uppercase">Overtime</span>
+                    <span className="block font-mono font-bold text-slate-800 mt-0.5">
+                      {selectedLogMobile.overtime > 0 ? `${selectedLogMobile.overtime}h` : '-'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="block text-[8px] font-black tracking-widest text-slate-400 uppercase">Late Minutes</span>
+                    <span className="block font-mono font-bold text-slate-800 mt-0.5">
+                      {selectedLogMobile.late > 0 ? `${selectedLogMobile.late}m` : '-'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="block text-[8px] font-black tracking-widest text-slate-400 uppercase">Settlement Status</span>
+                    <span className="block font-mono font-bold text-slate-800 mt-0.5">
+                      {selectedLogMobile.is_paid ? 'Paid' : 'Unpaid'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="block text-[8px] font-black tracking-widest text-slate-400 uppercase">Earned Amount</span>
+                    <span className="block font-mono font-black text-emerald-600 mt-0.5">
+                      ₱{selectedLogMobile.total_earnings.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Actions Section */}
+                <div className="space-y-3">
+                  <span className="block text-[9px] font-black tracking-widest text-slate-400 uppercase">Actions</span>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    {/* Break controls */}
+                    {!selectedLogMobile.break_start && (
+                      <button
+                        onClick={() => {
+                          handleBreakUpdate(selectedLogMobile.date, 'start');
+                          setSelectedLogMobile(null);
+                        }}
+                        className="inline-flex justify-center items-center gap-1.5 rounded-xl bg-amber-50 py-3 text-[10px] font-black uppercase tracking-widest text-amber-600 border border-amber-100 hover:bg-amber-100 transition-all animate-in fade-in"
+                      >
+                        <Coffee size={12} /> Start Break
+                      </button>
+                    )}
+                    {selectedLogMobile.break_start && !selectedLogMobile.break_end && (
+                      <button
+                        onClick={() => {
+                          handleBreakUpdate(selectedLogMobile.date, 'end');
+                          setSelectedLogMobile(null);
+                        }}
+                        className="inline-flex justify-center items-center gap-1.5 rounded-xl bg-emerald-50 py-3 text-[10px] font-black uppercase tracking-widest text-emerald-600 border border-emerald-100 hover:bg-emerald-100 transition-all animate-in fade-in"
+                      >
+                        <Coffee size={12} /> End Break
+                      </button>
+                    )}
+                    
+                    {/* End log control */}
+                    {!selectedLogMobile.end_time && (
+                      <button
+                        onClick={() => {
+                          setRowEndTarget(selectedLogMobile);
+                          setSelectedLogMobile(null);
+                        }}
+                        className="inline-flex justify-center items-center gap-1.5 rounded-xl bg-slate-100 py-3 text-[10px] font-black uppercase tracking-widest text-slate-700 hover:bg-slate-200 transition-all animate-in fade-in"
+                      >
+                        <Clock size={12} /> End Time
+                      </button>
+                    )}
+
+                    {/* Mark as paid control */}
+                    {!selectedLogMobile.is_paid && (
+                      <button
+                        onClick={() => {
+                          setSelectedLogDates([selectedLogMobile.date]);
+                          setBulkPayModalOpen(true);
+                          setSelectedLogMobile(null);
+                        }}
+                        className="inline-flex justify-center items-center gap-1.5 rounded-xl bg-emerald-500 py-3 text-[10px] font-black uppercase tracking-widest text-white shadow-md hover:bg-emerald-600 transition-all animate-in fade-in"
+                      >
+                        <Save size={12} /> Settle
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="pt-2 border-t border-slate-100 flex flex-col gap-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <button
+                        onClick={() => {
+                          setEditLog({...selectedLogMobile});
+                          setSelectedLogMobile(null);
+                        }}
+                        className="inline-flex justify-center items-center gap-1.5 rounded-xl bg-blue-50 py-3 text-[10px] font-black uppercase tracking-widest text-blue-600 hover:bg-blue-100 transition-all"
+                      >
+                        Edit Log
+                      </button>
+                      <button
+                        onClick={() => {
+                          setDeleteLogTarget(selectedLogMobile.date);
+                          setSelectedLogMobile(null);
+                        }}
+                        className="inline-flex justify-center items-center gap-1.5 rounded-xl bg-rose-50 py-3 text-[10px] font-black uppercase tracking-widest text-rose-600 hover:bg-rose-100 transition-all"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                    <button
+                      onClick={() => setSelectedLogMobile(null)}
+                      className="w-full rounded-xl bg-slate-50 py-3 text-[10px] font-black tracking-widest text-slate-500 uppercase transition-all hover:bg-slate-100"
+                    >
+                      Close
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* -------------------- */}

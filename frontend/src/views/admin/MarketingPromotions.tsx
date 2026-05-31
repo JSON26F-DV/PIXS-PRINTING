@@ -19,6 +19,12 @@ import {
   ArrowRight,
   Users,
   User,
+  Edit2,
+  Trash2,
+  Info,
+  X,
+  Calendar,
+  Lock,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import {
@@ -41,9 +47,9 @@ import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 import toast from 'react-hot-toast'
 import { v4 as uuidv4 } from 'uuid'
+import axiosInstance from '../../lib/axiosInstance'
 
-// Data Sources
-import rawPromos from '../../data/marketing_promotions.json'
+// Data Sources (as defaults / fallbacks)
 import rawUsersData from '../../data/users.json'
 import rawProducts from '../../data/products.json'
 import rawOrders from '../../data/order.json'
@@ -79,23 +85,11 @@ interface OrderRecord {
   }
 }
 
-interface DiscountNode {
-  discount_id: string
-  type: string
-  value: number
-  product_id?: string
-  remaining_uses: number
-  is_one_time: boolean
-  expires_at: string
-  status: string
-}
-
 interface UserNode {
   id: string
   name: string
   email: string
   role: string
-  discounts?: DiscountNode[]
 }
 
 // Validation Schema
@@ -136,10 +130,109 @@ const promoSchema = z
 type PromoFormData = z.infer<typeof promoSchema>
 
 const MarketingPromotions: React.FC = () => {
-  const [promos, setPromos] = useState<Promotion[]>(rawPromos as Promotion[])
+  const [promos, setPromos] = useState<Promotion[]>([])
+  const [customers, setCustomers] = useState<UserNode[]>(() => {
+    return (rawUsersData.customers || []).map((c: any) => ({
+      id: c.id,
+      name: c.name || `${c.first_name} ${c.last_name}`,
+      email: c.email,
+      role: 'customer',
+    }))
+  })
+  const [products, setProducts] = useState<any[]>(rawProducts)
+  const [isLoading, setIsLoading] = useState(true)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false)
+  const [selectedPromoDetails, setSelectedPromoDetails] = useState<Promotion | null>(null)
+  const [editingPromo, setEditingPromo] = useState<Promotion | null>(null)
+  
   const [filter, setFilter] = useState('all')
   const [searchTerm, setSearchTerm] = useState('')
+
+  // Map Database record to Promotion
+  const mapDiscountToPromotion = (discount: any): Promotion => {
+    const expiresAt = discount.expires_at;
+    const now = new Date();
+    const isExpired = expiresAt && isBefore(parseISO(expiresAt), now);
+    
+    let status: 'active' | 'used' | 'expired' = 'active';
+    if (discount.already_used) {
+      status = 'used';
+    } else if (isExpired) {
+      status = 'expired';
+    }
+
+    let discountType: Promotion['discount_type'] = 'fixed';
+    if (discount.product_id) {
+      discountType = 'product-specific';
+    } else if (discount.type === 'percentage') {
+      discountType = 'percentage';
+    }
+
+    return {
+      id: discount.id,
+      title: discount.title || `Campaign ${discount.code || discount.id}`,
+      discount_type: discountType,
+      discount_value: parseFloat(discount.value),
+      target_type: discount.customer_id ? 'specific_user' : (discount.code ? 'code' : 'all_users'),
+      assigned_user_id: discount.customer_id || undefined,
+      product_id: discount.product_id || undefined,
+      code: discount.code || undefined,
+      max_uses: 1,
+      used_count: discount.already_used ? 1 : 0,
+      expires_at: expiresAt || format(addDays(now, 30), "yyyy-MM-dd'T'HH:mm"),
+      status: status,
+      conditions: discount.min_spend > 0 ? { minimum_quantity: Math.round(parseFloat(discount.min_spend)) } : undefined
+    };
+  }
+
+  // --- FETCH DATA FROM BACKEND ---
+  const loadData = async () => {
+    try {
+      setIsLoading(true)
+      const discountsRes = await axiosInstance.get('/api/admin/discounts')
+      const fetchedDiscounts = discountsRes.data.data || []
+      const mappedDiscounts = fetchedDiscounts.map(mapDiscountToPromotion)
+      setPromos(mappedDiscounts)
+
+      // Fetch customers
+      try {
+        const custsRes = await axiosInstance.get('/api/admin/customers')
+        if (custsRes.data && custsRes.data.data) {
+          const formattedCustomers = custsRes.data.data.map((c: any) => ({
+            id: c.id,
+            name: c.name || `${c.first_name} ${c.last_name}`,
+            email: c.email,
+            role: 'customer'
+          }))
+          setCustomers(formattedCustomers)
+        }
+      } catch (err) {
+        console.warn("Failed to fetch customers from database, using defaults:", err)
+      }
+
+      // Fetch products
+      try {
+        const prodsRes = await axiosInstance.get('/api/products')
+        const prodData = prodsRes.data.data || prodsRes.data
+        if (Array.isArray(prodData)) {
+          setProducts(prodData)
+        }
+      } catch (err) {
+        console.warn("Failed to fetch products from database, using defaults:", err)
+      }
+
+    } catch (error) {
+      console.error("Error connecting to database:", error)
+      toast.error("Telemetry pipeline offline - using localized backup")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    loadData()
+  }, [])
 
   // --- FORM SETUP ---
   const {
@@ -150,7 +243,6 @@ const MarketingPromotions: React.FC = () => {
     control,
     formState: { errors },
   } = useForm<PromoFormData>({
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     resolver: zodResolver(promoSchema) as any,
     defaultValues: {
       discount_type: 'percentage',
@@ -201,7 +293,7 @@ const MarketingPromotions: React.FC = () => {
       return p.status === 'active' && diff > 0 && diff < 1000 * 60 * 60 * 24 * 3 // 3 days
     }).length
 
-    const usedToday = 0 // Simulated from orders
+    const usedToday = promos.filter((p) => p.status === 'used').length
     const totalDiscount = (rawOrders as OrderRecord[]).reduce(
       (acc, o) => acc + (o.discount?.total_discount_amount || 0),
       0,
@@ -212,12 +304,18 @@ const MarketingPromotions: React.FC = () => {
 
   // --- ANALYTICS ---
   const analyticsData = useMemo(() => {
+    if (promos.length === 0) {
+      return [
+        { name: 'Active', usage: stats.active, limit: 10 },
+        { name: 'Used', usage: stats.usedToday, limit: 10 },
+      ]
+    }
     return promos.slice(0, 5).map((p) => ({
       name: p.title.substring(0, 10),
       usage: p.used_count,
       limit: p.max_uses,
     }))
-  }, [promos])
+  }, [promos, stats])
 
   // --- FILTERED PROMOS ---
   const filteredPromos = useMemo(() => {
@@ -231,173 +329,237 @@ const MarketingPromotions: React.FC = () => {
     })
   }, [promos, searchTerm, filter])
 
-  // --- HANDLERS ---
-  const onFormSubmit = (data: PromoFormData) => {
-    const newPromo: Promotion = {
-      id: `PROMO-${uuidv4().substring(0, 8).toUpperCase()}`,
-      title: data.title,
-      discount_type: data.discount_type,
-      discount_value: data.discount_value,
-      target_type: data.target_type,
-      assigned_user_id: data.assigned_user_id,
-      product_id: data.product_id,
-      code: data.code?.toUpperCase(),
-      max_uses: data.max_uses,
-      used_count: 0,
-      expires_at: data.expires_at,
-      status: 'active',
-      conditions: data.min_quantity
-        ? { minimum_quantity: data.min_quantity }
-        : undefined,
-    }
+  // --- CRUD HANDLERS ---
+  const onFormSubmit = async (data: PromoFormData) => {
+    try {
+      // Map frontend data to Laravel expectations
+      const payload = {
+        title: data.title,
+        type: data.discount_type === 'percentage' ? 'percentage' : 'fixed',
+        value: data.discount_value,
+        customer_id: data.target_type === 'specific_user' ? data.assigned_user_id : null,
+        product_id: data.discount_type === 'product-specific' ? data.product_id : null,
+        variant_id: null,
+        code: data.target_type === 'code' ? data.code?.toUpperCase() : (data.target_type === 'all_users' ? `GLOBAL${uuidv4().substring(0, 4).toUpperCase()}` : `CUST${uuidv4().substring(0, 4).toUpperCase()}`),
+        min_spend: data.min_quantity || 0,
+        expires_at: data.expires_at,
+        already_used: data.max_uses > 1 ? false : undefined // defaults
+      }
 
-    setPromos([newPromo, ...promos])
-    toast.success('Promotion Engine Initialized', {
-      icon: '🚀',
-      style: { borderRadius: '16px', background: '#0f172a', color: '#fff' },
+      if (editingPromo) {
+        // UPDATE Campaign
+        const res = await axiosInstance.put(`/api/admin/discounts/${editingPromo.id}`, {
+          ...payload,
+          already_used: editingPromo.used_count > 0
+        })
+        toast.success('Promotion updated successfully', {
+          style: { borderRadius: '8px', background: '#1e293b', color: '#fff' },
+        })
+      } else {
+        // CREATE Campaign
+        const res = await axiosInstance.post('/api/admin/discounts', payload)
+        toast.success('Promotion created successfully', {
+          style: { borderRadius: '8px', background: '#1e293b', color: '#fff' },
+        })
+      }
+
+      setIsModalOpen(false)
+      setEditingPromo(null)
+      reset()
+      loadData() // Refresh list from DB
+    } catch (err: any) {
+      console.error("Submission failed:", err)
+      const errorMsg = err.response?.data?.message || "Failed to save promotion"
+      toast.error(errorMsg)
+    }
+  }
+
+  const handleEditPromo = (promo: Promotion) => {
+    setEditingPromo(promo)
+    
+    // Map Promotion parameters back to form values
+    reset({
+      title: promo.title,
+      discount_type: promo.discount_type === 'product-specific' ? 'product-specific' : (promo.discount_type === 'percentage' ? 'percentage' : 'fixed'),
+      discount_value: promo.discount_value,
+      target_type: promo.target_type,
+      assigned_user_id: promo.assigned_user_id || '',
+      product_id: promo.product_id || '',
+      code: promo.code || '',
+      expires_at: format(parseISO(promo.expires_at), "yyyy-MM-dd'T'HH:mm"),
+      max_uses: promo.max_uses,
+      is_one_time: promo.max_uses === 1,
+      min_quantity: promo.conditions?.minimum_quantity || 0,
     })
-    setIsModalOpen(false)
-    reset()
+
+    setIsModalOpen(true)
+  }
+
+  const handleDeletePromo = async (id: string) => {
+    // Rely on framework dialog rather than raw confirm()
+    const willDelete = window.confirm("Are you sure you want to delete this promotion?")
+    if (!willDelete) return
+
+    try {
+      await axiosInstance.delete(`/api/admin/discounts/${id}`)
+      toast.success('Promotion deleted successfully', {
+        style: { borderRadius: '8px', background: '#1e293b', color: '#fff' },
+      })
+      loadData() // Refresh list
+    } catch (err) {
+      console.error("Deletions failed:", err)
+      toast.error("Failed to delete promotion")
+    }
+  }
+
+  const handleOpenDetailsModal = (promo: Promotion) => {
+    setSelectedPromoDetails(promo)
+    setIsDetailsModalOpen(true)
   }
 
   const handleCopyCode = (code?: string) => {
     if (!code) return
     navigator.clipboard.writeText(code)
-    toast.success('Code copied to buffer')
+    toast.success('Code copied to clipboard')
   }
 
+  const allUsers = customers; // Simply reuse the fetched customers
+
   return (
-    <div className="admin-promo-container animate-in fade-in mx-auto max-w-[1700px] space-y-10 px-4 pb-20 duration-500 lg:px-10">
-      {/* 🚀 HEADER & STATS */}
-      <header className="flex flex-col justify-between gap-8 pt-12 lg:flex-row lg:items-end">
-        <div className="space-y-2">
-          <div className="flex items-center gap-4">
-            <div className="rounded-[22px] bg-slate-900 p-4 text-[#75EEA5] shadow-2xl shadow-slate-900/20">
-              <TicketPercent size={28} />
+    <div className="mx-auto max-w-[1400px] space-y-6 px-4 py-8 md:px-6">
+      {/* HEADER SECTION */}
+      <header className="flex flex-col justify-between gap-4 border-b border-slate-200 pb-5 md:flex-row md:items-center">
+        <div>
+          <div className="flex items-center gap-3">
+            <div className="rounded-lg bg-slate-900 p-2 text-white shadow-sm">
+              <TicketPercent size={20} />
             </div>
             <div>
-              <h1 className="text-4xl font-black tracking-tighter text-slate-900 uppercase italic">
-                Marketing Arsenal
+              <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+                Marketing Promotions
               </h1>
-              <p className="mt-1 text-[10px] font-black tracking-[4px] text-slate-400 uppercase italic">
-                Enterprise Yield Optimization & Loyalty Controller
+              <p className="text-xs text-slate-500 mt-0.5">
+                Manage and track customer discount campaigns
               </p>
             </div>
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-4">
+        <div className="flex flex-wrap gap-2">
           <button
-            onClick={() => setIsModalOpen(true)}
-            className="flex items-center gap-3 rounded-[24px] border border-[#5de291]/50 bg-[#75EEA5] px-8 py-5 text-[11px] font-black tracking-[3px] text-slate-900 uppercase italic shadow-xl shadow-emerald-500/20 transition-all hover:-translate-y-1 hover:bg-[#5de291]"
+            onClick={() => {
+              setEditingPromo(null)
+              reset({
+                discount_type: 'percentage',
+                target_type: 'all_users',
+                max_uses: 1,
+                is_one_time: true,
+                expires_at: format(addDays(new Date(), 30), "yyyy-MM-dd'T'HH:mm"),
+                discount_value: 0,
+                title: '',
+                code: '',
+                min_quantity: 0,
+              })
+              setIsModalOpen(true)
+            }}
+            className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 text-xs font-semibold text-white shadow-sm hover:bg-emerald-700 transition-colors"
           >
-            <Plus size={18} />
-            Initialize Campaign
+            <Plus size={16} />
+            Create Promotion
           </button>
         </div>
       </header>
 
-      {/* 📊 SUMMARY CARDS */}
-      <section className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <div className="admin-promo-card group relative overflow-hidden rounded-[32px] bg-slate-900 p-8 text-white">
-          <div className="absolute -top-4 -right-4 p-4 opacity-10 transition-transform duration-500 group-hover:scale-110">
-            <Zap size={100} />
+      {/* SUMMARY STATS CARDS */}
+      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-semibold text-slate-500 tracking-wider uppercase">
+              Active Campaigns
+            </p>
+            <span className="text-[10px] font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
+              Live
+            </span>
           </div>
-          <p className="mb-4 text-[10px] font-black tracking-[3px] uppercase opacity-60">
-            Active Campaigns
-          </p>
-          <div className="flex items-baseline gap-2">
-            <h3 className="text-5xl font-black tracking-tighter italic">
+          <div className="flex items-baseline gap-2 mt-3">
+            <h3 className="text-2xl font-bold text-slate-900">
               {stats.active}
             </h3>
-            <span className="text-xs font-bold text-[#75EEA5]">LIVE</span>
           </div>
         </div>
 
-        <div className="admin-promo-card group relative overflow-hidden rounded-[32px] border border-slate-100 bg-white p-8 shadow-2xl shadow-slate-200/40">
-          <div className="absolute -top-4 -right-4 p-4 opacity-5 transition-transform duration-500 group-hover:scale-110">
-            <Clock size={100} />
+        <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-semibold text-slate-500 tracking-wider uppercase">
+              Expiring Soon
+            </p>
+            <span className="text-[10px] font-medium text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
+              Threshold
+            </span>
           </div>
-          <p className="mb-4 text-[10px] font-black tracking-[3px] text-slate-400 uppercase">
-            Urgent Threshold
-          </p>
-          <div className="flex items-baseline gap-2">
-            <h3 className="text-4xl font-black tracking-tighter text-slate-900">
+          <div className="flex items-baseline gap-2 mt-3">
+            <h3 className="text-2xl font-bold text-slate-900">
               {stats.expiringSoon}
             </h3>
-            <span className="text-[10px] font-bold tracking-widest text-rose-500 uppercase">
-              Expiring Soon
+            <span className="text-[10px] text-rose-500 font-semibold uppercase">
+              3 Days Left
             </span>
           </div>
         </div>
 
-        <div className="admin-promo-card group relative rounded-[32px] border border-slate-100 bg-white p-8 shadow-2xl shadow-slate-200/40">
-          <p className="mb-4 text-[10px] font-black tracking-[3px] text-slate-400 uppercase">
-            Yield Forgone
-          </p>
-          <div className="flex items-baseline gap-2">
-            <span className="text-xl font-bold text-slate-400">₱</span>
-            <h3 className="text-4xl font-black tracking-tighter text-slate-900">
-              {stats.totalDiscount.toLocaleString()}
-            </h3>
-          </div>
-          <div className="mt-4 flex items-center gap-2">
-            <div className="h-2 w-2 animate-pulse rounded-full bg-emerald-500"></div>
-            <p className="text-[9px] font-black tracking-[2px] text-slate-400 uppercase">
-              Net Loyalty Impact
+        <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-semibold text-slate-500 tracking-wider uppercase">
+              Total Redemptions
             </p>
+            <span className="text-[10px] font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
+              Usage
+            </span>
+          </div>
+          <div className="flex items-baseline gap-2 mt-3">
+            <h3 className="text-2xl font-bold text-slate-900">
+              {stats.usedToday}
+            </h3>
           </div>
         </div>
 
-        <div className="admin-promo-card flex flex-col justify-between rounded-[32px] border border-slate-100 bg-white p-8 shadow-2xl shadow-slate-200/40">
-          <ResponsiveContainer width="100%" height={60}>
-            <AreaChart data={analyticsData}>
-              <Area
-                type="monotone"
-                dataKey="usage"
-                stroke="#75EEA5"
-                fill="#75EEA5"
-                fillOpacity={0.1}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-          <div className="flex items-end justify-between">
-            <div>
-              <p className="text-[9px] font-black tracking-[2px] text-slate-400 uppercase">
-                Peak Engagement
-              </p>
-              <p className="text-sm font-black text-slate-900 uppercase italic">
-                Velocity Tracker
-              </p>
-            </div>
-            <ArrowRight className="text-slate-200" size={20} />
+        <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+          <p className="text-xs font-semibold text-slate-500 tracking-wider uppercase">
+            Total Discount Granted
+          </p>
+          <div className="flex items-baseline gap-1 mt-3">
+            <span className="text-sm font-semibold text-slate-400">₱</span>
+            <h3 className="text-2xl font-bold text-slate-900">
+              {stats.totalDiscount.toLocaleString()}
+            </h3>
           </div>
         </div>
       </section>
 
-      {/* 🛠️ CONTROLS & TABLE */}
-      <div className="space-y-6">
-        <div className="admin-promo-filter flex flex-col items-center justify-between gap-6 rounded-[32px] border border-slate-100 bg-white p-6 shadow-2xl shadow-slate-200/30 lg:flex-row">
-          <div className="group relative w-full max-w-lg flex-1">
+      {/* FILTER & SEARCH CONTROLS */}
+      <div className="space-y-4">
+        <div className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm md:flex-row md:items-center md:justify-between">
+          <div className="relative w-full max-w-md flex-1">
             <Search
-              className="absolute top-1/2 left-6 -translate-y-1/2 text-slate-400 transition-colors group-focus-within:text-[#75EEA5]"
-              size={18}
+              className="absolute top-1/2 left-3 -translate-y-1/2 text-slate-400"
+              size={16}
             />
             <input
               type="text"
-              placeholder="Search Campaigns, Codes, or Targets..."
-              className="w-full rounded-[22px] border border-slate-100 bg-slate-50 py-4 pr-6 pl-14 font-mono text-sm font-bold text-slate-900 italic transition-all focus:border-emerald-200 focus:bg-white focus:outline-none"
+              placeholder="Search campaigns or promo codes..."
+              className="w-full rounded-lg border border-slate-200 bg-slate-50 py-2 pr-4 pl-9 text-xs text-slate-900 placeholder:text-slate-400 focus:border-slate-400 focus:bg-white focus:outline-none transition-colors"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
 
-          <div className="flex w-full flex-wrap gap-3 lg:w-auto">
+          <div className="flex flex-wrap gap-1.5">
             {[
               'all',
               'active',
+              'used',
               'expired',
-              'unit',
+              'fixed',
               'percentage',
               'product-specific',
             ].map((f) => (
@@ -405,10 +567,10 @@ const MarketingPromotions: React.FC = () => {
                 key={f}
                 onClick={() => setFilter(f)}
                 className={cn(
-                  'rounded-full px-6 py-3 text-[9px] font-black tracking-[2px] uppercase italic transition-all',
+                  'rounded-md px-3 py-1.5 text-[10px] font-semibold tracking-wider uppercase transition-colors',
                   filter === f
-                    ? 'bg-slate-900 text-white shadow-xl'
-                    : 'bg-slate-100 text-slate-500 hover:bg-slate-200',
+                    ? 'bg-slate-900 text-white shadow-sm'
+                    : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200',
                 )}
               >
                 {f}
@@ -417,246 +579,380 @@ const MarketingPromotions: React.FC = () => {
           </div>
         </div>
 
-        {/* 📋 TABLE VIEW */}
-        <div className="admin-promo-table overflow-hidden rounded-[44px] border border-slate-100 bg-white shadow-2xl shadow-slate-200/40">
-          <div className="custom-scrollbar overflow-x-auto">
-            <table className="w-full border-collapse text-left">
-              <thead>
-                <tr className="border-b border-slate-100 bg-slate-50/50">
-                  <th className="px-10 py-8 text-[10px] font-black tracking-[3px] text-slate-400 uppercase">
-                    Campaign Node
-                  </th>
-                  <th className="px-10 py-8 text-[10px] font-black tracking-[3px] text-slate-400 uppercase">
-                    Logic & Yield
-                  </th>
-                  <th className="px-10 py-8 text-[10px] font-black tracking-[3px] text-slate-400 uppercase">
-                    Propagation Target
-                  </th>
-                  <th className="px-10 py-8 text-[10px] font-black tracking-[3px] text-slate-400 uppercase">
-                    Load & Usage
-                  </th>
-                  <th className="px-10 py-8 text-[10px] font-black tracking-[3px] text-slate-400 uppercase">
-                    Timeline
-                  </th>
-                  <th className="px-10 py-8 text-right text-[10px] font-black tracking-[3px] text-slate-400 uppercase">
-                    State
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50">
-                {filteredPromos.map((promo) => {
-                  const userData = rawUsersData as unknown as {
-                    employees: UserNode[]
-                    customers: UserNode[]
-                  }
-                  const allUsers = [
-                    ...(userData.employees || []),
-                    ...(userData.customers || []).map((c) => ({
-                      ...c,
-                      role: 'customer',
-                    })),
-                  ]
-                  const targetUser = allUsers.find(
-                    (u) => u.id === promo.assigned_user_id,
-                  )
-                  const targetProd = rawProducts.find(
-                    (p) => p.id === promo.product_id,
-                  )
-                  const usagePercent = (promo.used_count / promo.max_uses) * 100
+        {/* LOADING & EMPTY STATES */}
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center py-16 space-y-3 rounded-lg bg-white border border-slate-200 shadow-sm">
+            <Activity className="animate-spin text-slate-400" size={28} />
+            <p className="text-xs font-semibold tracking-wider text-slate-400 uppercase">
+              Loading campaigns...
+            </p>
+          </div>
+        ) : filteredPromos.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 space-y-3 rounded-lg bg-white border border-slate-200 shadow-sm text-center px-4">
+            <AlertCircle className="text-slate-300" size={36} />
+            <div>
+              <p className="text-xs font-bold tracking-wider text-slate-700 uppercase">
+                No campaigns found
+              </p>
+              <p className="text-xs text-slate-400 mt-1 max-w-[320px]">
+                Try refining your filters or create a new promotional discount campaign above.
+              </p>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* 📋 TABLE VIEW - Visible on Tablet/Desktop */}
+            <div className="hidden md:block overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse text-left text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-200 bg-slate-50/75">
+                      <th className="px-6 py-3.5 font-semibold text-slate-500 tracking-wider uppercase">
+                        Promotion Name
+                      </th>
+                      <th className="px-6 py-3.5 font-semibold text-slate-500 tracking-wider uppercase">
+                        Discount Logic
+                      </th>
+                      <th className="px-6 py-3.5 font-semibold text-slate-500 tracking-wider uppercase">
+                        Targeting
+                      </th>
+                      <th className="px-6 py-3.5 font-semibold text-slate-500 tracking-wider uppercase">
+                        Usage Limit
+                      </th>
+                      <th className="px-6 py-3.5 font-semibold text-slate-500 tracking-wider uppercase">
+                        Validity
+                      </th>
+                      <th className="px-6 py-3.5 font-semibold text-slate-500 tracking-wider uppercase text-center">
+                        Status
+                      </th>
+                      <th className="px-6 py-3.5 font-semibold text-slate-500 tracking-wider uppercase text-right">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {filteredPromos.map((promo) => {
+                      const targetUser = allUsers.find(
+                        (u) => u.id === promo.assigned_user_id,
+                      )
+                      const targetProd = products.find(
+                        (p) => p.id === promo.product_id,
+                      )
+                      const usagePercent = (promo.used_count / promo.max_uses) * 100
 
-                  return (
-                    <tr
-                      key={promo.id}
-                      className="group transition-colors hover:bg-slate-50/80"
-                    >
-                      <td className="px-10 py-8">
-                        <div className="flex items-center gap-5">
-                          <div
-                            className={cn(
-                              'flex h-12 w-12 items-center justify-center rounded-[18px] transition-transform group-hover:scale-110',
-                              promo.status === 'active'
-                                ? 'bg-emerald-50 text-emerald-600'
-                                : 'bg-slate-100 text-slate-400',
-                            )}
-                          >
-                            {promo.discount_type === 'unit' ? (
-                              <Zap size={22} />
-                            ) : promo.discount_type === 'percentage' ? (
-                              <TicketPercent size={22} />
-                            ) : promo.discount_type === 'product-specific' ? (
-                              <ShoppingBag size={22} />
+                      return (
+                        <tr
+                          key={promo.id}
+                          className="hover:bg-slate-50/50 transition-colors"
+                        >
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-3">
+                              <div
+                                className={cn(
+                                  'flex h-8 w-8 items-center justify-center rounded-md bg-slate-100 text-slate-500',
+                                )}
+                              >
+                                {promo.discount_type === 'unit' ? (
+                                  <Zap size={14} />
+                                ) : promo.discount_type === 'percentage' ? (
+                                  <TicketPercent size={14} />
+                                ) : promo.discount_type === 'product-specific' ? (
+                                  <ShoppingBag size={14} />
+                                ) : (
+                                  <Tag size={14} />
+                                )}
+                              </div>
+                              <div>
+                                <p className="font-semibold text-slate-900">
+                                  {promo.title}
+                                </p>
+                                <p className="text-[10px] text-slate-400 font-mono">
+                                  ID: {promo.id}
+                                </p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex flex-col">
+                              <span className="font-semibold text-slate-900">
+                                {promo.discount_type === 'percentage'
+                                  ? `${promo.discount_value}%`
+                                  : `₱${promo.discount_value}`}
+                              </span>
+                              <span className="text-[9px] text-slate-500 uppercase tracking-wider">
+                                {promo.discount_type}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            {promo.target_type === 'code' ? (
+                              <div
+                                onClick={() => handleCopyCode(promo.code)}
+                                className="group flex cursor-pointer items-center gap-1.5 rounded border border-slate-200 bg-slate-50 px-2 py-0.5 transition-colors hover:bg-slate-100 w-fit"
+                              >
+                                <span className="font-mono text-xs font-semibold text-slate-700">
+                                  {promo.code}
+                                </span>
+                                <Copy
+                                  size={10}
+                                  className="text-slate-400 opacity-60"
+                                />
+                              </div>
+                            ) : promo.target_type === 'specific_user' ? (
+                              <div className="flex items-center gap-2">
+                                <User size={12} className="text-slate-400" />
+                                <div className="min-w-0">
+                                  <p className="font-medium text-slate-900 truncate max-w-[120px]">
+                                    {targetUser?.name || 'Customer Account'}
+                                  </p>
+                                </div>
+                              </div>
                             ) : (
-                              <Tag size={22} />
+                              <div className="flex items-center gap-1.5 text-slate-500">
+                                <Users size={12} />
+                                <span className="text-[10px] uppercase tracking-wider">
+                                  All Customers
+                                </span>
+                              </div>
                             )}
-                          </div>
-                          <div>
-                            <p className="text-base font-black tracking-tight text-slate-900 uppercase italic">
-                              {promo.title}
-                            </p>
-                            <p className="mt-0.5 font-mono text-[10px] font-bold text-slate-400">
-                              {promo.id}
-                            </p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-10 py-8">
-                        <div className="flex flex-col gap-1">
-                          <span className="text-lg font-black tracking-tighter text-slate-900 italic">
-                            {promo.discount_type === 'percentage'
-                              ? `${promo.discount_value}%`
-                              : promo.discount_type === 'unit'
-                                ? `₱${promo.discount_value} OFF/UNIT`
-                                : `₱${promo.discount_value} OFF`}
-                          </span>
-                          <span
-                            className={cn(
-                              'w-fit rounded-md px-2 py-0.5 text-[9px] font-black tracking-widest uppercase',
-                              promo.discount_type === 'unit'
-                                ? 'bg-blue-50 text-blue-600'
-                                : 'bg-slate-100 text-slate-600',
+                            {targetProd && (
+                              <div className="mt-1 flex items-center gap-1 text-[10px] text-slate-400">
+                                <ShoppingBag size={10} />
+                                <span className="truncate max-w-[120px]">{targetProd.name}</span>
+                              </div>
                             )}
-                          >
-                            {promo.discount_type}
-                          </span>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="w-full max-w-[100px]">
+                              <div className="flex items-baseline justify-between mb-1 text-[10px]">
+                                <span className="font-semibold text-slate-750">
+                                  {promo.used_count}/{promo.max_uses}
+                                </span>
+                                <span className="text-slate-400 font-medium">used</span>
+                              </div>
+                              <div className="h-1 w-full rounded-full bg-slate-100 overflow-hidden">
+                                <div
+                                  className={cn(
+                                    'h-full rounded-full',
+                                    usagePercent >= 100 ? 'bg-slate-400' : 'bg-slate-800',
+                                  )}
+                                  style={{
+                                    width: `${Math.min(100, usagePercent)}%`,
+                                  }}
+                                />
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex flex-col text-[11px]">
+                              <span className="font-medium text-slate-700">
+                                {format(parseISO(promo.expires_at), 'MMM dd, yyyy')}
+                              </span>
+                              <span className="text-slate-400">
+                                {format(parseISO(promo.expires_at), 'hh:mm a')}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <span
+                              className={cn(
+                                'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium tracking-wide uppercase',
+                                promo.status === 'active'
+                                  ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                                  : promo.status === 'expired'
+                                    ? 'border-slate-200 bg-slate-50 text-slate-400'
+                                    : 'border-amber-200 bg-amber-50 text-amber-700',
+                              )}
+                            >
+                              {promo.status}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                onClick={() => handleOpenDetailsModal(promo)}
+                                className="flex h-7 w-7 items-center justify-center rounded border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-colors"
+                                title="View details"
+                              >
+                                <Info size={14} />
+                              </button>
+                              <button
+                                onClick={() => handleEditPromo(promo)}
+                                className="flex h-7 w-7 items-center justify-center rounded border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-colors"
+                                title="Edit promotion"
+                              >
+                                <Edit2 size={14} />
+                              </button>
+                              <button
+                                onClick={() => handleDeletePromo(promo.id)}
+                                className="flex h-7 w-7 items-center justify-center rounded border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-rose-600 transition-colors"
+                                title="Delete promotion"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* 📱 CARDS VIEW - Visible on Mobile */}
+            <div className="block md:hidden space-y-3">
+              {filteredPromos.map((promo) => {
+                const targetUser = allUsers.find(
+                  (u) => u.id === promo.assigned_user_id,
+                )
+                const targetProd = products.find(
+                  (p) => p.id === promo.product_id,
+                )
+                
+                return (
+                  <div 
+                    key={promo.id} 
+                    className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm space-y-3"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <div className={cn(
+                          'flex h-8 w-8 items-center justify-center rounded bg-slate-100 text-slate-500'
+                        )}>
+                          {promo.discount_type === 'unit' ? (
+                            <Zap size={16} />
+                          ) : promo.discount_type === 'percentage' ? (
+                            <TicketPercent size={16} />
+                          ) : promo.discount_type === 'product-specific' ? (
+                            <ShoppingBag size={16} />
+                          ) : (
+                            <Tag size={16} />
+                          )}
                         </div>
-                      </td>
-                      <td className="px-10 py-8">
+                        <div>
+                          <h4 className="text-xs font-bold text-slate-900">
+                            {promo.title}
+                          </h4>
+                          <p className="text-[10px] text-slate-400 font-mono">
+                            ID: {promo.id}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      <span className={cn(
+                        'inline-flex items-center rounded-full border px-2 py-0.5 text-[9px] font-medium tracking-wide uppercase',
+                        promo.status === 'active'
+                          ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                          : promo.status === 'expired'
+                            ? 'border-slate-200 bg-slate-50 text-slate-400'
+                            : 'border-amber-200 bg-amber-50 text-amber-700'
+                      )}>
+                        {promo.status}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3 border-y border-slate-100 py-2.5 text-xs">
+                      <div>
+                        <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Logic & Yield</p>
+                        <p className="font-bold text-slate-900 mt-0.5">
+                          {promo.discount_type === 'percentage'
+                            ? `${promo.discount_value}%`
+                            : `₱${promo.discount_value}`}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Timeline</p>
+                        <p className="font-medium text-slate-700 mt-0.5">
+                          {format(parseISO(promo.expires_at), 'MMM dd, yyyy')}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center justify-between gap-3 text-xs pt-1">
+                      <div>
                         {promo.target_type === 'code' ? (
                           <div
                             onClick={() => handleCopyCode(promo.code)}
-                            className="group/code flex cursor-pointer items-center gap-3 rounded-xl bg-slate-900 px-4 py-2 transition-all active:scale-95"
+                            className="flex cursor-pointer items-center gap-1.5 rounded border border-slate-200 bg-slate-50 px-2 py-0.5 transition-colors"
                           >
-                            <span className="font-mono text-xs font-black tracking-widest text-[#75EEA5]">
+                            <span className="font-mono text-xs font-semibold text-slate-700">
                               {promo.code}
                             </span>
-                            <Copy
-                              size={12}
-                              className="text-white opacity-20 transition-opacity group-hover/code:opacity-100"
-                            />
+                            <Copy size={10} className="text-slate-400" />
                           </div>
                         ) : promo.target_type === 'specific_user' ? (
-                          <div className="flex items-center gap-3">
-                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-400">
-                              <User size={14} />
-                            </div>
-                            <div className="min-w-0">
-                              <p className="truncate text-[11px] font-black text-slate-900 uppercase italic">
-                                {targetUser?.name || 'Purged User'}
-                              </p>
-                              <p className="mt-0.5 truncate text-[9px] font-bold text-slate-400 uppercase">
-                                ID: {promo.assigned_user_id}
-                              </p>
-                            </div>
+                          <div className="flex items-center gap-1.5">
+                            <User size={12} className="text-slate-400" />
+                            <span className="font-medium text-slate-800 truncate max-w-[120px]">
+                              {targetUser?.name || 'Customer Account'}
+                            </span>
                           </div>
                         ) : (
-                          <div className="flex items-center gap-2 text-slate-500">
-                            <Users size={16} />
-                            <span className="text-[10px] font-black tracking-widest uppercase">
-                              Global Broadcast
-                            </span>
+                          <div className="flex items-center gap-1 text-slate-500">
+                            <Users size={12} />
+                            <span className="text-[10px] uppercase tracking-wider">All Customers</span>
                           </div>
                         )}
-                        {targetProd && (
-                          <div className="mt-3 flex items-center gap-2 text-slate-400">
-                            <ShoppingBag size={12} />
-                            <span className="max-w-[120px] truncate text-[9px] font-bold uppercase">
-                              {targetProd.name}
-                            </span>
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-10 py-8">
-                        <div className="w-full max-w-[120px]">
-                          <div className="mb-2 flex items-baseline justify-between">
-                            <p className="text-[10px] font-black text-slate-900">
-                              {promo.used_count}/{promo.max_uses}
-                            </p>
-                            <p className="text-[9px] font-bold tracking-widest text-slate-400 uppercase">
-                              USES
-                            </p>
-                          </div>
-                          <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
-                            <div
-                              className={cn(
-                                'h-full transition-all duration-1000',
-                                usagePercent > 90
-                                  ? 'bg-rose-500'
-                                  : 'bg-slate-900',
-                              )}
-                              style={{
-                                width: `${Math.min(100, usagePercent)}%`,
-                              }}
-                            />
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-10 py-8">
-                        <div className="flex flex-col gap-1">
-                          <span className="text-xs font-black text-slate-900 uppercase italic">
-                            {format(parseISO(promo.expires_at), 'MMM dd, yyyy')}
-                          </span>
-                          <span className="flex items-center gap-1 text-[9px] font-bold tracking-widest text-slate-400 uppercase">
-                            <Clock size={10} />
-                            {format(parseISO(promo.expires_at), 'hh:mm a')}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-10 py-8 text-right">
-                        <div
-                          className={cn(
-                            'inline-flex items-center gap-2 rounded-full border px-4 py-2 text-[9px] font-black tracking-widest uppercase italic',
-                            promo.status === 'active'
-                              ? 'border-emerald-100 bg-emerald-50 text-emerald-600'
-                              : promo.status === 'expired'
-                                ? 'border-slate-200 bg-slate-100 text-slate-400'
-                                : 'border-amber-100 bg-amber-50 text-amber-600',
-                          )}
+                      </div>
+
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={() => handleOpenDetailsModal(promo)}
+                          className="flex h-7 w-7 items-center justify-center rounded border border-slate-200 bg-white text-slate-500"
+                          title="View details"
                         >
-                          <div
-                            className={cn(
-                              'h-2 w-2 rounded-full',
-                              promo.status === 'active'
-                                ? 'animate-pulse bg-emerald-500'
-                                : 'bg-slate-300',
-                            )}
-                          />
-                          {promo.status}
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
+                          <Info size={14} />
+                        </button>
+                        <button
+                          onClick={() => handleEditPromo(promo)}
+                          className="flex h-7 w-7 items-center justify-center rounded border border-slate-200 bg-white text-slate-500"
+                          title="Edit promotion"
+                        >
+                          <Edit2 size={14} />
+                        </button>
+                        <button
+                          onClick={() => handleDeletePromo(promo.id)}
+                          className="flex h-7 w-7 items-center justify-center rounded border border-slate-200 bg-white text-slate-500 hover:text-rose-600"
+                          title="Delete promotion"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </>
+        )}
       </div>
 
-      {/* 📊 ANALYTICS VISUALIZER */}
-      <section className="grid grid-cols-1 gap-8 lg:grid-cols-12">
-        <div className="rounded-[48px] border border-slate-100 bg-white p-10 shadow-2xl shadow-slate-200/40 lg:col-span-8">
-          <div className="mb-10 flex items-center justify-between">
+      {/* ANALYTICS & MILESTONES SECTION */}
+      <section className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+        <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm lg:col-span-8">
+          <div className="mb-6 flex items-center justify-between border-b border-slate-100 pb-3">
             <div>
-              <h3 className="text-xl font-black text-slate-900 uppercase italic">
-                Engagement Velocity
+              <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
+                Promotion Analytics
               </h3>
-              <p className="mt-1 text-[10px] font-black tracking-[3px] text-slate-400 uppercase">
-                Market Pulse Analysis per Campaign Node
+              <p className="text-xs text-slate-400 mt-0.5">
+                Overview of discount usage volume and limits
               </p>
             </div>
-            <div className="flex items-center gap-3 rounded-full border border-slate-100 bg-slate-50 px-6 py-2">
-              <Activity size={14} className="text-emerald-500" />
-              <span className="text-[10px] font-black tracking-widest text-slate-600 uppercase">
-                Live Telemetry
+            <div className="flex items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-1">
+              <Activity size={12} className="text-slate-500" />
+              <span className="text-[10px] font-bold text-slate-600 tracking-wider uppercase">
+                Active Telemetry
               </span>
             </div>
           </div>
 
-          <div className="h-[400px]">
+          <div className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
                 data={analyticsData}
-                margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
+                margin={{ top: 10, right: 10, left: 10, bottom: 5 }}
               >
                 <CartesianGrid
                   strokeDasharray="3 3"
@@ -667,28 +963,28 @@ const MarketingPromotions: React.FC = () => {
                   dataKey="name"
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fontSize: 10, fontWeight: 900, fill: '#94a3b8' }}
-                  dy={10}
+                  tick={{ fontSize: 10, fill: '#94a3b8' }}
+                  dy={5}
                 />
                 <YAxis
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fontSize: 10, fontWeight: 900, fill: '#94a3b8' }}
+                  tick={{ fontSize: 10, fill: '#94a3b8' }}
                 />
                 <Tooltip
                   cursor={{ fill: '#f8fafc' }}
                   contentStyle={{
-                    borderRadius: '24px',
-                    border: 'none',
-                    boxShadow: '0 25px 50px -12px rgb(0 0 0 / 0.15)',
-                    padding: '20px',
+                    borderRadius: '8px',
+                    border: '1px solid #e2e8f0',
+                    fontSize: '11px',
+                    padding: '8px',
                   }}
                 />
-                <Bar dataKey="usage" radius={[12, 12, 12, 12]} barSize={40}>
+                <Bar dataKey="usage" radius={[4, 4, 0, 0]} barSize={28}>
                   {analyticsData.map((_, index) => (
                     <Cell
                       key={`cell-${index}`}
-                      fill={index % 2 === 0 ? '#0f172a' : '#75EEA5'}
+                      fill={index % 2 === 0 ? '#1e293b' : '#10b981'}
                     />
                   ))}
                 </Bar>
@@ -697,418 +993,513 @@ const MarketingPromotions: React.FC = () => {
           </div>
         </div>
 
-        <div className="space-y-8 lg:col-span-4">
-          <div className="group relative overflow-hidden rounded-[48px] border border-slate-800 bg-slate-900 p-10 text-white">
-            <div className="absolute top-0 right-0 p-10 opacity-10 transition-transform duration-[2000ms] group-hover:scale-125">
-              <TrendingUp size={120} className="text-[#75EEA5]" />
-            </div>
-            <div className="relative z-10">
-              <h4 className="mb-10 text-xl font-black text-[#75EEA5] uppercase italic">
-                Awards & Milestones
-              </h4>
-              <div className="space-y-8">
-                {[
-                  {
-                    icon: Award,
-                    label: 'Loyalty Tier 1',
-                    requirement: '1,000 Points',
-                    reward: '₱200 Voucher',
-                  },
-                  {
-                    icon: Gift,
-                    label: 'Boutique Bonus',
-                    requirement: '5 Orders',
-                    reward: 'Free Screenplate',
-                  },
-                  {
-                    icon: Zap,
-                    label: 'Speedster Award',
-                    requirement: '3 Instant Pays',
-                    reward: '5% Perpetual',
-                  },
-                ].map((award, i) => (
-                  <div
-                    key={i}
-                    className="flex items-center gap-5 border-b border-white/5 pb-6"
-                  >
-                    <div className="flex h-12 w-12 items-center justify-center rounded-[18px] bg-white/10 text-[#75EEA5]">
-                      <award.icon size={22} />
-                    </div>
-                    <div>
-                      <p className="text-sm font-black uppercase italic">
-                        {award.label}
-                      </p>
-                      <div className="mt-1 flex items-center gap-3">
-                        <span className="text-[9px] font-bold tracking-widest text-white/40 uppercase">
-                          {award.requirement}
-                        </span>
-                        <ChevronRight size={10} className="text-white/20" />
-                        <span className="text-[9px] font-black tracking-widest text-[#75EEA5] uppercase">
-                          {award.reward}
-                        </span>
-                      </div>
+        <div className="space-y-6 lg:col-span-4">
+          <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm text-slate-900">
+            <h4 className="mb-4 text-xs font-bold text-slate-800 tracking-wider uppercase border-b border-slate-100 pb-3 flex items-center gap-2">
+              <Award size={14} className="text-slate-600" />
+              Customer Rewards Settings
+            </h4>
+            <div className="space-y-4">
+              {[
+                {
+                  icon: Award,
+                  label: 'Silver Tier Voucher',
+                  requirement: '1,000 Points Required',
+                  reward: '₱200 Fixed Value',
+                },
+                {
+                  icon: Gift,
+                  label: 'Volume Purchase Reward',
+                  requirement: 'Min. 5 Completed Orders',
+                  reward: 'Free Screenplate Setup',
+                },
+                {
+                  icon: Zap,
+                  label: 'Prompt Settlement Award',
+                  requirement: '3 Instant Pay Completed',
+                  reward: '5% Custom Discount',
+                },
+              ].map((award, i) => (
+                <div
+                  key={i}
+                  className="flex items-center gap-3 border-b border-slate-100 pb-3 last:border-b-0 last:pb-0"
+                >
+                  <div className="flex h-8 w-8 items-center justify-center rounded bg-slate-50 text-slate-500">
+                    <award.icon size={16} />
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-slate-900">
+                      {award.label}
+                    </p>
+                    <div className="mt-0.5 flex items-center gap-1.5 text-[10px] text-slate-400">
+                      <span>{award.requirement}</span>
+                      <ChevronRight size={8} />
+                      <span className="font-semibold text-slate-600">{award.reward}</span>
                     </div>
                   </div>
-                ))}
-              </div>
-              <button className="mt-12 w-full rounded-[24px] border border-white/10 bg-white/5 py-5 text-[10px] font-black tracking-[3px] uppercase transition-all hover:bg-white/10">
-                Configure Loyalty Engine
-              </button>
+                </div>
+              ))}
             </div>
+            <button className="mt-5 w-full rounded-md border border-slate-200 bg-slate-50 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition-colors">
+              Configure Reward Parameters
+            </button>
           </div>
 
-          <div className="group flex items-center gap-6 rounded-[40px] border border-slate-100 bg-white p-8 shadow-xl transition-all hover:translate-y-[-4px]">
-            <div className="flex h-16 w-16 items-center justify-center rounded-[22px] bg-rose-50 text-rose-500 transition-colors duration-500 group-hover:bg-rose-500 group-hover:text-white">
-              <AlertCircle size={28} />
+          <div className="flex items-center gap-4 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="flex h-10 w-10 items-center justify-center rounded bg-slate-50 text-slate-600">
+              <AlertCircle size={20} />
             </div>
             <div>
-              <h5 className="text-sm font-black text-slate-900 uppercase italic">
-                Anomaly Shield
+              <h5 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                Discount Verification
               </h5>
-              <p className="mt-1 text-[10px] font-black tracking-[2px] text-slate-400 uppercase">
-                No Negative Totals Detected
+              <p className="text-xs text-slate-400 mt-0.5">
+                No negative transaction exceptions detected
               </p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* 🏗️ CREATE PROMOTION MODAL */}
-      {isModalOpen && (
-        <div className="animate-in fade-in fixed inset-0 z-[100] flex items-center justify-end bg-slate-900/90 p-0 backdrop-blur-3xl duration-500 lg:p-8">
-          <div className="animate-in slide-in-from-right-full relative flex h-full w-full max-w-4xl flex-col overflow-hidden rounded-none border-x-8 border-slate-50 bg-white shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] duration-700 lg:h-auto lg:max-h-[85vh] lg:rounded-[56px]">
-            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-100 bg-white p-10">
-              <div className="flex items-center gap-6">
-                <div className="rounded-[18px] bg-slate-900 p-4 text-[#75EEA5]">
-                  <Zap size={24} />
-                </div>
-                <div>
-                  <h3 className="text-3xl font-black tracking-tighter text-slate-900 uppercase italic">
-                    Campaign Provisioner
-                  </h3>
-                  <p className="mt-1 text-[10px] font-black tracking-[3px] text-slate-400 uppercase italic">
-                    Configure Yield Logic & Target Parameters
-                  </p>
-                </div>
+      {/* 📋 DETAILS MODAL - Enterprise Grade Details */}
+      {isDetailsModalOpen && selectedPromoDetails && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm transition-all">
+          <div className="relative w-full max-w-md overflow-hidden rounded-xl border border-slate-200 bg-white p-6 shadow-xl animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
+                  Promotion Details
+                </h3>
+                <p className="text-[10px] text-slate-400 mt-0.5">
+                  Full parameters and current usage metrics
+                </p>
               </div>
               <button
-                onClick={() => setIsModalOpen(false)}
-                className="flex h-14 w-14 items-center justify-center rounded-full bg-slate-50 text-slate-400 transition-all hover:bg-rose-500 hover:text-white"
+                onClick={() => setIsDetailsModalOpen(false)}
+                className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50 text-slate-400 hover:bg-rose-500 hover:text-white transition-colors border border-slate-200"
               >
-                <XCircle size={24} />
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="mt-4 space-y-4 text-xs">
+              {/* Campaign configuration details */}
+              <div className="rounded-lg bg-slate-50 p-4 space-y-2 border border-slate-200/60">
+                <div className="flex justify-between items-center">
+                  <span className="font-medium text-slate-500">Promotion Name</span>
+                  <span className="font-bold text-slate-800 truncate max-w-[180px]">{selectedPromoDetails.title}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="font-medium text-slate-500">Promo Code</span>
+                  <span className="font-mono font-bold text-slate-800 bg-slate-200/80 px-2 py-0.5 rounded border border-slate-350">
+                    {selectedPromoDetails.code || 'N/A (Broadcast)'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="font-medium text-slate-500">Discount Logic</span>
+                  <span className="font-semibold text-slate-700 uppercase">{selectedPromoDetails.discount_type}</span>
+                </div>
+                <div className="flex justify-between items-center pt-1.5 border-t border-slate-200/60 mt-1">
+                  <span className="font-medium text-slate-500">Discount Value</span>
+                  <span className="text-sm font-bold text-slate-900">
+                    {selectedPromoDetails.discount_type === 'percentage'
+                      ? `${selectedPromoDetails.discount_value}%`
+                      : `₱${selectedPromoDetails.discount_value.toLocaleString()}`}
+                  </span>
+                </div>
+              </div>
+
+              {/* Safeguards and parameters */}
+              <div className="rounded-lg border border-slate-200 bg-white p-4 space-y-2">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider pb-1 border-b border-slate-100">
+                  Target & Requirements
+                </p>
+                <div className="flex justify-between items-center pt-1">
+                  <span className="text-slate-500">Min. Spend Limit</span>
+                  <span className="font-semibold text-slate-800 font-mono">
+                    ₱{(selectedPromoDetails.conditions?.minimum_quantity || 0).toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-500">Assigned Entity</span>
+                  <span className="font-semibold text-slate-800 uppercase max-w-[180px] truncate text-right">
+                    {selectedPromoDetails.target_type === 'specific_user' 
+                      ? (allUsers.find(u => u.id === selectedPromoDetails.assigned_user_id)?.name || 'Assigned Customer')
+                      : selectedPromoDetails.target_type === 'code' ? 'Code Redeemable' : 'Global Broadcast'}
+                  </span>
+                </div>
+                {selectedPromoDetails.product_id && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-500">Linked Merchandise</span>
+                    <span className="font-semibold text-slate-800 truncate max-w-[160px]">
+                      {products.find(p => p.id === selectedPromoDetails.product_id)?.name || 'Product Specific'}
+                    </span>
+                  </div>
+                )}
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-500">Expiration Date</span>
+                  <span className="font-semibold text-slate-800 font-mono">
+                    {format(parseISO(selectedPromoDetails.expires_at), 'yyyy-MM-dd hh:mm a')}
+                  </span>
+                </div>
+              </div>
+
+              {/* Usage stats */}
+              <div className="rounded-lg bg-slate-900 p-4 text-white space-y-2.5">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <p className="text-[10px] text-white/50 uppercase tracking-wider font-semibold">Redemptions Status</p>
+                    <p className="font-bold mt-0.5">Limit telemetry</p>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-lg font-bold text-emerald-400 font-mono">
+                      {selectedPromoDetails.used_count}/{selectedPromoDetails.max_uses}
+                    </span>
+                    <p className="text-[8px] text-white/30 uppercase mt-0.5 font-bold">Usages Count</p>
+                  </div>
+                </div>
+                <div className="h-1 w-full bg-white/15 rounded-full overflow-hidden">
+                  <div 
+                    className={cn(
+                      "h-full rounded-full transition-all duration-300",
+                      selectedPromoDetails.used_count >= selectedPromoDetails.max_uses ? "bg-rose-500" : "bg-emerald-400"
+                    )}
+                    style={{ width: `${(selectedPromoDetails.used_count / selectedPromoDetails.max_uses) * 100}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-5 flex gap-2">
+              <button
+                onClick={() => {
+                  setIsDetailsModalOpen(false)
+                  handleEditPromo(selectedPromoDetails)
+                }}
+                className="flex-1 rounded-md bg-slate-900 py-2.5 text-xs font-semibold text-white text-center hover:bg-slate-800 transition-colors"
+              >
+                Edit Promotion
+              </button>
+              <button
+                onClick={() => setIsDetailsModalOpen(false)}
+                className="flex-1 rounded-md border border-slate-200 py-2.5 text-xs font-semibold text-slate-500 text-center hover:bg-slate-50 transition-colors"
+              >
+                Dismiss Details
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 🏗️ CREATE / EDIT PROMOTION FORM MODAL */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm transition-all">
+          <div className="relative flex w-full max-w-2xl flex-col bg-white shadow-2xl rounded-xl max-h-[90vh] overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-200">
+            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-white p-5">
+              <div>
+                <h3 className="text-base font-bold text-slate-900 uppercase tracking-wider">
+                  {editingPromo ? 'Edit Promotion Campaign' : 'Create Promotion Campaign'}
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Configure discount conditions and targeting limits
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setIsModalOpen(false)
+                  setEditingPromo(null)
+                }}
+                className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50 text-slate-400 border border-slate-200 hover:bg-rose-500 hover:text-white transition-colors"
+              >
+                <X size={16} />
               </button>
             </div>
 
             <form
               onSubmit={handleSubmit(onFormSubmit)}
-              className="custom-scrollbar space-y-10 overflow-y-auto bg-white p-10"
+              className="custom-scrollbar space-y-6 overflow-y-auto bg-white p-6"
             >
-              {/* Section 1: Core Meta */}
-              <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
-                <div className="space-y-3">
-                  <label className="px-2 text-[10px] font-black tracking-[3px] text-slate-400 uppercase italic">
-                    Campaign Title
-                  </label>
-                  <input
-                    {...register('title')}
-                    className="w-full rounded-[24px] border border-slate-100 bg-slate-50 px-8 py-5 font-mono text-base font-black text-slate-900 italic shadow-inner transition-all focus:border-[#75EEA5] focus:bg-white focus:outline-none"
-                    placeholder="e.g. VIP Laguna Launch"
-                  />
-                  {errors.title && (
-                    <p className="px-4 text-[10px] font-bold text-rose-500">
-                      {errors.title.message}
-                    </p>
-                  )}
-                </div>
+              {/* Section 1: General Details */}
+              <div className="space-y-4">
+                <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 pb-1 flex items-center gap-1.5">
+                  <Info size={12} />
+                  General Details
+                </h4>
 
-                <div className="space-y-3">
-                  <label className="px-2 text-[10px] font-black tracking-[3px] text-slate-400 uppercase italic">
-                    Discount Logic Type
-                  </label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {(
-                      [
-                        'percentage',
-                        'fixed',
-                        'unit',
-                        'product-specific',
-                      ] as const
-                    ).map((t) => (
-                      <label
-                        key={t}
-                        className={cn(
-                          'relative flex cursor-pointer items-center justify-center rounded-[20px] border p-4 transition-all',
-                          watchType === t
-                            ? 'border-slate-900 bg-slate-900 text-white shadow-xl'
-                            : 'border-slate-100 bg-white text-slate-400 hover:border-[#75EEA5]',
-                        )}
-                      >
-                        <input
-                          type="radio"
-                          value={t}
-                          {...register('discount_type')}
-                          className="sr-only"
-                        />
-                        <span className="text-[9px] font-black tracking-widest uppercase">
-                          {t}
-                        </span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Section 2: Economics */}
-              <div className="grid grid-cols-1 gap-8 rounded-[40px] border border-slate-100 bg-slate-50 p-10 md:grid-cols-3">
-                <div className="space-y-3">
-                  <label className="text-[10px] font-black tracking-[3px] text-slate-400 uppercase italic">
-                    Discount Value
-                  </label>
-                  <div className="relative">
-                    <span className="absolute top-1/2 left-6 -translate-y-1/2 font-black text-slate-400 italic">
-                      {watchType === 'percentage' ? '%' : '₱'}
-                    </span>
-                    <input
-                      type="number"
-                      step="0.01"
-                      {...register('discount_value', { valueAsNumber: true })}
-                      className="w-full rounded-[20px] border border-slate-200 bg-white py-5 pr-6 pl-12 font-mono text-xl font-black text-slate-900 transition-all focus:border-[#75EEA5] focus:outline-none"
-                    />
-                  </div>
-                  {errors.discount_value && (
-                    <p className="px-2 text-[10px] font-bold text-rose-500">
-                      {errors.discount_value.message}
-                    </p>
-                  )}
-                </div>
-
-                {watchType === 'product-specific' && (
-                  <div className="space-y-3">
-                    <label className="text-[10px] font-black tracking-[3px] text-slate-400 uppercase italic">
-                      Link Product Node
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-slate-600">
+                      Promotion Title
                     </label>
-                    <select
-                      {...register('product_id')}
-                      className="w-full appearance-none rounded-[20px] border border-slate-200 bg-white px-6 py-5 text-sm font-black text-slate-900 italic transition-all focus:border-[#75EEA5] focus:outline-none"
-                    >
-                      <option value="">Select Product...</option>
-                      {rawProducts.map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.name} (₱{p.base_price})
-                        </option>
+                    <input
+                      {...register('title')}
+                      className="w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-950 focus:border-slate-400 focus:bg-white focus:outline-none transition-colors"
+                      placeholder="e.g. VIP Client Offer"
+                    />
+                    {errors.title && (
+                      <p className="text-[10px] font-semibold text-rose-500">
+                        {errors.title.message}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-slate-600">
+                      Discount Logic Type
+                    </label>
+                    <div className="grid grid-cols-3 gap-1">
+                      {(
+                        [
+                          'percentage',
+                          'fixed',
+                          'product-specific',
+                        ] as const
+                      ).map((t) => (
+                        <label
+                          key={t}
+                          className={cn(
+                            'relative flex cursor-pointer items-center justify-center rounded-md border p-2 transition-colors text-center',
+                            watchType === t
+                              ? 'border-slate-900 bg-slate-900 text-white shadow-sm font-semibold'
+                              : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300',
+                          )}
+                        >
+                          <input
+                            type="radio"
+                            value={t}
+                            {...register('discount_type')}
+                            className="sr-only"
+                          />
+                          <span className="text-[10px] uppercase truncate">
+                            {t === 'product-specific' ? 'Product' : t}
+                          </span>
+                        </label>
                       ))}
-                    </select>
+                    </div>
                   </div>
-                )}
-
-                {watchType === 'unit' && (
-                  <div className="space-y-3">
-                    <label className="text-[10px] font-black tracking-[3px] text-slate-400 uppercase italic">
-                      Minimum Quantity Condition
-                    </label>
-                    <input
-                      type="number"
-                      {...register('min_quantity', { valueAsNumber: true })}
-                      className="w-full rounded-[20px] border border-slate-200 bg-white px-6 py-5 font-mono text-xl font-black text-slate-900 transition-all focus:border-[#75EEA5] focus:outline-none"
-                      placeholder="300"
-                    />
-                  </div>
-                )}
-
-                <div className="space-y-3">
-                  <label className="text-[10px] font-black tracking-[3px] text-slate-400 uppercase italic">
-                    Expiration Timer
-                  </label>
-                  <input
-                    type="datetime-local"
-                    {...register('expires_at')}
-                    className="w-full rounded-[20px] border border-slate-200 bg-white px-6 py-5 font-mono text-xs font-black text-slate-900 uppercase transition-all focus:border-[#75EEA5] focus:outline-none"
-                  />
-                  {errors.expires_at && (
-                    <p className="px-2 text-[10px] font-bold text-rose-500">
-                      {errors.expires_at.message}
-                    </p>
-                  )}
                 </div>
               </div>
 
-              {/* Section 3: Propagation Target */}
-              <div className="space-y-6">
-                <div className="flex flex-wrap gap-4">
-                  {[
-                    {
-                      id: 'all_users',
-                      label: 'Broadcast All',
-                      icon: Users as LucideIcon,
-                    },
-                    {
-                      id: 'specific_user',
-                      label: 'Specific Entity',
-                      icon: User as LucideIcon,
-                    },
-                    { id: 'code', label: 'Manual Code', icon: Tag as LucideIcon },
-                  ].map((t) => (
-                    <label
-                      key={t.id}
-                      className={cn(
-                        'flex min-w-[180px] flex-1 cursor-pointer flex-col items-center gap-3 rounded-[32px] border p-6 transition-all',
-                        watchTarget === t.id
-                          ? 'border-slate-900 bg-slate-900 text-white shadow-2xl'
-                          : 'border-slate-100 bg-white text-slate-400 hover:border-[#75EEA5]',
-                      )}
-                    >
-                      <input
-                        type="radio"
-                        value={t.id}
-                        {...register('target_type')}
-                        className="sr-only"
-                      />
-                      <t.icon size={24} />
-                      <span className="text-[10px] font-black tracking-widest uppercase">
-                        {t.label}
-                      </span>
-                    </label>
-                  ))}
-                </div>
+              {/* Section 2: Discount & Validity Parameters */}
+              <div className="space-y-4">
+                <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 pb-1 flex items-center gap-1.5">
+                  <SlidersIcon size={12} />
+                  Discount Parameters
+                </h4>
 
-                <div className="grid grid-cols-1 gap-8 pt-4 md:grid-cols-2">
-                  {watchTarget === 'specific_user' && (
-                    <div className="animate-in slide-in-from-top-2 space-y-3">
-                      <label className="text-[10px] font-black tracking-[3px] text-slate-400 uppercase italic">
-                        Select User Entity
+                <div className="grid grid-cols-1 gap-4 rounded-lg border border-slate-200 bg-slate-50 p-4 md:grid-cols-3">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-slate-600">
+                      Discount Value
+                    </label>
+                    <div className="relative">
+                      <span className="absolute top-1/2 left-3 -translate-y-1/2 text-slate-400 font-semibold text-xs">
+                        {watchType === 'percentage' ? '%' : '₱'}
+                      </span>
+                      <input
+                        type="number"
+                        step="0.01"
+                        {...register('discount_value', { valueAsNumber: true })}
+                        className="w-full rounded-md border border-slate-200 bg-white py-1.5 pr-3 pl-7 text-xs text-slate-900 focus:border-slate-400 focus:outline-none transition-colors"
+                      />
+                    </div>
+                    {errors.discount_value && (
+                      <p className="text-[10px] font-semibold text-rose-500">
+                        {errors.discount_value.message}
+                      </p>
+                    )}
+                  </div>
+
+                  {watchType === 'product-specific' && (
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-slate-600">
+                        Link Merchandise
                       </label>
                       <select
-                        {...register('assigned_user_id')}
-                        className="w-full appearance-none rounded-[24px] border border-slate-100 bg-slate-50 px-8 py-5 text-sm font-black text-slate-900 italic transition-all focus:border-[#75EEA5] focus:outline-none"
+                        {...register('product_id')}
+                        className="w-full rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-900 focus:border-slate-400 focus:outline-none transition-colors"
                       >
-                        <option value="">Search users.json...</option>
-                        {(() => {
-                          const data = rawUsersData as unknown as {
-                            customers: {
-                              id: string
-                              name: string
-                              email: string
-                            }[]
-                          }
-                          return (data.customers || []).map((u) => (
-                            <option key={u.id} value={u.id}>
-                              {u.name} ({u.email})
-                            </option>
-                          ))
-                        })()}
+                        <option value="">Select Product...</option>
+                        {products.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.name} (₱{parseFloat(p.base_price || 0)})
+                          </option>
+                        ))}
                       </select>
                     </div>
                   )}
 
-                  {watchTarget === 'code' && (
-                    <div className="animate-in slide-in-from-top-2 space-y-3">
-                      <label className="text-[10px] font-black tracking-[3px] text-slate-400 uppercase italic">
-                        Manual Redeem Code
-                      </label>
-                      <div className="relative">
-                        <input
-                          {...register('code')}
-                          className="w-full rounded-[24px] border border-slate-100 bg-slate-50 px-8 py-5 font-mono text-xl font-black tracking-widest text-slate-900 uppercase italic transition-all focus:border-[#75EEA5] focus:outline-none"
-                          placeholder="SUMMER2026"
-                        />
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setValue(
-                              'code',
-                              uuidv4().substring(0, 8).toUpperCase(),
-                            )
-                          }
-                          className="absolute top-1/2 right-4 -translate-y-1/2 rounded-xl bg-white p-3 text-slate-400 hover:text-slate-900"
-                        >
-                          <Zap size={18} />
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between px-2">
-                      <label className="text-[10px] font-black tracking-[3px] text-slate-400 uppercase italic">
-                        Max Propagation Limit
-                      </label>
-                      <label className="flex cursor-pointer items-center gap-2">
-                        <span className="text-[9px] font-black tracking-widest text-slate-500 uppercase">
-                          One-Time Use
-                        </span>
-                        <div
-                          className={cn(
-                            'relative h-5 w-10 rounded-full transition-colors',
-                            watchOneTime ? 'bg-[#75EEA5]' : 'bg-slate-200',
-                          )}
-                        >
-                          <input
-                            type="checkbox"
-                            {...register('is_one_time')}
-                            className="sr-only"
-                          />
-                          <div
-                            className={cn(
-                              'absolute top-1 h-3 w-3 rounded-full bg-white transition-all',
-                              watchOneTime ? 'left-6' : 'left-1',
-                            )}
-                          />
-                        </div>
-                      </label>
-                    </div>
+                  <div className={cn("space-y-1.5", watchType === 'product-specific' ? "col-span-1" : "col-span-2")}>
+                    <label className="text-xs font-semibold text-slate-600">
+                      Expiration Date
+                    </label>
                     <input
-                      type="number"
-                      disabled={watchOneTime}
-                      {...register('max_uses', { valueAsNumber: true })}
-                      className="w-full rounded-[24px] border border-slate-100 bg-slate-50 px-8 py-5 font-mono text-xl font-black text-slate-900 transition-all focus:border-[#75EEA5] focus:outline-none disabled:opacity-30"
+                      type="datetime-local"
+                      {...register('expires_at')}
+                      className="w-full rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-900 focus:border-slate-400 focus:outline-none transition-colors"
                     />
+                    {errors.expires_at && (
+                      <p className="text-[10px] font-semibold text-rose-500">
+                        {errors.expires_at.message}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
 
-              <div className="space-y-6 rounded-[40px] bg-slate-900 p-10 text-white">
-                <div className="flex items-center gap-4">
-                  <Shield size={24} className="text-[#75EEA5]" />
-                  <h4 className="text-xl font-black tracking-tighter uppercase italic">
-                    Immunity & Safeguard Check
+              {/* Section 3: Targeting Controls */}
+              <div className="space-y-4">
+                <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 pb-1 flex items-center gap-1.5">
+                  <Users size={12} />
+                  Targeting & Limits
+                </h4>
+
+                <div className="space-y-4">
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      {
+                        id: 'all_users',
+                        label: 'All Customers',
+                        icon: Users as LucideIcon,
+                      },
+                      {
+                        id: 'specific_user',
+                        label: 'Specific Customer',
+                        icon: User as LucideIcon,
+                      },
+                      { id: 'code', label: 'Promo Code', icon: Tag as LucideIcon },
+                    ].map((t) => (
+                      <label
+                        key={t.id}
+                        className={cn(
+                          'flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-md border p-3 transition-colors text-center min-w-[120px]',
+                          watchTarget === t.id
+                            ? 'border-slate-900 bg-slate-900 text-white shadow-sm font-semibold'
+                            : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300',
+                        )}
+                      >
+                        <input
+                          type="radio"
+                          value={t.id}
+                          {...register('target_type')}
+                          className="sr-only"
+                        />
+                        <t.icon size={14} />
+                        <span className="text-[10px] uppercase">
+                          {t.label}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-4 pt-1 md:grid-cols-2">
+                    {watchTarget === 'specific_user' && (
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-semibold text-slate-600">
+                          Select Customer
+                        </label>
+                        <select
+                          {...register('assigned_user_id')}
+                          className="w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-900 focus:border-slate-400 focus:outline-none transition-colors animate-in fade-in duration-200"
+                        >
+                          <option value="">Select User...</option>
+                          {allUsers.map((u) => (
+                            <option key={u.id} value={u.id}>
+                              {u.name} ({u.email})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
+                    {watchTarget === 'code' && (
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-semibold text-slate-600">
+                          Manual Promo Code
+                        </label>
+                        <div className="relative">
+                          <input
+                            {...register('code')}
+                            className="w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-mono text-slate-900 uppercase focus:border-slate-400 focus:outline-none transition-colors animate-in fade-in duration-200"
+                            placeholder="SUMMER2026"
+                          />
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setValue(
+                                'code',
+                                uuidv4().substring(0, 8).toUpperCase(),
+                              )
+                            }
+                            className="absolute top-1/2 right-2.5 -translate-y-1/2 text-slate-400 hover:text-slate-900"
+                            title="Generate random code"
+                          >
+                            <Zap size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-slate-600">
+                        Minimum Spend Safeguard (₱)
+                      </label>
+                      <input
+                        type="number"
+                        {...register('min_quantity', { valueAsNumber: true })}
+                        className="w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-900 focus:border-slate-400 focus:outline-none transition-colors"
+                        placeholder="0.00"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Safeguard Policies */}
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 space-y-2">
+                <div className="flex items-center gap-2 text-slate-700">
+                  <Lock size={14} />
+                  <h4 className="text-xs font-bold uppercase tracking-wider">
+                    Discount Verification Policy
                   </h4>
                 </div>
-                <ul className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  {[
-                    'No Negative Overrides Guaranteed',
-                    'Automatic Expiration Cleanup',
-                    'One-Time Redeem Security Layer',
-                    'Backend Migration Compatible Pivot',
-                  ].map((check, i) => (
-                    <li
-                      key={i}
-                      className="flex items-center gap-3 text-slate-400"
-                    >
-                      <div className="flex h-5 w-5 items-center justify-center rounded-full bg-white/5 text-[#75EEA5]">
-                        <CheckCircle2 size={12} />
-                      </div>
-                      <span className="text-[9px] font-black tracking-widest uppercase">
-                        {check}
-                      </span>
-                    </li>
-                  ))}
+                <ul className="grid grid-cols-1 gap-2 text-[10px] text-slate-500 md:grid-cols-2">
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 size={10} className="text-slate-400" />
+                    <span>No negative totals guaranteed</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 size={10} className="text-slate-400" />
+                    <span>Automatic expiration checks</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 size={10} className="text-slate-400" />
+                    <span>Single-use code security</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 size={10} className="text-slate-400" />
+                    <span>Real-time database sync</span>
+                  </li>
                 </ul>
               </div>
 
-              <div className="sticky bottom-0 flex gap-4 border-t border-slate-50 bg-white pt-6 pb-2">
+              <div className="sticky bottom-0 flex gap-2 border-t border-slate-200 bg-white pt-4 pb-2 justify-end">
                 <button
                   type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="flex-1 rounded-[28px] border border-slate-100 py-6 font-mono text-[11px] font-black tracking-[3px] text-slate-400 uppercase italic transition-all hover:bg-slate-50"
+                  onClick={() => {
+                    setIsModalOpen(false)
+                    setEditingPromo(null)
+                  }}
+                  className="rounded-md border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
                 >
-                  Abort Mission
+                  Cancel
                 </button>
                 <button
                   type="submit"
-                  className="flex flex-[2] items-center justify-center gap-4 rounded-[28px] bg-slate-900 py-6 text-[11px] font-black tracking-[3px] text-white uppercase shadow-2xl shadow-slate-900/40 transition-all hover:bg-slate-800"
+                  className="rounded-md bg-slate-900 px-5 py-2 text-xs font-semibold text-white hover:bg-slate-800 transition-colors flex items-center gap-1.5 shadow-sm"
                 >
-                  Propagate Campaign Strategy
-                  <ArrowRight size={18} className="text-[#75EEA5]" />
+                  {editingPromo ? 'Save Changes' : 'Save Promotion'}
+                  <ArrowRight size={14} />
                 </button>
               </div>
             </form>
@@ -1119,7 +1510,32 @@ const MarketingPromotions: React.FC = () => {
   )
 }
 
-// Generic Shield Icon fallback
+// Sliders icon fallback
+const SlidersIcon = ({ size, className }: { size: number; className?: string }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2.5"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+  >
+    <line x1="4" y1="21" x2="4" y2="14" />
+    <line x1="4" y1="10" x2="4" y2="3" />
+    <line x1="12" y1="21" x2="12" y2="12" />
+    <line x1="12" y1="8" x2="12" y2="3" />
+    <line x1="20" y1="21" x2="20" y2="16" />
+    <line x1="20" y1="12" x2="20" y2="3" />
+    <line x1="1" y1="14" x2="7" y2="14" />
+    <line x1="9" y1="8" x2="15" y2="8" />
+    <line x1="17" y1="16" x2="23" y2="16" />
+  </svg>
+)
+
+// Generic Shield Icon fallback (unused but kept as helper)
 const Shield = ({ size, className }: { size: number; className?: string }) => (
   <svg
     width={size}

@@ -34,17 +34,22 @@ const ScreenplateConfirmMessage: React.FC<ScreenplateConfirmMessageProps> = ({ r
 
   useEffect(() => {
     let mounted = true
-    axiosInstance.get(`/api/customer/screenplate-requests`)
+    axiosInstance.get(`/api/messages/screenplate-requests/${requestId}`)
       .then(res => {
         if (mounted) {
-          const found = res.data.find((r: ScreenplateRequest) => r.id === requestId)
-          setRequest(found)
+          if (res.data && !res.data.notFound) {
+            setRequest(res.data)
+          } else {
+            setRequest(null)
+          }
           setLoading(false)
         }
       })
-      .catch(err => {
-        console.error('Failed to fetch screenplate request:', err)
-        if (mounted) setLoading(false)
+      .catch(() => {
+        if (mounted) {
+          setRequest(null)
+          setLoading(false)
+        }
       })
     return () => { mounted = false }
   }, [requestId])
@@ -90,7 +95,46 @@ const ScreenplateConfirmMessage: React.FC<ScreenplateConfirmMessageProps> = ({ r
     )
   }
 
-  if (!request) return <div className="p-4 text-[10px] uppercase font-black text-rose-500">Request Data Not Found</div>
+  if (!request || !request.status || request.calculated_total === undefined) {
+    return (
+      <div className={clsx(
+        "w-full max-w-sm rounded-[32px] overflow-hidden shadow-2xl border transition-all duration-300 hover:scale-[1.01]",
+        isCustomer ? "bg-slate-900 border-white/10 text-white" : "bg-white border-slate-100 text-slate-900"
+      )}>
+        {/* Header / Title */}
+        <div className="p-6 border-b border-white/10 flex justify-between items-center">
+          <div>
+            <div className="flex items-center gap-3 mb-2">
+               <div className="h-0.5 w-8 bg-rose-500 animate-pulse" />
+               <span className="text-[10px] font-black tracking-[4px] text-rose-500 uppercase italic">Technical Node</span>
+            </div>
+            <h3 className="text-xl font-black italic uppercase leading-none">Setup Offline</h3>
+          </div>
+          <div className="h-10 w-10 rounded-2xl bg-rose-500/10 flex items-center justify-center border border-rose-500/20">
+            <XCircle size={18} className="text-rose-500" />
+          </div>
+        </div>
+
+        {/* Details Section */}
+        <div className="p-6 space-y-4">
+          <div className="p-4 rounded-2xl bg-rose-500/5 border border-rose-500/10 italic">
+            <p className="text-[10px] font-bold text-rose-400 leading-relaxed uppercase tracking-wider">
+              Screenplate request "{requestId}" is currently offline or has been removed.
+            </p>
+          </div>
+          <p className="text-[9px] font-medium opacity-50 uppercase tracking-widest leading-relaxed">
+            The database seed or request data is missing from the active protocol nodes. Please verify if the screenplate request ID exists or create a new request node.
+          </p>
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 py-4 bg-slate-900/20 border-t border-white/10 flex justify-between items-center text-[8px] font-black uppercase text-slate-400 tracking-wider">
+          <span>Status: UNKNOWN</span>
+          <span className="opacity-30">ID: {requestId}</span>
+        </div>
+      </div>
+    )
+  }
 
   const config = getStatusConfig(request.status)
 

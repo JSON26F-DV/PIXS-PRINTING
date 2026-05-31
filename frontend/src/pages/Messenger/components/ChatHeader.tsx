@@ -1,16 +1,29 @@
 import React from 'react'
-import { Phone, LayoutGrid, Circle } from 'lucide-react'
+import { Phone, LayoutGrid, Circle, Users, ArrowLeft } from 'lucide-react'
 import { clsx } from 'clsx'
+import { useAuth } from '../../../hooks/useAuth'
+import { useNavigate } from 'react-router-dom'
 
 interface ChatHeaderProps {
   onToggleGallery: () => void
   isGalleryOpen: boolean
+  onToggleAccounts?: () => void
+  isAccountsOpen?: boolean
+  title?: string
+  subtitle?: string
 }
 
 const ChatHeader: React.FC<ChatHeaderProps> = ({
   onToggleGallery,
   isGalleryOpen,
+  onToggleAccounts,
+  isAccountsOpen,
+  title,
+  subtitle,
 }) => {
+  const { user } = useAuth()
+  const navigate = useNavigate()
+
   return (
     <header className="ChatHeader sticky top-0 z-20 flex items-center justify-between border-b border-slate-50 bg-white/80 px-3 py-3 backdrop-blur-xl min-[360px]:px-4 min-[414px]:px-6 md:px-10 md:py-6">
       <div className="flex items-center gap-3 md:gap-4">
@@ -27,17 +40,17 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
 
         <div>
           <h2 className="text-[12px] leading-none font-black tracking-tighter text-slate-900 uppercase italic min-[360px]:text-[13px] min-[414px]:text-sm">
-            PIXS Production Admin
+            {title || 'PIXS Production Admin'}
           </h2>
           <div className="mt-1.5 flex items-center gap-1.5">
             <span className="text-[9px] font-bold tracking-widest text-emerald-500 uppercase">
-              Active Node
+              Active
             </span>
             <span className="text-[8px] font-bold tracking-widest text-slate-300 uppercase opacity-40">
               ·
             </span>
             <span className="text-[9px] font-bold tracking-widest text-slate-400 uppercase">
-              Response: ~5m
+              {subtitle || 'Response: ~5m'}
             </span>
           </div>
         </div>
@@ -53,18 +66,61 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
           <Phone size={16} />
         </a>
 
-        <button
-          onClick={onToggleGallery}
-          className={clsx(
-            'flex h-9 w-9 items-center justify-center rounded-xl transition-all active:scale-90 min-[360px]:h-10 min-[360px]:w-10',
-            isGalleryOpen
-              ? 'bg-slate-900 text-white'
-              : 'bg-slate-50 text-slate-400 hover:bg-slate-100 hover:text-slate-900',
-          )}
-          title="Gallery Assets"
-        >
-          <LayoutGrid size={16} />
-        </button>
+        {user?.role === 'admin' ? (
+          <>
+            {/* Gallery Assets Button */}
+            <button
+              onClick={onToggleGallery}
+              className={clsx(
+                'flex h-9 w-9 items-center justify-center rounded-xl transition-all active:scale-90 min-[360px]:h-10 min-[360px]:w-10',
+                isGalleryOpen
+                  ? 'bg-slate-900 text-white'
+                  : 'bg-slate-50 text-slate-400 hover:bg-slate-100 hover:text-slate-900',
+              )}
+              title="Gallery Assets"
+            >
+              <LayoutGrid size={16} />
+            </button>
+
+            {/* Accounts Panel Button */}
+            <button
+              onClick={onToggleAccounts}
+              className={clsx(
+                'flex h-9 w-9 items-center justify-center rounded-xl transition-all active:scale-90 min-[360px]:h-10 min-[360px]:w-10',
+                isAccountsOpen
+                  ? 'bg-slate-900 text-white'
+                  : 'bg-slate-50 text-slate-400 hover:bg-slate-100 hover:text-slate-900',
+              )}
+              title="Accounts Registry"
+            >
+              <Users size={16} />
+            </button>
+
+            {/* Dashboard Navigation Button */}
+            <button
+              onClick={() => navigate('/admin/dashboard')}
+              className="flex h-9 px-3 items-center justify-center gap-1.5 rounded-xl bg-slate-900 text-white font-bold text-xs uppercase italic tracking-wider transition-all hover:bg-slate-800 active:scale-95 min-[360px]:h-10 shadow-sm"
+              title="Back to Dashboard"
+            >
+              <ArrowLeft size={14} className="text-pixs-mint" />
+              <span className="hidden sm:inline">Dashboard</span>
+            </button>
+          </>
+        ) : (
+          /* Default Customer/Employee layout controls */
+          <button
+            onClick={onToggleGallery}
+            className={clsx(
+              'flex h-9 w-9 items-center justify-center rounded-xl transition-all active:scale-90 min-[360px]:h-10 min-[360px]:w-10',
+              isGalleryOpen
+                ? 'bg-slate-900 text-white'
+                : 'bg-slate-50 text-slate-400 hover:bg-slate-100 hover:text-slate-900',
+            )}
+            title="Gallery Assets"
+          >
+            <LayoutGrid size={16} />
+          </button>
+        )}
       </div>
     </header>
   )

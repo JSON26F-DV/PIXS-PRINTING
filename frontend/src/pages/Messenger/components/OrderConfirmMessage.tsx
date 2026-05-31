@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { Check, MapPin, Phone } from 'lucide-react'
-import { orderApi } from '../../../api/orders.api'
+
 import type { Order } from '../../Order/components/OrderCard'
 import { clsx } from 'clsx'
 import axiosInstance from '../../../lib/axiosInstance'
@@ -21,10 +21,10 @@ const OrderConfirmMessage: React.FC<OrderConfirmMessageProps> = ({ messageId, or
 
   useEffect(() => {
     let mounted = true
-    orderApi.getOrderById(orderId)
-      .then(data => {
+    axiosInstance.get(`/api/messages/orders/${orderId}`)
+      .then(res => {
         if (mounted) {
-          setOrder(data)
+          setOrder(res.data)
           setLoading(false)
         }
       })

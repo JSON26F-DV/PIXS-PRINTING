@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Order;
+use App\Models\ScreenplateRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -10,7 +12,7 @@ use Illuminate\Support\Str;
 class MessageController extends Controller
 {
     /**
-     * Get messages for the authenticated user.
+     * Get messages.
      */
     public function index(Request $request): JsonResponse
     {
@@ -28,7 +30,23 @@ class MessageController extends Controller
             'created_at', 'updated_at',
         ];
 
-        if ($user->role === 'customer') {
+        if ($user->role === 'admin') {
+            $targetId = $request->query('target_id');
+            if ($targetId) {
+                $messages = DB::table('messages')
+                    ->select($safeColumns)
+                    ->where(function ($q) use ($targetId) {
+                        $q->where('sender_id', $targetId)
+                            ->orWhere('receiver_id', $targetId);
+                    })
+                    ->orderBy('created_at', 'asc')
+                    ->limit($perPage)
+                    ->offset($offset)
+                    ->get();
+            } else {
+                $messages = collect();
+            }
+        } else {
             $messages = DB::table('messages')
                 ->select($safeColumns)
                 ->where(function ($q) use ($user) {
@@ -39,24 +57,54 @@ class MessageController extends Controller
                 ->limit($perPage)
                 ->offset($offset)
                 ->get();
-        } else {
-            $messages = DB::table('messages')
-                ->select($safeColumns)
-                ->orderBy('created_at', 'asc')
-                ->limit($perPage)
-                ->offset($offset)
-                ->get();
         }
+
+        // Mark all messages as read for the current user (auto-read on load)
+        DB::table('messages')
+            ->where('receiver_id', $user->id)
+            ->where('is_read', 0)
+            ->update(['is_read' => 1]);
 
         $messageIds = $messages->pluck('id');
 
-        // Batch-fetch attachments and reactions (2 queries, not N+1)
+        // Batch-fetch attachments
         $attachmentsGrouped = DB::table('message_attachments')->whereIn('message_id', $messageIds)->get()->groupBy('message_id');
+
+        // Batch-fetch reactions
         $reactionsGrouped = DB::table('message_reactions')->whereIn('message_id', $messageIds)->get()->groupBy('message_id');
 
-        $messages = $messages->map(function ($msg) use ($attachmentsGrouped, $reactionsGrouped) {
+        // Batch-fetch reply-to messages context
+        $replyToIds = $messages->pluck('reply_to_id')->filter()->unique();
+        $replyToMessages = collect();
+        if ($replyToIds->isNotEmpty()) {
+            $replyToMessages = DB::table('messages')
+                ->whereIn('id', $replyToIds)
+                ->select('id', 'message', 'sender_id', 'sender_type')
+                ->get()
+                ->keyBy('id');
+        }
+
+        $messages = $messages->map(function ($msg) use ($attachmentsGrouped, $reactionsGrouped, $replyToMessages) {
             $msg->attachments = $attachmentsGrouped->get($msg->id, collect())->values();
-            $msg->reactions = $reactionsGrouped->get($msg->id, collect())->values();
+            
+            $msg->reactions = $reactionsGrouped->get($msg->id, collect())->map(function ($react) {
+                return [
+                    'user' => $react->user_id,
+                    'emoji' => $react->emoji,
+                    'user_type' => $react->user_type,
+                ];
+            })->values()->all();
+
+            $msg->reply_to = null;
+            if ($msg->reply_to_id && $replyToMessages->has($msg->reply_to_id)) {
+                $repliedMsg = $replyToMessages->get($msg->reply_to_id);
+                $msg->reply_to = [
+                    'id' => $repliedMsg->id,
+                    'text' => $repliedMsg->message,
+                    'sender_type' => $repliedMsg->sender_type,
+                    'sender_id' => $repliedMsg->sender_id,
+                ];
+            }
 
             return $msg;
         });
@@ -65,6 +113,37 @@ class MessageController extends Controller
             'data' => $messages,
         ]);
     }
+    /**
+     * Get all users (employees and customers) for the chat interface.
+     */
+    public function getUsers(Request $request): JsonResponse
+    {
+        $employees = DB::table('employees')
+            ->select('id', DB::raw("CONCAT(first_name, ' ', last_name) as name"), 'email', 'role', 'profile_picture')
+            ->get()
+            ->map(function ($emp) {
+                // Ensure account_type or similar property is set if needed by frontend
+                $emp->account_type = 'employee';
+                $emp->status = 'offline'; // Mock status since we don't track online status in DB
+                return $emp;
+            });
+
+        $customers = DB::table('customers')
+            ->select('id', DB::raw("CONCAT(first_name, ' ', last_name) as name"), 'email', 'role', 'profile_picture')
+            ->get()
+            ->map(function ($cust) {
+                $cust->account_type = 'customer';
+                $cust->status = 'offline';
+                return $cust;
+            });
+
+        $users = $employees->merge($customers);
+
+        return response()->json([
+            'data' => $users,
+        ]);
+    }
+
 
     /**
      * Get the total image upload count for the authenticated user.
@@ -167,7 +246,7 @@ class MessageController extends Controller
 
         // Automatically enforce that customers message the admin,
         // regardless of frontend input, prioritizing database security natively.
-        if ($senderType === 'customer') {
+        if ($user->role !== 'admin') {
             $receiverId = '1';
             $receiverType = 'employee';
         } else {
@@ -191,8 +270,8 @@ class MessageController extends Controller
             // Insert message
             DB::insert('
                 INSERT INTO messages 
-                (id, conversation_id, sender_id, sender_type, receiver_id, receiver_type, message, order_id, screenplate_request_id, created_at, updated_at) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+                (id, conversation_id, sender_id, sender_type, receiver_id, receiver_type, message, reply_to_id, order_id, screenplate_request_id, created_at, updated_at) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
             ', [
                 $msgId,
                 $convId,
@@ -201,6 +280,7 @@ class MessageController extends Controller
                 $receiverId,
                 $receiverType,
                 $validated['message'],
+                $validated['reply_to_id'] ?? null,
                 $validated['order_id'] ?? null,
                 $validated['screenplate_request_id'] ?? null,
             ]);
@@ -288,5 +368,146 @@ class MessageController extends Controller
         }
 
         return response()->json(['message' => 'Confirmed.']);
+    }
+
+    public function getOrderContext($id): JsonResponse
+    {
+        $order = Order::with([
+            'items',
+            'items.product',
+            'items.variant',
+            'items.colors.colorDetails',
+            'items.screenplate',
+            'address',
+        ])->where('id', $id)->first();
+
+        if (! $order) {
+            return response()->json(['message' => 'Order not found'], 404);
+        }
+
+        $formatted = [
+            'order_id' => $order->id,
+            'user_id' => $order->customer_id,
+            'total_amount' => (float) $order->total_amount,
+            'status' => $order->status,
+            'created_at' => $order->created_at,
+            'admin_comment' => $order->admin_comment,
+            'feedback' => $order->feedback,
+            'complaint' => $order->complaint,
+            'rating' => $order->rating,
+            'shipping_address' => $order->address ? [
+                'label' => $order->address->adress_label,
+                'region' => $order->address->region,
+                'province' => $order->address->province,
+                'city' => $order->address->city,
+                'barangay' => $order->address->barangay,
+                'street' => $order->address->street,
+                'postal_code' => $order->address->postal_code,
+                'contact_number' => $order->address->contact_number,
+            ] : null,
+            'order_items' => $order->items->map(function ($item) {
+                $order_item_colors = $item->colors ? $item->colors->map(function ($c) {
+                    return [
+                        'id' => $c->color_id,
+                        'name' => $c->colorDetails ? $c->colorDetails->name : $c->color_id,
+                        'hex' => $c->colorDetails ? $c->colorDetails->hex : '#000000',
+                    ];
+                })->toArray() : [];
+
+                $plate = $item->screenplate ? [
+                    'id' => $item->screenplate_id,
+                    'name' => $item->screenplate->plate_name ?? 'Custom Plate',
+                    'type' => $item->screenplate->type ?? 'Flatscreen',
+                    'channels' => (int) $item->screenplate->channels ?? 1,
+                    'setupFee' => 0,
+                    'printPricePerUnit' => (float) $item->plate_price,
+                ] : null;
+
+                return [
+                    'id' => (string) $item->id,
+                    'product_id' => $item->product_id,
+                    'productName' => $item->product ? $item->product->name : 'Unknown Product',
+                    'short_description' => $item->product ? $item->product->short_description : null,
+                    'productImage' => $item->product && $item->product->main_image
+                        ? '/images/products/'.$item->product->main_image
+                        : '',
+                    'quantity' => $item->quantity,
+                    'variant' => [
+                        'id' => $item->variant_id,
+                        'size' => $item->variant ? $item->variant->size : '',
+                        'width' => $item->variant ? $item->variant->width : null,
+                        'height' => $item->variant ? $item->variant->height : null,
+                        'unitPrice' => (float) $item->unit_price,
+                    ],
+                    'order_item_colors' => $order_item_colors,
+                    'plate' => $plate,
+                ];
+            })->toArray(),
+        ];
+
+        return response()->json($formatted);
+    }
+
+    public function getScreenplateRequestContext($id): JsonResponse
+    {
+        $request = ScreenplateRequest::with('product')
+            ->where('id', $id)
+            ->first();
+
+        if (! $request) {
+            return response()->json(['notFound' => true]);
+        }
+
+        return response()->json($request);
+    }
+
+    /**
+     * React to a message.
+     */
+    public function reactMessage(string $id): JsonResponse
+    {
+        $validated = request()->validate([
+            'emoji' => 'required|string|max:10',
+        ]);
+
+        $user = request()->user();
+        $userId = $user->id;
+        $userType = $user->role === 'customer' ? 'customer' : 'employee';
+        $emoji = $validated['emoji'];
+
+        $message = DB::table('messages')->where('id', $id)->first();
+
+        if (!$message) {
+            return response()->json(['message' => 'Message not found.'], 404);
+        }
+
+        // Security check: only allow if user is sender or receiver of the message
+        if ($message->sender_id !== $userId && $message->receiver_id !== $userId) {
+            return response()->json(['message' => 'Unauthorized.'], 403);
+        }
+
+        // Upsert: replace existing reaction (one reaction per user per message)
+        $existing = DB::table('message_reactions')
+            ->where('message_id', $id)
+            ->where('user_id', $userId)
+            ->first();
+
+        if ($existing) {
+            DB::table('message_reactions')
+                ->where('id', $existing->id)
+                ->update(['emoji' => $emoji]);
+        } else {
+            DB::table('message_reactions')->insert([
+                'message_id' => $id,
+                'user_id' => $userId,
+                'user_type' => $userType,
+                'emoji' => $emoji,
+            ]);
+        }
+
+        return response()->json([
+            'message' => 'Reaction saved.',
+            'emoji' => $emoji,
+        ]);
     }
 }

@@ -39,7 +39,7 @@ import AdminSettings from '../views/admin/Settings/AdminSettings'
 // import DisputeView from '../views/admin/DisputeView';
 // Staff Views
 import StaffOverview from '../views/staff/StaffOverview'
-import StaffComHub from '../views/staff/StaffComHub'
+
 import LiveQueue from '../pages/staff/LiveQueue'
 import Attendance from '../pages/staff/Attendance'
 
@@ -161,6 +161,16 @@ const AppRouter: React.FC = () => {
       </Route>
 
       <Route path="/delete-account" element={<DeletedAccount />} />
+      
+      {/* Standalone Admin Message Route */}
+      <Route
+        path="/admin/message"
+        element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <MessengerPage />
+          </ProtectedRoute>
+        }
+      />
 
       {/* Admin Routes */}
       <Route
@@ -190,7 +200,6 @@ const AppRouter: React.FC = () => {
         <Route path="payroll" element={<Payroll />} />
         <Route path="payroll/manage/:id" element={<ManageAttendance />} />
         <Route path="orders" element={<Orders />} />
-        <Route path="message" element={<StaffComHub />} />
         <Route path="setting" element={<AdminSettings />} />
         <Route path="marketing" element={<MarketingPromotions />} />
       </Route>

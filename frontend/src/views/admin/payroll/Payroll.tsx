@@ -32,6 +32,10 @@ const Payroll: React.FC = () => {
   const [holidayDate, setHolidayDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'))
   const [isProcessingHoliday, setIsProcessingHoliday] = useState(false)
   const [holidayConfirmOpen, setHolidayConfirmOpen] = useState(false)
+  const [holidayConfirmActionConfig, setHolidayConfirmActionConfig] = useState<{
+    action: 'set' | 'undo'
+    type?: 'non_working' | 'special_work' | 'regular'
+  } | null>(null)
 
   // Late Minutes Modal
   const [lateModalOpen, setLateModalOpen] = useState(false)
@@ -41,6 +45,31 @@ const Payroll: React.FC = () => {
   // Bulk Payment Modal
   const [bulkPayModalOpen, setBulkPayModalOpen] = useState(false)
   const [printReceiptsChecked, setPrintReceiptsChecked] = useState(true)
+
+  // Memoized unpaid list
+  const unpaidEmployees = useMemo(() => {
+    return employeesState.filter(emp => emp.status_today !== 'pending' && !emp.is_paid)
+  }, [employeesState])
+
+  const hasUnpaidEmployees = unpaidEmployees.length > 0
+
+  const getFormattedHolidayDate = () => {
+    if (!holidayDate) return ''
+    try {
+      const parts = holidayDate.split('-')
+      const dateObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]))
+      return format(dateObj, 'EEEE, MMMM dd, yyyy')
+    } catch {
+      return holidayDate
+    }
+  }
+
+  const handleConfirmHolidayAction = async () => {
+    if (!holidayConfirmActionConfig) return
+    const { action, type } = holidayConfirmActionConfig
+    setHolidayConfirmActionConfig(null)
+    await handleHolidayAction(action, type)
+  }
 
   // Print Ref
   const printRef = useRef<HTMLDivElement>(null)
@@ -204,8 +233,7 @@ const Payroll: React.FC = () => {
   }
 
   const handlePayAllEmployees = async () => {
-    const unpaidList = employeesState.filter(emp => emp.status_today !== 'pending' && !emp.is_paid)
-    if (unpaidList.length === 0) {
+    if (unpaidEmployees.length === 0) {
       toast.info("No unpaid employee records to pay today.")
       setBulkPayModalOpen(false)
       return
@@ -217,7 +245,7 @@ const Payroll: React.FC = () => {
     try {
       const todayStr = format(new Date(), 'yyyy-MM-dd')
       
-      await Promise.all(unpaidList.map(async (emp) => {
+      await Promise.all(unpaidEmployees.map(async (emp) => {
         const payload = {
           date: todayStr,
           status: emp.status_today,
@@ -245,7 +273,7 @@ const Payroll: React.FC = () => {
         }
       }))
 
-      toast.success(`Successfully processed payouts for all ${unpaidList.length} employees today!`)
+      toast.success(`Successfully processed payouts for all ${unpaidEmployees.length} employees today!`)
       
       if (printReceiptsChecked) {
         setTimeout(() => {
@@ -267,9 +295,9 @@ const Payroll: React.FC = () => {
       <PayrollSystemHeader />
 
       {/* Holiday Configuration Section */}
-      <div className="group relative flex flex-col md:flex-row md:items-center justify-between overflow-hidden rounded-[40px] border border-slate-200 bg-white p-8 shadow-sm">
+      <div className="group relative flex flex-col items-center text-center justify-center overflow-hidden rounded-[40px] border border-slate-200 bg-white p-8 shadow-sm space-y-6">
         <div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center justify-center gap-3">
             <Coffee className="text-amber-500" size={24} />
             <h4 className="text-xl font-black tracking-tighter text-slate-900 uppercase italic">
               Global Holiday Configuration
@@ -280,7 +308,7 @@ const Payroll: React.FC = () => {
           </p>
         </div>
         
-        <div className="relative z-10 mt-6 md:mt-0 flex flex-wrap items-center gap-4">
+        <div className="relative z-10 flex flex-wrap items-center justify-center gap-4 w-full">
           <div className="relative">
              <CalendarIcon className="absolute top-1/2 left-4 -translate-y-1/2 text-slate-400" size={16} />
              <input 
@@ -294,7 +322,7 @@ const Payroll: React.FC = () => {
           {isAdmin && (
             <>
               <button
-                onClick={() => handleHolidayAction('set', 'non_working')}
+                onClick={() => setHolidayConfirmActionConfig({ action: 'set', type: 'non_working' })}
                 disabled={isProcessingHoliday}
                 className="flex h-14 items-center justify-center gap-2 rounded-2xl bg-slate-900 px-8 text-xs font-black tracking-widest text-white uppercase shadow-xl transition-all hover:bg-slate-800 active:scale-95 disabled:opacity-50"
               >
@@ -302,7 +330,7 @@ const Payroll: React.FC = () => {
               </button>
 
               <button
-                onClick={() => handleHolidayAction('set', 'special_work')}
+                onClick={() => setHolidayConfirmActionConfig({ action: 'set', type: 'special_work' })}
                 disabled={isProcessingHoliday}
                 className="flex h-14 items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-8 text-xs font-black tracking-widest text-white uppercase shadow-xl shadow-indigo-600/20 transition-all hover:bg-indigo-700 active:scale-95 disabled:opacity-50"
               >
@@ -310,7 +338,7 @@ const Payroll: React.FC = () => {
               </button>
 
               <button
-                onClick={() => handleHolidayAction('undo')}
+                onClick={() => setHolidayConfirmActionConfig({ action: 'undo' })}
                 disabled={isProcessingHoliday}
                 className="flex h-14 items-center justify-center gap-2 rounded-2xl border border-rose-200 bg-rose-50 px-8 text-xs font-black tracking-widest text-rose-600 uppercase shadow-sm transition-all hover:bg-rose-100 hover:text-rose-700 active:scale-95 disabled:opacity-50"
               >
@@ -373,6 +401,67 @@ const Payroll: React.FC = () => {
       <div className="hidden">
         <PayrollPrint ref={printRef} employees={employeesState.filter(emp => emp.status_today !== 'pending')} date={format(new Date(), 'yyyy-MM-dd')} />
       </div>
+
+      {/* Premium Holiday Confirmation Modal for specific selected date and action */}
+      {holidayConfirmActionConfig && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div 
+            className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" 
+            onClick={() => setHolidayConfirmActionConfig(null)}
+          />
+          <div className="relative w-full max-w-md overflow-hidden rounded-[30px] bg-white p-8 text-center shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-amber-50 text-amber-500">
+              <Coffee size={32} />
+            </div>
+            <h3 className="mb-2 text-xl font-black tracking-tighter text-slate-900 uppercase">
+              Confirm Holiday Action
+            </h3>
+            
+            <div className="my-6 rounded-2xl bg-slate-50 p-4 border border-slate-100">
+              <span className="block text-[10px] font-black tracking-widest text-slate-400 uppercase">Selected Target Date</span>
+              <span className="block text-md font-black text-slate-800 font-mono mt-1">
+                {getFormattedHolidayDate()}
+              </span>
+            </div>
+
+            <p className="mb-8 text-sm font-medium text-slate-500">
+              {holidayConfirmActionConfig.action === 'undo' ? (
+                <span>
+                  Are you sure you want to <strong className="font-extrabold text-rose-600">UNDO</strong> the holiday configuration for this day? This will revert employees back to regular work day logs.
+                </span>
+              ) : holidayConfirmActionConfig.type === 'special_work' ? (
+                <span>
+                  Are you sure you want to mark this day as a <strong className="font-extrabold text-indigo-600">Special Non-Working / Work Day</strong>?
+                </span>
+              ) : (
+                <span>
+                  Are you sure you want to mark this day as a <strong className="font-extrabold text-slate-900">Regular Non-Working Holiday</strong> for all active employees?
+                </span>
+              )}
+            </p>
+
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={handleConfirmHolidayAction}
+                disabled={isProcessingHoliday}
+                className="flex w-full items-center justify-center rounded-xl bg-amber-500 py-4 text-xs font-black tracking-widest text-white shadow-xl shadow-amber-500/20 uppercase transition-all hover:bg-amber-600 disabled:opacity-50"
+              >
+                {isProcessingHoliday ? (
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                ) : (
+                  'Yes, Confirm'
+                )}
+              </button>
+              <button
+                onClick={() => setHolidayConfirmActionConfig(null)}
+                className="w-full rounded-xl bg-slate-50 py-4 text-xs font-black tracking-widest text-slate-500 uppercase transition-all hover:bg-slate-100 hover:text-slate-900"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Premium Holiday Confirmation Modal */}
       {holidayConfirmOpen && (
@@ -479,39 +568,43 @@ const Payroll: React.FC = () => {
 
             {/* Unpaid list view */}
             <div className="max-h-40 overflow-y-auto mb-6 border border-slate-100 rounded-2xl p-4 bg-slate-50/50 space-y-3">
-              {employeesState.filter(emp => emp.status_today !== 'pending' && !emp.is_paid).map(emp => (
+              {unpaidEmployees.map(emp => (
                 <div key={emp.id} className="flex justify-between items-center text-xs">
                   <span className="font-bold text-slate-800">{emp.name}</span>
                   <span className="font-black text-slate-500 uppercase">₱{emp.total_earnings.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                 </div>
               ))}
-              {employeesState.filter(emp => emp.status_today !== 'pending' && !emp.is_paid).length === 0 && (
+              {!hasUnpaidEmployees && (
                 <div className="text-center text-xs text-slate-400 font-medium py-4">No unpaid records for today.</div>
               )}
             </div>
 
             {/* Print Toggle */}
-            <div className="mb-6 flex items-center gap-3 rounded-2xl border border-slate-150 p-4 hover:bg-slate-50/55 transition-all">
-              <input
-                type="checkbox"
-                id="printReceiptToggle"
-                checked={printReceiptsChecked}
-                onChange={(e) => setPrintReceiptsChecked(e.target.checked)}
-                className="h-5 w-5 rounded border-slate-300 text-emerald-500 focus:ring-emerald-500"
-              />
-              <label htmlFor="printReceiptToggle" className="cursor-pointer select-none">
-                <span className="block text-xs font-black text-slate-800 uppercase tracking-widest">Print Payslips (2/4 Layout)</span>
-                <span className="block text-[10px] font-medium text-slate-400">Prints 4 accounts grouped on single paper sheets</span>
-              </label>
-            </div>
+            {hasUnpaidEmployees && (
+              <div className="mb-6 flex items-center gap-3 rounded-2xl border border-slate-150 p-4 hover:bg-slate-50/55 transition-all">
+                <input
+                  type="checkbox"
+                  id="printReceiptToggle"
+                  checked={printReceiptsChecked}
+                  onChange={(e) => setPrintReceiptsChecked(e.target.checked)}
+                  className="h-5 w-5 rounded border-slate-300 text-emerald-500 focus:ring-emerald-500"
+                />
+                <label htmlFor="printReceiptToggle" className="cursor-pointer select-none">
+                  <span className="block text-xs font-black text-slate-800 uppercase tracking-widest">Print Payslips (2/4 Layout)</span>
+                  <span className="block text-[10px] font-medium text-slate-400">Prints 4 accounts grouped on single paper sheets</span>
+                </label>
+              </div>
+            )}
 
             <div className="flex flex-col gap-3">
-              <button
-                onClick={handlePayAllEmployees}
-                className="flex w-full items-center justify-center rounded-xl bg-emerald-500 py-4 text-xs font-black tracking-widest text-white shadow-xl shadow-emerald-500/20 uppercase transition-all hover:bg-emerald-600"
-              >
-                Confirm Payout
-              </button>
+              {hasUnpaidEmployees && (
+                <button
+                  onClick={handlePayAllEmployees}
+                  className="flex w-full items-center justify-center rounded-xl bg-emerald-500 py-4 text-xs font-black tracking-widest text-white shadow-xl shadow-emerald-500/20 uppercase transition-all hover:bg-emerald-600"
+                >
+                  Confirm Payout
+                </button>
+              )}
               <button
                 onClick={() => setBulkPayModalOpen(false)}
                 className="w-full rounded-xl bg-slate-50 py-4 text-xs font-black tracking-widest text-slate-500 uppercase transition-all hover:bg-slate-100 hover:text-slate-900"
