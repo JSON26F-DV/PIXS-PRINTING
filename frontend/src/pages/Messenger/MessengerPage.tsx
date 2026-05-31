@@ -127,6 +127,8 @@ const MessengerPage: React.FC = () => {
 
   const [messages, setMessages] = useState<IMessage[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [hasMoreMessages, setHasMoreMessages] = useState(true)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [imageUploadCount, setImageUploadCount] = useState(0)
 
   const fetchImageCount = async () => {
@@ -138,62 +140,93 @@ const MessengerPage: React.FC = () => {
     }
   }
 
-  useEffect(() => {
-    const fetchMessages = async () => {
-      try {
-        let endpoint = '/api/messages'
-        if (user.role === 'admin' && selectedUserId) {
-          endpoint += `?target_id=${selectedUserId}`
-        } else if (user.role === 'admin' && !selectedUserId) {
-          setMessages([])
-          setIsLoading(false)
-          return
+  const fetchMessages = async (cursor?: string) => {
+    try {
+      const endpoint = '/api/messages'
+      const limit = cursor ? '30' : '10'
+      const params = new URLSearchParams({ per_page: limit })
+      if (cursor) params.append('cursor', cursor)
+      
+      if (user?.role === 'admin' && selectedUserId) {
+        params.append('target_id', selectedUserId)
+      } else if (user?.role === 'admin' && !selectedUserId) {
+        return { formatted: [], nextCursor: null }
+      }
+
+      const res = await axiosInstance.get(`${endpoint}?${params.toString()}`)
+      const formatted = res.data.data.map((m: ApiMessage) => {
+        const isMine = String(m.sender_id) === String(user?.id)
+        
+        let replyTo = undefined;
+        if (m.reply_to) {
+          const replyIsMine = String(m.reply_to.sender_id) === String(user?.id);
+          replyTo = {
+            id: m.reply_to.id,
+            text: m.reply_to.text,
+            senderName: replyIsMine ? 'You' : (m.reply_to.sender_type === 'employee' ? 'PIXS Admin' : 'Customer')
+          };
         }
 
-        const res = await axiosInstance.get(endpoint)
-        const formatted = res.data.data.map((m: ApiMessage) => {
-          const isMine = String(m.sender_id) === String(user.id)
-          
-          let replyTo = undefined;
-          if (m.reply_to) {
-            const replyIsMine = String(m.reply_to.sender_id) === String(user.id);
-            replyTo = {
-              id: m.reply_to.id,
-              text: m.reply_to.text,
-              senderName: replyIsMine ? 'You' : (m.reply_to.sender_type === 'employee' ? 'PIXS Admin' : 'Customer')
-            };
-          }
+        return {
+          id: m.id,
+          sender: isMine ? 'customer' : 'admin', 
+          senderName: isMine ? 'You' : (m.sender_type === 'employee' ? 'PIXS Admin' : 'Customer'),
+          text: m.message,
+          timestamp: m.created_at,
+          attachments: m.attachments ? m.attachments.map((a: { type: 'image' | 'file', url: string, name: string }) => ({ type: a.type, url: a.url, name: a.name })) : [],
+          reactions: m.reactions ? m.reactions.map((r: { user: string, emoji: string }) => ({ user: r.user, emoji: r.emoji })) : [],
+          replyTo,
+          senderId: m.sender_id,
+          receiverId: m.receiver_id,
+          order_id: m.order_id,
+          screenplate_request_id: m.screenplate_request_id,
+          is_confirm: m.is_confirm
+        }
+      })
+      
+      return { formatted, nextCursor: res.data.next_cursor }
+    } catch (error) {
+      console.error('Failed to load messages', error)
+      return { formatted: [], nextCursor: null }
+    }
+  }
 
-          return {
-            id: m.id,
-            sender: isMine ? 'customer' : 'admin', 
-            senderName: isMine ? 'You' : (m.sender_type === 'employee' ? 'PIXS Admin' : 'Customer'),
-            text: m.message,
-            timestamp: m.created_at,
-            attachments: m.attachments ? m.attachments.map(a => ({ type: a.type, url: a.url, name: a.name })) : [],
-            reactions: m.reactions ? m.reactions.map(r => ({ user: r.user, emoji: r.emoji })) : [],
-            replyTo,
-            senderId: m.sender_id,
-            receiverId: m.receiver_id,
-            order_id: m.order_id,
-            screenplate_request_id: m.screenplate_request_id,
-            is_confirm: m.is_confirm
-          }
-        })
-        setMessages(formatted)
-      } catch (error) {
-        console.error('Failed to load messages', error)
-      } finally {
+  const loadMoreMessages = async () => {
+    if (isLoadingMore || !hasMoreMessages || messages.length === 0) return
+    setIsLoadingMore(true)
+    const cursor = messages[0]?.id
+    const { formatted: olderMessages, nextCursor } = await fetchMessages(cursor)
+    
+    if (olderMessages.length > 0) {
+      setMessages(prev => [...olderMessages, ...prev])
+      setHasMoreMessages(nextCursor !== null)
+    } else {
+      setHasMoreMessages(false)
+    }
+    setIsLoadingMore(false)
+  }
+
+  useEffect(() => {
+    const initializeMessages = async () => {
+      if (user && user.id) {
+        setIsLoading(true)
+        if (user.role === 'admin' && !selectedUserId) {
+           setMessages([])
+           setIsLoading(false)
+        } else {
+           const { formatted, nextCursor } = await fetchMessages()
+           setMessages(formatted)
+           setHasMoreMessages(nextCursor !== null)
+           setIsLoading(false)
+        }
+        if (user.role === 'admin') fetchUsers()
+        fetchImageCount()
+      } else {
         setIsLoading(false)
       }
     }
-    if (user && user.id) {
-      if (user.role === 'admin') fetchUsers()
-      fetchMessages()
-      fetchImageCount()
-    } else {
-      setIsLoading(false)
-    }
+    initializeMessages()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, selectedUserId])
 
   const [isHeroVisible, setIsHeroVisible] = useState(() => {
@@ -384,9 +417,9 @@ const MessengerPage: React.FC = () => {
   }
 
   return (
-    <div className="MessengerTerminal relative flex min-h-screen flex-col bg-slate-50 scrollbar-neogreen">
+    <div className="MessengerTerminal relative flex h-screen max-h-screen overflow-hidden flex-col bg-slate-50">
       {user?.role === 'admin' ? (
-        <div className="flex flex-1 flex-col">
+        <div className="flex flex-1 flex-col h-full overflow-hidden">
           {/* Header Fixed Logic */}
           <div className="fixed top-0 left-0 z-40 w-full">
             <ChatHeader
@@ -402,7 +435,16 @@ const MessengerPage: React.FC = () => {
           <main className="relative flex flex-1 overflow-hidden pt-[80px] pb-[116px]">
             {selectedUserId ? (
               <div className="flex flex-1 flex-col px-0.5 min-[360px]:px-1 min-[414px]:px-1 sm:px-0">
-                <MessageList messages={messages} onReact={handleReaction} onReply={setActiveReplyTo} onEdit={handleEditMessage} onDelete={handleDeleteMessage} isLoading={isLoading} />
+                <MessageList 
+                  messages={messages} 
+                  onReact={handleReaction} 
+                  onReply={setActiveReplyTo} 
+                  onEdit={handleEditMessage} 
+                  onDelete={handleDeleteMessage} 
+                  isLoading={isLoading} 
+                  onLoadMore={loadMoreMessages}
+                  isLoadingMore={isLoadingMore}
+                />
               </div>
             ) : (
               <div className="flex h-[calc(100vh-80px)] flex-col items-center justify-center p-12 text-center text-slate-400 w-full mt-[80px]">
@@ -500,7 +542,7 @@ const MessengerPage: React.FC = () => {
 
           {/* MessageInput Fixed Logic */}
           {selectedUserId && (
-            <div className="fixed bottom-0 left-0 z-40 w-full bg-white pb-20 md:pb-0">
+            <div className="fixed bottom-0 left-0 z-40 w-full bg-white">
               <MessageInput onSend={handleSendMessage} activeReplyTo={activeReplyTo} onCancelReply={() => setActiveReplyTo(null)} totalImageUploads={imageUploadCount} isEmployee={true} />
             </div>
           )}
@@ -530,7 +572,7 @@ const MessengerPage: React.FC = () => {
             </main>
           </div>
         ) : (
-          <div className="flex flex-1 flex-col">
+          <div className="flex flex-1 flex-col h-full overflow-hidden">
             {/* Header Fixed Logic */}
             <div className="fixed top-0 left-0 z-40 w-full md:top-20">
               <ChatHeader
@@ -549,6 +591,8 @@ const MessengerPage: React.FC = () => {
                   onEdit={handleEditMessage}
                   onDelete={handleDeleteMessage}
                   isLoading={isLoading}
+                  onLoadMore={loadMoreMessages}
+                  isLoadingMore={isLoadingMore}
                 />
               </div>
 

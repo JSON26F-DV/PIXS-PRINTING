@@ -5,7 +5,8 @@ import type { Order } from '../pages/Order/components/OrderCard'
 export interface CreateOrderPayload {
     cart_item_ids: string[]
     address_id: string
-    payment_method_id: string
+    payment_method_id?: string | null
+    payment_code?: string | null
     delivery_method_id: string
     production_notes?: string
     discount_id?: string | null

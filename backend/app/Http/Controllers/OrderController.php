@@ -266,7 +266,8 @@ class OrderController extends Controller
                 'cart_item_ids' => 'required|array|min:1',
                 'cart_item_ids.*' => 'required|string',
                 'address_id' => 'required|string',
-                'payment_method_id' => 'required|string',
+                'payment_method_id' => 'nullable|string',
+                'payment_code' => 'nullable|string',
                 'delivery_method_id' => 'required|string|exists:delivery_methods,id',
                 'production_notes' => 'nullable|string',
                 'discount_id' => 'nullable|string|exists:discounts,id',
@@ -277,8 +278,31 @@ class OrderController extends Controller
             return response()->json(['message' => 'Validation failed', 'errors' => $e->errors()], 422);
         }
 
+        if (empty($validated['payment_code']) && empty($validated['payment_method_id'])) {
+            return response()->json(['message' => 'Either a payment method or a payment code is required.'], 422);
+        }
+
+        // Verify payment code if provided
+        $payCode = null;
+        if (!empty($validated['payment_code'])) {
+            $payCode = DB::table('payment_codes')
+                ->where('code', $validated['payment_code'])
+                ->first();
+
+            if (!$payCode) {
+                return response()->json(['message' => 'The payment code is invalid.'], 404);
+            }
+
+            if ($payCode->is_used) {
+                return response()->json([
+                    'message' => 'This payment code has already been used.',
+                    'error_code' => 'PAYMENT_CODE_ALREADY_USED'
+                ], 422);
+            }
+        }
+
         try {
-            return DB::transaction(function () use ($validated, $user) {
+            return DB::transaction(function () use ($validated, $user, $payCode) {
                 // STEP 2: Load cart items with relations
                 $cartItems = CartItem::with(['colors', 'variant', 'screenplate', 'product'])
                     ->whereIn('id', $validated['cart_item_ids'])
@@ -314,6 +338,16 @@ class OrderController extends Controller
                         'message' => 'INSUFFICIENT_STOCK',
                         'stock_errors' => $stockErrors,
                     ], 422);
+                }
+
+                // STEP 2.5: Mark payment code as used if verified
+                if ($payCode) {
+                    DB::table('payment_codes')
+                        ->where('id', $payCode->id)
+                        ->update([
+                            'is_used' => 1,
+                            'used_at' => now(),
+                        ]);
                 }
 
                 // STEP 3: Calculate totals
@@ -377,13 +411,14 @@ class OrderController extends Controller
                     'id' => $orderId,
                     'customer_id' => $user->id,
                     'address_id' => $validated['address_id'],
-                    'payment_method_id' => $validated['payment_method_id'],
+                    'payment_method_id' => $validated['payment_method_id'] ?? null,
+                    'payment_code_id' => $payCode ? $payCode->id : null,
                     'delivery_method_id' => $validated['delivery_method_id'],
                     'production_notes' => $validated['production_notes'] ?? null,
                     'discount_id' => $discountId,
                     'total_discount_amount' => $totalDiscountAmount,
                     'total_amount' => $finalAmount,
-                    'status' => 'PENDING',
+                    'status' => $payCode ? 'UNPAID' : 'PENDING',
                     'rating' => 0,
                     'feedback' => null,
                     'admin_comment' => null,
@@ -490,6 +525,7 @@ class OrderController extends Controller
                     'receiver_type' => 'employee',
                     'message' => 'review your shipping address',
                     'order_id' => $orderId,
+                    'payment_code_id' => $payCode ? $payCode->id : null,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);
@@ -498,7 +534,7 @@ class OrderController extends Controller
                 return response()->json([
                     'id' => $orderId,
                     'total_amount' => $finalAmount,
-                    'status' => 'PENDING',
+                    'status' => $order->status,
                 ], 201);
             });
         } catch (\Throwable $e) {

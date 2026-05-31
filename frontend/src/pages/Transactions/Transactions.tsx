@@ -16,6 +16,7 @@ import type { CartItem } from '../../types/cart'
 import AbortConfirmModal from '../../components/Transactions/AbortConfirmModal'
 import PurchaseSuccessModal from '../../components/Transactions/PurchaseSuccessModal'
 import StockAlertModal from '../../components/Transactions/StockAlertModal'
+import PaymentCodeAlertModal from '../../components/Transactions/PaymentCodeAlertModal'
 import { orderApi } from '../../api/orders.api'
 import { cartService } from '../AddToCart/services/cartService'
 
@@ -145,6 +146,11 @@ const Transactions: React.FC = () => {
   const [isStockAlertOpen, setIsStockAlertOpen] = useState(false)
   const [stockAlertItems, setStockAlertItems] = useState<{ name: string; requested: number; available: number }[]>([])
 
+  // Payment Code State
+  const [paymentCode, setPaymentCode] = useState('')
+  const [isCodeAlertOpen, setIsCodeAlertOpen] = useState(false)
+  const [codeAlertMessage, setCodeAlertMessage] = useState('')
+
 
   // Initial Data Load
   useEffect(() => {
@@ -211,7 +217,9 @@ const Transactions: React.FC = () => {
   }
 
   const isFormValid =
-    selectedAddressId && selectedPaymentId && selectedDeliveryId
+    selectedAddressId &&
+    (selectedPaymentId === 'payment_code' ? paymentCode.trim().length > 0 : selectedPaymentId) &&
+    selectedDeliveryId
 
   const handlePurchase = async () => {
     if (!isFormValid) {
@@ -249,7 +257,8 @@ const Transactions: React.FC = () => {
     const payload: import('../../api/orders.api').CreateOrderPayload = {
       cart_item_ids: checkoutItems.map(i => i.id),
       address_id: selectedAddr.id,
-      payment_method_id: selectedPay!.id,
+      payment_method_id: selectedPaymentId === 'payment_code' ? null : selectedPay?.id,
+      payment_code: selectedPaymentId === 'payment_code' ? paymentCode.trim() : null,
       delivery_method_id: delMeta?.id || selectedDeliveryId,
       production_notes: notes,
       discount_id: selectedDiscount?.id ?? null,
@@ -316,8 +325,20 @@ const Transactions: React.FC = () => {
     } catch (err) {
       console.error('Purchase Error:', err)
 
-      const axiosErr = err as { response?: { data?: { message?: string; stock_errors?: { product_name: string; requested: number; available: number }[] } } };
+      const axiosErr = err as { response?: { status?: number; data?: { message?: string; error_code?: string; stock_errors?: { product_name: string; requested: number; available: number }[] } } };
       const backendData = axiosErr.response?.data
+
+      if (backendData?.error_code === 'PAYMENT_CODE_ALREADY_USED') {
+        setCodeAlertMessage('THIS PAYMENT CODE HAS ALREADY BEEN USED. CODES ARE ONE-TIME USE ONLY.')
+        setIsCodeAlertOpen(true)
+        return
+      }
+
+      if (axiosErr.response?.status === 404 && backendData?.message?.toLowerCase().includes('payment code')) {
+        setCodeAlertMessage('THE PAYMENT CODE IS INVALID. PLEASE VERIFY THE SPELLING.')
+        setIsCodeAlertOpen(true)
+        return
+      }
 
       if (backendData?.message === 'INSUFFICIENT_STOCK' && backendData?.stock_errors) {
         setStockAlertItems(
@@ -415,30 +436,12 @@ const Transactions: React.FC = () => {
 
             {/* 💳 PAYMENT METHOD FALLBACK */}
             {/* If no payment methods found, prompt user to add one to continue checkout */}
-            {paymentMethods.length > 0 ? (
-              <PaymentSection
-                selectedId={selectedPaymentId}
-                onSelect={setSelectedPaymentId}
-              />
-            ) : (
-              <div className="PaymentFallback rounded-[32px] border-2 border-dashed border-slate-200 bg-white p-12 text-center">
-                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-slate-50 text-slate-400">
-                  <ShieldCheck size={32} />
-                </div>
-                <h3 className="text-lg font-black tracking-tighter text-slate-900 uppercase italic">
-                  No Payment Method Linked.
-                </h3>
-                <p className="mt-2 text-[10px] font-bold tracking-widest text-slate-400 uppercase italic">
-                  PLEASE ADD A PAYMENT METHOD TO SECURE YOUR ORDER.
-                </p>
-                <button 
-                  onClick={() => navigate('/settings', { state: { section: 'payment' } })}
-                  className="mt-6 text-[10px] font-black tracking-[4px] text-pixs-mint border border-pixs-mint/20 px-6 py-3 rounded-full hover:bg-pixs-mint/5 transition-all uppercase italic"
-                >
-                  Link Payment Method
-                </button>
-              </div>
-            )}
+            <PaymentSection
+              selectedId={selectedPaymentId}
+              onSelect={setSelectedPaymentId}
+              paymentCode={paymentCode}
+              onPaymentCodeChange={setPaymentCode}
+            />
 
             <div className="h-px w-full bg-slate-100" />
 
@@ -634,6 +637,12 @@ const Transactions: React.FC = () => {
         isOpen={isStockAlertOpen}
         items={stockAlertItems}
         onClose={() => setIsStockAlertOpen(false)}
+      />
+
+      <PaymentCodeAlertModal
+        isOpen={isCodeAlertOpen}
+        message={codeAlertMessage}
+        onClose={() => setIsCodeAlertOpen(false)}
       />
     </div>
   )

@@ -1,7 +1,9 @@
-import React, { useRef, useEffect, useState } from 'react'
+import React, { useRef, useEffect, useState, useCallback } from 'react'
+import { Virtuoso } from 'react-virtuoso'
 
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
+import type { PanInfo } from 'framer-motion'
 import {
   Smile,
   MoreHorizontal,
@@ -34,6 +36,8 @@ interface MessageListProps {
   onEdit: (id: string, text: string) => void
   onDelete: (id: string) => void
   isLoading?: boolean
+  onLoadMore?: () => void
+  isLoadingMore?: boolean
 }
 
 const QUICK_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '😡']
@@ -133,16 +137,14 @@ const MessageBubble: React.FC<{
     <motion.div
       drag="x"
       dragConstraints={{ left: 0, right: 0 }}
-      onDragEnd={(_, info) => {
+      onDragEnd={(_, info: PanInfo) => {
         if (info.offset.x < -100 || info.offset.x > 100) onReply()
       }}
-      initial={{ opacity: 0, y: 10, scale: 0.95 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
       className={clsx(
         'group relative mb-3 md:mb-8 flex cursor-default flex-col',
         isCustomer ? 'items-end mr-2 min-[360px]:mr-3.5 min-[375px]:mr-3.5 min-[414px]:mr-3 sm:mr-0' : 'items-start',
       )}
-      >
+    >
       <div
         className={clsx(
           'relative flex max-w-[80%] min-[414px]:max-w-[85%] flex-col md:max-w-[70%]',
@@ -514,11 +516,12 @@ const MessageList: React.FC<MessageListProps> = ({
   onEdit,
   onDelete,
   isLoading,
+  onLoadMore,
+  isLoadingMore,
 }) => {
-  const scrollRef = useRef<HTMLDivElement>(null)
-  const [showScrollDown, setShowScrollDown] = useState(false)
-  const [isHoveredBottom, setIsHoveredBottom] = useState(false)
-  const isNearBottomRef = useRef(true)
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const [scrollContainer, setScrollContainer] = useState<HTMLDivElement | null>(null)
+  const [hasScrolledUp, setHasScrolledUp] = useState(false)
   const prevLengthRef = useRef(messages.length)
 
   const [galleryOpen, setGalleryOpen] = useState(false)
@@ -529,76 +532,69 @@ const MessageList: React.FC<MessageListProps> = ({
     setGalleryOpen(true)
   }
 
+  // Check if viewport is at the bottom
+  const isNearBottom = (): boolean => {
+    const container = scrollContainerRef.current
+    if (!container) return true
+    
+    const { scrollTop, scrollHeight, clientHeight } = container
+    return scrollHeight - scrollTop - clientHeight < 50
+  }
+
+  // Scroll to the very bottom of messages
   const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
-    const targetY = Math.max(
-      document.body.scrollHeight,
-      document.documentElement.scrollHeight,
-      document.documentElement.offsetHeight,
-    )
-    window.scrollTo({
-      top: targetY,
+    const container = scrollContainerRef.current
+    if (!container) return
+    
+    container.scrollTo({
+      top: container.scrollHeight,
       behavior,
     })
   }
+
+  // Handle scroll event
+  const handleScroll = useCallback(() => {
+    setHasScrolledUp(!isNearBottom())
+  }, [])
+
+  useEffect(() => {
+    const container = scrollContainerRef.current
+    if (!container) return
+
+    container.addEventListener('scroll', handleScroll)
+    return () => container.removeEventListener('scroll', handleScroll)
+  }, [scrollContainer, handleScroll])
 
   useEffect(() => {
     const newMessage = messages.length > prevLengthRef.current
     prevLengthRef.current = messages.length
 
-    if (newMessage || isNearBottomRef.current) {
+    if (newMessage || isNearBottom()) {
       setTimeout(() => {
         scrollToBottom(newMessage ? 'smooth' : 'auto')
       }, 50)
     }
   }, [messages])
 
-  useEffect(() => {
-    const handleWindowScroll = () => {
-      const scrollTop = window.scrollY
-      const scrollHeight = document.body.scrollHeight
-      const clientHeight = window.innerHeight
-      const scrollBottom = scrollHeight - scrollTop - clientHeight
-
-      const nearBottom = scrollBottom < 50
-      isNearBottomRef.current = nearBottom
-      setShowScrollDown(!nearBottom)
-    }
-
-    window.addEventListener('scroll', handleWindowScroll)
-    return () => window.removeEventListener('scroll', handleWindowScroll)
-  }, [])
-
   return (
-    <div className="relative w-full">
+    <div className="relative w-full h-full overflow-hidden">
       <div
-        ref={scrollRef}
-        className="MessageList flex flex-col scroll-smooth bg-emoji-pattern bg-slate-50/20 px-2 min-[360px]:px-3 min-[414px]:px-3 sm:px-8 pt-6 md:pt-12 pb-8 md:pb-14"
+        ref={(el) => {
+          scrollContainerRef.current = el
+          setScrollContainer(el)
+        }}
+        className="MessageList flex flex-col scroll-smooth bg-emoji-pattern bg-slate-50/20 px-2 min-[360px]:px-3 min-[414px]:px-3 sm:px-8 pt-6 md:pt-12 md:pb-14"
         style={{
+          height: '100%',
+          overflowY: 'auto',
           WebkitOverflowScrolling: 'touch',
-          touchAction: 'pan-y',
           scrollbarWidth: 'thin',
           scrollbarColor: '#39ff14 transparent',
         }}
       >
-        <style>{`
-          .MessageList::-webkit-scrollbar {
-            width: 6px;
-          }
-          .MessageList::-webkit-scrollbar-track {
-            background: transparent;
-          }
-          .MessageList::-webkit-scrollbar-thumb {
-            background-color: #39ff14;
-            border-radius: 99px;
-            transition: background-color 0.2s;
-          }
-          .MessageList::-webkit-scrollbar-thumb:hover {
-            background-color: #32e612;
-          }
-        `}</style>
         <div className="mx-auto flex min-h-0 w-full max-w-4xl flex-col">
           {isLoading ? (
-            <div className="flex h-full flex-col items-center justify-center gap-4 text-slate-400">
+            <div className="flex h-full flex-col items-center justify-center gap-4 py-20 text-slate-400">
               <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-slate-800"></div>
               <p className="text-xs font-black uppercase tracking-widest">Loading Conversation...</p>
             </div>
@@ -613,17 +609,36 @@ const MessageList: React.FC<MessageListProps> = ({
               </p>
             </div>
           ) : (
-            messages.map((msg) => (
-              <MessageBubble
-                key={msg.id}
-                message={msg}
-                onReact={(emoji) => onReact(msg.id, emoji)}
-                onReply={() => onReply(msg)}
-                onEdit={(text) => onEdit(msg.id, text)}
-                onDelete={() => onDelete(msg.id)}
-                onImageClick={handleImageClick}
-              />
-            ))
+            <Virtuoso
+              customScrollParent={scrollContainer || undefined}
+              data={messages}
+              firstItemIndex={10000 - messages.length}
+              startReached={() => {
+                if (onLoadMore && !isLoadingMore) {
+                  onLoadMore()
+                }
+              }}
+              initialTopMostItemIndex={messages.length - 1}
+              itemContent={(_index, msg) => (
+                <MessageBubble
+                  key={msg.id}
+                  message={msg}
+                  onReact={(emoji) => onReact(msg.id, emoji)}
+                  onReply={() => onReply(msg)}
+                  onEdit={(text) => onEdit(msg.id, text)}
+                  onDelete={() => onDelete(msg.id)}
+                  onImageClick={handleImageClick}
+                />
+              )}
+              components={{
+                Header: () => isLoadingMore ? (
+                  <div className="py-4 flex justify-center">
+                    <div className="h-6 w-6 animate-spin rounded-full border-2 border-slate-300 border-t-slate-800"></div>
+                  </div>
+                ) : <div className="h-4" />,
+                Footer: () => <div className="md:pb-10" />
+              }}
+            />
           )}
         </div>
       </div>
@@ -637,34 +652,26 @@ const MessageList: React.FC<MessageListProps> = ({
         />
       </MessagePortal>
 
-      <div
-        className="fixed bottom-[80px] left-1/2 z-40 h-32 w-48 -translate-x-1/2 md:bottom-[100px]"
-        onMouseEnter={() => setIsHoveredBottom(true)}
-        onMouseLeave={() => setIsHoveredBottom(false)}
-      >
-        <AnimatePresence>
-          {(showScrollDown || isHoveredBottom) && (
-            <motion.button
-              initial={{ opacity: 0, scale: 0.8, x: '-50%' }}
-              animate={{ opacity: 1, scale: 1, x: '-50%' }}
-              exit={{ opacity: 0, scale: 0.8, x: '-50%' }}
-              onClick={() => scrollToBottom()}
-              className="group fixed bottom-[140px] left-1/2 z-50 flex h-14 w-14 items-center justify-center rounded-full border border-slate-100 bg-white text-slate-900 shadow-2xl transition-all hover:scale-110 active:scale-95 md:bottom-[50px]"
-            >
-              <div className="relative">
-                <ArrowDown
-                  size={28}
-                  className="transition-transform group-hover:translate-y-1"
-                />
-                <div className="absolute top-1/2 left-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 animate-pulse rounded-full bg-pixs-mint" />
-              </div>
-              <div className="absolute -top-12 rounded-xl bg-slate-900 px-4 py-2 text-[10px] font-black tracking-widest whitespace-nowrap text-white uppercase opacity-0 transition-opacity group-hover:opacity-100">
-                Latest fulfillment
-              </div>
-            </motion.button>
-          )}
-        </AnimatePresence>
-      </div>
+      <AnimatePresence>
+        {hasScrolledUp && (
+          <motion.button
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            onClick={() => scrollToBottom()}
+            className="group absolute bottom-4 md:bottom-6 left-1/2 z-50 flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full border border-slate-100 bg-white text-slate-900 shadow-2xl transition-all hover:scale-110 active:scale-95"
+            style={{ transform: 'translateX(-50%)' }}
+          >
+            <ArrowDown
+              size={20}
+              className="transition-transform group-hover:translate-y-0.5 md:group-hover:translate-y-1 md:size-[24px]"
+            />
+            <div className="absolute -top-12 rounded-xl bg-slate-900 px-4 py-2 text-[10px] font-black tracking-widest whitespace-nowrap text-white uppercase opacity-0 transition-opacity group-hover:opacity-100">
+              Latest fulfillment
+            </div>
+          </motion.button>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\AdminOrderController;
 use App\Http\Controllers\Admin\AdminPayrollController;
 use App\Http\Controllers\Admin\AdminScreenplateController;
+use App\Http\Controllers\Admin\AdminPaymentCodeController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\CartController;
@@ -168,6 +169,11 @@ Route::middleware(['auth:sanctum'])->prefix('admin')->group(function () {
     Route::post('/payroll/manage/{id}', [AdminPayrollController::class, 'manageStore'])->middleware('role:admin');
     Route::patch('/payroll/manage/{id}/{date}/break', [AdminPayrollController::class, 'manageBreak'])->middleware('role:admin');
     Route::delete('/payroll/manage/{id}/{date}', [AdminPayrollController::class, 'manageDestroy'])->middleware('role:admin');
+
+    // Payment Codes Management
+    Route::get('/payment-codes', [AdminPaymentCodeController::class, 'index'])->middleware('role:admin');
+    Route::post('/payment-codes', [AdminPaymentCodeController::class, 'store'])->middleware('role:admin');
+    Route::delete('/payment-codes/{id}', [AdminPaymentCodeController::class, 'destroy'])->middleware('role:admin');
 });
 
 // Messaging & Notifications

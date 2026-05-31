@@ -18,52 +18,58 @@ class MessageController extends Controller
     {
         $user = $request->user();
         $perPage = min((int) $request->query('per_page', 30), 100);
-        $page = max((int) $request->query('page', 1), 1);
-        $offset = ($page - 1) * $perPage;
+        $cursor = $request->query('cursor');
 
         // Whitelist columns — original_text is intentionally excluded (spec: never expose to client)
         $safeColumns = [
             'id', 'conversation_id', 'sender_id', 'sender_type',
             'receiver_id', 'receiver_type', 'message',
             'reply_to_id', 'is_edited', 'is_deleted', 'is_read',
-            'order_id', 'screenplate_request_id', 'is_confirm',
+            'order_id', 'screenplate_request_id', 'payment_code_id', 'is_pinned', 'is_confirm',
             'created_at', 'updated_at',
         ];
+
+        $query = DB::table('messages')
+            ->select($safeColumns)
+            ->orderBy('created_at', 'desc');
+
+        if ($cursor) {
+            $cursorMsg = DB::table('messages')->where('id', $cursor)->first();
+            if ($cursorMsg) {
+                $query->where('created_at', '<', $cursorMsg->created_at);
+            }
+        }
 
         if ($user->role === 'admin') {
             $targetId = $request->query('target_id');
             if ($targetId) {
-                $messages = DB::table('messages')
-                    ->select($safeColumns)
-                    ->where(function ($q) use ($targetId) {
-                        $q->where('sender_id', $targetId)
-                            ->orWhere('receiver_id', $targetId);
-                    })
-                    ->orderBy('created_at', 'asc')
-                    ->limit($perPage)
-                    ->offset($offset)
-                    ->get();
+                $query->where(function ($q) use ($targetId) {
+                    $q->where('sender_id', $targetId)
+                        ->orWhere('receiver_id', $targetId);
+                });
             } else {
-                $messages = collect();
+                $query->whereRaw('1 = 0');
             }
         } else {
-            $messages = DB::table('messages')
-                ->select($safeColumns)
-                ->where(function ($q) use ($user) {
-                    $q->where('sender_id', $user->id)
-                        ->orWhere('receiver_id', $user->id);
-                })
-                ->orderBy('created_at', 'asc')
-                ->limit($perPage)
-                ->offset($offset)
-                ->get();
+            $query->where(function ($q) use ($user) {
+                $q->where('sender_id', $user->id)
+                    ->orWhere('receiver_id', $user->id);
+            });
         }
 
-        // Mark all messages as read for the current user (auto-read on load)
-        DB::table('messages')
-            ->where('receiver_id', $user->id)
-            ->where('is_read', 0)
-            ->update(['is_read' => 1]);
+        $messages = $query->limit($perPage)->get();
+
+        // Mark all fetched messages as read for the current user
+        if ($messages->isNotEmpty()) {
+            DB::table('messages')
+                ->where('receiver_id', $user->id)
+                ->where('is_read', 0)
+                ->whereIn('id', $messages->pluck('id'))
+                ->update(['is_read' => 1]);
+        }
+
+        // Reverse for chronological ascending display on frontend
+        $messages = $messages->reverse()->values();
 
         $messageIds = $messages->pluck('id');
 
@@ -109,8 +115,11 @@ class MessageController extends Controller
             return $msg;
         });
 
+        $nextCursor = $messages->isNotEmpty() && $messages->count() === $perPage ? $messages->first()->id : null;
+
         return response()->json([
             'data' => $messages,
+            'next_cursor' => $nextCursor,
         ]);
     }
     /**
@@ -177,6 +186,7 @@ class MessageController extends Controller
             'reply_to_id' => 'nullable|string|max:30',
             'order_id' => 'nullable|string|max:30',
             'screenplate_request_id' => 'nullable|string|max:20',
+            'payment_code_id' => 'nullable|string|max:30',
             'attachments' => 'nullable|array|max:20',
             'attachments.*.file' => [
                 'nullable', 'file', 'max:5120',           // 5 MB in KB (reduced from 10MB)
@@ -270,8 +280,8 @@ class MessageController extends Controller
             // Insert message
             DB::insert('
                 INSERT INTO messages 
-                (id, conversation_id, sender_id, sender_type, receiver_id, receiver_type, message, reply_to_id, order_id, screenplate_request_id, created_at, updated_at) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+                (id, conversation_id, sender_id, sender_type, receiver_id, receiver_type, message, reply_to_id, order_id, screenplate_request_id, payment_code_id, created_at, updated_at) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
             ', [
                 $msgId,
                 $convId,
@@ -283,6 +293,7 @@ class MessageController extends Controller
                 $validated['reply_to_id'] ?? null,
                 $validated['order_id'] ?? null,
                 $validated['screenplate_request_id'] ?? null,
+                $validated['payment_code_id'] ?? null,
             ]);
 
             if (! empty($attachments)) {

@@ -19,6 +19,7 @@ class Order extends Model
         'customer_id',
         'address_id',
         'payment_method_id',
+        'payment_code_id',
         'total_amount',
         'discount_id',
         'total_discount_amount',
@@ -49,5 +50,10 @@ class Order extends Model
     public function address(): BelongsTo
     {
         return $this->belongsTo(CustomerAddress::class, 'address_id');
+    }
+
+    public function paymentCode(): BelongsTo
+    {
+        return $this->belongsTo(PaymentCode::class, 'payment_code_id');
     }
 }
