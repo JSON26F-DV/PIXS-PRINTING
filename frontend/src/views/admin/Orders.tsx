@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
+import React, { useState, useMemo, useEffect } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import {
   Search,
   Users,
@@ -12,6 +12,7 @@ import {
   MoreVertical,
   Trash2,
   Plus,
+  AlertCircle,
   MessageSquare,
 } from 'lucide-react'
 import {
@@ -27,6 +28,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 import { format, parseISO } from 'date-fns'
+import { toast } from 'react-hot-toast'
 import { useAuth } from '../../context/AuthContext'
 import { useAdminOrders, type Order, type OrderItem } from '../../hooks/useAdminOrders'
 import axiosInstance from '../../lib/axiosInstance'
@@ -95,7 +97,24 @@ const Orders: React.FC = () => {
     message: string
     isSubmitting: boolean
   }>({ isOpen: false, orderId: '', message: '', isSubmitting: false })
+  const [concernModal, setConcernModal] = useState<{
+    isOpen: boolean
+    orderId: string
+    concernText: string
+  }>({ isOpen: false, orderId: '', concernText: '' })
   const [mobileDetailOrder, setMobileDetailOrder] = useState<Order | null>(null)
+  const [orderSearch, setOrderSearch] = useState('')
+
+  const location = useLocation()
+  const queryParams = useMemo(() => new URLSearchParams(location.search), [location.search])
+  const searchOrderId = queryParams.get('search') || queryParams.get('id') || ''
+
+  useEffect(() => {
+    if (searchOrderId) {
+      setOrderSearch(searchOrderId)
+      setExpandedOrderIds(new Set([searchOrderId]))
+    }
+  }, [searchOrderId])
 
   const itemsPerPage = 10
   const customersPerPage = 5
@@ -131,6 +150,11 @@ const Orders: React.FC = () => {
       result = result.filter((o) => o.status?.trim().toUpperCase() === statusHeaderFilter.toUpperCase())
     }
 
+    // Order Search ID Filter
+    if (orderSearch.trim()) {
+      const q = orderSearch.toLowerCase().trim()
+      result = result.filter((o) => o.order_id.toLowerCase().includes(q))
+    }
 
     // Sorting
     result.sort((a, b) => {
@@ -164,6 +188,7 @@ const Orders: React.FC = () => {
     statusHeaderFilter,
     sortOption,
     customers,
+    orderSearch,
   ])
 
   const paginatedOrders = useMemo(() => {
@@ -220,7 +245,7 @@ const Orders: React.FC = () => {
       setStatusModal({ isOpen: false, orderId: '', newStatus: '' })
     } catch (err) {
       console.error('Failed to update status', err)
-      alert('Failed to update status')
+      toast.error('Failed to update status')
     }
   }
 
@@ -231,7 +256,7 @@ const Orders: React.FC = () => {
       setDeleteModal({ isOpen: false, orderId: '' })
     } catch (err) {
       console.error('Failed to delete order', err)
-      alert('Failed to delete order')
+      toast.error('Failed to delete order')
     }
   }
 
@@ -245,7 +270,7 @@ const Orders: React.FC = () => {
         receiver_type: 'employee',
         order_id: messageModal.orderId,
       })
-      alert('Message sent to admin successfully')
+      toast.success('Message sent to admin successfully')
       setMessageModal({
         isOpen: false,
         orderId: '',
@@ -254,8 +279,42 @@ const Orders: React.FC = () => {
       })
     } catch (err) {
       console.error('Failed to send message', err)
-      alert('Failed to send message')
+      toast.error('Failed to send message')
       setMessageModal((prev) => ({ ...prev, isSubmitting: false }))
+    }
+  }
+
+  const handleCreateProductConcern = async (orderId: string) => {
+    try {
+      await axiosInstance.post('/api/messages/send', {
+        message: `Product concern for order ${orderId}. Please review.`,
+        receiver_id: '1',  // Admin ID
+        receiver_type: 'employee',
+        order_id: orderId,
+        product_concern: true,
+      })
+      toast.success('Product concern message created')
+    } catch (error) {
+      console.error('Failed to create message', error)
+      toast.error('Failed to create message')
+    }
+  }
+
+  const handleCreateProductConcernConfirm = async () => {
+    if (!concernModal.orderId || !concernModal.concernText.trim()) return
+    try {
+      await axiosInstance.post('/api/messages/send', {
+        message: concernModal.concernText.trim(),
+        receiver_id: '1',  // Admin ID
+        receiver_type: 'employee',
+        order_id: concernModal.orderId,
+        product_concern: true,
+      })
+      toast.success('Product concern message created')
+      setConcernModal({ isOpen: false, orderId: '', concernText: '' })
+    } catch (error) {
+      console.error('Failed to create message', error)
+      toast.error('Failed to create message')
     }
   }
 
@@ -595,7 +654,17 @@ const Orders: React.FC = () => {
                     : 'Viewing: All Orders'}
                 </p>
               </div>
-              <div className="flex items-center gap-4">
+              <div className="flex flex-wrap items-center gap-4">
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Search Order ID..."
+                    value={orderSearch}
+                    onChange={(e) => setOrderSearch(e.target.value)}
+                    className="w-full md:w-60 rounded-xl border border-slate-100 bg-slate-50 px-4 py-2.5 pl-9 text-[10px] font-black tracking-widest uppercase shadow-sm outline-none focus:border-amber-400 focus:bg-white transition-colors"
+                  />
+                  <Search className="absolute top-1/2 left-3 -translate-y-1/2 text-slate-400" size={12} />
+                </div>
                 <div className="rounded-full border border-slate-100 bg-slate-50 px-5 py-2 text-[10px] font-black tracking-[2px] text-slate-500 uppercase">
                   Showing {filteredOrders.length} Orders
                 </div>
@@ -656,14 +725,16 @@ const Orders: React.FC = () => {
                        </span>
                        <div className="flex gap-0.5">
                           {user?.role === 'inventory' ? (
-                            <button 
+                            <button
                               onClick={(e) => {
                                 e.stopPropagation()
-                                setMessageModal({ isOpen: true, orderId: order.order_id, message: '', isSubmitting: false })
+                                handleCreateProductConcern(order.order_id)
                               }}
-                              className="rounded p-1 text-blue-500 hover:bg-blue-50"
+                              className="flex items-center gap-1.5 rounded-xl p-1.5 text-[8px] font-black tracking-widest text-amber-600 uppercase transition-colors hover:bg-amber-50"
+                              title="Create Product Concern Message"
                             >
-                               <MessageSquare size={10} />
+                              <AlertCircle size={10} className="text-amber-400" />
+                              Message
                             </button>
                           ) : (
                             <button 
@@ -818,19 +889,27 @@ const Orders: React.FC = () => {
                           </td>
                           <td className="px-8 py-6 text-right">
                             <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
-                              {user?.role === 'inventory' ? (
-                                <button 
-                                  onClick={() => setMessageModal({ isOpen: true, orderId: order.order_id, message: '', isSubmitting: false })}
-                                  className="orders-action-btn rounded-xl p-3 text-blue-500 transition-all hover:bg-blue-50 hover:text-blue-600"
-                                >
-                                  <MessageSquare size={18} />
-                                </button>
-                              ) : (
+                              {user?.role === 'admin' ? (
                                 <button 
                                   onClick={() => setDeleteModal({ isOpen: true, orderId: order.order_id })}
                                   className="orders-action-btn rounded-xl p-3 text-rose-400 transition-all hover:bg-rose-50 hover:text-rose-600"
+                                  title="Delete Order"
                                 >
                                   <Trash2 size={18} />
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => {
+                                    setConcernModal({
+                                      isOpen: true,
+                                      orderId: order.order_id,
+                                      concernText: '',
+                                    })
+                                  }}
+                                  className="orders-action-btn rounded-xl p-3 text-amber-400 transition-all hover:bg-amber-50 hover:text-amber-600"
+                                  title="Create Product Concern Message"
+                                >
+                                  <MessageSquare size={18} />
                                 </button>
                               )}
                             </div>
@@ -1292,6 +1371,70 @@ const Orders: React.FC = () => {
                   className="flex-1 rounded-xl bg-rose-600 py-5 text-[10px] font-black tracking-widest text-white uppercase italic shadow-xl shadow-rose-900/20 transition-all hover:bg-rose-700 hover:scale-105 active:scale-95"
                 >
                   Delete Permanently
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Product Concern Message Confirmation Modal */}
+      <AnimatePresence>
+        {concernModal.isOpen && (
+          <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-md"
+              onClick={() => setConcernModal({ ...concernModal, isOpen: false })}
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative w-full max-w-lg overflow-hidden rounded-2xl bg-white p-8 shadow-2xl md:p-12"
+            >
+              <div className="mb-6">
+                <div className="mb-4 flex items-center gap-3">
+                  <div className="h-0.5 w-8 bg-amber-500" />
+                  <span className="text-[10px] font-black tracking-[4px] text-amber-500 uppercase italic">
+                    Product Concern
+                  </span>
+                </div>
+                <h2 className="text-3xl font-black tracking-tighter text-slate-900 uppercase italic">
+                  Create Concern Message?
+                </h2>
+                <p className="mt-4 text-xs font-bold leading-relaxed text-slate-400 uppercase italic">
+                  Order ID: <span className="text-slate-900 font-mono">{concernModal.orderId}</span>
+                </p>
+                <div className="mt-6">
+                  <label className="mb-2 block px-1 font-mono text-[9px] font-black tracking-widest text-slate-400 uppercase leading-none">
+                    Concern Description
+                  </label>
+                  <textarea
+                    rows={4}
+                    placeholder="Describe the product concern in detail..."
+                    value={concernModal.concernText}
+                    onChange={(e) => setConcernModal({ ...concernModal, concernText: e.target.value })}
+                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-xs font-semibold text-slate-900 shadow-sm transition-all outline-none focus:border-amber-500 focus:bg-white resize-none"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-4">
+                <button
+                  onClick={() => setConcernModal({ ...concernModal, isOpen: false })}
+                  className="flex-1 rounded-xl border border-slate-100 py-5 text-[10px] font-black tracking-widest text-slate-400 uppercase italic transition-all hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  disabled={!concernModal.concernText.trim()}
+                  onClick={handleCreateProductConcernConfirm}
+                  className="flex-1 rounded-xl bg-amber-500 py-5 text-[10px] font-black tracking-widest text-white uppercase italic shadow-xl shadow-amber-900/20 transition-all hover:bg-amber-600 hover:scale-105 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100"
+                >
+                  Confirm & Transmit
                 </button>
               </div>
             </motion.div>

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import {
   TrendingUp,
   Briefcase,
@@ -10,7 +10,8 @@ import {
   Trash2,
   Edit2,
   RotateCcw,
-  User
+  User,
+  MessageSquare
 } from 'lucide-react'
 import {
   BarChart,
@@ -28,6 +29,7 @@ import type { IExpenditure, IInventoryLog } from '../../../hooks/useStockAnalyti
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../../context/AuthContext'
 import { toast } from 'react-hot-toast'
+import axiosInstance from '../../../lib/axiosInstance'
 
 interface IProductExtended extends IProduct {
   variantsFiltered?: IProductVariant[]
@@ -42,6 +44,83 @@ interface InventoryAnalyticsSectionProps {
   updateExpenditure: (id: number, data: Partial<IExpenditure>) => Promise<void>
   deleteExpenditure: (id: number) => Promise<void>
   undoInventoryLog: (id: string) => Promise<void>
+  initialLogSearch?: string
+}
+
+const renderPagination = (
+  currentPage: number,
+  totalItems: number,
+  itemsPerPage: number,
+  onPageChange: React.Dispatch<React.SetStateAction<number>>
+) => {
+  const totalPages = Math.max(Math.ceil(totalItems / itemsPerPage), 1)
+
+  return (
+    <div className="flex items-center justify-between border-t border-slate-100 dark:border-white/5 px-4 py-3 sm:px-6 mt-4">
+      <div className="flex flex-1 justify-between sm:hidden">
+        <button
+          disabled={currentPage === 1}
+          onClick={() => onPageChange(currentPage - 1)}
+          className="relative inline-flex items-center rounded-xl bg-transparent px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 disabled:opacity-35 disabled:hover:bg-transparent transition-all"
+        >
+          Previous
+        </button>
+        <button
+          disabled={currentPage === totalPages}
+          onClick={() => onPageChange(currentPage + 1)}
+          className="relative ml-3 inline-flex items-center rounded-xl bg-transparent px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 disabled:opacity-35 disabled:hover:bg-transparent transition-all"
+        >
+          Next
+        </button>
+      </div>
+      <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-wider text-slate-555">
+            Showing <span className="font-mono text-slate-900">{totalItems === 0 ? 0 : ((currentPage - 1) * itemsPerPage) + 1}</span> to{' '}
+            <span className="font-mono text-slate-900">{Math.min(currentPage * itemsPerPage, totalItems)}</span> of{' '}
+            <span className="font-mono text-slate-900">{totalItems}</span> entries
+          </p>
+        </div>
+        <div>
+          <nav className="isolate inline-flex gap-1" aria-label="Pagination">
+            <button
+              disabled={currentPage === 1}
+              onClick={() => onPageChange(currentPage - 1)}
+              className="relative inline-flex items-center rounded-xl bg-transparent p-2 text-slate-400 hover:bg-slate-100 disabled:opacity-30 disabled:hover:bg-transparent transition-all"
+            >
+              <span className="sr-only">Previous</span>
+              &lsaquo;
+            </button>
+            {Array.from({ length: totalPages }).map((_, idx) => {
+              const p = idx + 1
+              const isCurrent = p === currentPage
+              return (
+                <button
+                  key={p}
+                  onClick={() => onPageChange(p)}
+                  className={`relative inline-flex items-center rounded-xl px-3 py-1.5 text-xs font-black transition-all ${
+                    isCurrent
+                      ? 'bg-emerald-500 text-white'
+                      : 'bg-transparent text-slate-600 hover:bg-slate-100'
+                  }`}
+                >
+                  {p}
+                </button>
+              )
+            })}
+            <button
+              disabled={currentPage === totalPages}
+              onClick={() => onPageChange(currentPage + 1)}
+              className="relative inline-flex items-center rounded-xl bg-transparent p-2 text-slate-400 hover:bg-slate-100 disabled:opacity-30 disabled:hover:bg-transparent transition-all"
+            >
+              <span className="sr-only">Next</span>
+              &rsaquo;
+            </button>
+          </nav>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 export const InventoryAnalyticsSection: React.FC<InventoryAnalyticsSectionProps> = ({ 
@@ -51,13 +130,14 @@ export const InventoryAnalyticsSection: React.FC<InventoryAnalyticsSectionProps>
   addExpenditure,
   updateExpenditure,
   deleteExpenditure,
-  undoInventoryLog
+  undoInventoryLog,
+  initialLogSearch
 }) => {
   const { user } = useAuth()
   const navigate = useNavigate()
 
   const [productSearch, setProductSearch] = useState('')
-  const [logSearch, setLogSearch] = useState('')
+  const [logSearch, setLogSearch] = useState(initialLogSearch || '')
   const [logCategoryFilter, setLogCategoryFilter] = useState('ALL')
   
   // Stock Level chart sorting and category states
@@ -83,6 +163,27 @@ export const InventoryAnalyticsSection: React.FC<InventoryAnalyticsSectionProps>
   const [invLogTypeFilter, setInvLogTypeFilter] = useState('ALL')
   const [mobileSelectedInvLog, setMobileSelectedInvLog] = useState<IInventoryLog | null>(null)
 
+  const [concernModal, setConcernModal] = useState<{
+    isOpen: boolean
+    expenditureId: string | number
+    concernText: string
+  }>({ isOpen: false, expenditureId: '', concernText: '' })
+
+  // Pagination States
+  const [directControlPage, setDirectControlPage] = useState(1)
+  const [operationalLogsPage, setOperationalLogsPage] = useState(1)
+  const [auditTrailPage, setAuditTrailPage] = useState(1)
+  const ITEMS_PER_PAGE = 10
+
+  useEffect(() => {
+    if (initialLogSearch && initialLogSearch !== logSearch) {
+      const timer = setTimeout(() => {
+        setLogSearch(initialLogSearch)
+      }, 0)
+      return () => clearTimeout(timer)
+    }
+  }, [initialLogSearch, logSearch])
+
   const filteredInventoryLogs = useMemo(() => {
     let result = [...inventoryLogs]
     if (invLogTypeFilter !== 'ALL') {
@@ -100,6 +201,26 @@ export const InventoryAnalyticsSection: React.FC<InventoryAnalyticsSectionProps>
     }
     return result
   }, [inventoryLogs, invLogTypeFilter, invLogSearch])
+
+
+
+  const handleCreateExpenditureConcernConfirm = async () => {
+    if (!concernModal.expenditureId || !concernModal.concernText.trim()) return
+    try {
+      await axiosInstance.post('/api/messages/send', {
+        message: concernModal.concernText.trim(),
+        receiver_id: '1',  // Admin ID
+        receiver_type: 'employee',
+        expenditures_id: String(concernModal.expenditureId),
+        product_concern: false,
+      })
+      toast.success('Expenditure concern message created')
+      setConcernModal({ isOpen: false, expenditureId: '', concernText: '' })
+    } catch (error) {
+      console.error('Failed to create message', error)
+      toast.error('Failed to create message')
+    }
+  }
 
   // Generate unique categories for chart filtering (maps category_id to category_label)
   const uniqueProductCategories = useMemo(() => {
@@ -193,11 +314,26 @@ export const InventoryAnalyticsSection: React.FC<InventoryAnalyticsSectionProps>
       result = result.filter((l) => l.category === logCategoryFilter)
     }
     if (logSearch) {
-      const q = logSearch.toLowerCase()
-      result = result.filter((l) => l.description?.toLowerCase().includes(q))
+      const q = logSearch.toLowerCase().trim()
+      result = result.filter((l) => 
+        l.description?.toLowerCase().includes(q) ||
+        String(l.id).toLowerCase().includes(q)
+      )
     }
     return result
   }, [expenditures, logCategoryFilter, logSearch])
+
+  const paginatedProducts = useMemo(() => {
+    return filteredProducts.slice((directControlPage - 1) * ITEMS_PER_PAGE, directControlPage * ITEMS_PER_PAGE)
+  }, [filteredProducts, directControlPage])
+
+  const paginatedLogs = useMemo(() => {
+    return filteredLogs.slice((operationalLogsPage - 1) * ITEMS_PER_PAGE, operationalLogsPage * ITEMS_PER_PAGE)
+  }, [filteredLogs, operationalLogsPage])
+
+  const paginatedInventoryLogs = useMemo(() => {
+    return filteredInventoryLogs.slice((auditTrailPage - 1) * ITEMS_PER_PAGE, auditTrailPage * ITEMS_PER_PAGE)
+  }, [filteredInventoryLogs, auditTrailPage])
 
   const handleAddExpense = async () => {
     if (!extraExpenseForm.description || !extraExpenseForm.amount) {
@@ -361,19 +497,19 @@ export const InventoryAnalyticsSection: React.FC<InventoryAnalyticsSectionProps>
             {/* INSUFFICIENT & RUNNING LOW STOCK FILTERS */}
             <div className="flex flex-wrap gap-1.5 border-b border-slate-50 pb-3">
               <button
-                onClick={() => setDirectControlStockFilter('ALL')}
+                onClick={() => { setDirectControlStockFilter('ALL'); setDirectControlPage(1); }}
                 className={`rounded-xl px-3 py-1.5 text-[8px] font-black tracking-wider uppercase border transition-all ${directControlStockFilter === 'ALL' ? 'bg-slate-900 border-slate-900 text-white shadow-md' : 'bg-slate-50 border-slate-100 text-slate-400 hover:text-slate-700'}`}
               >
                 All
               </button>
               <button
-                onClick={() => setDirectControlStockFilter('INSUFFICIENT')}
+                onClick={() => { setDirectControlStockFilter('INSUFFICIENT'); setDirectControlPage(1); }}
                 className={`rounded-xl px-3 py-1.5 text-[8px] font-black tracking-wider uppercase border transition-all ${directControlStockFilter === 'INSUFFICIENT' ? 'bg-rose-600 border-rose-600 text-white shadow-md shadow-rose-200' : 'bg-rose-50 border-rose-100 text-rose-500 hover:bg-rose-100/50'}`}
               >
                 Insufficient
               </button>
               <button
-                onClick={() => setDirectControlStockFilter('RUNNING_LOW')}
+                onClick={() => { setDirectControlStockFilter('RUNNING_LOW'); setDirectControlPage(1); }}
                 className={`rounded-xl px-3 py-1.5 text-[8px] font-black tracking-wider uppercase border transition-all ${directControlStockFilter === 'RUNNING_LOW' ? 'bg-amber-500 border-amber-500 text-white shadow-md shadow-amber-200' : 'bg-amber-50 border-amber-100 text-amber-600 hover:bg-amber-100/50'}`}
               >
                 Running Low
@@ -386,14 +522,14 @@ export const InventoryAnalyticsSection: React.FC<InventoryAnalyticsSectionProps>
               type="text"
               placeholder="Find Product..."
               value={productSearch}
-              onChange={(e) => setProductSearch(e.target.value)}
+              onChange={(e) => { setProductSearch(e.target.value); setDirectControlPage(1); }}
               className="w-full rounded-2xl border border-slate-100 bg-slate-50 px-5 py-3.5 text-xs font-black tracking-widest text-slate-900 uppercase shadow-sm transition-all outline-none placeholder:text-slate-350 focus:border-emerald-400 focus:bg-white"
             />
             <Search size={14} className="absolute top-1/2 right-4 -translate-y-1/2 text-slate-300" />
           </div>
 
           <div className="custom-scrollbar flex-1 space-y-3 overflow-y-auto pr-2 pb-6">
-            {filteredProducts.map((p) => {
+            {paginatedProducts.map((p) => {
               const activeVariants = (p as IProductExtended).variantsFiltered || p.variants || []
               return (
                 <div
@@ -461,6 +597,12 @@ export const InventoryAnalyticsSection: React.FC<InventoryAnalyticsSectionProps>
                   No Products Found
                 </p>
               </div>
+            )}
+            {renderPagination(
+              directControlPage,
+              filteredProducts.length,
+              ITEMS_PER_PAGE,
+              setDirectControlPage
             )}
           </div>
         </div>
@@ -537,7 +679,7 @@ export const InventoryAnalyticsSection: React.FC<InventoryAnalyticsSectionProps>
                   type="text"
                   placeholder="Search Logs..."
                   value={logSearch}
-                  onChange={(e) => setLogSearch(e.target.value)}
+                  onChange={(e) => { setLogSearch(e.target.value); setOperationalLogsPage(1); }}
                   className="w-full md:w-48 rounded-xl border border-slate-100 bg-slate-50 px-4 py-2 pl-9 text-[10px] font-black tracking-widest uppercase shadow-sm transition-all outline-none focus:border-violet-400"
                 />
                 <Search size={12} className="absolute top-1/2 left-3 -translate-y-1/2 text-slate-300" />
@@ -545,7 +687,7 @@ export const InventoryAnalyticsSection: React.FC<InventoryAnalyticsSectionProps>
 
               <select
                 value={logCategoryFilter}
-                onChange={(e) => setLogCategoryFilter(e.target.value)}
+                onChange={(e) => { setLogCategoryFilter(e.target.value); setOperationalLogsPage(1); }}
                 className="w-full md:w-auto cursor-pointer rounded-xl border border-slate-100 bg-slate-50 px-4 py-2 text-[10px] font-black tracking-widest uppercase shadow-sm outline-none focus:border-violet-400"
               >
                 <option value="ALL">All Categories</option>
@@ -579,7 +721,7 @@ export const InventoryAnalyticsSection: React.FC<InventoryAnalyticsSectionProps>
                 </tr>
               </thead>
               <tbody>
-                {filteredLogs.map((log) => (
+                {paginatedLogs.map((log) => (
                   <tr key={log.id} className="group transition-colors hover:bg-slate-50/50">
                     <td className="rounded-l-2xl border-y border-r-0 border-l border-slate-100 bg-white py-4 pl-4 shadow-sm group-hover:bg-slate-50">
                       <div className="flex items-center gap-3">
@@ -652,21 +794,33 @@ export const InventoryAnalyticsSection: React.FC<InventoryAnalyticsSectionProps>
                         </div>
                       ) : (
                         <div className="flex items-center justify-center gap-3">
-                          <button 
-                            onClick={() => {
-                              setEditingExpId(log.id)
-                              setEditExpenseForm({ category: log.category, description: log.description || '', amount: String(log.amount) })
-                            }}
-                            className="text-blue-500 hover:text-blue-700 transition"
-                          >
-                            <Edit2 size={14} />
-                          </button>
-                          {user?.role !== 'inventory' && (
-                            <button 
-                              onClick={() => handleDeleteExpense(log.id)}
-                              className="text-rose-500 hover:text-rose-700 transition"
+                          {user?.role === 'admin' ? (
+                            <>
+                              <button 
+                                onClick={() => {
+                                  setEditingExpId(log.id)
+                                  setEditExpenseForm({ category: log.category, description: log.description || '', amount: String(log.amount) })
+                                }}
+                                className="text-blue-500 hover:text-blue-700 transition"
+                                title="Edit"
+                              >
+                                <Edit2 size={14} />
+                              </button>
+                              <button 
+                                onClick={() => handleDeleteExpense(log.id)}
+                                className="text-rose-500 hover:text-rose-700 transition"
+                                title="Delete"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </>
+                          ) : (
+                            <button
+                              onClick={() => setConcernModal({ isOpen: true, expenditureId: log.id, concernText: '' })}
+                              className="text-emerald-500 hover:text-emerald-700 transition"
+                              title="Report Concern"
                             >
-                              <Trash2 size={14} />
+                              <MessageSquare size={14} />
                             </button>
                           )}
                         </div>
@@ -683,7 +837,7 @@ export const InventoryAnalyticsSection: React.FC<InventoryAnalyticsSectionProps>
             <p className="text-[9px] font-black uppercase tracking-wider text-slate-400 mb-2">
               Tap an Operational Log to manage details:
             </p>
-            {filteredLogs.map((log) => (
+            {paginatedLogs.map((log) => (
               <div
                 key={log.id}
                 onClick={() => {
@@ -712,6 +866,13 @@ export const InventoryAnalyticsSection: React.FC<InventoryAnalyticsSectionProps>
               </div>
             ))}
           </div>
+
+          {renderPagination(
+            operationalLogsPage,
+            filteredLogs.length,
+            ITEMS_PER_PAGE,
+            setOperationalLogsPage
+          )}
 
           {filteredLogs.length === 0 && (
             <div className="flex flex-col items-center py-20 text-center opacity-10">
@@ -849,18 +1010,30 @@ export const InventoryAnalyticsSection: React.FC<InventoryAnalyticsSectionProps>
                   </div>
 
                   <div className="flex gap-3 pt-2">
-                    <button
-                      onClick={() => setIsEditingInMobileModal(true)}
-                      className="flex-1 flex items-center justify-center gap-1 rounded-xl bg-blue-50 hover:bg-blue-100 py-3 text-xs font-extrabold text-blue-700 border border-blue-100 transition-all active:scale-95"
-                    >
-                      <Edit2 size={12} /> Edit Entry
-                    </button>
-                    {user?.role !== 'inventory' && (
+                    {user?.role === 'admin' ? (
+                      <>
+                        <button
+                          onClick={() => setIsEditingInMobileModal(true)}
+                          className="flex-1 flex items-center justify-center gap-1 rounded-xl bg-blue-50 hover:bg-blue-100 py-3 text-xs font-extrabold text-blue-700 border border-blue-100 transition-all active:scale-95"
+                        >
+                          <Edit2 size={12} /> Edit Entry
+                        </button>
+                        <button
+                          onClick={() => handleDeleteExpense(mobileSelectedLog.id)}
+                          className="flex-1 flex items-center justify-center gap-1 rounded-xl bg-rose-50 hover:bg-rose-100 py-3 text-xs font-extrabold text-rose-600 border border-rose-100 transition-all active:scale-95"
+                        >
+                          <Trash2 size={12} /> Delete Entry
+                        </button>
+                      </>
+                    ) : (
                       <button
-                        onClick={() => handleDeleteExpense(mobileSelectedLog.id)}
-                        className="flex-1 flex items-center justify-center gap-1 rounded-xl bg-rose-50 hover:bg-rose-100 py-3 text-xs font-extrabold text-rose-600 border border-rose-100 transition-all active:scale-95"
+                        onClick={() => {
+                          setMobileSelectedLog(null)
+                          setConcernModal({ isOpen: true, expenditureId: mobileSelectedLog.id, concernText: '' })
+                        }}
+                        className="flex-1 flex items-center justify-center gap-1 rounded-xl bg-emerald-50 hover:bg-emerald-100 py-3 text-xs font-extrabold text-emerald-700 border border-emerald-100 transition-all active:scale-95"
                       >
-                        <Trash2 size={12} /> Delete Entry
+                        <MessageSquare size={12} /> Report Concern
                       </button>
                     )}
                   </div>
@@ -889,15 +1062,15 @@ export const InventoryAnalyticsSection: React.FC<InventoryAnalyticsSectionProps>
                 type="text"
                 placeholder="Search logs..."
                 value={invLogSearch}
-                onChange={(e) => setInvLogSearch(e.target.value)}
+                onChange={(e) => { setInvLogSearch(e.target.value); setAuditTrailPage(1); }}
                 className="w-full md:w-48 rounded-xl border border-slate-100 bg-slate-50 px-4 py-2 pl-9 text-[10px] font-black tracking-widest uppercase shadow-sm outline-none focus:border-emerald-400"
               />
-              <Search size={12} className="absolute top-1/2 left-3 -translate-y-1/2 text-slate-350" />
+              <Search size={12} className="absolute top-1/2 left-3 -translate-y-1/2 text-slate-355" />
             </div>
 
             <select
               value={invLogTypeFilter}
-              onChange={(e) => setInvLogTypeFilter(e.target.value)}
+              onChange={(e) => { setInvLogTypeFilter(e.target.value); setAuditTrailPage(1); }}
               className="w-full md:w-auto cursor-pointer rounded-xl border border-slate-100 bg-slate-50 px-4 py-2 text-[10px] font-black tracking-widest uppercase shadow-sm outline-none focus:border-emerald-400"
             >
               <option value="ALL">All Types</option>
@@ -941,7 +1114,7 @@ export const InventoryAnalyticsSection: React.FC<InventoryAnalyticsSectionProps>
               </tr>
             </thead>
             <tbody>
-              {filteredInventoryLogs.map((log) => {
+              {paginatedInventoryLogs.map((log) => {
                 const isAddition = log.qty_added > 0
                 return (
                   <tr key={log.id} className="group transition-colors hover:bg-slate-50/50">
@@ -970,15 +1143,7 @@ export const InventoryAnalyticsSection: React.FC<InventoryAnalyticsSectionProps>
                     <td className="border-y border-slate-100 bg-white py-4 shadow-sm group-hover:bg-slate-50">
                       <div className="flex items-center gap-2">
                         <div className="h-6 w-6 rounded-full bg-slate-100 border border-slate-200 overflow-hidden flex items-center justify-center">
-                          {log.employee?.profile_picture ? (
-                            <img
-                              src={`/images/employees/${log.employee.profile_picture}`}
-                              className="h-full w-full object-cover"
-                              alt=""
-                            />
-                          ) : (
-                            <User size={10} className="text-slate-400" />
-                          )}
+                          <User size={10} className="text-slate-400" />
                         </div>
                         <span className="text-xs font-bold text-slate-700">
                           {log.employee ? `${log.employee.first_name} ${log.employee.last_name}` : 'Unknown'}
@@ -986,9 +1151,9 @@ export const InventoryAnalyticsSection: React.FC<InventoryAnalyticsSectionProps>
                       </div>
                     </td>
                     <td className="border-y border-slate-100 bg-white py-4 text-center shadow-sm group-hover:bg-slate-50">
-                      <span className={`rounded-xl px-2 py-0.5 text-[8px] font-black tracking-wider uppercase border ${
+                      <span className={`rounded-xl border px-2 py-0.5 text-[8px] font-black tracking-wider uppercase ${
                         log.type === 'RESTOCK'
-                          ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
+                          ? 'bg-emerald-50 text-emerald-755 border-emerald-100'
                           : log.type === 'DAMAGE'
                           ? 'bg-rose-50 text-rose-600 border-rose-100'
                           : 'bg-slate-100 text-slate-600 border-slate-200'
@@ -1010,7 +1175,7 @@ export const InventoryAnalyticsSection: React.FC<InventoryAnalyticsSectionProps>
                       {log.notes || '—'}
                     </td>
                     <td className="rounded-r-2xl border-y border-l-0 border-r border-slate-100 bg-white py-4 pr-4 text-center shadow-sm group-hover:bg-slate-50">
-                      {user?.role !== 'inventory' && (
+                      {user?.role === 'admin' ? (
                         <button
                           onClick={() => {
                             if (confirm('Undo this stock adjustment? This will revert the stock level and delete any linked expenditures.')) {
@@ -1022,7 +1187,7 @@ export const InventoryAnalyticsSection: React.FC<InventoryAnalyticsSectionProps>
                         >
                           <RotateCcw size={10} /> Undo
                         </button>
-                      )}
+                      ) : null}
                     </td>
                   </tr>
                 )
@@ -1036,7 +1201,7 @@ export const InventoryAnalyticsSection: React.FC<InventoryAnalyticsSectionProps>
           <p className="text-[9px] font-black uppercase tracking-wider text-slate-400 mb-2">
             Tap an Audit Log to view details and revert:
           </p>
-          {filteredInventoryLogs.map((log) => {
+          {paginatedInventoryLogs.map((log) => {
             const isAddition = log.qty_added > 0
             return (
               <div
@@ -1070,6 +1235,13 @@ export const InventoryAnalyticsSection: React.FC<InventoryAnalyticsSectionProps>
             );
           })}
         </div>
+
+        {renderPagination(
+          auditTrailPage,
+          filteredInventoryLogs.length,
+          ITEMS_PER_PAGE,
+          setAuditTrailPage
+        )}
 
         {filteredInventoryLogs.length === 0 && (
           <div className="flex flex-col items-center py-20 text-center opacity-10">
@@ -1167,10 +1339,8 @@ export const InventoryAnalyticsSection: React.FC<InventoryAnalyticsSectionProps>
                     {mobileSelectedInvLog.notes || 'No description provided.'}
                   </span>
                 </div>
-              </div>
-
-              <div className="pt-2">
-                {user?.role !== 'inventory' && (
+              {user?.role === 'admin' && (
+                <div className="pt-2">
                   <button
                     onClick={() => {
                       if (confirm('Undo this stock adjustment? This will revert the stock level and delete any linked expenditures.')) {
@@ -1178,11 +1348,76 @@ export const InventoryAnalyticsSection: React.FC<InventoryAnalyticsSectionProps>
                         setMobileSelectedInvLog(null)
                       }
                     }}
-                    className="w-full flex items-center justify-center gap-2 rounded-xl bg-rose-600 hover:bg-rose-500 py-3.5 text-xs font-extrabold text-white shadow-lg shadow-rose-100 transition-all active:scale-95"
+                    className="w-full flex items-center justify-center gap-2 rounded-xl bg-rose-50 hover:bg-rose-100 py-3.5 text-xs font-extrabold text-rose-600 border border-rose-100 transition-all active:scale-95 shadow-sm"
                   >
-                    <RotateCcw size={14} /> Undo Stock Action
+                    <RotateCcw size={14} /> Revert Stock Change
                   </button>
-                )}
+                </div>
+              )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Expenditure Concern Message Confirmation Modal */}
+      <AnimatePresence>
+        {concernModal.isOpen && (
+          <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-md"
+              onClick={() => setConcernModal({ ...concernModal, isOpen: false })}
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative w-full max-w-lg overflow-hidden rounded-2xl bg-white p-8 shadow-2xl md:p-12"
+            >
+              <div className="mb-6">
+                <div className="mb-4 flex items-center gap-3">
+                  <div className="h-0.5 w-8 bg-emerald-500" />
+                  <span className="text-[10px] font-black tracking-[4px] text-emerald-500 uppercase italic">
+                    Log Concern
+                  </span>
+                </div>
+                <h2 className="text-3xl font-black tracking-tighter text-slate-900 uppercase italic">
+                  Create Concern Message?
+                </h2>
+                <p className="mt-4 text-xs font-bold leading-relaxed text-slate-400 uppercase italic">
+                  Expenditure ID: <span className="text-slate-900 font-mono">{concernModal.expenditureId}</span>
+                </p>
+                <div className="mt-6">
+                  <label className="mb-2 block px-1 font-mono text-[9px] font-black tracking-widest text-slate-400 uppercase leading-none">
+                    Concern Description
+                  </label>
+                  <textarea
+                    rows={4}
+                    placeholder="Describe the operational log concern in detail..."
+                    value={concernModal.concernText}
+                    onChange={(e) => setConcernModal({ ...concernModal, concernText: e.target.value })}
+                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-xs font-semibold text-slate-900 shadow-sm transition-all outline-none focus:border-emerald-500 focus:bg-white resize-none"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-4">
+                <button
+                  onClick={() => setConcernModal({ ...concernModal, isOpen: false })}
+                  className="flex-1 rounded-xl border border-slate-100 py-5 text-[10px] font-black tracking-widest text-slate-400 uppercase italic transition-all hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  disabled={!concernModal.concernText.trim()}
+                  onClick={handleCreateExpenditureConcernConfirm}
+                  className="flex-1 rounded-xl bg-emerald-500 py-5 text-[10px] font-black tracking-widest text-white uppercase italic shadow-xl shadow-emerald-900/20 transition-all hover:bg-emerald-600 hover:scale-105 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100"
+                >
+                  Confirm & Transmit
+                </button>
               </div>
             </motion.div>
           </div>

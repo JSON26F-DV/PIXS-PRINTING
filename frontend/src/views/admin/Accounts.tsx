@@ -22,6 +22,7 @@ import debounce from 'lodash/debounce'
 import BoxFallback from '../../components/common/BoxFallback'
 import AnimatedNumber from '../../components/animations/AnimatedNumber'
 import axiosInstance from '../../lib/axiosInstance'
+import { useAuth } from '../../context/AuthContext'
 
 // Utility for class merging
 function cn(...inputs: ClassValue[]) {
@@ -145,6 +146,7 @@ const StatCard = ({
 // --- MAIN PAGE ---
 
 const Accounts: React.FC = () => {
+  const { user: currentUser } = useAuth()
   const [users, setUsers] = useState<UserData[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -345,9 +347,11 @@ const Accounts: React.FC = () => {
                 <th className="hidden px-6 py-6 text-[11px] font-black tracking-[3px] text-slate-400 uppercase md:table-cell">
                   Status
                 </th>
-                <th className="px-6 py-6 text-right text-[11px] font-black tracking-[3px] text-slate-400 uppercase">
-                  Actions
-                </th>
+                {currentUser?.role !== 'inventory' && (
+                  <th className="px-6 py-6 text-right text-[11px] font-black tracking-[3px] text-slate-400 uppercase">
+                    Actions
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
@@ -371,7 +375,9 @@ const Accounts: React.FC = () => {
                   >
                     <td className="px-6 py-6">
                       <div className="flex items-center gap-4">
-                        <UserAvatar src={user.profile_picture} name={user.name} size="h-12 w-12" />
+                        {currentUser?.role !== 'inventory' && (
+                          <UserAvatar src={user.profile_picture} name={user.name} size="h-12 w-12" />
+                        )}
                         <div>
                           <p className="text-sm font-black tracking-tight text-slate-900 uppercase italic">
                             {user.name}
@@ -454,22 +460,24 @@ const Accounts: React.FC = () => {
                         {user.status}
                       </span>
                     </td>
-                    <td className="px-6 py-6 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Link
-                          to={`/admin/account/manage/${user.type}/${user.id}`}
-                          className="rounded-[16px] p-3 text-slate-400 shadow-sm transition-all hover:bg-slate-900 hover:text-white"
-                        >
-                          <Edit2 size={16} />
-                        </Link>
-                        <Link
-                          to={`/admin/account/delete/${user.id}`}
-                          className="rounded-[16px] p-3 text-slate-400 shadow-sm transition-all hover:bg-rose-500 hover:text-white"
-                        >
-                          <Trash2 size={16} />
-                        </Link>
-                      </div>
-                    </td>
+                    {currentUser?.role !== 'inventory' && (
+                      <td className="px-6 py-6 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <Link
+                            to={`/admin/account/manage/${user.type}/${user.id}`}
+                            className="rounded-[16px] p-3 text-slate-400 shadow-sm transition-all hover:bg-slate-900 hover:text-white"
+                          >
+                            <Edit2 size={16} />
+                          </Link>
+                          <Link
+                            to={`/admin/account/delete/${user.id}`}
+                            className="rounded-[16px] p-3 text-slate-400 shadow-sm transition-all hover:bg-rose-500 hover:text-white"
+                          >
+                            <Trash2 size={16} />
+                          </Link>
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 ))
               ) : (

@@ -1,23 +1,33 @@
 import React, { useEffect, useState } from 'react'
 import { Check, MapPin, Phone } from 'lucide-react'
-
+import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../../../context/AuthContext'
 import type { Order } from '../../Order/components/OrderCard'
 import { clsx } from 'clsx'
 import axiosInstance from '../../../lib/axiosInstance'
+
+interface ExtendedOrder extends Order {
+  customer_name?: string | null
+  company_name?: string | null
+}
 
 interface OrderConfirmMessageProps {
   messageId: string
   orderId: string
   isCustomer: boolean
   isConfirm?: number
+  productConcern?: number | boolean
 }
 
-const OrderConfirmMessage: React.FC<OrderConfirmMessageProps> = ({ messageId, orderId, isCustomer, isConfirm }) => {
-  const [order, setOrder] = useState<Order | null>(null)
+const OrderConfirmMessage: React.FC<OrderConfirmMessageProps> = ({ messageId, orderId, isCustomer, isConfirm, productConcern }) => {
+  const { user } = useAuth()
+  const navigate = useNavigate()
+  const [order, setOrder] = useState<ExtendedOrder | null>(null)
   const [loading, setLoading] = useState(true)
   const [confirmed, setConfirmed] = useState(() => {
     return isConfirm === 1 || localStorage.getItem(`confirmed_order_${orderId}`) === 'true'
   })
+  const isProductConcern = productConcern === 1 || productConcern === true
 
   useEffect(() => {
     let mounted = true
@@ -45,6 +55,16 @@ const OrderConfirmMessage: React.FC<OrderConfirmMessageProps> = ({ messageId, or
     }
   }
 
+  const handleCardClick = () => {
+    if (!isProductConcern || !user || user.role === 'customer') return
+    const base = user.role === 'staff' || user.role === 'technician'
+      ? '/staff'
+      : user.role === 'inventory'
+        ? '/inventory'
+        : '/admin'
+    navigate(`${base}/orders?search=${orderId}`)
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
@@ -56,18 +76,33 @@ const OrderConfirmMessage: React.FC<OrderConfirmMessageProps> = ({ messageId, or
   if (!order) return <div className="p-4 text-[10px] uppercase font-black text-rose-500">Order Data Corrupted or Deleted</div>
 
   return (
-    <div className={clsx(
-      "w-full max-w-sm rounded-[32px] overflow-hidden shadow-2xl border transition-all",
-      isCustomer ? "bg-slate-900 border-white/10 text-white" : "bg-white border-slate-100 text-slate-900"
-    )}>
+    <div 
+      onClick={handleCardClick}
+      className={clsx(
+        "w-full max-w-sm rounded-[32px] overflow-hidden shadow-2xl border transition-all",
+        isProductConcern && user && user.role !== 'customer' && "cursor-pointer hover:border-amber-400 hover:shadow-amber-500/10",
+        isCustomer ? "bg-slate-900 border-white/10 text-white" : "bg-white border-slate-100 text-slate-900"
+      )}
+    >
       {/* Header */}
       <div className="p-6 border-b border-white/10">
         <div className="flex items-center gap-3 mb-2">
-           <div className="h-0.5 w-8 bg-pixs-mint" />
-           <span className="text-[10px] font-black tracking-[4px] text-pixs-mint uppercase italic">Transmission Received</span>
+           <div className={clsx("h-0.5 w-8", isProductConcern ? "bg-amber-500" : "bg-pixs-mint")} />
+           <span className={clsx("text-[10px] font-black tracking-[4px] uppercase italic", isProductConcern ? "text-amber-500" : "text-pixs-mint")}>
+             {isProductConcern ? "Concern Flagged" : "Transmission Received"}
+           </span>
         </div>
-        <h3 className="text-xl font-black italic uppercase leading-none">review your shipping address</h3>
-        <p className="mt-2 text-[9px] font-bold opacity-50 uppercase tracking-widest">ID: {orderId}</p>
+        <h3 className="text-xl font-black italic uppercase leading-none">
+          {isProductConcern ? `Product concern for order ${orderId}` : "review your shipping address"}
+        </h3>
+        {isProductConcern ? (
+          <div className="mt-3 text-[10px] font-bold space-y-1 opacity-70 uppercase tracking-wider">
+            {order.customer_name && <p>Customer: <span className="font-black text-slate-900 dark:text-white">{order.customer_name}</span></p>}
+            {order.company_name && <p>Company: <span className="font-black text-slate-900 dark:text-white">{order.company_name}</span></p>}
+          </div>
+        ) : (
+          <p className="mt-2 text-[9px] font-bold opacity-50 uppercase tracking-widest">ID: {orderId}</p>
+        )}
       </div>
 
       {/* Items */}
@@ -120,27 +155,29 @@ const OrderConfirmMessage: React.FC<OrderConfirmMessageProps> = ({ messageId, or
       )}
 
       {/* Confirm Button */}
-      <div className="p-6 flex justify-end">
-        <button
-          onClick={handleConfirm}
-          disabled={confirmed}
-          className={clsx(
-            "px-8 py-4 rounded-2xl flex items-center justify-center gap-3 transition-all active:scale-95",
-            confirmed 
-              ? "bg-green-500/10 text-green-500 border border-green-500/20" 
-              : "bg-pixs-mint text-slate-900 shadow-xl shadow-pixs-mint/20 hover:scale-[1.02]"
-          )}
-        >
-          {confirmed ? (
-            <>
-              <Check size={18} />
-              <span className="text-[11px] font-black uppercase italic tracking-widest">Address Confirmed</span>
-            </>
-          ) : (
-            <span className="text-[11px] font-black uppercase italic tracking-widest">Confirm Information</span>
-          )}
-        </button>
-      </div>
+      {!isProductConcern && (
+        <div className="p-6 flex justify-end">
+          <button
+            onClick={handleConfirm}
+            disabled={confirmed}
+            className={clsx(
+              "px-8 py-4 rounded-2xl flex items-center justify-center gap-3 transition-all active:scale-95",
+              confirmed 
+                ? "bg-green-500/10 text-green-500 border border-green-500/20" 
+                : "bg-pixs-mint text-slate-900 shadow-xl shadow-pixs-mint/20 hover:scale-[1.02]"
+            )}
+          >
+            {confirmed ? (
+              <>
+                <Check size={18} />
+                <span className="text-[11px] font-black uppercase italic tracking-widest">Address Confirmed</span>
+              </>
+            ) : (
+              <span className="text-[11px] font-black uppercase italic tracking-widest">Confirm Information</span>
+            )}
+          </button>
+        </div>
+      )}
     </div>
   )
 }

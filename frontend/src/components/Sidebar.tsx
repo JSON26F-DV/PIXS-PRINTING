@@ -15,6 +15,7 @@ import {
   Layers,
   BarChart3,
   QrCode,
+  Receipt,
   type LucideIcon,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
@@ -119,6 +120,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       { id: 'product', label: 'Product Catalog', icon: PackageOpen },
       { id: 'screenplate', label: 'Screenplate Registry', icon: Layers },
       { id: 'stock', label: 'Stock Analytics', icon: BarChart3 },
+      { id: 'refund', label: 'Refund Management', icon: Receipt },
       { id: 'account', label: 'Accounts', icon: Users },
       { id: 'payroll', label: 'Attendance & Payroll', icon: CalendarCheck },
       { id: 'marketing', label: 'Marketing & Promos', icon: TicketPercent },

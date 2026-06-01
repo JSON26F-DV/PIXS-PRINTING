@@ -19,6 +19,9 @@ import {
   ArrowDown,
   Pin,
   Copy,
+  DollarSign,
+  Mail,
+  AlertCircle,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -30,6 +33,9 @@ import type { EmojiClickData } from 'emoji-picker-react'
 import type { IMessage } from '../MessengerPage.tsx'
 import OrderConfirmMessage from './OrderConfirmMessage'
 import ScreenplateConfirmMessage from './ScreenplateConfirmMessage'
+import ExpenditureConfirmMessage from './ExpenditureConfirmMessage'
+import RefundMessage from './RefundMessage'
+import EmailMessage from './EmailMessage'
 import FullscreenGalleryModal from '../../../components/common/FullscreenGalleryModal'
 
 interface MessageListProps {
@@ -165,7 +171,7 @@ const MessageBubble: React.FC<{
     if (onCancelEdit) onCancelEdit()
   }
 
-  const hasCard = message.order_id || message.screenplate_request_id;
+  const hasCard = !!(message.order_id || message.screenplate_request_id || message.expenditures_id || message.refund_id || message.an_email);
 
   return (
     <motion.div
@@ -275,7 +281,25 @@ const MessageBubble: React.FC<{
 
           {message.order_id && !isEditing && !message.isDeleted && (
             <div className="mt-2 group-last:mb-0">
-               <OrderConfirmMessage messageId={message.id} orderId={message.order_id} isCustomer={isCustomer} isConfirm={message.is_confirm} />
+               <OrderConfirmMessage messageId={message.id} orderId={message.order_id} isCustomer={isCustomer} isConfirm={message.is_confirm} productConcern={message.product_concern} />
+            </div>
+          )}
+
+          {message.expenditures_id && !isEditing && !message.isDeleted && (
+            <div className="mt-2 group-last:mb-0">
+               <ExpenditureConfirmMessage expenditureId={message.expenditures_id} isCustomer={isCustomer} />
+            </div>
+          )}
+
+          {message.refund_id && !isEditing && !message.isDeleted && (
+            <div className="mt-2 group-last:mb-0">
+               <RefundMessage refundId={message.refund_id} isCustomer={isCustomer} />
+            </div>
+          )}
+
+          {message.an_email && !isEditing && !message.isDeleted && (
+            <div className="mt-2 group-last:mb-0">
+               <EmailMessage messageText={message.text} created_at={message.created_at} isCustomer={isCustomer} />
             </div>
           )}
 
@@ -304,6 +328,46 @@ const MessageBubble: React.FC<{
               >
                 <Copy size={10} /> Copy
               </button>
+            </div>
+          )}
+
+          {message.refund_id && (
+            <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50/50 p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <DollarSign size={16} className="text-rose-500" />
+                <span className="text-[10px] font-black tracking-widest uppercase text-rose-500">
+                  REFUND NOTICE
+                </span>
+              </div>
+              <p className="text-sm font-medium">{message.text}</p>
+              <button className="mt-3 text-[10px] font-bold uppercase tracking-widest text-rose-600 hover:underline">
+                View Refund Details →
+              </button>
+            </div>
+          )}
+
+          {message.an_email && (
+            <div className="mt-3 rounded-xl border border-blue-200 bg-blue-50/50 p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Mail size={16} className="text-blue-500" />
+                <span className="text-[10px] font-black tracking-widest uppercase text-blue-500">
+                  EMAIL SENT
+                </span>
+              </div>
+              <p className="text-sm font-medium">{message.text}</p>
+            </div>
+          )}
+
+          {message.product_concern && !message.refund_id && !message.an_email && (
+            <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50/50 p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <AlertCircle size={16} className="text-amber-500" />
+                <span className="text-[10px] font-black tracking-widest uppercase text-amber-500">
+                  PRODUCT CONCERN
+                </span>
+              </div>
+              <p className="text-sm font-medium">{message.text}</p>
+              <p className="mt-2 text-xs text-slate-500">Awaiting admin response</p>
             </div>
           )}
 

@@ -38,6 +38,7 @@ import ManageOrder from '../views/admin/management/ManageOrder'
 import MarketingPromotions from '../views/admin/MarketingPromotions'
 import AdminSettings from '../views/admin/Settings/AdminSettings'
 import PayCode from '../views/admin/PayCode'
+import RefundPage from '../views/admin/Refund'
 // import DisputeView from '../views/admin/DisputeView';
 // Staff Views
 import StaffOverview from '../views/staff/StaffOverview'
@@ -207,6 +208,7 @@ const AppRouter: React.FC = () => {
         <Route path="setting" element={<AdminSettings />} />
         <Route path="marketing" element={<MarketingPromotions />} />
         <Route path="generatecode" element={<PayCode />} />
+        <Route path="refund" element={<RefundPage />} />
       </Route>
 
       {/* Staff Routes */}

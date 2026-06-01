@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { useLocation } from 'react-router-dom'
 import { Package, TrendingUp, Briefcase, AlertCircle } from 'lucide-react'
 import Skeleton from 'react-loading-skeleton'
 import 'react-loading-skeleton/dist/skeleton.css'
@@ -21,6 +22,10 @@ export default function StockAnalytics() {
     deleteExpenditure,
     undoInventoryLog,
   } = useStockAnalytics()
+
+  const location = useLocation()
+  const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search])
+  const searchLogId = searchParams.get('search') || searchParams.get('id') || ''
 
   const catalogValue = useMemo(
     () => expenditures.reduce((acc: number, exp) => acc + Number(exp.amount), 0),
@@ -120,6 +125,7 @@ export default function StockAnalytics() {
             updateExpenditure={updateExpenditure}
             deleteExpenditure={deleteExpenditure}
             undoInventoryLog={undoInventoryLog}
+            initialLogSearch={searchLogId}
           />
         )}
       </main>

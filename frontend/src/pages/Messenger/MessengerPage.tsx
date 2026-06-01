@@ -45,6 +45,10 @@ export interface IMessage {
   is_confirm?: number
   payment_code_id?: string
   is_pinned?: string | null
+  refund_id?: string
+  expenditures_id?: string
+  an_email?: boolean
+  product_concern?: boolean
 }
 
 interface ApiMessage {
@@ -70,6 +74,10 @@ interface ApiMessage {
   is_confirm?: number
   payment_code_id?: string
   is_pinned?: string | null
+  refund_id?: string
+  expenditures_id?: string
+  an_email?: number | boolean
+  product_concern?: number | boolean
 }
 
 const SidebarUserAvatar: React.FC<{
@@ -191,7 +199,11 @@ const MessengerPage: React.FC = () => {
           is_confirm: m.is_confirm,
           payment_code_id: m.payment_code_id,
           is_pinned: m.is_pinned,
-          isDeleted: m.is_deleted === 1
+          isDeleted: m.is_deleted === 1,
+          refund_id: m.refund_id,
+          expenditures_id: m.expenditures_id,
+          an_email: Boolean(m.an_email),
+          product_concern: Boolean(m.product_concern)
         }
       })
       

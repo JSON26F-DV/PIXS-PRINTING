@@ -26,6 +26,7 @@ class MessageController extends Controller
             'receiver_id', 'receiver_type', 'message',
             'reply_to_id', 'is_edited', 'is_deleted', 'is_read',
             'order_id', 'screenplate_request_id', 'payment_code_id', 'is_pinned', 'is_confirm',
+            'refund_id', 'expenditures_id', 'product_concern', 'an_email',
             'created_at', 'updated_at',
         ];
 
@@ -188,6 +189,8 @@ class MessageController extends Controller
             'order_id' => 'nullable|string|max:30',
             'screenplate_request_id' => 'nullable|string|max:20',
             'payment_code_id' => 'nullable|string|max:30',
+            'product_concern' => 'nullable|boolean',
+            'expenditures_id' => 'nullable|string|max:30',
             'attachments' => 'nullable|array|max:20',
             'attachments.*.file' => [
                 'nullable', 'file', 'max:5120',           // 5 MB in KB (reduced from 10MB)
@@ -281,8 +284,8 @@ class MessageController extends Controller
             // Insert message
             DB::insert('
                 INSERT INTO messages 
-                (id, conversation_id, sender_id, sender_type, receiver_id, receiver_type, message, reply_to_id, order_id, screenplate_request_id, payment_code_id, created_at, updated_at) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+                (id, conversation_id, sender_id, sender_type, receiver_id, receiver_type, message, reply_to_id, order_id, screenplate_request_id, payment_code_id, product_concern, expenditures_id, created_at, updated_at) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
             ', [
                 $msgId,
                 $convId,
@@ -295,6 +298,8 @@ class MessageController extends Controller
                 $validated['order_id'] ?? null,
                 $validated['screenplate_request_id'] ?? null,
                 $validated['payment_code_id'] ?? null,
+                !empty($validated['product_concern']) ? 1 : 0,
+                $validated['expenditures_id'] ?? null,
             ]);
 
             if (! empty($attachments)) {
@@ -401,6 +406,7 @@ class MessageController extends Controller
             'items.colors.colorDetails',
             'items.screenplate',
             'address',
+            'customer',
         ])->where('id', $id)->first();
 
         if (! $order) {
@@ -410,6 +416,8 @@ class MessageController extends Controller
         $formatted = [
             'order_id' => $order->id,
             'user_id' => $order->customer_id,
+            'customer_name' => $order->customer ? "{$order->customer->first_name} {$order->customer->last_name}" : null,
+            'company_name' => $order->customer ? $order->customer->company_name : null,
             'total_amount' => (float) $order->total_amount,
             'status' => $order->status,
             'created_at' => $order->created_at,
@@ -481,6 +489,40 @@ class MessageController extends Controller
         }
 
         return response()->json($request);
+    }
+
+    public function getExpenditureContext($id): JsonResponse
+    {
+        $expenditure = DB::table('expenditures')->where('id', $id)->first();
+
+        if (!$expenditure) {
+            return response()->json(['notFound' => true], 404);
+        }
+
+        return response()->json($expenditure);
+    }
+
+    public function getRefundContext($id): JsonResponse
+    {
+        $refund = DB::table('refunds')
+            ->select(
+                'refunds.*',
+                'customers.first_name as customer_first_name',
+                'customers.last_name as customer_last_name',
+                'customers.email as customer_email',
+                'employees.first_name as employee_first_name',
+                'employees.last_name as employee_last_name',
+            )
+            ->leftJoin('customers', 'refunds.customer_id', '=', 'customers.id')
+            ->leftJoin('employees', 'refunds.employee_id', '=', 'employees.id')
+            ->where('refunds.id', $id)
+            ->first();
+
+        if (!$refund) {
+            return response()->json(['notFound' => true], 404);
+        }
+
+        return response()->json($refund);
     }
 
     /**
@@ -731,5 +773,41 @@ class MessageController extends Controller
         ]);
 
         return response()->json(['message' => 'Payment code updated']);
+    }
+
+    /**
+     * Attach refund to a message (for display purposes)
+     */
+    public function attachRefund(string $id): JsonResponse
+    {
+        $validated = request()->validate([
+            'refund_id' => 'nullable|string|max:30',
+            'product_concern' => 'nullable|boolean',
+            'an_email' => 'nullable|boolean',
+        ]);
+
+        $user = request()->user();
+
+        // Verify user has access to this message
+        $msg = DB::table('messages')->where('id', $id)->first();
+        if (!$msg || ($msg->sender_id !== $user->id && $msg->receiver_id !== $user->id)) {
+            return response()->json(['message' => 'Unauthorized.'], 403);
+        }
+
+        $updateData = ['updated_at' => now()];
+        
+        if (array_key_exists('refund_id', $validated)) {
+            $updateData['refund_id'] = $validated['refund_id'];
+        }
+        if (array_key_exists('product_concern', $validated)) {
+            $updateData['product_concern'] = $validated['product_concern'] ? 1 : 0;
+        }
+        if (array_key_exists('an_email', $validated)) {
+            $updateData['an_email'] = $validated['an_email'] ? 1 : 0;
+        }
+
+        DB::table('messages')->where('id', $id)->update($updateData);
+
+        return response()->json(['message' => 'Message updated.']);
     }
 }

@@ -186,6 +186,20 @@ Route::middleware(['auth:sanctum'])->prefix('admin')->group(function () {
     Route::get('/payment-codes', [AdminPaymentCodeController::class, 'index'])->middleware('role:admin');
     Route::post('/payment-codes', [AdminPaymentCodeController::class, 'store'])->middleware('role:admin');
     Route::delete('/payment-codes/{id}', [AdminPaymentCodeController::class, 'destroy'])->middleware('role:admin');
+
+    // Refunds
+    Route::get('/refunds', [\App\Http\Controllers\Admin\RefundController::class, 'index'])->middleware('role:admin');
+    Route::post('/refunds', [\App\Http\Controllers\Admin\RefundController::class, 'store'])->middleware('role:admin');
+    Route::get('/refunds/{id}', [\App\Http\Controllers\Admin\RefundController::class, 'show'])->middleware('role:admin');
+    Route::patch('/refunds/{id}', [\App\Http\Controllers\Admin\RefundController::class, 'update'])->middleware('role:admin');
+    Route::delete('/refunds/{id}', [\App\Http\Controllers\Admin\RefundController::class, 'destroy'])->middleware('role:admin');
+    Route::get('/customers/{id}/payment-methods', [\App\Http\Controllers\Admin\RefundController::class, 'customerPaymentMethods'])->middleware('role:admin');
+
+    // Expenditures (Handled fully inside AdminStockAnalyticsController above)
+    // Route::get('/expenditures', [\App\Http\Controllers\Admin\ExpenditureController::class, 'index'])->middleware('role:admin');
+    // Route::post('/expenditures', [\App\Http\Controllers\Admin\ExpenditureController::class, 'store'])->middleware('role:admin');
+    // Route::patch('/expenditures/{id}', [\App\Http\Controllers\Admin\ExpenditureController::class, 'update'])->middleware('role:admin');
+    // Route::delete('/expenditures/{id}', [\App\Http\Controllers\Admin\ExpenditureController::class, 'destroy'])->middleware('role:admin');
 });
 
 // Messaging & Notifications
@@ -194,6 +208,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/messages/users', [MessageController::class, 'getUsers']);
     Route::get('/messages/orders/{id}', [MessageController::class, 'getOrderContext']);
     Route::get('/messages/screenplate-requests/{id}', [MessageController::class, 'getScreenplateRequestContext']);
+    Route::get('/messages/expenditures/{id}', [MessageController::class, 'getExpenditureContext']);
+    Route::get('/messages/refunds/{id}', [MessageController::class, 'getRefundContext']);
     Route::get('/messages/image-count', [MessageController::class, 'getImageUploadCount']);
     Route::post('/messages/send', [MessageController::class, 'store']);
     Route::post('/messages/{id}/react', [MessageController::class, 'reactMessage']);
@@ -207,6 +223,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/messages/{id}', [MessageController::class, 'destroy']);
     Route::patch('/messages/{id}/pin', [MessageController::class, 'togglePin']);
     Route::patch('/messages/{id}/payment-code', [MessageController::class, 'managePaymentCode']);
+    Route::patch('/messages/{id}/refund', [MessageController::class, 'attachRefund']);
 
     // Notifications
     Route::post('/notifications', [NotificationController::class, 'store']);
