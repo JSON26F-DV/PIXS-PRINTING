@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react'
+import React, { useState, useMemo } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import {
   Search,
@@ -103,18 +103,19 @@ const Orders: React.FC = () => {
     concernText: string
   }>({ isOpen: false, orderId: '', concernText: '' })
   const [mobileDetailOrder, setMobileDetailOrder] = useState<Order | null>(null)
-  const [orderSearch, setOrderSearch] = useState('')
 
   const location = useLocation()
   const queryParams = useMemo(() => new URLSearchParams(location.search), [location.search])
   const searchOrderId = queryParams.get('search') || queryParams.get('id') || ''
 
-  useEffect(() => {
-    if (searchOrderId) {
-      setOrderSearch(searchOrderId)
-      setExpandedOrderIds(new Set([searchOrderId]))
-    }
-  }, [searchOrderId])
+  const [orderSearch, setOrderSearch] = useState(searchOrderId)
+  const [prevSearchOrderId, setPrevSearchOrderId] = useState(searchOrderId)
+
+  if (searchOrderId !== prevSearchOrderId) {
+    setOrderSearch(searchOrderId)
+    setExpandedOrderIds(new Set([searchOrderId]))
+    setPrevSearchOrderId(searchOrderId)
+  }
 
   const itemsPerPage = 10
   const customersPerPage = 5

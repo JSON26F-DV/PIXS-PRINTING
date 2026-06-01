@@ -37,10 +37,10 @@ const CustomerNavbar: React.FC = () => {
     useCustomerAddressStore()
 
   React.useEffect(() => {
-    if (user) {
+    if (user?.isLoggedIn) {
       fetchAddresses()
     }
-  }, [user, fetchAddresses])
+  }, [user?.isLoggedIn, fetchAddresses])
 
   const selectedAddress = useMemo(
     () => addresses.find((a) => a.id === defaultAddressId),
@@ -48,10 +48,10 @@ const CustomerNavbar: React.FC = () => {
   )
   const addressText = selectedAddress
     ? `${selectedAddress.city || ''}, ${selectedAddress.province || ''}`.trim()
-    : 'Select Delivery Address'
+    : user?.isLoggedIn ? 'Select Delivery Address' : 'Guest Mode'
   const addressLineFull = selectedAddress
     ? `${selectedAddress.city}, ${selectedAddress.province} CP-${selectedAddress.postal_code}`
-    : 'Select Address'
+    : user?.isLoggedIn ? 'Select Address' : 'Guest Mode'
 
   const { getCartCount } = useCartStore()
   const { unreadCount } = useNotificationStore()
@@ -61,6 +61,14 @@ const CustomerNavbar: React.FC = () => {
 
   const plateStatus = 'Ready'
   const cartItemCount = getCartCount()
+
+  const handleAddressClick = () => {
+    if (user?.isLoggedIn) {
+      setIsAddressModalOpen(true)
+    } else {
+      navigate('/login')
+    }
+  }
 
   if (location.pathname.startsWith('/admin')) {
     return null
@@ -95,33 +103,29 @@ const CustomerNavbar: React.FC = () => {
               >
                 <Search size={18} strokeWidth={2.5} />
               </button>
-              {user?.isLoggedIn && (
-                <button
-                  onClick={() => setIsAddressModalOpen(true)}
-                  className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-50 text-slate-400 transition-colors hover:bg-slate-100"
-                >
-                  <MapPin
-                    size={18}
-                    className="text-pixs-mint"
-                    strokeWidth={2.5}
-                  />
-                </button>
-              )}
+              <button
+                onClick={handleAddressClick}
+                className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-50 text-slate-400 transition-colors hover:bg-slate-100"
+              >
+                <MapPin
+                  size={18}
+                  className="text-pixs-mint"
+                  strokeWidth={2.5}
+                />
+              </button>
             </div>
 
-            {user?.isLoggedIn && (
-              <button
-                onClick={() => setIsAddressModalOpen(true)}
-                className="CustomerNavbarAddressButton hidden flex-col items-start rounded-2xl border border-transparent px-4 py-2 transition-all hover:border-slate-100 hover:bg-slate-50 min-[1251px]:flex"
-              >
-                <span className="flex items-center gap-1.5 text-[10px] leading-none font-black tracking-[2px] text-slate-400 uppercase italic">
-                  Deliver to <MapPin size={10} className="text-pixs-mint" />
-                </span>
-                <p className="mt-1 max-w-[140px] truncate text-xs leading-none font-bold text-slate-900 italic">
-                  {addressLineFull}
-                </p>
-              </button>
-            )}
+            <button
+              onClick={handleAddressClick}
+              className="CustomerNavbarAddressButton hidden flex-col items-start rounded-2xl border border-transparent px-4 py-2 transition-all hover:border-slate-100 hover:bg-slate-50 min-[1251px]:flex"
+            >
+              <span className="flex items-center gap-1.5 text-[10px] leading-none font-black tracking-[2px] text-slate-400 uppercase italic">
+                Deliver to <MapPin size={10} className="text-pixs-mint" />
+              </span>
+              <p className="mt-1 max-w-[140px] truncate text-xs leading-none font-bold text-slate-900 italic">
+                {addressLineFull}
+              </p>
+            </button>
           </div>
 
           {/* Center: Search (Desktop Only) */}
@@ -261,48 +265,28 @@ const CustomerNavbar: React.FC = () => {
         {(location.pathname === '/' || location.pathname === '/homepage') && (
           <div className="mobile-navbar-top fixed top-0 right-0 left-0 z-50 flex flex-col bg-white/90 shadow-[0_10px_40px_rgba(0,0,0,0.03)] backdrop-blur-3xl">
           <div className="flex h-16 items-center justify-between px-4">
-            {/* 📍 Left — Location Block (Authenticated Only) */}
-            {user?.isLoggedIn ? (
-              <button
-                onClick={() => setIsAddressModalOpen(true)}
-                className="location-wrapper mr-4 flex flex-1 items-center gap-3 overflow-hidden transition-opacity duration-150 active:opacity-70"
-              >
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] bg-slate-900 shadow-lg shadow-slate-200">
-                  <MapPin
-                    size={16}
-                    className="text-pixs-mint"
-                    strokeWidth={3}
-                  />
-                </div>
-                <div className="flex flex-col items-start overflow-hidden leading-tight">
-                  <span className="mb-1 flex items-center gap-1 text-[8px] leading-none font-black tracking-[3px] text-slate-400 uppercase italic">
-                    Arrival Node{' '}
-                    <ChevronDown size={10} className="opacity-70" />
-                  </span>
-                  <p className="location-text max-w-[55vw] truncate overflow-hidden text-sm leading-none font-black tracking-tighter whitespace-nowrap text-slate-900 italic">
-                    {addressText}
-                  </p>
-                </div>
-              </button>
-            ) : (
-              <div className="flex flex-1 items-center gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] bg-slate-900 opacity-50 shadow-lg shadow-slate-200">
-                  <Package
-                    size={16}
-                    className="text-pixs-mint"
-                    strokeWidth={2.5}
-                  />
-                </div>
-                <div className="flex flex-col items-start leading-tight">
-                  <span className="mb-1 text-[8px] leading-none font-black tracking-[3px] text-slate-400 uppercase italic">
-                    Status Node
-                  </span>
-                  <p className="text-sm leading-none font-black tracking-tighter text-slate-900/40 italic">
-                    Guest Mode
-                  </p>
-                </div>
+            {/* 📍 Left — Location Block */}
+            <button
+              onClick={handleAddressClick}
+              className="location-wrapper mr-4 flex flex-1 items-center gap-3 overflow-hidden transition-opacity duration-150 active:opacity-70"
+            >
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] bg-slate-900 shadow-lg shadow-slate-200">
+                <MapPin
+                  size={16}
+                  className="text-pixs-mint"
+                  strokeWidth={3}
+                />
               </div>
-            )}
+              <div className="flex flex-col items-start overflow-hidden leading-tight">
+                <span className="mb-1 flex items-center gap-1 text-[8px] leading-none font-black tracking-[3px] text-slate-400 uppercase italic">
+                  Arrival Node{' '}
+                  <ChevronDown size={10} className="opacity-70" />
+                </span>
+                <p className="location-text max-w-[55vw] truncate overflow-hidden text-sm leading-none font-black tracking-tighter whitespace-nowrap text-slate-900 italic">
+                  {addressText}
+                </p>
+              </div>
+            </button>
 
             <div className="flex items-center gap-2">
               {/* 🔔 Alert Icon — Mobile Top */}

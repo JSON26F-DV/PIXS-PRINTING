@@ -27,7 +27,13 @@ return Application::configure(basePath: dirname(__DIR__))
                 return null;
             }
 
-            if ($e instanceof ValidationException || $e instanceof HttpExceptionInterface) {
+            if (
+                $e instanceof ValidationException || 
+                $e instanceof HttpExceptionInterface ||
+                $e instanceof \Illuminate\Auth\AuthenticationException ||
+                $e instanceof \Illuminate\Auth\Access\AuthorizationException ||
+                $e instanceof \Illuminate\Database\Eloquent\ModelNotFoundException
+            ) {
                 return null;
             }
 
