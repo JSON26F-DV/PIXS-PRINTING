@@ -345,11 +345,35 @@ const MessengerPage: React.FC = () => {
         }
       })
 
-      await axiosInstance.post('/api/messages/send', formData, {
+      interface SendResponse {
+        data: {
+          id: string;
+          attachments?: { type: 'image' | 'file'; url: string; name: string }[];
+        };
+      }
+
+      const res = await axiosInstance.post<SendResponse>('/api/messages/send', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
       })
+
+      const realId = res.data.data.id
+      const realAttachments = res.data.data.attachments || []
+
+      // Sync local optimistic message state with the database ID and generated attachment names
+      setMessages((prev) =>
+        prev.map((msg) => {
+          if (msg.id === tempId) {
+            return {
+              ...msg,
+              id: realId,
+              attachments: realAttachments,
+            }
+          }
+          return msg
+        })
+      )
 
       // Refresh image count after successful send if attachments contained images
       if (attachments.some(a => a.type === 'image')) {
@@ -473,6 +497,26 @@ const MessengerPage: React.FC = () => {
     }
   }
 
+  const handleDeleteMediaAttachment = async (messageId: string, filename: string) => {
+    try {
+      await axiosInstance.delete(`/api/messages/${messageId}/attachments/${filename}`)
+      setMessages((prev) =>
+        prev.map((msg) => {
+          if (msg.id === messageId) {
+            return {
+              ...msg,
+              attachments: (msg.attachments || []).filter((at) => at.name !== filename),
+            }
+          }
+          return msg
+        })
+      )
+      fetchImageCount()
+    } catch (error) {
+      console.error('Failed to delete media attachment', error)
+    }
+  }
+
   return (
     <div className="MessengerTerminal relative flex h-screen max-h-screen overflow-hidden flex-col bg-slate-50">
       {user?.role === 'admin' ? (
@@ -504,6 +548,7 @@ const MessengerPage: React.FC = () => {
                   isLoading={isLoading} 
                   onLoadMore={loadMoreMessages}
                   isLoadingMore={isLoadingMore}
+                  onDeleteMedia={handleDeleteMediaAttachment}
                 />
               </div>
             ) : (
@@ -528,6 +573,7 @@ const MessengerPage: React.FC = () => {
                   <GalleryView
                     messages={messages}
                     onClose={() => setIsGalleryOpen(false)}
+                    onDeleteMedia={handleDeleteMediaAttachment}
                   />
                 </motion.div>
               )}
@@ -655,6 +701,7 @@ const MessengerPage: React.FC = () => {
                   isLoading={isLoading}
                   onLoadMore={loadMoreMessages}
                   isLoadingMore={isLoadingMore}
+                  onDeleteMedia={undefined}
                 />
               </div>
 
@@ -670,6 +717,7 @@ const MessengerPage: React.FC = () => {
                     <GalleryView
                       messages={messages}
                       onClose={() => setIsGalleryOpen(false)}
+                      onDeleteMedia={undefined}
                     />
                   </motion.div>
                 )}
@@ -729,6 +777,7 @@ const MessengerPage: React.FC = () => {
                 messages={messages}
                 onClose={() => setIsGalleryOpen(false)}
                 isMobile
+                onDeleteMedia={user?.role === 'admin' ? handleDeleteMediaAttachment : undefined}
               />
             </motion.div>
           </div>
@@ -842,6 +891,10 @@ const MessengerPage: React.FC = () => {
         targetUser={users.find(u => u.id === selectedUserId)}
         onDeleteConversation={handleDeleteConversation}
         onSendMessage={handleSendMessage}
+        onToggleGallery={() => {
+          setIsGalleryOpen(true)
+          setIsAccountsOpen(false)
+        }}
       />
     </div>
   )

@@ -25,6 +25,7 @@ interface PriceCalculatorUIProps {
   onBuyNow: () => void
   quantity: number
   isStockInsufficient?: boolean
+  hideBuyNow?: boolean
 }
 
 /**
@@ -46,6 +47,7 @@ const PriceCalculatorUI: React.FC<PriceCalculatorUIProps> = ({
   onBuyNow,
   quantity,
   isStockInsufficient,
+  hideBuyNow,
 }) => {
   const isColorMissing = isNeedColor && !hasRequiredColor
   const isPlateMissing = isNeedScreenplate && !hasRequiredPlate
@@ -190,21 +192,23 @@ const PriceCalculatorUI: React.FC<PriceCalculatorUIProps> = ({
 
         {/* Dual Action CTA Terminal */}
         <div className="flex flex-col gap-4">
-          <button
-            onClick={onBuyNow}
-            disabled={!canAddToCart}
-            className={clsx(
-              'group relative flex w-full items-center justify-center gap-4 overflow-hidden rounded-2xl py-6 transition-all duration-500 active:scale-[0.98] md:rounded-[32px]',
-              canAddToCart
-                ? 'bg-pixs-mint shadow-pixs-mint/20 text-slate-900 shadow-xl hover:scale-[1.01]'
-                : 'cursor-not-allowed bg-slate-100 text-slate-300 opacity-60 grayscale',
-            )}
-          >
-            <span className="text-xl font-black tracking-tighter uppercase italic">
-              {canAddToCart ? 'BUY NOW' : 'Selection Incomplete'}
-            </span>
-            <PackageCheck size={24} strokeWidth={3} />
-          </button>
+          {!hideBuyNow && (
+            <button
+              onClick={onBuyNow}
+              disabled={!canAddToCart}
+              className={clsx(
+                'group relative flex w-full items-center justify-center gap-4 overflow-hidden rounded-2xl py-6 transition-all duration-500 active:scale-[0.98] md:rounded-[32px]',
+                canAddToCart
+                  ? 'bg-pixs-mint shadow-pixs-mint/20 text-slate-900 shadow-xl hover:scale-[1.01]'
+                  : 'cursor-not-allowed bg-slate-100 text-slate-300 opacity-60 grayscale',
+              )}
+            >
+              <span className="text-xl font-black tracking-tighter uppercase italic">
+                {canAddToCart ? 'BUY NOW' : 'Selection Incomplete'}
+              </span>
+              <PackageCheck size={24} strokeWidth={3} />
+            </button>
+          )}
 
           <button
             onClick={onAddToCart}

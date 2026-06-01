@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
   Layers,
   Check,
@@ -9,22 +9,24 @@ import {
   Upload,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useDebounce } from '../../../hooks/useDebounce'
 import toast from 'react-hot-toast'
-import type { IProduct, IScreenplate, IUser } from './inventory-sections/types'
-import { ALIGNMENT_OPTIONS } from './inventory-sections/constants'
+import type { IProduct, IScreenplate, IUser, ICompatibilityNode, IVariant } from '../inventory-sections/types'
+import { ALIGNMENT_OPTIONS } from '../inventory-sections/constants'
 import {
   InputField,
   TextArea,
   SectionTitle,
-} from './inventory-sections/UIComponents'
+} from '../inventory-sections/UIComponents'
 import {
   getAdminScreenplate,
   createAdminScreenplate,
   updateAdminScreenplate,
   uploadScreenplateImage,
-} from '../../api/admin-screenplates.api'
-import { getAdminCustomers } from '../../api/customers.api'
-import { getProducts, getProductById } from '../../api/products.api'
+  updateScreenplateRequestStatus,
+} from '../../../api/admin-screenplates.api'
+import { getAdminCustomers } from '../../../api/customers.api'
+import { getProducts, getProductById } from '../../../api/products.api'
 
 const cn = (...classes: (string | boolean | undefined)[]) =>
   classes.filter(Boolean).join(' ')
@@ -58,11 +60,22 @@ export default function ManageScreenplate() {
   const [isUploading, setIsUploading] = useState(false)
   const [expandedProduct, setExpandedProduct] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
+  const [searchParams] = useSearchParams()
   const [saveModal, setSaveModal] = useState({
     open: false,
     type: 'success' as 'success' | 'error',
     message: '',
   })
+
+  // Customer Dropdown state
+  const [customerSearch, setCustomerSearch] = useState('')
+  const debouncedCustomerSearch = useDebounce(customerSearch, 350)
+  const [isCustomerDropdownOpen, setIsCustomerDropdownOpen] = useState(false)
+
+  const filteredCustomers = customers.filter(c => 
+    c.name.toLowerCase().includes(debouncedCustomerSearch.toLowerCase()) || 
+    (c.company_name && c.company_name.toLowerCase().includes(debouncedCustomerSearch.toLowerCase()))
+  )
 
   useEffect(() => {
     Promise.all([getAdminCustomers(), getProducts()])
@@ -70,8 +83,37 @@ export default function ManageScreenplate() {
         setCustomers(custs)
         const raw = Array.isArray(prods) ? prods : (prods && (prods.data || prods.items)) || []
         setProducts(Array.isArray(raw) ? raw : [])
+        const initCustomerId = searchParams.get('customer_id')
+        const initProductId = searchParams.get('product_id')
+        const initVariantId = searchParams.get('variant_id')
+        const initColorCount = searchParams.get('color_count')
+        const initAlignment = searchParams.get('alignment')
+
         if (isCreate && custs.length > 0) {
-          setData((prev) => ({ ...prev, owner_id: custs[0].id }))
+          setData((prev: IScreenplate) => ({ 
+            ...prev, 
+            owner_id: initCustomerId || custs[0].id,
+            channels: initColorCount ? parseInt(initColorCount) : prev.channels,
+            alignment: initAlignment || prev.alignment
+          }))
+        }
+        
+        if (initProductId && initVariantId) {
+          // Trigger variant fetch and toggle
+          getProductById(initProductId).then((res: unknown) => {
+            const raw = (res as { data?: { variants?: IVariant[] } })?.data || (res as { variants?: IVariant[] })
+            const variants = Array.isArray(raw?.variants) ? raw.variants : []
+            setProducts((p: IProduct[]) => p.map((prod: IProduct) => (prod.id === initProductId ? { ...prod, variants } : prod)))
+            setExpandedProduct(initProductId)
+            
+            // Toggle variant
+            setData((prevData: IScreenplate) => {
+               return {
+                 ...prevData,
+                 compatibility: [{ product_id: initProductId, allowed_variants: [initVariantId] }]
+               }
+             })
+          })
         }
       })
       .catch(() => {
@@ -84,7 +126,7 @@ export default function ManageScreenplate() {
     if (id) {
       setIsLoading(true)
       getAdminScreenplate(id)
-        .then((plate) => {
+        .then((plate: IScreenplate) => {
           setData(plate)
         })
         .catch(() => {
@@ -99,7 +141,7 @@ export default function ManageScreenplate() {
   const update = <K extends keyof IScreenplate>(
     field: K,
     val: IScreenplate[K],
-  ) => setData((p) => ({ ...p, [field]: val }))
+  ) => setData((p: IScreenplate) => ({ ...p, [field]: val }))
 
 
   const toggleVariant = (productId: string, variantId: string, forceState?: boolean) => {
@@ -125,11 +167,11 @@ export default function ManageScreenplate() {
 
       const currentIncompat = data.incompatible_products || []
       if (currentIncompat.includes(productId)) {
-        update('incompatible_products', currentIncompat.filter((id) => id !== productId))
+        update('incompatible_products', currentIncompat.filter((id: string) => id !== productId))
       }
     } else {
       if (idx !== -1) {
-        next[idx].allowed_variants = next[idx].allowed_variants.filter((v) => v !== variantId)
+        next[idx].allowed_variants = next[idx].allowed_variants.filter((v: string) => v !== variantId)
         if (next[idx].allowed_variants.length === 0) {
           next.splice(idx, 1)
           const currentIncompat = data.incompatible_products || []
@@ -158,6 +200,20 @@ export default function ManageScreenplate() {
     }
   }
 
+  const handleAbort = async () => {
+    const requestId = searchParams.get('request_id')
+    if (requestId) {
+      try {
+        await updateScreenplateRequestStatus(requestId, 'Pending')
+        toast.success('Request reverted to Pending')
+      } catch (err) {
+        console.error('Failed to revert request status', err)
+        toast.error('Failed to revert request status to Pending')
+      }
+    }
+    navigate('/admin/screenplate')
+  }
+
   const closeSaveModal = () => {
     setSaveModal((prev) => ({ ...prev, open: false }))
     if (saveModal.type === 'success') {
@@ -169,7 +225,7 @@ export default function ManageScreenplate() {
     setIsSaving(true)
     try {
       const allProductIds = products.map((p) => p.id)
-      const compatibleIds = data.compatibility.map((c) => c.product_id)
+      const compatibleIds = data.compatibility.map((c: ICompatibilityNode) => c.product_id)
       const computedIncompatible = allProductIds.filter(
         (id) => !compatibleIds.includes(id),
       )
@@ -254,17 +310,44 @@ export default function ManageScreenplate() {
               <label className="mb-3 block text-[10px] font-black tracking-widest text-slate-500 uppercase">
                 Customer Owner
               </label>
-              <select
-                value={data.owner_id}
-                onChange={(e) => update('owner_id', e.target.value)}
-                className="w-full appearance-none rounded-2xl border border-slate-200 bg-slate-50 px-6 py-4 text-xs font-black tracking-tight text-slate-900 uppercase italic transition-all outline-none focus:border-slate-900"
-              >
-                {customers.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name} ({c.company_name})
-                  </option>
-                ))}
-              </select>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={isCustomerDropdownOpen ? customerSearch : customers.find(c => c.id === data.owner_id)?.name || ''}
+                  onChange={(e) => {
+                    setCustomerSearch(e.target.value)
+                    setIsCustomerDropdownOpen(true)
+                  }}
+                  onFocus={() => {
+                    setCustomerSearch('')
+                    setIsCustomerDropdownOpen(true)
+                  }}
+                  onBlur={() => setTimeout(() => setIsCustomerDropdownOpen(false), 200)}
+                  placeholder="Search customer..."
+                  className="w-full appearance-none rounded-2xl border border-slate-200 bg-slate-50 px-6 py-4 text-xs font-black tracking-tight text-slate-900 uppercase italic transition-all outline-none focus:border-slate-900"
+                />
+                {isCustomerDropdownOpen && (
+                  <div className="absolute z-50 mt-2 max-h-60 w-full overflow-y-auto rounded-2xl border border-slate-100 bg-white shadow-xl">
+                    {filteredCustomers.length === 0 ? (
+                       <div className="p-4 text-xs text-slate-400">No customers found.</div>
+                    ) : (
+                      filteredCustomers.map((c) => (
+                        <div
+                          key={c.id}
+                          onMouseDown={(e) => {
+                            e.preventDefault()
+                            update('owner_id', c.id)
+                            setIsCustomerDropdownOpen(false)
+                          }}
+                          className="cursor-pointer border-b border-slate-50 p-4 text-xs font-bold hover:bg-slate-50 last:border-0 text-slate-900"
+                        >
+                          {c.name} {c.company_name ? `(${c.company_name})` : ''}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
             <div>
               <p className="mb-3 block text-[10px] font-black tracking-widest text-slate-500 uppercase">
@@ -378,7 +461,7 @@ export default function ManageScreenplate() {
                   onChange={(e) => update('alignment', e.target.value)}
                   className="w-full appearance-none rounded-2xl border border-slate-200 bg-slate-50 px-6 py-4 text-xs font-black text-slate-900 uppercase italic focus:border-slate-900"
                 >
-                  {ALIGNMENT_OPTIONS.map((opt) => (
+                  {ALIGNMENT_OPTIONS.map((opt: string) => (
                     <option key={opt} value={opt}>
                       {opt}
                     </option>
@@ -425,7 +508,7 @@ export default function ManageScreenplate() {
                 update(
                   'compatibility',
                   data.compatibility.filter(
-                    (c) => !restrictedIds.includes(c.product_id),
+                    (c: ICompatibilityNode) => !restrictedIds.includes(c.product_id),
                   ),
                 )
 
@@ -523,7 +606,7 @@ export default function ManageScreenplate() {
                 return (
                   p.name.toLowerCase().includes(q) ||
                   (p.category || '').toLowerCase().includes(q) ||
-                  (p.variants || []).some((v) => v.size.toLowerCase().includes(q))
+                  (p.variants || []).some((v: IVariant) => v.size.toLowerCase().includes(q))
                 )
               })
               .map((p) => {
@@ -589,9 +672,9 @@ export default function ManageScreenplate() {
                                 No variants available
                               </p>
                             ) : (
-                              (p.variants || []).map((v) => {
+                              (p.variants || []).map((v: IVariant) => {
                                 const config = data.compatibility.find(
-                                  (c) => c.product_id === p.id,
+                                  (c: ICompatibilityNode) => c.product_id === p.id,
                                 )
                                 const isLinked =
                                   config?.allowed_variants.includes(
@@ -687,7 +770,7 @@ export default function ManageScreenplate() {
       {/* Footer actions */}
       <div className="sticky bottom-0 z-50 mt-auto flex gap-4 border-t border-slate-100 bg-white p-6 lg:p-10">
         <button
-          onClick={() => navigate('/admin/screenplate')}
+          onClick={handleAbort}
           className="rounded-2xl bg-slate-900/5 px-8 py-4 text-[10px] font-black tracking-[3px] text-slate-900 uppercase transition-all hover:bg-slate-900/10 lg:py-5"
         >
           ABORT

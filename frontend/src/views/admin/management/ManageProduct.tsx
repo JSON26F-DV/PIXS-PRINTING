@@ -16,9 +16,9 @@ import {
   X,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
-import axiosInstance from '../../lib/axiosInstance'
-import type { ICategory } from '../../types/product.types'
-import BoxFallback from '../../components/common/BoxFallback'
+import axiosInstance from '../../../lib/axiosInstance'
+import type { ICategory } from '../../../types/product.types'
+import BoxFallback from '../../../components/common/BoxFallback'
 import { motion, AnimatePresence } from 'framer-motion'
 
 // ─── Schema ──────────────────────────────────────────────────────────────────
@@ -258,13 +258,15 @@ const ManageProduct: React.FC = () => {
     axiosInstance
       .get(`/api/admin/products/${product_id}/gallery`)
       .then((res) => {
-        const images = (res.data.data || []).map((img: any, idx: number) => ({
-          id: img.id,
-          image_url: img.image_url,
-          preview: `/images/products_gallery/${img.image_url}`,
-          sort_order: img.sort_order ?? idx,
-          isNew: false,
-        }))
+        const images = (res.data.data || []).map(
+          (img: { id?: number; image_url: string; sort_order?: number }, idx: number): IGalleryImage => ({
+            id: img.id,
+            image_url: img.image_url,
+            preview: `/images/products_gallery/${img.image_url}`,
+            sort_order: img.sort_order ?? idx,
+            isNew: false,
+          })
+        )
         setGalleryImages(images)
       })
       .catch(() => {
@@ -278,11 +280,13 @@ const ManageProduct: React.FC = () => {
     axiosInstance
       .get(`/api/admin/products/${product_id}/tags`)
       .then((res) => {
-        const loadedTags = (res.data.data || []).map((tag: any) => ({
-          id: tag.id,
-          tag: tag.tag,
-          isNew: false,
-        }))
+        const loadedTags = (res.data.data || []).map(
+          (tag: { id?: number; tag: string }): IProductTag => ({
+            id: tag.id,
+            tag: tag.tag,
+            isNew: false,
+          })
+        )
         setTags(loadedTags)
       })
       .catch(() => {
@@ -296,16 +300,18 @@ const ManageProduct: React.FC = () => {
     axiosInstance
       .get(`/api/admin/products/${product_id}/variants`)
       .then((res) => {
-        const loadedVariants = (res.data.data || []).map((v: any) => ({
-          id: v.id,
-          variant_id: v.variant_id,
-          size: v.size || '',
-          width: v.width || '',
-          height: v.height || '',
-          price: parseFloat(v.price) || 0,
-          stock: v.stock || 0,
-          isNew: false,
-        }))
+        const loadedVariants = (res.data.data || []).map(
+          (v: { id?: number; variant_id: string; size?: string; width?: string; height?: string; price: string | number; stock?: number }): IProductVariant => ({
+            id: v.id,
+            variant_id: v.variant_id,
+            size: v.size || '',
+            width: v.width || '',
+            height: v.height || '',
+            price: typeof v.price === 'string' ? parseFloat(v.price) || 0 : v.price || 0,
+            stock: v.stock || 0,
+            isNew: false,
+          })
+        )
         setVariants(loadedVariants)
       })
       .catch(() => {

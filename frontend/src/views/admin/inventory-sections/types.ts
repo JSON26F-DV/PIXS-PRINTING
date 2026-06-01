@@ -5,6 +5,7 @@ export interface IVariant {
   height: string
   price: number
   stock: number
+  is_need_screenplate?: boolean
 }
 
 export interface IProduct {
@@ -71,6 +72,21 @@ export interface IUser {
   role?: string
   company_name?: string
   business_address?: string
+}
+
+export interface IScreenplateRequest {
+  id: string
+  customer_id: string
+  product_id: string
+  variant_id: string
+  reference_image: string
+  color_count: number
+  alignment: string
+  status: string
+  created_at?: string
+  customer?: IUser
+  product?: IProduct
+  variant?: IVariant
 }
 
 export interface IRestockLog {

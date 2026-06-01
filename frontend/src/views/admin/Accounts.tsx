@@ -13,7 +13,8 @@ import {
   UserCheck,
   TrendingUp,
   type LucideIcon,
-  ShieldAlert
+  ShieldAlert,
+  Plus
 } from 'lucide-react'
 import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
@@ -151,6 +152,7 @@ const Accounts: React.FC = () => {
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [roleFilter, setRoleFilter] = useState<string>('all')
   const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null)
 
   useEffect(() => {
     document.title = 'Account Infrastructure | PIXS ERP'
@@ -357,7 +359,15 @@ const Accounts: React.FC = () => {
                 filteredUsers.map((user) => (
                   <tr
                     key={user.id}
-                    className="group transition-colors hover:bg-slate-50/80"
+                    onClick={() => {
+                      if (user.type === 'customer' || user.role === 'customer') {
+                        setSelectedCustomerId(user.id === selectedCustomerId ? null : user.id)
+                      }
+                    }}
+                    className={cn(
+                      "group transition-colors cursor-pointer",
+                      selectedCustomerId === user.id ? "bg-emerald-50/60" : "hover:bg-slate-50/80"
+                    )}
                   >
                     <td className="px-6 py-6">
                       <div className="flex items-center gap-4">
@@ -481,6 +491,21 @@ const Accounts: React.FC = () => {
           </table>
         </div>
       </div>
+      {/* Floating Add Order Button */}
+      {selectedCustomerId && (
+        <div className="fixed bottom-8 right-8 z-[100] animate-in zoom-in slide-in-from-bottom-4 duration-300">
+          <Link
+            to={`/admin/orders/manage/${selectedCustomerId}`}
+            className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500 text-slate-900 shadow-2xl shadow-emerald-500/40 transition-all hover:scale-110 hover:bg-emerald-400 group relative"
+            title="Create Direct Order for Selected Customer"
+          >
+            <Plus size={32} />
+            <span className="absolute -top-12 bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+              Create Order
+            </span>
+          </Link>
+        </div>
+      )}
     </div>
   )
 }

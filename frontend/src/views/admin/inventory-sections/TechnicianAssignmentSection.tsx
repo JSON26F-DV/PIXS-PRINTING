@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Users,
   Search,
@@ -12,8 +12,9 @@ import {
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import toast from 'react-hot-toast'
-import usersData from '../../../data/users.json'
-import productsData from '../../../data/products.json'
+import axiosInstance from '../../../lib/axiosInstance'
+import type { IProduct } from './types'
+import BoxFallback from '../../../components/common/BoxFallback'
 
 interface Employee {
   id: string
@@ -35,6 +36,14 @@ type RoleFilter = 'all' | 'staff' | 'technician' | 'welder'
 const cn = (...classes: (string | boolean | undefined)[]) =>
   classes.filter(Boolean).join(' ')
 
+const ProductImage = ({ src, alt, className }: { src: string; alt: string; className: string }) => {
+  const [error, setError] = useState(false)
+  if (error || !src) {
+    return <BoxFallback className={cn("flex items-center justify-center bg-slate-100", className)} iconClassName="h-6 w-6 opacity-30" />
+  }
+  return <img src={src} alt={alt} className={className} onError={() => setError(true)} />
+}
+
 export const TechnicianAssignmentSection: React.FC<
   TechnicianAssignmentSectionProps
 > = ({ categories }) => {
@@ -44,11 +53,52 @@ export const TechnicianAssignmentSection: React.FC<
     useState<AssignmentMode>('categories')
   const [selectedEmpId, setSelectedEmpId] = useState<string | null>(null)
 
-  const [employees, setEmployees] = useState<Employee[]>(() => {
-    return usersData.employees.filter((emp) =>
-      ['staff', 'technician', 'welder'].includes(emp.role),
-    ) as Employee[]
-  })
+  const [employees, setEmployees] = useState<Employee[]>([])
+  const [products, setProducts] = useState<IProduct[]>([])
+  const [isLoadingData, setIsLoadingData] = useState(true)
+
+  const getProfilePictureUrl = (pic?: string | null) => {
+    if (!pic) return 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'
+    if (pic.startsWith('http') || pic.startsWith('blob:') || pic.startsWith('data:')) {
+      return pic
+    }
+    return `/src/assets/profile/${pic}`
+  }
+
+  useEffect(() => {
+    let isMounted = true
+    const fetchData = async () => {
+      try {
+        setIsLoadingData(true)
+        const [accountsRes, productsRes] = await Promise.all([
+          axiosInstance.get('/api/admin/accounts'),
+          axiosInstance.get('/api/admin/products')
+        ])
+        
+        if (isMounted) {
+          const allAccounts = accountsRes.data?.data || []
+          const empList = allAccounts.filter((acc: { type: string; role: string }) => 
+            acc.type === 'employee' && ['staff', 'technician', 'welder'].includes(acc.role)
+          )
+          setEmployees(empList)
+          
+          const prodList = productsRes.data?.data || []
+          setProducts(prodList)
+        }
+      } catch (error) {
+        console.error('Error fetching matrix data:', error)
+        toast.error('Failed to load matrix data')
+      } finally {
+        if (isMounted) {
+          setIsLoadingData(false)
+        }
+      }
+    }
+    fetchData()
+    return () => {
+      isMounted = false
+    }
+  }, [])
 
   const filteredEmployees = employees.filter((emp) => {
     const matchesSearch = emp.name.toLowerCase().includes(search.toLowerCase())
@@ -58,50 +108,121 @@ export const TechnicianAssignmentSection: React.FC<
 
   const selectedEmp = employees.find((e) => e.id === selectedEmpId)
 
-  const handleToggleCategory = (catLabel: string) => {
+  const handleToggleCategory = async (catLabel: string) => {
     if (!selectedEmpId) return
 
-    setEmployees((prev) =>
-      prev.map((emp) => {
-        if (emp.id === selectedEmpId) {
-          const current = emp.allowed_categories || []
-          const next = current.includes(catLabel)
-            ? current.filter((c: string) => c !== catLabel)
-            : [...current, catLabel]
+    const employee = employees.find(emp => emp.id === selectedEmpId)
+    if (!employee) return
 
-          return { ...emp, allowed_categories: next }
-        }
-        return emp
-      }),
-    )
+    const current = employee.allowed_categories || []
+    const next = current.includes(catLabel)
+      ? current.filter((c: string) => c !== catLabel)
+      : [...current, catLabel]
 
-    toast.success('Category accessibility updated', {
-      icon: '📁',
-      style: { borderRadius: '12px', background: '#0f172a', color: '#fff' },
-    })
+    try {
+      // Optimistic update
+      setEmployees((prev) =>
+        prev.map((emp) => {
+          if (emp.id === selectedEmpId) {
+            return { ...emp, allowed_categories: next }
+          }
+          return emp
+        }),
+      )
+
+      await axiosInstance.post(`/api/admin/accounts/employee/${selectedEmpId}/assignments`, {
+        allowed_categories: next,
+        allowed_products: employee.allowed_products || []
+      })
+
+      toast.success('Category accessibility updated', {
+        icon: '📁',
+        style: { borderRadius: '12px', background: '#0f172a', color: '#fff' },
+      })
+    } catch (err) {
+      console.error('Failed to update category assignment:', err)
+      // Revert state
+      setEmployees((prev) =>
+        prev.map((emp) => {
+          if (emp.id === selectedEmpId) {
+            return { ...emp, allowed_categories: current }
+          }
+          return emp
+        }),
+      )
+      toast.error('Failed to save assignment changes')
+    }
   }
 
-  const handleToggleProduct = (productName: string) => {
+  const handleToggleProduct = async (productName: string) => {
     if (!selectedEmpId) return
 
-    setEmployees((prev) =>
-      prev.map((emp) => {
-        if (emp.id === selectedEmpId) {
-          const current = emp.allowed_products || []
-          const next = current.includes(productName)
-            ? current.filter((p: string) => p !== productName)
-            : [...current, productName]
+    const employee = employees.find(emp => emp.id === selectedEmpId)
+    if (!employee) return
 
-          return { ...emp, allowed_products: next }
-        }
-        return emp
-      }),
+    const current = employee.allowed_products || []
+    const next = current.includes(productName)
+      ? current.filter((p: string) => p !== productName)
+      : [...current, productName]
+
+    try {
+      // Optimistic update
+      setEmployees((prev) =>
+        prev.map((emp) => {
+          if (emp.id === selectedEmpId) {
+            return { ...emp, allowed_products: next }
+          }
+          return emp
+        }),
+      )
+
+      await axiosInstance.post(`/api/admin/accounts/employee/${selectedEmpId}/assignments`, {
+        allowed_categories: employee.allowed_categories || [],
+        allowed_products: next
+      })
+
+      toast.success('Product assignment updated', {
+        icon: '📦',
+        style: { borderRadius: '12px', background: '#0f172a', color: '#fff' },
+      })
+    } catch (err) {
+      console.error('Failed to update product assignment:', err)
+      // Revert state
+      setEmployees((prev) =>
+        prev.map((emp) => {
+          if (emp.id === selectedEmpId) {
+            return { ...emp, allowed_products: current }
+          }
+          return emp
+        }),
+      )
+      toast.error('Failed to save assignment changes')
+    }
+  }
+
+  if (isLoadingData) {
+    return (
+      <section className="TechnicianAssignmentSection animate-in slide-in-from-bottom-4 mt-16 space-y-8 duration-700">
+        <div className="flex flex-col justify-between gap-6 md:flex-row md:items-center">
+          <div className="space-y-1">
+            <h2 className="text-3xl font-black tracking-tighter text-slate-900 uppercase italic">
+              Workforce Operational Matrix
+            </h2>
+            <p className="text-xs leading-relaxed font-bold tracking-widest text-slate-400 uppercase">
+              Define granular production permissions for staff, technicians, and welders.
+            </p>
+          </div>
+        </div>
+        <div className="flex h-96 items-center justify-center rounded-[32px] bg-white p-12 text-center shadow-md">
+          <div className="space-y-4">
+            <div className="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-slate-200 border-t-emerald-500" />
+            <p className="text-xs font-bold tracking-widest text-slate-400 uppercase italic animate-pulse">
+              Synchronizing Operational clearances...
+            </p>
+          </div>
+        </div>
+      </section>
     )
-
-    toast.success('Product assignment updated', {
-      icon: '📦',
-      style: { borderRadius: '12px', background: '#0f172a', color: '#fff' },
-    })
   }
 
   return (
@@ -201,7 +322,7 @@ export const TechnicianAssignmentSection: React.FC<
                   <div className="flex items-center gap-4">
                     <div className="relative">
                       <img
-                        src={emp.profile_picture}
+                        src={getProfilePictureUrl(emp.profile_picture)}
                         className="h-12 w-12 rounded-2xl border border-slate-100 object-cover shadow-sm grayscale transition-all group-hover:grayscale-0"
                       />
                       <div
@@ -282,7 +403,7 @@ export const TechnicianAssignmentSection: React.FC<
                     <div className="flex items-center gap-6">
                       <div className="relative">
                         <img
-                          src={selectedEmp.profile_picture}
+                          src={getProfilePictureUrl(selectedEmp.profile_picture)}
                           className="h-20 w-20 rounded-[32px] object-cover shadow-2xl ring-[6px] ring-emerald-50"
                         />
                         <div className="absolute -top-2 -right-2 animate-bounce rounded-xl bg-slate-900 p-2 text-[#75EEA5] shadow-lg">
@@ -371,7 +492,7 @@ export const TechnicianAssignmentSection: React.FC<
                         </h4>
                       </div>
                       <div className="no-scrollbar grid max-h-[500px] grid-cols-1 gap-4 overflow-y-auto pr-2 sm:grid-cols-2">
-                        {productsData.map((prod) => {
+                        {products.map((prod) => {
                           const isAllowed = (
                             selectedEmp.allowed_products || []
                           ).includes(prod.name)
@@ -387,8 +508,9 @@ export const TechnicianAssignmentSection: React.FC<
                               )}
                             >
                               <div className="h-14 w-14 overflow-hidden rounded-2xl border border-slate-100 bg-white p-1 shadow-sm">
-                                <img
-                                  src={prod.main_image}
+                                <ProductImage
+                                  src={`/public/images/products/${prod.main_image}`}
+                                  alt={prod.name}
                                   className="h-full w-full rounded-xl object-cover"
                                 />
                               </div>

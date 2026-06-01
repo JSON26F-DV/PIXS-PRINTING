@@ -12,6 +12,7 @@ import {
   UserCircle,
   Users,
   Menu,
+  X,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { IUser, IScreenplate, IProduct } from './types'

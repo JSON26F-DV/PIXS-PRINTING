@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\AdminOrderController;
 use App\Http\Controllers\Admin\AdminPayrollController;
 use App\Http\Controllers\Admin\AdminScreenplateController;
+use App\Http\Controllers\Admin\AdminScreenplateRequestController;
 use App\Http\Controllers\Admin\AdminPaymentCodeController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Auth\RegisterController;
@@ -106,6 +107,7 @@ Route::middleware(['auth:sanctum'])->prefix('admin')->group(function () {
     Route::put('/accounts/customer/{id}', [AdminAccountController::class, 'updateCustomer'])->middleware('role:admin');
     Route::delete('/accounts/delete/{id}', [AdminAccountController::class, 'deleteAccount'])->middleware('role:admin');
     Route::post('/accounts/upload-profile-picture', [AdminAccountController::class, 'uploadProfilePicture'])->middleware('role:admin');
+    Route::post('/accounts/employee/{id}/assignments', [AdminAccountController::class, 'updateAssignments'])->middleware('role:admin');
 
     // Customers
     Route::get('/customers', [AdminCustomerController::class, 'index'])->middleware('role:admin');
@@ -124,6 +126,13 @@ Route::middleware(['auth:sanctum'])->prefix('admin')->group(function () {
     Route::post('/screenplates/{id}/incompatible', [AdminScreenplateController::class, 'addIncompatible'])->middleware('role:admin');
     Route::delete('/screenplates/{id}/incompatible', [AdminScreenplateController::class, 'removeIncompatible'])->middleware('role:admin');
 
+    // Screenplate Requests & Visibility
+    Route::get('/screenplate-requests', [AdminScreenplateRequestController::class, 'index'])->middleware('role:admin');
+    Route::patch('/screenplate-requests/{id}/status', [AdminScreenplateRequestController::class, 'updateStatus'])->middleware('role:admin');
+    Route::patch('/products/{id}/screenplate-visibility', [AdminScreenplateRequestController::class, 'updateProductVisibility'])->middleware('role:admin');
+    Route::patch('/variants/{id}/screenplate-visibility', [AdminScreenplateRequestController::class, 'updateVariantVisibility'])->middleware('role:admin');
+
+
     // Discount Management
     Route::get('/discounts', [DiscountController::class, 'index'])->middleware('role:admin');
     Route::post('/discounts', [DiscountController::class, 'store'])->middleware('role:admin');
@@ -135,7 +144,9 @@ Route::middleware(['auth:sanctum'])->prefix('admin')->group(function () {
 
     // Order Management
     Route::get('/orders', [AdminOrderController::class, 'index'])->middleware('role:admin');
+    Route::post('/orders/direct', [AdminOrderController::class, 'storeDirect'])->middleware('role:admin');
     Route::patch('/orders/{id}/status', [AdminDashboardController::class, 'updateOrderStatus'])->middleware('role:admin');
+    Route::delete('/orders/{id}', [AdminOrderController::class, 'destroy'])->middleware('role:admin');
 
     // Product Management
     Route::get('/products', [ProductController::class, 'adminIndex'])->middleware('role:admin');

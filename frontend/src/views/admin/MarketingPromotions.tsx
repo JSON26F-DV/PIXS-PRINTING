@@ -6,13 +6,10 @@ import {
   ShoppingBag,
   Tag,
   Activity,
-  Clock,
   CheckCircle2,
-  XCircle,
   ChevronRight,
   Zap,
   Gift,
-  TrendingUp,
   Award,
   AlertCircle,
   Copy,
@@ -23,7 +20,6 @@ import {
   Trash2,
   Info,
   X,
-  Calendar,
   Lock,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
@@ -36,8 +32,6 @@ import {
   Tooltip,
   Cell,
   CartesianGrid,
-  AreaChart,
-  Area,
 } from 'recharts'
 import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -132,10 +126,10 @@ type PromoFormData = z.infer<typeof promoSchema>
 const MarketingPromotions: React.FC = () => {
   const [promos, setPromos] = useState<Promotion[]>([])
   const [customers, setCustomers] = useState<UserNode[]>(() => {
-    return (rawUsersData.customers || []).map((c: any) => ({
-      id: c.id,
-      name: c.name || `${c.first_name} ${c.last_name}`,
-      email: c.email,
+    return (rawUsersData.customers || []).map((c: Record<string, unknown>) => ({
+      id: c.id as string,
+      name: (c.name as string) || `${c.first_name} ${c.last_name}`,
+      email: c.email as string,
       role: 'customer',
     }))
   })
@@ -150,7 +144,7 @@ const MarketingPromotions: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('')
 
   // Map Database record to Promotion
-  const mapDiscountToPromotion = (discount: any): Promotion => {
+  const mapDiscountToPromotion = (discount: Record<string, any>): Promotion => {
     const expiresAt = discount.expires_at;
     const now = new Date();
     const isExpired = expiresAt && isBefore(parseISO(expiresAt), now);
@@ -199,10 +193,10 @@ const MarketingPromotions: React.FC = () => {
       try {
         const custsRes = await axiosInstance.get('/api/admin/customers')
         if (custsRes.data && custsRes.data.data) {
-          const formattedCustomers = custsRes.data.data.map((c: any) => ({
-            id: c.id,
-            name: c.name || `${c.first_name} ${c.last_name}`,
-            email: c.email,
+          const formattedCustomers = custsRes.data.data.map((c: Record<string, unknown>) => ({
+            id: c.id as string,
+            name: (c.name as string) || `${c.first_name} ${c.last_name}`,
+            email: c.email as string,
             role: 'customer'
           }))
           setCustomers(formattedCustomers)
@@ -348,7 +342,7 @@ const MarketingPromotions: React.FC = () => {
 
       if (editingPromo) {
         // UPDATE Campaign
-        const res = await axiosInstance.put(`/api/admin/discounts/${editingPromo.id}`, {
+        axiosInstance.put(`/api/admin/discounts/${editingPromo.id}`, {
           ...payload,
           already_used: editingPromo.used_count > 0
         })
@@ -357,7 +351,7 @@ const MarketingPromotions: React.FC = () => {
         })
       } else {
         // CREATE Campaign
-        const res = await axiosInstance.post('/api/admin/discounts', payload)
+        await axiosInstance.post('/api/admin/discounts', payload)
         toast.success('Promotion created successfully', {
           style: { borderRadius: '8px', background: '#1e293b', color: '#fff' },
         })
@@ -367,9 +361,9 @@ const MarketingPromotions: React.FC = () => {
       setEditingPromo(null)
       reset()
       loadData() // Refresh list from DB
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Submission failed:", err)
-      const errorMsg = err.response?.data?.message || "Failed to save promotion"
+      const errorMsg = (err as any).response?.data?.message || "Failed to save promotion"
       toast.error(errorMsg)
     }
   }
@@ -635,10 +629,8 @@ const MarketingPromotions: React.FC = () => {
                       const targetUser = allUsers.find(
                         (u) => u.id === promo.assigned_user_id,
                       )
-                      const targetProd = products.find(
-                        (p) => p.id === promo.product_id,
-                      )
-                      const usagePercent = (promo.used_count / promo.max_uses) * 100
+                      const targetProd = products.find((p: any) => p.id === promo.product_id)
+                      const usagePercent = promo.max_uses > 0 ? (promo.used_count / promo.max_uses) * 100 : 0
 
                       return (
                         <tr
@@ -806,10 +798,6 @@ const MarketingPromotions: React.FC = () => {
                 const targetUser = allUsers.find(
                   (u) => u.id === promo.assigned_user_id,
                 )
-                const targetProd = products.find(
-                  (p) => p.id === promo.product_id,
-                )
-                
                 return (
                   <div 
                     key={promo.id} 
@@ -1216,7 +1204,7 @@ const MarketingPromotions: React.FC = () => {
             </div>
 
             <form
-              onSubmit={handleSubmit(onFormSubmit)}
+              onSubmit={handleSubmit(onFormSubmit as any)}
               className="custom-scrollbar space-y-6 overflow-y-auto bg-white p-6"
             >
               {/* Section 1: General Details */}
@@ -1535,21 +1523,5 @@ const SlidersIcon = ({ size, className }: { size: number; className?: string }) 
   </svg>
 )
 
-// Generic Shield Icon fallback (unused but kept as helper)
-const Shield = ({ size, className }: { size: number; className?: string }) => (
-  <svg
-    width={size}
-    height={size}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="3"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    className={className}
-  >
-    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-  </svg>
-)
 
 export default MarketingPromotions

@@ -83,3 +83,25 @@ export const removeScreenplateIncompatible = async (
   const response = await axiosInstance.delete(`/api/admin/screenplates/${screenplateId}/incompatible`, { data })
   return response.data
 }
+
+// Screenplate Requests
+export const getAdminScreenplateRequests = async () => {
+  const response = await axiosInstance.get('/api/admin/screenplate-requests')
+  return response.data.data
+}
+
+export const updateScreenplateRequestStatus = async (id: string, status: string) => {
+  const response = await axiosInstance.patch(`/api/admin/screenplate-requests/${id}/status`, { status })
+  return response.data.data
+}
+
+// Visibility
+export const updateProductScreenplateVisibility = async (productId: string, is_need_screenplate: boolean) => {
+  const response = await axiosInstance.patch(`/api/admin/products/${productId}/screenplate-visibility`, { is_need_screenplate })
+  return response.data.data
+}
+
+export const updateVariantScreenplateVisibility = async (variantId: string, is_need_screenplate: boolean) => {
+  const response = await axiosInstance.patch(`/api/admin/variants/${variantId}/screenplate-visibility`, { is_need_screenplate })
+  return response.data.data
+}

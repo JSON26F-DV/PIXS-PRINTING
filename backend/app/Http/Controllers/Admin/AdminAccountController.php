@@ -50,6 +50,8 @@ class AdminAccountController extends Controller
                 'status' => $e->status,
                 'type' => 'employee',
                 'date_created' => $e->created_at,
+                'allowed_categories' => $e->allowed_categories ?? [],
+                'allowed_products' => $e->allowed_products ?? [],
             ];
         });
 
@@ -292,6 +294,32 @@ class AdminAccountController extends Controller
         return response()->json([
             'status' => 'success',
             'url' => $filename,
+        ]);
+    }
+
+    public function updateAssignments(Request $request, $id): JsonResponse
+    {
+        $employee = Employee::findOrFail($id);
+
+        $validated = $request->validate([
+            'allowed_categories' => 'nullable|array',
+            'allowed_categories.*' => 'string|max:255',
+            'allowed_products' => 'nullable|array',
+            'allowed_products.*' => 'string|max:255',
+        ]);
+
+        $employee->update([
+            'allowed_categories' => $validated['allowed_categories'] ?? [],
+            'allowed_products' => $validated['allowed_products'] ?? [],
+        ]);
+
+        return response()->json([
+            'status' => 'success',
+            'data' => [
+                'id' => $employee->id,
+                'allowed_categories' => $employee->allowed_categories,
+                'allowed_products' => $employee->allowed_products,
+            ]
         ]);
     }
 }

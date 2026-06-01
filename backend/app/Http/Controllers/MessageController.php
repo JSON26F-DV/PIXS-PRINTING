@@ -331,10 +331,20 @@ class MessageController extends Controller
             }
         });
 
+        // Fetch saved attachments to return to client
+        $savedAttachments = DB::table('message_attachments')->where('message_id', $msgId)->get();
+
         return response()->json([
             'message' => 'Message transmitted securely.',
             'data' => [
                 'id' => $msgId,
+                'attachments' => $savedAttachments->map(function ($att) {
+                    return [
+                        'type' => $att->type,
+                        'url' => $att->url,
+                        'name' => $att->name,
+                    ];
+                })->all(),
             ],
         ]);
     }

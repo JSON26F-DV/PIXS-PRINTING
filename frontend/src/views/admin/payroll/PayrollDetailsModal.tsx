@@ -1,6 +1,6 @@
 import React from 'react'
 import { X, Receipt, Download, CreditCard, User, Landmark } from 'lucide-react'
-import type { PayrollRecord } from './PayrollTable'
+import type { PayrollRecord } from './types'
 
 interface PayrollDetailsModalProps {
   record: PayrollRecord | null
@@ -88,7 +88,7 @@ const PayrollDetailsModal: React.FC<PayrollDetailsModalProps> = ({
                 <div className="flex justify-between text-sm">
                   <span className="font-bold text-slate-500">Daily Rate</span>
                   <span className="font-mono font-black text-slate-900">
-                    ₱{record.daily_rate.toLocaleString()}
+                    ₱{(record.daily_rate || 0).toLocaleString()}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm italic">
@@ -107,7 +107,7 @@ const PayrollDetailsModal: React.FC<PayrollDetailsModalProps> = ({
                   <span className="font-mono font-black text-slate-900">
                     ₱
                     {(
-                      record.daily_rate * record.attendance_days
+                      (record.daily_rate || 0) * (record.attendance_days || 0)
                     ).toLocaleString()}
                   </span>
                 </div>
@@ -142,7 +142,7 @@ const PayrollDetailsModal: React.FC<PayrollDetailsModalProps> = ({
                     Subtotal
                   </span>
                   <span className="font-mono font-black text-[#75EEA5] drop-shadow-sm">
-                    ₱{(record.ot_rate * record.overtime_hours).toLocaleString()}
+                    ₱{((record.ot_rate || 0) * (record.overtime_hours || 0)).toLocaleString()}
                   </span>
                 </div>
               </div>
@@ -158,7 +158,7 @@ const PayrollDetailsModal: React.FC<PayrollDetailsModalProps> = ({
                 Final Gross Yield
               </p>
               <h5 className="mt-1 font-mono text-4xl font-black tracking-tighter text-white italic">
-                ₱{record.gross_pay.toLocaleString()}
+                ₱{(record.gross_pay || 0).toLocaleString()}
               </h5>
             </div>
             <div className="relative z-10 flex gap-4">

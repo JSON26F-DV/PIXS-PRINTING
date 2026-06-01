@@ -25,7 +25,7 @@ class ProductController extends Controller
     public function index(Request $request): JsonResponse
     {
         try {
-            $query = Product::with('category');
+            $query = Product::with(['category', 'variants']);
 
             // Category filter (by label)
             if ($request->filled('category')) {
@@ -123,7 +123,19 @@ class ProductController extends Controller
             $products = $query->paginate($perPage);
 
             return response()->json([
-                'data' => collect($products->items())->map(fn ($p) => $this->formatProduct($p)),
+                'data' => collect($products->items())->map(function ($p) {
+                    $data = $this->formatProduct($p);
+                    $data['variants'] = $p->variants->map(fn ($v) => [
+                        'variant_id' => $v->variant_id,
+                        'size' => $v->size,
+                        'width' => $v->width,
+                        'height' => $v->height,
+                        'price' => (float) $v->price,
+                        'stock' => (int) $v->stock,
+                        'is_need_screenplate' => (bool) $v->is_need_screenplate,
+                    ]);
+                    return $data;
+                }),
                 'current_page' => $products->currentPage(),
                 'last_page' => $products->lastPage(),
                 'per_page' => $products->perPage(),
@@ -241,7 +253,7 @@ class ProductController extends Controller
     public function adminIndex(Request $request): JsonResponse
     {
         try {
-            $query = Product::with('category');
+            $query = Product::with(['category', 'variants']);
 
             if ($request->filled('search')) {
                 $search = $request->search;
@@ -258,7 +270,19 @@ class ProductController extends Controller
             $products = $query->orderBy('id', 'DESC')->get();
 
             return response()->json([
-                'data' => $products->map(fn ($p) => $this->formatProduct($p)),
+                'data' => $products->map(function (Product $p) {
+                    $data = $this->formatProduct($p);
+                    $data['variants'] = $p->variants->map(fn ($v) => [
+                        'variant_id' => $v->variant_id,
+                        'size' => $v->size,
+                        'width' => $v->width,
+                        'height' => $v->height,
+                        'price' => (float) $v->price,
+                        'stock' => (int) $v->stock,
+                        'is_need_screenplate' => (bool) $v->is_need_screenplate,
+                    ]);
+                    return $data;
+                }),
             ]);
         } catch (\Throwable $e) {
             Log::error('ProductController@adminIndex failed', ['message' => $e->getMessage()]);
@@ -361,6 +385,9 @@ class ProductController extends Controller
                 $this->handleProductVariants($request, $product);
                 $this->handleProductTags($request, $product);
 
+                // Increment category count
+                DB::table('categories')->where('id', $product->category_id)->increment('count');
+
                 return $product;
             });
 
@@ -416,6 +443,8 @@ class ProductController extends Controller
                     );
                 }
 
+                $oldCategoryId = $product->category_id;
+
                 $product->update([
                     'name' => $request->input('name'),
                     'category_id' => $request->input('category_id'),
@@ -433,6 +462,21 @@ class ProductController extends Controller
                     'ratings' => (int) $request->input('ratings', $product->ratings),
                     'total_sold' => (int) $request->input('total_sold', $product->total_sold),
                 ]);
+
+                // Sync category counts if changed
+                $newCategoryId = $product->category_id;
+                if ($oldCategoryId !== $newCategoryId) {
+                    if ($oldCategoryId) {
+                        DB::table('categories')
+                            ->where('id', $oldCategoryId)
+                            ->update(['count' => DB::raw('GREATEST(0, CAST(count AS SIGNED) - 1)')]);
+                    }
+                    if ($newCategoryId) {
+                        DB::table('categories')
+                            ->where('id', $newCategoryId)
+                            ->increment('count');
+                    }
+                }
 
                 // Handle gallery images
                 $this->handleGalleryImages($request, $product);
@@ -510,6 +554,13 @@ class ProductController extends Controller
 
                 // Delete related variants
                 ProductVariant::where('product_id', $product->id)->delete();
+
+                // Decrement category count
+                if ($product->category_id) {
+                    DB::table('categories')
+                        ->where('id', $product->category_id)
+                        ->update(['count' => DB::raw('GREATEST(0, CAST(count AS SIGNED) - 1)')]);
+                }
 
                 // Delete the product itself
                 $product->delete();

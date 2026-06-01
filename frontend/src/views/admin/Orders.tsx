@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   Search,
   Users,
@@ -10,6 +11,7 @@ import {
   TrendingUp,
   MoreVertical,
   Trash2,
+  Plus,
 } from 'lucide-react'
 import {
   ResponsiveContainer,
@@ -54,6 +56,7 @@ const RatingStars = ({ rating }: { rating: number }) => (
 
 
 const Orders: React.FC = () => {
+  const navigate = useNavigate()
   const { user } = useAuth()
   
   const {
@@ -288,7 +291,7 @@ const Orders: React.FC = () => {
         </div>
         <div className="orders-stats-card group relative overflow-hidden rounded-[24px] border border-slate-100 bg-white p-4 sm:p-6 shadow-sm">
           <div className="h-[60px] w-full">
-            <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+            <ResponsiveContainer width="100%" height={60}>
               <BarChart data={chartData.customerBar}>
                 <Bar dataKey="orders" fill="#f1f5f9" radius={[4, 4, 0, 0]} />
               </BarChart>
@@ -302,9 +305,18 @@ const Orders: React.FC = () => {
 
       {/* 🛠️ HEADER CONTROLS - Removed main search/filters as requested */}
       <section className="orders-header flex flex-col items-center justify-between gap-6 rounded-2xl border border-slate-100 bg-white p-6 shadow-2xl shadow-slate-200/40 lg:flex-row">
-        <div className="flex items-center gap-4">
-           <ShoppingBag className="text-slate-900 shrink-0" size={24} />
-           <h2 className="text-lg md:text-xl font-black tracking-tight text-slate-900 uppercase italic leading-tight">Order Management System</h2>
+        <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
+          <div className="flex items-center gap-4">
+             <ShoppingBag className="text-slate-900 shrink-0" size={24} />
+             <h2 className="text-lg md:text-xl font-black tracking-tight text-slate-900 uppercase italic leading-tight">Order Management System</h2>
+          </div>
+          <button 
+            onClick={() => navigate(selectedCustomerId ? `/admin/orders/manage/${selectedCustomerId}` : '/admin/orders/manage')}
+            className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-slate-900 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest italic transition-colors shadow-lg shadow-emerald-500/20"
+          >
+            <Plus size={16} />
+            <span>Add Order</span>
+          </button>
         </div>
 
         <div className="grid w-full grid-cols-2 gap-3 lg:flex lg:w-auto lg:items-center">
@@ -1043,7 +1055,7 @@ const Orders: React.FC = () => {
                 Order Status Distribution
               </h4>
               <div className="h-[260px] w-full">
-                <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                <ResponsiveContainer width="100%" height={260}>
                   <PieChart>
                     <Pie
                       data={chartData.statusPie}

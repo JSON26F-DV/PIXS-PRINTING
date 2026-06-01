@@ -80,6 +80,7 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
   const [editingProduct, setEditingProduct] = useState<IProduct | null>(null)
   const [isAddingProduct, setIsAddingProduct] = useState(false)
   const [productToDelete, setProductToDelete] = useState<IProduct | null>(null)
+  const [selectedMobileProduct, setSelectedMobileProduct] = useState<IProduct | null>(null)
   const navigate = useNavigate()
 
   // Debounced search
@@ -174,7 +175,7 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
 
           <div className="flex h-[700px] flex-col overflow-hidden rounded-[32px] border border-slate-100 bg-white shadow-lg shadow-slate-200/50">
             <div className="custom-scrollbar flex-1 overflow-y-auto">
-              <table className="w-full border-collapse text-left">
+              <table className="w-full border-collapse text-left hidden md:table">
                 <thead className="sticky top-0 z-10 bg-white/90 backdrop-blur-md">
                   <tr className="border-b border-slate-50 bg-slate-50/30">
                     <th className="px-8 py-5 text-[10px] font-black tracking-widest text-slate-400 uppercase">
@@ -236,6 +237,43 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
                   ))}
                 </tbody>
               </table>
+
+              {/* Mobile View: Cards Layout */}
+              <div className="grid grid-cols-1 gap-4 p-6 md:hidden">
+                {filteredProducts.map((p) => (
+                  <div
+                    key={p.id}
+                    onClick={() => setSelectedMobileProduct(p)}
+                    className="group relative flex flex-col gap-4 rounded-[24px] border border-slate-100 bg-slate-50/30 p-5 transition-all hover:bg-slate-50 cursor-pointer shadow-sm"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-md animate-in fade-in duration-300">
+                        <ProductImage
+                          src={`/public/images/products/${p.main_image}`}
+                          alt={p.name}
+                          className="h-full w-full object-cover"
+                        />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-black text-slate-900 uppercase italic truncate text-sm">
+                          {p.name}
+                        </h4>
+                        <p className="mt-0.5 text-[9px] font-black tracking-widest text-slate-400 uppercase truncate">
+                          {p.id} • {p.category}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between border-t border-slate-100/50 pt-3">
+                      <span className="rounded-lg border px-2.5 py-1 text-[8px] font-black tracking-widest uppercase shadow-sm border-blue-100 bg-blue-50 text-blue-600">
+                        {p.total_sold || 0} sold
+                      </span>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase italic">
+                        Tap to view details
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
               {filteredProducts.length === 0 && (
                 <div className="flex flex-col items-center justify-center p-24 text-center opacity-30">
                   <Package2 size={80} className="mb-4 text-slate-300" />
@@ -352,6 +390,142 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
                   className="flex-1 rounded-xl bg-rose-600 py-4 text-xs font-bold tracking-widest text-white uppercase shadow-lg shadow-rose-200 transition-all hover:-translate-y-1 disabled:opacity-50"
                 >
                   {isDeletingProduct ? 'Deleting...' : 'Delete Forever'}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {/* Mobile Detail Modal Overlay */}
+        {selectedMobileProduct && (
+          <div className="fixed inset-0 z-[160] flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-md"
+              onClick={() => setSelectedMobileProduct(null)}
+            />
+            <motion.div
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+              className="relative w-full max-w-xl max-h-[85vh] overflow-hidden rounded-t-[32px] sm:rounded-3xl bg-white shadow-2xl flex flex-col"
+            >
+              <div className="sticky top-0 z-20 bg-white border-b border-slate-100 p-6 flex items-center justify-between">
+                <div>
+                  <h3 className="text-xl font-black text-slate-900 uppercase italic">Product Details</h3>
+                  <p className="text-[10px] font-bold text-slate-400">ID: {selectedMobileProduct.id}</p>
+                </div>
+                <button
+                  onClick={() => setSelectedMobileProduct(null)}
+                  className="rounded-full bg-slate-100 p-2 text-slate-400 transition-colors hover:bg-slate-200"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
+                <div className="flex flex-col gap-4">
+                  <div className="aspect-video w-full overflow-hidden rounded-2xl border border-slate-100 bg-slate-50">
+                    <ProductImage
+                      src={`/public/images/products/${selectedMobileProduct.main_image}`}
+                      alt={selectedMobileProduct.name}
+                      className="h-full w-full object-cover"
+                    />
+                  </div>
+                  <div>
+                    <h4 className="text-2xl font-black text-slate-900 uppercase italic leading-none">{selectedMobileProduct.name}</h4>
+                    <p className="mt-2 text-[10px] font-black tracking-widest text-slate-400 uppercase">
+                      {selectedMobileProduct.category} • Print: {selectedMobileProduct.print_method || 'N/A'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 border-t border-slate-50 pt-4">
+                  <div>
+                    <p className="text-[8px] font-black tracking-widest text-slate-400 uppercase">Base Price</p>
+                    <p className="text-sm font-black text-slate-900">₱{selectedMobileProduct.base_price?.toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <p className="text-[8px] font-black tracking-widest text-slate-400 uppercase">Raw Cost</p>
+                    <p className="text-sm font-black text-emerald-600">₱{selectedMobileProduct.raw_material_cost?.toLocaleString()}</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-4 border-t border-slate-50 pt-4">
+                  <div>
+                    <p className="text-[8px] font-black tracking-widest text-slate-400 uppercase">Current Stock</p>
+                    <p className="text-xs font-bold text-slate-900">{selectedMobileProduct.current_stock ?? 0}</p>
+                  </div>
+                  <div>
+                    <p className="text-[8px] font-black tracking-widest text-slate-400 uppercase">Min Threshold</p>
+                    <p className="text-xs font-bold text-amber-600">{selectedMobileProduct.min_threshold ?? 0}</p>
+                  </div>
+                  <div>
+                    <p className="text-[8px] font-black tracking-widest text-slate-400 uppercase">Min Order</p>
+                    <p className="text-xs font-bold text-blue-600">{selectedMobileProduct.min_order ?? 1} Units</p>
+                  </div>
+                </div>
+
+                <div className="border-t border-slate-50 pt-4 space-y-2">
+                  <p className="text-[8px] font-black tracking-widest text-slate-400 uppercase">Quick Summary</p>
+                  <p className="text-xs font-bold leading-relaxed text-slate-600">{selectedMobileProduct.short_description || 'No description available.'}</p>
+                </div>
+
+                <div className="border-t border-slate-50 pt-4 space-y-2">
+                  <p className="text-[8px] font-black tracking-widest text-slate-400 uppercase">Full Description</p>
+                  <p className="text-xs leading-relaxed text-slate-600">{selectedMobileProduct.long_description || 'No long description provided.'}</p>
+                </div>
+
+                <div className="border-t border-slate-50 pt-4 space-y-2">
+                  <p className="text-[8px] font-black tracking-widest text-slate-400 uppercase">Best For</p>
+                  <p className="text-xs font-bold text-slate-700 italic">"{selectedMobileProduct.best_for || 'N/A'}"</p>
+                </div>
+
+                {selectedMobileProduct.tags && selectedMobileProduct.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-2 border-t border-slate-50 pt-4">
+                    {selectedMobileProduct.tags.map((t) => (
+                      <span key={t} className="rounded-lg bg-slate-100 px-3 py-1.5 text-[8px] font-black tracking-widest text-slate-500 uppercase">
+                        {t}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                <div className="flex items-center gap-6 border-t border-slate-50 pt-4">
+                  <div className="flex items-center gap-2">
+                    <div className={cn("h-3.5 w-3.5 rounded-full border", selectedMobileProduct.is_need_screenplate ? "bg-emerald-500 border-emerald-600" : "bg-slate-200 border-slate-300")} />
+                    <span className="text-[9px] font-black tracking-widest text-slate-500 uppercase">Requires Plate</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className={cn("h-3.5 w-3.5 rounded-full border", selectedMobileProduct.is_need_color ? "bg-emerald-500 border-emerald-600" : "bg-slate-200 border-slate-300")} />
+                    <span className="text-[9px] font-black tracking-widest text-slate-500 uppercase">Multi-Color</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-6 border-t border-slate-100 flex gap-4 bg-slate-50/50">
+                <button
+                  onClick={() => {
+                    const p = selectedMobileProduct
+                    setSelectedMobileProduct(null)
+                    navigate(`/admin/product/manage/${p.id}`)
+                  }}
+                  className="flex-1 rounded-xl bg-slate-900 py-4 text-[10px] font-black tracking-widest text-[#75EEA5] uppercase italic shadow-xl transition-all hover:bg-slate-800"
+                >
+                  Edit Product
+                </button>
+                <button
+                  onClick={() => {
+                    const p = selectedMobileProduct
+                    setSelectedMobileProduct(null)
+                    handleShowDeleteModal(p)
+                  }}
+                  className="flex-1 rounded-xl bg-rose-600 py-4 text-[10px] font-black tracking-widest text-white uppercase italic shadow-xl transition-all hover:bg-rose-700"
+                >
+                  Delete Product
                 </button>
               </div>
             </motion.div>

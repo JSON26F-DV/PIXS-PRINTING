@@ -5,6 +5,7 @@ import type { IMessage } from '../MessengerPage'
 import { format } from 'date-fns'
 import toast from 'react-hot-toast'
 import axiosInstance from '../../../lib/axiosInstance.ts'
+import BoxFallback from '../../../components/common/BoxFallback'
 
 interface AdminControlModalProps {
   isOpen: boolean
@@ -28,8 +29,22 @@ const AdminControlModal: React.FC<AdminControlModalProps> = ({
   onScrollToMessage
 }) => {
   const [searchQuery, setSearchQuery] = useState('')
+  const [imgError, setImgError] = useState(false)
+
+  React.useEffect(() => {
+    setImgError(false)
+  }, [targetUser?.profile_picture])
 
   if (!isOpen) return null
+
+  const displaySrc =
+    targetUser?.profile_picture && !imgError
+      ? targetUser.profile_picture.startsWith('http') ||
+        targetUser.profile_picture.startsWith('blob:') ||
+        targetUser.profile_picture.startsWith('data:')
+        ? targetUser.profile_picture
+        : `/src/assets/profile/${targetUser.profile_picture}`
+      : null
 
   const handleGeneratePayCode = async () => {
     try {
@@ -78,13 +93,19 @@ const AdminControlModal: React.FC<AdminControlModalProps> = ({
                 <X size={16} />
               </button>
 
-              <div className="w-20 h-20 rounded-full overflow-hidden bg-slate-200 border-4 border-white shadow-lg mb-4">
-                {targetUser?.profile_picture ? (
-                  <img src={targetUser.profile_picture} alt="Profile" className="w-full h-full object-cover" />
+              <div className="w-20 h-20 rounded-full overflow-hidden bg-slate-200 border-4 border-white shadow-lg mb-4 flex items-center justify-center">
+                {displaySrc ? (
+                  <img
+                    src={displaySrc}
+                    alt="Profile"
+                    className="w-full h-full object-cover"
+                    onError={() => setImgError(true)}
+                  />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-slate-900 text-white font-black text-xl">
-                    {targetUser?.name?.charAt(0) || '?'}
-                  </div>
+                  <BoxFallback
+                    className="w-full h-full rounded-full bg-slate-900 flex items-center justify-center overflow-hidden"
+                    iconClassName="h-9 w-9 brightness-0 invert opacity-30"
+                  />
                 )}
               </div>
               <h2 className="text-lg font-black text-slate-900 uppercase tracking-tight">{targetUser?.name || 'Unknown User'}</h2>

@@ -22,9 +22,9 @@ import { getHomePathForRole } from '../utils/authRouting'
 import AdminLayout from '../layouts/AdminLayout'
 import Dashboard from '../views/admin/Dashboard'
 import ProductManagement from '../views/admin/ProductManagement'
-import ManageProduct from '../views/admin/ManageProduct'
+import ManageProduct from '../views/admin/management/ManageProduct'
 import ScreenplateManagement from '../views/admin/ScreenplateManagement'
-import ManageScreenplate from '../views/admin/ManageScreenplate'
+import ManageScreenplate from '../views/admin/management/ManageScreenplate'
 import StockAnalytics from '../views/admin/StockAnalytics'
 import ManageStock from '../views/admin/management/ManageStock'
 import Accounts from '../views/admin/Accounts'
@@ -34,6 +34,7 @@ import DeleteAccountPage from '../views/admin/management/DeleteAccountPage'
 import ManageAttendance from '../views/admin/management/ManageAttendance'
 import Payroll from '../views/admin/payroll/Payroll'
 import Orders from '../views/admin/Orders'
+import ManageOrder from '../views/admin/management/ManageOrder'
 import MarketingPromotions from '../views/admin/MarketingPromotions'
 import AdminSettings from '../views/admin/Settings/AdminSettings'
 import PayCode from '../views/admin/PayCode'
@@ -201,6 +202,8 @@ const AppRouter: React.FC = () => {
         <Route path="payroll" element={<Payroll />} />
         <Route path="payroll/manage/:id" element={<ManageAttendance />} />
         <Route path="orders" element={<Orders />} />
+        <Route path="orders/manage" element={<ManageOrder />} />
+        <Route path="orders/manage/:customerId" element={<ManageOrder />} />
         <Route path="setting" element={<AdminSettings />} />
         <Route path="marketing" element={<MarketingPromotions />} />
         <Route path="generatecode" element={<PayCode />} />

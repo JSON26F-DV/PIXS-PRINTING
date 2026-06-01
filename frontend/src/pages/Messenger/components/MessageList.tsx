@@ -44,6 +44,7 @@ interface MessageListProps {
   onLoadMore?: () => void
   isLoadingMore?: boolean
   scrollToMessageId?: string | null
+  onDeleteMedia?: (messageId: string, filename: string) => void
 }
 
 const QUICK_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '😡']
@@ -114,15 +115,39 @@ const MessageBubble: React.FC<{
   isAdmin?: boolean
   onImageClick: (url: string) => void
   isHighlighted?: boolean
-}> = ({ message, onReact, onReply, onEdit, onDelete, onPin, isAdmin, onImageClick, isHighlighted }) => {
+  onDeleteMedia?: (messageId: string, filename: string) => void
+  isEditing?: boolean
+  onStartEdit?: () => void
+  onCancelEdit?: () => void
+}> = ({
+  message,
+  onReact,
+  onReply,
+  onEdit,
+  onDelete,
+  onPin,
+  isAdmin,
+  onImageClick,
+  isHighlighted,
+  onDeleteMedia,
+  isEditing = false,
+  onStartEdit,
+  onCancelEdit,
+}) => {
   const [showQuickBar, setShowQuickBar] = useState(false)
   const [showFullPicker, setShowFullPicker] = useState(false)
   const [showOptions, setShowOptions] = useState(false)
-  const [isEditing, setIsEditing] = useState(false)
+  const [showDeletedText, setShowDeletedText] = useState(false)
   const [editText, setEditText] = useState(message.text)
   const [showOriginal, setShowOriginal] = useState(false)
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null)
   const anchorRef = useRef<HTMLDivElement>(null)
+
+  React.useEffect(() => {
+    if (isEditing) {
+      setEditText(message.text)
+    }
+  }, [isEditing, message.text])
 
   const isCustomer = message.sender === 'customer'
 
@@ -137,7 +162,7 @@ const MessageBubble: React.FC<{
     if (editText.trim() && editText !== message.text) {
       onEdit(editText.trim())
     }
-    setIsEditing(false)
+    if (onCancelEdit) onCancelEdit()
   }
 
   const hasCard = message.order_id || message.screenplate_request_id;
@@ -210,7 +235,7 @@ const MessageBubble: React.FC<{
 
               <div className="flex justify-end gap-2">
                 <button
-                  onClick={() => setIsEditing(false)}
+                  onClick={onCancelEdit}
                   className="rounded-lg px-3 py-1 text-[9px] font-black uppercase hover:bg-slate-700"
                 >
                   Cancel
@@ -226,7 +251,13 @@ const MessageBubble: React.FC<{
           ) : (
             <>
               {message.isDeleted ? (
-                <span>this message has been removed.</span>
+                isAdmin && showDeletedText ? (
+                  <span className="text-rose-400 italic font-medium">
+                    [Deleted message content: {message.text}]
+                  </span>
+                ) : (
+                  <span>this message has been removed.</span>
+                )
               ) : (
                 !hasCard && message.text
               )}
@@ -323,7 +354,7 @@ const MessageBubble: React.FC<{
                   {at.type === 'image' ? (
                     <motion.div
                       whileHover={{ scale: 1.02 }}
-                      className="group relative cursor-pointer overflow-hidden rounded-[16px] md:rounded-[24px] border border-slate-100 bg-slate-50 shadow-lg"
+                      className="group/image relative cursor-pointer overflow-hidden rounded-[16px] md:rounded-[24px] border border-slate-100 bg-slate-50 shadow-lg"
                       onClick={() => onImageClick(getAssetUrl(at))}
                     >
                       <img
@@ -331,35 +362,64 @@ const MessageBubble: React.FC<{
                         alt={at.name}
                         className="max-h-[180px] sm:max-h-[240px] md:max-h-[300px] w-auto object-cover"
                       />
-                      <div className="absolute inset-0 flex items-center justify-center bg-slate-900/40 opacity-0 transition-opacity group-hover:opacity-100">
+                      <div className="absolute inset-0 flex items-center justify-center bg-slate-900/40 opacity-0 transition-opacity group-hover/image:opacity-100">
                         <ExternalLink size={24} className="text-white" />
                       </div>
+                      {isAdmin && onDeleteMedia && (
+                        <button
+                          className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1.5 opacity-0 group-hover/image:opacity-100 transition-opacity z-10 hover:bg-red-600 shadow-md"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            if (window.confirm('Delete this media permanently?')) {
+                              onDeleteMedia(message.id, at.name)
+                            }
+                          }}
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      )}
                     </motion.div>
                   ) : (
-                    <a
-                      href={getAssetUrl(at)}
-                      download={at.name}
-                      className={clsx(
-                        'group flex items-center gap-3 md:gap-4 rounded-[16px] md:rounded-[22px] border p-3 md:p-4 shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98]',
-                        isCustomer
-                          ? 'hover:border-pixs-mint/50 border-slate-200 bg-slate-50 text-slate-900'
-                          : 'hover:border-pixs-mint/50 border-slate-100 bg-white text-slate-900',
+                    <div className="relative flex items-center gap-2">
+                      <a
+                        href={getAssetUrl(at)}
+                        download={at.name}
+                        className={clsx(
+                          'group/doc flex items-center gap-3 md:gap-4 rounded-[16px] md:rounded-[22px] border p-3 md:p-4 shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98] flex-1',
+                          isCustomer
+                            ? 'hover:border-pixs-mint/50 border-slate-200 bg-slate-50 text-slate-900'
+                            : 'hover:border-pixs-mint/50 border-slate-100 bg-white text-slate-900',
+                        )}
+                      >
+                        <div className="flex h-10 w-10 md:h-12 md:w-12 shrink-0 items-center justify-center rounded-xl md:rounded-2xl bg-slate-900 shadow-lg shadow-slate-900/10">
+                          <FileText size={18} className="text-pixs-mint md:hidden" />
+                          <FileText size={20} className="text-pixs-mint hidden md:block" />
+                        </div>
+                        <div className="min-w-0 pr-2 md:pr-4">
+                          <p className="truncate text-[9px] md:text-[10px] leading-none font-black uppercase italic">
+                            {at.name}
+                          </p>
+                          <p className="mt-1.5 md:mt-2 flex items-center gap-1.5 text-[7px] md:text-[8px] font-bold tracking-widest text-slate-400 uppercase">
+                            Click to Download{' '}
+                            <Download size={10} className="text-pixs-mint" />
+                          </p>
+                        </div>
+                      </a>
+                      {isAdmin && onDeleteMedia && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            e.preventDefault()
+                            if (window.confirm('Delete this document permanently?')) {
+                              onDeleteMedia(message.id, at.name)
+                            }
+                          }}
+                          className="p-2 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 transition shrink-0"
+                        >
+                          <Trash2 size={18} />
+                        </button>
                       )}
-                    >
-                      <div className="flex h-10 w-10 md:h-12 md:w-12 shrink-0 items-center justify-center rounded-xl md:rounded-2xl bg-slate-900 shadow-lg shadow-slate-900/10">
-                        <FileText size={18} className="text-pixs-mint md:hidden" />
-                        <FileText size={20} className="text-pixs-mint hidden md:block" />
-                      </div>
-                      <div className="min-w-0 pr-2 md:pr-4">
-                        <p className="truncate text-[9px] md:text-[10px] leading-none font-black uppercase italic">
-                          {at.name}
-                        </p>
-                        <p className="mt-1.5 md:mt-2 flex items-center gap-1.5 text-[7px] md:text-[8px] font-bold tracking-widest text-slate-400 uppercase">
-                          Click to Download{' '}
-                          <Download size={10} className="text-pixs-mint" />
-                        </p>
-                      </div>
-                    </a>
+                    </div>
                   )}
                 </div>
               ))}
@@ -395,7 +455,7 @@ const MessageBubble: React.FC<{
         )}
 
         {/* Advanced Action Terminal */}
-        {!message.isDeleted && !isEditing && (
+        {((!message.isDeleted && !isEditing) || (message.isDeleted && isAdmin)) && (
           <div
             className={clsx(
               'absolute top-1/2 flex -translate-y-1/2 items-center gap-1.5 opacity-0 transition-opacity group-hover:opacity-100',
@@ -505,59 +565,89 @@ const MessageBubble: React.FC<{
                           : 'origin-bottom-left',
                       )}
                     >
-                      <button
-                        onClick={() => {
-                          onReply()
-                          setShowOptions(false)
-                        }}
-                        className="flex w-full items-center gap-3 rounded-xl p-3 text-[10px] font-black tracking-widest text-slate-700 uppercase transition-colors hover:bg-slate-50"
-                      >
-                        <CornerUpRight size={16} className="text-slate-400" />{' '}
-                        Reply
-                      </button>
-                      {isCustomer && (
-                        <button
-                          onClick={() => {
-                            setIsEditing(true)
-                            setShowOptions(false)
-                          }}
-                          className="flex w-full items-center gap-3 rounded-xl p-3 text-[10px] font-black tracking-widest text-slate-700 uppercase transition-colors hover:bg-slate-50"
-                        >
-                          <Edit2 size={16} className="text-slate-400" /> Edit
-                        </button>
-                      )}
-                      {isAdmin && onPin && (
-                        <button
-                          onClick={() => {
-                            onPin()
-                            setShowOptions(false)
-                          }}
-                          className="flex w-full items-center gap-3 rounded-xl p-3 text-[10px] font-black tracking-widest text-emerald-600 uppercase transition-colors hover:bg-emerald-50"
-                        >
-                          <Pin size={16} className="text-emerald-500" /> {message.is_pinned ? 'Unpin' : 'Pin'}
-                        </button>
-                      )}
-                      <button
-                        onClick={() => {
-                          onDelete()
-                          setShowOptions(false)
-                        }}
-                        className="flex w-full items-center gap-3 rounded-xl p-3 text-[10px] font-black tracking-widest text-rose-500 uppercase transition-colors hover:bg-rose-50"
-                      >
-                        <Trash2 size={16} className="text-rose-400" /> Delete
-                      </button>
-                      {isAdmin && (
-                        <button
-                          onClick={() => {
-                            if (window.confirm('Hard delete this message and all its files from the server?')) {
-                              onDelete(true)
-                            }
-                            setShowOptions(false)
-                          }}
-                          className="flex w-full items-center gap-3 rounded-xl p-3 text-[10px] font-black tracking-widest text-white bg-red-600 uppercase transition-colors hover:bg-red-700"
-                        >
-                          <Trash2 size={16} className="text-white" /> Delete DB
-                        </button>
+                      {message.isDeleted ? (
+                        <>
+                          <button
+                            onClick={() => {
+                              setShowDeletedText(!showDeletedText)
+                              setShowOptions(false)
+                            }}
+                            className="flex w-full items-center gap-3 rounded-xl p-3 text-[10px] font-black tracking-widest text-slate-700 uppercase transition-colors hover:bg-slate-50"
+                          >
+                            <History size={16} className="text-slate-400" />{' '}
+                            {showDeletedText ? 'Hide Text' : 'View Text'}
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (window.confirm('Hard delete this message and all its files from the server?')) {
+                                onDelete(true)
+                              }
+                              setShowOptions(false)
+                            }}
+                            className="flex w-full items-center gap-3 rounded-xl p-3 text-[10px] font-black tracking-widest text-white bg-red-600 uppercase transition-colors hover:bg-red-700"
+                          >
+                            <Trash2 size={16} className="text-white" /> Delete DB
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => {
+                              onReply()
+                              setShowOptions(false)
+                            }}
+                            className="flex w-full items-center gap-3 rounded-xl p-3 text-[10px] font-black tracking-widest text-slate-700 uppercase transition-colors hover:bg-slate-50"
+                          >
+                            <CornerUpRight size={16} className="text-slate-400" />{' '}
+                            Reply
+                          </button>
+                          {isCustomer && onStartEdit && (
+                            <button
+                              onClick={() => {
+                                onStartEdit()
+                                setShowOptions(false)
+                              }}
+                              className="flex w-full items-center gap-3 rounded-xl p-3 text-[10px] font-black tracking-widest text-slate-700 uppercase transition-colors hover:bg-slate-50"
+                            >
+                              <Edit2 size={16} className="text-slate-400" /> Edit
+                            </button>
+                          )}
+                          {isAdmin && onPin && (
+                            <button
+                              onClick={() => {
+                                onPin()
+                                setShowOptions(false)
+                              }}
+                              className="flex w-full items-center gap-3 rounded-xl p-3 text-[10px] font-black tracking-widest text-emerald-600 uppercase transition-colors hover:bg-emerald-50"
+                            >
+                              <Pin size={16} className="text-emerald-500" /> {message.is_pinned ? 'Unpin' : 'Pin'}
+                            </button>
+                          )}
+                          {(isAdmin || isCustomer) && (
+                            <button
+                              onClick={() => {
+                                onDelete()
+                                setShowOptions(false)
+                              }}
+                              className="flex w-full items-center gap-3 rounded-xl p-3 text-[10px] font-black tracking-widest text-rose-500 uppercase transition-colors hover:bg-rose-50"
+                            >
+                              <Trash2 size={16} className="text-rose-400" /> Delete
+                            </button>
+                          )}
+                          {isAdmin && (
+                            <button
+                              onClick={() => {
+                                if (window.confirm('Hard delete this message and all its files from the server?')) {
+                                  onDelete(true)
+                                }
+                                setShowOptions(false)
+                              }}
+                              className="flex w-full items-center gap-3 rounded-xl p-3 text-[10px] font-black tracking-widest text-white bg-red-600 uppercase transition-colors hover:bg-red-700"
+                            >
+                              <Trash2 size={16} className="text-white" /> Delete DB
+                            </button>
+                          )}
+                        </>
                       )}
                       <button
                         onClick={() => setShowOptions(false)}
@@ -586,7 +676,9 @@ const MessageList: React.FC<MessageListProps> = ({
   isLoading,
   onLoadMore,
   isLoadingMore,
+  onDeleteMedia,
 }) => {
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const [scrollContainer, setScrollContainer] = useState<HTMLDivElement | null>(null)
   const [hasScrolledUp, setHasScrolledUp] = useState(false)
@@ -692,12 +784,19 @@ const MessageList: React.FC<MessageListProps> = ({
                   key={msg.id}
                   message={msg}
                   onReact={(emoji) => onReact(msg.id, emoji)}
-                  onReply={() => onReply(msg)}
+                  onReply={() => {
+                    setEditingMessageId(null)
+                    onReply(msg)
+                  }}
                   onEdit={(text) => onEdit(msg.id, text)}
                   onDelete={(isHard) => onDelete(msg.id, isHard)}
                   onPin={onPin ? () => onPin(msg.id) : undefined}
                   isAdmin={isAdmin}
                   onImageClick={handleImageClick}
+                  onDeleteMedia={onDeleteMedia}
+                  isEditing={editingMessageId === msg.id}
+                  onStartEdit={() => setEditingMessageId(msg.id)}
+                  onCancelEdit={() => setEditingMessageId(null)}
                 />
               )}
               components={{

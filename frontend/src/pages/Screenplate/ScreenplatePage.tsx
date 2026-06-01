@@ -361,6 +361,8 @@ const ScreenplatePage: React.FC = () => {
   const searchResults = useMemo(() => {
     if (!searchQuery.trim()) return []
     return productsData.filter((p) => {
+      if (!p.is_need_screenplate) return false
+
       const catLabel = p.category_label?.toLowerCase() || ''
       const catId = p.category_id?.toLowerCase() || ''
       
@@ -374,10 +376,13 @@ const ScreenplatePage: React.FC = () => {
       const q = searchQuery.toLowerCase()
       const matchName = p.name.toLowerCase().includes(q)
       const matchVariant = p.variants?.some((v: IProductVariant) =>
-        v.size.toLowerCase().includes(q),
+        v.is_need_screenplate !== false && v.size.toLowerCase().includes(q),
       )
       return matchName || matchVariant
-    })
+    }).map(p => ({
+      ...p,
+      variants: p.variants?.filter(v => v.is_need_screenplate !== false)
+    })).filter(p => p.variants && p.variants.length > 0)
   }, [searchQuery, productsData])
 
   const BASE_SETUP_FEE = 700

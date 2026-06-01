@@ -43,6 +43,8 @@ class Employee extends Authenticatable
         'ot_rate',
         'profile_picture',
         'status',
+        'allowed_categories',
+        'allowed_products',
     ];
 
     /**
@@ -65,6 +67,8 @@ class Employee extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'allowed_categories' => 'array',
+            'allowed_products' => 'array',
         ];
     }
 

@@ -67,6 +67,7 @@ const ManageAttendance: React.FC = () => {
 
   // Print State & Refs
   interface PrintableReceiptRecord {
+    id: string
     employee_id: string
     name: string
     role: string
@@ -272,6 +273,7 @@ const ManageAttendance: React.FC = () => {
         })
 
         const receiptRecord = {
+          id: employee.id,
           employee_id: employee.id,
           name: employee.name,
           role: employee.role || 'Staff / Employee',

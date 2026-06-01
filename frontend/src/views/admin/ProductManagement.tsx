@@ -5,6 +5,7 @@ import 'react-loading-skeleton/dist/skeleton.css'
 import { Toaster } from 'react-hot-toast'
 
 import { ProductsSection } from './inventory-sections/ProductsSection'
+import { TechnicianAssignmentSection } from './inventory-sections/TechnicianAssignmentSection'
 import type { IProduct, ICategory } from './inventory-sections/types'
 import axiosInstance from '../../lib/axiosInstance'
 import ErrorBoundary from '../../components/common/ErrorBoundary'
@@ -108,7 +109,7 @@ function ProductManagementContent() {
               setProducts={setProducts}
               setCategories={setCategories}
             />
-            {/* <TechnicianAssignmentSection categories={categories} /> */}
+            <TechnicianAssignmentSection categories={categories} />
           </>
         )}
       </main>

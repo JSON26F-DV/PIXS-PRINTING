@@ -24,6 +24,28 @@ export interface ProductionLog {
   completed_at: string
 }
 
+export interface PayrollRecord {
+  id: string
+  employee_id: string
+  name: string
+  role?: string
+  current_rate: number
+  daily_rate?: number
+  ot_rate: number
+  attendance: AttendanceDay[]
+  weekly_total: number
+  profile_picture?: string
+  attendance_days?: number
+  overtime_hours?: number
+  gross_pay?: number
+  basic_salary?: number
+  overtime_pay?: number
+  deductions?: number
+  net_salary?: number
+  status?: string
+}
+
+
 export interface EmployeeTodayRecord {
   id: string
   name: string

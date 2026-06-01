@@ -9,6 +9,7 @@ export interface IProductVariant {
   size: string
   width: string
   height: string
+  is_need_screenplate?: boolean
 }
 
 export interface IProduct {
