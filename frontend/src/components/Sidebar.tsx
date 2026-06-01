@@ -145,7 +145,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   }
 
   const roleKey =
-    user.role === 'technician' || user.role === 'welder' ? 'staff' : user.role
+    user.role === 'technician' ? 'staff' : user.role
   const items = navItems[roleKey as keyof typeof navItems] || []
 
   return (
@@ -235,7 +235,6 @@ const Sidebar: React.FC<SidebarProps> = ({
             <option value="admin">Admin</option>
             <option value="staff">Staff</option>
             <option value="technician">Technician</option>
-            <option value="welder">Welder</option>
             <option value="inventory">Inventory</option>
             <option value="customer">Customer</option>
           </select>

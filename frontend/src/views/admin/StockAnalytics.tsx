@@ -14,10 +14,12 @@ export default function StockAnalytics() {
     products,
     setProducts,
     expenditures,
+    inventoryLogs,
     isLoading,
     addExpenditure,
     updateExpenditure,
     deleteExpenditure,
+    undoInventoryLog,
   } = useStockAnalytics()
 
   const catalogValue = useMemo(
@@ -112,10 +114,12 @@ export default function StockAnalytics() {
           <InventoryAnalyticsSection
             products={products}
             expenditures={expenditures}
+            inventoryLogs={inventoryLogs}
             setProducts={setProducts}
             addExpenditure={addExpenditure}
             updateExpenditure={updateExpenditure}
             deleteExpenditure={deleteExpenditure}
+            undoInventoryLog={undoInventoryLog}
           />
         )}
       </main>

@@ -590,7 +590,7 @@ const GeneralDashboard: React.FC = () => {
                     </div>
                     <div className="flex shrink-0 items-center gap-3">
                       <PermissionWrapper
-                        allowedRoles={['admin', 'inventory']}
+                        allowedRoles={['admin']}
                         hideIfNoAccess
                       >
                         <button
@@ -603,7 +603,7 @@ const GeneralDashboard: React.FC = () => {
                       </PermissionWrapper>
 
                       <PermissionWrapper
-                        allowedRoles={['admin', 'inventory']}
+                        allowedRoles={['admin']}
                         hideIfNoAccess
                       >
                         <button

@@ -70,7 +70,7 @@ const ProtectedRoute: React.FC<{
   }
 
   if (
-    ['staff', 'technician', 'welder'].includes(role) &&
+    ['staff', 'technician'].includes(role) &&
     !location.startsWith('/staff')
   ) {
     return <Navigate to="/staff/overview" replace />
@@ -213,7 +213,7 @@ const AppRouter: React.FC = () => {
       <Route
         path="/staff"
         element={
-          <ProtectedRoute allowedRoles={['staff', 'technician', 'welder']}>
+          <ProtectedRoute allowedRoles={['staff', 'technician']}>
             <AdminLayout />
           </ProtectedRoute>
         }
@@ -240,6 +240,7 @@ const AppRouter: React.FC = () => {
         <Route path="overview" element={<StaffOverview />} />
         <Route path="orders" element={<Orders />} />
         <Route path="stock" element={<StockAnalytics />} />
+        <Route path="stock/manage/:product_id" element={<ManageStock />} />
         <Route path="attendance" element={<Attendance />} />
         <Route path="chat" element={<MessengerPage />} />
         <Route path="setting" element={<AdminSettings />} />

@@ -7,7 +7,6 @@ export function getHomePathForRole(role: RoleType | string | undefined): string 
       return '/admin/dashboard'
     case 'staff':
     case 'technician':
-    case 'welder':
       return '/staff/overview'
     case 'inventory':
       return '/inventory/overview'

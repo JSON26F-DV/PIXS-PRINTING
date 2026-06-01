@@ -12,6 +12,7 @@ import {
   MoreVertical,
   Trash2,
   Plus,
+  MessageSquare,
 } from 'lucide-react'
 import {
   ResponsiveContainer,
@@ -88,6 +89,12 @@ const Orders: React.FC = () => {
     isOpen: boolean
     orderId: string
   }>({ isOpen: false, orderId: '' })
+  const [messageModal, setMessageModal] = useState<{
+    isOpen: boolean
+    orderId: string
+    message: string
+    isSubmitting: boolean
+  }>({ isOpen: false, orderId: '', message: '', isSubmitting: false })
   const [mobileDetailOrder, setMobileDetailOrder] = useState<Order | null>(null)
 
   const itemsPerPage = 10
@@ -228,6 +235,30 @@ const Orders: React.FC = () => {
     }
   }
 
+  const handleSendMessage = async () => {
+    if (!messageModal.message.trim()) return
+    setMessageModal((prev) => ({ ...prev, isSubmitting: true }))
+    try {
+      await axiosInstance.post('/api/messages/send', {
+        message: messageModal.message,
+        receiver_id: '1',
+        receiver_type: 'employee',
+        order_id: messageModal.orderId,
+      })
+      alert('Message sent to admin successfully')
+      setMessageModal({
+        isOpen: false,
+        orderId: '',
+        message: '',
+        isSubmitting: false,
+      })
+    } catch (err) {
+      console.error('Failed to send message', err)
+      alert('Failed to send message')
+      setMessageModal((prev) => ({ ...prev, isSubmitting: false }))
+    }
+  }
+
   const toggleOrderExpansion = (orderId: string) => {
     setExpandedOrderIds(prev => {
       const next = new Set(prev)
@@ -310,13 +341,15 @@ const Orders: React.FC = () => {
              <ShoppingBag className="text-slate-900 shrink-0" size={24} />
              <h2 className="text-lg md:text-xl font-black tracking-tight text-slate-900 uppercase italic leading-tight">Order Management System</h2>
           </div>
-          <button 
-            onClick={() => navigate(selectedCustomerId ? `/admin/orders/manage/${selectedCustomerId}` : '/admin/orders/manage')}
-            className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-slate-900 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest italic transition-colors shadow-lg shadow-emerald-500/20"
-          >
-            <Plus size={16} />
-            <span>Add Order</span>
-          </button>
+          {user?.role !== 'inventory' && (
+            <button 
+              onClick={() => navigate(selectedCustomerId ? `/admin/orders/manage/${selectedCustomerId}` : '/admin/orders/manage')}
+              className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-slate-900 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest italic transition-colors shadow-lg shadow-emerald-500/20"
+            >
+              <Plus size={16} />
+              <span>Add Order</span>
+            </button>
+          )}
         </div>
 
         <div className="grid w-full grid-cols-2 gap-3 lg:flex lg:w-auto lg:items-center">
@@ -622,15 +655,27 @@ const Orders: React.FC = () => {
                           {format(parseISO(order.created_at), 'MMM dd')}
                        </span>
                        <div className="flex gap-0.5">
-                          <button 
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              setDeleteModal({ isOpen: true, orderId: order.order_id })
-                            }}
-                            className="rounded p-1 text-rose-400 hover:bg-rose-50"
-                          >
-                             <Trash2 size={10} />
-                          </button>
+                          {user?.role === 'inventory' ? (
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setMessageModal({ isOpen: true, orderId: order.order_id, message: '', isSubmitting: false })
+                              }}
+                              className="rounded p-1 text-blue-500 hover:bg-blue-50"
+                            >
+                               <MessageSquare size={10} />
+                            </button>
+                          ) : (
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setDeleteModal({ isOpen: true, orderId: order.order_id })
+                              }}
+                              className="rounded p-1 text-rose-400 hover:bg-rose-50"
+                            >
+                               <Trash2 size={10} />
+                            </button>
+                          )}
                        </div>
                     </div>
                   </motion.div>
@@ -715,10 +760,10 @@ const Orders: React.FC = () => {
                             <div className="group/status relative flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
                               <div className="relative w-fit">
                                 <select
-                                  disabled={user?.role === 'staff'}
+                                  disabled={['staff', 'inventory'].includes(user?.role || '')}
                                   className={cn(
                                     'orders-status-dropdown appearance-none rounded-xl border px-4 py-2 pr-8 text-[10px] font-black uppercase transition-all',
-                                    user?.role === 'staff'
+                                    ['staff', 'inventory'].includes(user?.role || '')
                                       ? 'cursor-not-allowed opacity-70'
                                       : 'cursor-pointer',
                                     order.status?.toUpperCase() === 'DELIVERED'
@@ -773,12 +818,21 @@ const Orders: React.FC = () => {
                           </td>
                           <td className="px-8 py-6 text-right">
                             <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
-                              <button 
-                                onClick={() => setDeleteModal({ isOpen: true, orderId: order.order_id })}
-                                className="orders-action-btn rounded-xl p-3 text-rose-400 transition-all hover:bg-rose-50 hover:text-rose-600"
-                              >
-                                <Trash2 size={18} />
-                              </button>
+                              {user?.role === 'inventory' ? (
+                                <button 
+                                  onClick={() => setMessageModal({ isOpen: true, orderId: order.order_id, message: '', isSubmitting: false })}
+                                  className="orders-action-btn rounded-xl p-3 text-blue-500 transition-all hover:bg-blue-50 hover:text-blue-600"
+                                >
+                                  <MessageSquare size={18} />
+                                </button>
+                              ) : (
+                                <button 
+                                  onClick={() => setDeleteModal({ isOpen: true, orderId: order.order_id })}
+                                  className="orders-action-btn rounded-xl p-3 text-rose-400 transition-all hover:bg-rose-50 hover:text-rose-600"
+                                >
+                                  <Trash2 size={18} />
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -1375,9 +1429,11 @@ const Orders: React.FC = () => {
                                 {['UNPAID', 'PENDING', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED'].map((s) => (
                                    <button
                                      key={s}
+                                     disabled={['staff', 'inventory'].includes(user?.role || '')}
                                      onClick={() => setStatusModal({ isOpen: true, orderId: mobileDetailOrder.order_id, newStatus: s })}
                                      className={cn(
                                        "rounded-lg border py-3 text-[9px] font-black uppercase transition-all",
+                                       ['staff', 'inventory'].includes(user?.role || '') ? 'opacity-50 cursor-not-allowed' : '',
                                        mobileDetailOrder.status?.toUpperCase() === s 
                                          ? "border-slate-900 bg-slate-900 text-white shadow-lg shadow-slate-900/10"
                                          : "border-slate-100 bg-slate-50 text-slate-400 hover:border-slate-200"
@@ -1407,14 +1463,25 @@ const Orders: React.FC = () => {
                </div>
                
                <div className="p-6 border-t border-slate-100 flex gap-4 bg-slate-50/50">
-                  <button 
-                    onClick={() => {
-                        setDeleteModal({ isOpen: true, orderId: mobileDetailOrder.order_id })
-                    }}
-                    className="flex-1 rounded-xl bg-rose-600 py-4 text-[10px] font-black tracking-widest text-white uppercase italic shadow-xl shadow-rose-900/20 transition-all hover:bg-rose-700"
-                  >
-                    Terminate Order
-                  </button>
+                  {user?.role === 'inventory' ? (
+                    <button 
+                      onClick={() => {
+                          setMessageModal({ isOpen: true, orderId: mobileDetailOrder.order_id, message: '', isSubmitting: false })
+                      }}
+                      className="flex-1 rounded-xl bg-blue-600 py-4 text-[10px] font-black tracking-widest text-white uppercase italic shadow-xl shadow-blue-900/20 transition-all hover:bg-blue-700"
+                    >
+                      Message Admin
+                    </button>
+                  ) : (
+                    <button 
+                      onClick={() => {
+                          setDeleteModal({ isOpen: true, orderId: mobileDetailOrder.order_id })
+                      }}
+                      className="flex-1 rounded-xl bg-rose-600 py-4 text-[10px] font-black tracking-widest text-white uppercase italic shadow-xl shadow-rose-900/20 transition-all hover:bg-rose-700"
+                    >
+                      Terminate Order
+                    </button>
+                  )}
                   <button 
                     onClick={() => setMobileDetailOrder(null)}
                     className="flex-1 rounded-xl bg-white border border-slate-200 py-4 text-[10px] font-black tracking-widest text-slate-600 uppercase italic transition-all hover:bg-slate-50"
@@ -1422,6 +1489,70 @@ const Orders: React.FC = () => {
                     Dismiss
                   </button>
                </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Message Modal */}
+      <AnimatePresence>
+        {messageModal.isOpen && (
+          <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-md"
+              onClick={() => !messageModal.isSubmitting && setMessageModal({ ...messageModal, isOpen: false })}
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative w-full max-w-lg overflow-hidden rounded-2xl bg-white p-8 shadow-2xl md:p-12"
+            >
+              <div className="mb-8">
+                <div className="mb-4 flex items-center gap-3">
+                  <div className="h-0.5 w-8 bg-blue-500" />
+                  <span className="text-[10px] font-black tracking-[4px] text-blue-500 uppercase italic">
+                    Contact Admin
+                  </span>
+                </div>
+                <h2 className="text-3xl font-black tracking-tighter text-slate-900 uppercase italic">
+                  Send Message
+                </h2>
+                <p className="mt-4 text-xs font-bold leading-relaxed text-slate-400 uppercase italic">
+                  Regarding Order <span className="text-slate-900 font-mono">{messageModal.orderId}</span>
+                </p>
+              </div>
+
+              <div className="mb-6">
+                <textarea
+                  className="w-full rounded-xl border border-slate-200 p-4 text-sm font-bold text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/20"
+                  rows={4}
+                  placeholder="Type your message here..."
+                  value={messageModal.message}
+                  onChange={(e) => setMessageModal({ ...messageModal, message: e.target.value })}
+                  disabled={messageModal.isSubmitting}
+                />
+              </div>
+
+              <div className="flex gap-4">
+                <button
+                  onClick={() => !messageModal.isSubmitting && setMessageModal({ ...messageModal, isOpen: false })}
+                  disabled={messageModal.isSubmitting}
+                  className="flex-1 rounded-xl border border-slate-100 py-5 text-[10px] font-black tracking-widest text-slate-400 uppercase italic transition-all hover:bg-slate-50 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSendMessage}
+                  disabled={messageModal.isSubmitting || !messageModal.message.trim()}
+                  className="flex-1 rounded-xl bg-blue-600 py-5 text-[10px] font-black tracking-widest text-white uppercase italic shadow-xl shadow-blue-900/20 transition-all hover:bg-blue-700 hover:scale-105 active:scale-95 disabled:opacity-50"
+                >
+                  {messageModal.isSubmitting ? 'Sending...' : 'Send Message'}
+                </button>
+              </div>
             </motion.div>
           </div>
         )}

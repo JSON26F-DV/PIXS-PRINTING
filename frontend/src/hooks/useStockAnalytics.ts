@@ -13,9 +13,31 @@ export interface IExpenditure {
   created_at: string
 }
 
+export interface IInventoryLog {
+  id: string
+  employee_id: string
+  product_id?: string
+  variant_id?: string
+  expenditure_id?: number
+  product_name: string
+  qty_added: number
+  cost: number
+  type: 'RESTOCK' | 'MISC' | 'ADJUSTMENT' | 'DAMAGE'
+  notes?: string
+  date: string
+  employee?: {
+    id: string
+    first_name: string
+    last_name: string
+    role?: string
+    profile_picture?: string
+  }
+}
+
 export function useStockAnalytics() {
   const [products, setProducts] = useState<IProduct[]>([])
   const [expenditures, setExpenditures] = useState<IExpenditure[]>([])
+  const [inventoryLogs, setInventoryLogs] = useState<IInventoryLog[]>([])
   const [isLoading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -41,6 +63,7 @@ export function useStockAnalytics() {
       const json = await res.json()
       setProducts(json.data?.products || [])
       setExpenditures(json.data?.expenditures || [])
+      setInventoryLogs(json.data?.inventory_logs || [])
     } catch (err) {
       if ((err as Error).name === 'AbortError') return
       setError('Failed to load stock analytics')
@@ -118,15 +141,37 @@ export function useStockAnalytics() {
     }
   }
 
+  const undoInventoryLog = async (id: string) => {
+    try {
+      const token = localStorage.getItem(STORAGE_KEYS.TOKEN)
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/inventory-logs/${id}/undo`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { Authorization: `Bearer ${token}` }),
+        },
+      })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const json = await res.json()
+      toast.success(json.message || 'Log adjustment successfully reverted')
+      fetchAnalytics()
+    } catch (err) {
+      toast.error('Failed to undo log adjustment')
+      console.error(err)
+    }
+  }
+
   return {
     products,
     setProducts,
     expenditures,
+    inventoryLogs,
     isLoading,
     error,
     addExpenditure,
     updateExpenditure,
     deleteExpenditure,
+    undoInventoryLog,
     refetch: fetchAnalytics,
   }
 }

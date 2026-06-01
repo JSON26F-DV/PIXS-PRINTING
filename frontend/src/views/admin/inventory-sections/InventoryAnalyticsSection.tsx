@@ -8,7 +8,9 @@ import {
   PlusCircle,
   Search,
   Trash2,
-  Edit2
+  Edit2,
+  RotateCcw,
+  User
 } from 'lucide-react'
 import {
   BarChart,
@@ -22,8 +24,9 @@ import {
 } from 'recharts'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { IProduct, IProductVariant } from '../../../types/product.types'
-import type { IExpenditure } from '../../../hooks/useStockAnalytics'
+import type { IExpenditure, IInventoryLog } from '../../../hooks/useStockAnalytics'
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../../../context/AuthContext'
 import { toast } from 'react-hot-toast'
 
 interface IProductExtended extends IProduct {
@@ -33,19 +36,24 @@ interface IProductExtended extends IProduct {
 interface InventoryAnalyticsSectionProps {
   products: IProduct[]
   expenditures: IExpenditure[]
+  inventoryLogs: IInventoryLog[]
   setProducts: React.Dispatch<React.SetStateAction<IProduct[]>>
   addExpenditure: (data: Partial<IExpenditure>) => Promise<void>
   updateExpenditure: (id: number, data: Partial<IExpenditure>) => Promise<void>
   deleteExpenditure: (id: number) => Promise<void>
+  undoInventoryLog: (id: string) => Promise<void>
 }
 
 export const InventoryAnalyticsSection: React.FC<InventoryAnalyticsSectionProps> = ({ 
   products, 
   expenditures, 
+  inventoryLogs,
   addExpenditure,
   updateExpenditure,
-  deleteExpenditure
+  deleteExpenditure,
+  undoInventoryLog
 }) => {
+  const { user } = useAuth()
   const navigate = useNavigate()
 
   const [productSearch, setProductSearch] = useState('')
@@ -69,6 +77,29 @@ export const InventoryAnalyticsSection: React.FC<InventoryAnalyticsSectionProps>
   // Mobile selected log modal state
   const [mobileSelectedLog, setMobileSelectedLog] = useState<IExpenditure | null>(null)
   const [isEditingInMobileModal, setIsEditingInMobileModal] = useState(false)
+
+  // Inventory Logs states
+  const [invLogSearch, setInvLogSearch] = useState('')
+  const [invLogTypeFilter, setInvLogTypeFilter] = useState('ALL')
+  const [mobileSelectedInvLog, setMobileSelectedInvLog] = useState<IInventoryLog | null>(null)
+
+  const filteredInventoryLogs = useMemo(() => {
+    let result = [...inventoryLogs]
+    if (invLogTypeFilter !== 'ALL') {
+      result = result.filter(l => l.type === invLogTypeFilter)
+    }
+    if (invLogSearch.trim()) {
+      const q = invLogSearch.toLowerCase().trim()
+      result = result.filter(l => 
+        l.id.toLowerCase().includes(q) ||
+        l.product_name.toLowerCase().includes(q) ||
+        (l.notes || '').toLowerCase().includes(q) ||
+        (l.employee?.first_name || '').toLowerCase().includes(q) ||
+        (l.employee?.last_name || '').toLowerCase().includes(q)
+      )
+    }
+    return result
+  }, [inventoryLogs, invLogTypeFilter, invLogSearch])
 
   // Generate unique categories for chart filtering (maps category_id to category_label)
   const uniqueProductCategories = useMemo(() => {
@@ -367,7 +398,7 @@ export const InventoryAnalyticsSection: React.FC<InventoryAnalyticsSectionProps>
               return (
                 <div
                   key={p.id}
-                  onClick={() => navigate(`/admin/stock/manage/${p.id}`)}
+                  onClick={() => navigate(`/${user?.role === 'inventory' ? 'inventory' : 'admin'}/stock/manage/${p.id}`)}
                   className="cursor-pointer rounded-[24px] border border-slate-100 bg-slate-50/50 p-4 transition-all duration-300 hover:border-emerald-200 hover:bg-white hover:shadow-lg"
                 >
                   <div className="flex items-center justify-between mb-3 border-b border-slate-200/60 pb-2">
@@ -630,12 +661,14 @@ export const InventoryAnalyticsSection: React.FC<InventoryAnalyticsSectionProps>
                           >
                             <Edit2 size={14} />
                           </button>
-                          <button 
-                            onClick={() => handleDeleteExpense(log.id)}
-                            className="text-rose-500 hover:text-rose-700 transition"
-                          >
-                            <Trash2 size={14} />
-                          </button>
+                          {user?.role !== 'inventory' && (
+                            <button 
+                              onClick={() => handleDeleteExpense(log.id)}
+                              className="text-rose-500 hover:text-rose-700 transition"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          )}
                         </div>
                       )}
                     </td>
@@ -822,15 +855,335 @@ export const InventoryAnalyticsSection: React.FC<InventoryAnalyticsSectionProps>
                     >
                       <Edit2 size={12} /> Edit Entry
                     </button>
-                    <button
-                      onClick={() => handleDeleteExpense(mobileSelectedLog.id)}
-                      className="flex-1 flex items-center justify-center gap-1 rounded-xl bg-rose-50 hover:bg-rose-100 py-3 text-xs font-extrabold text-rose-600 border border-rose-100 transition-all active:scale-95"
-                    >
-                      <Trash2 size={12} /> Delete Entry
-                    </button>
+                    {user?.role !== 'inventory' && (
+                      <button
+                        onClick={() => handleDeleteExpense(mobileSelectedLog.id)}
+                        className="flex-1 flex items-center justify-center gap-1 rounded-xl bg-rose-50 hover:bg-rose-100 py-3 text-xs font-extrabold text-rose-600 border border-rose-100 transition-all active:scale-95"
+                      >
+                        <Trash2 size={12} /> Delete Entry
+                      </button>
+                    )}
                   </div>
                 </>
               )}
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* SECTION 3: DETAILED INVENTORY OPERATIONAL LOGS */}
+      <div className="rounded-[32px] border border-slate-200 bg-white p-6 md:p-8 shadow-sm">
+        <div className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+          <div>
+            <h3 className="flex items-center gap-3 text-lg font-black tracking-tight text-slate-900 uppercase italic">
+              <HistoryIcon className="text-emerald-500" size={20} /> Inventory Audit Trail (Operational Logs)
+            </h3>
+            <p className="text-xs font-semibold text-slate-400 mt-1">
+              Complete historical trail of inventory adjustments, restocks, and damage logs.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Search logs..."
+                value={invLogSearch}
+                onChange={(e) => setInvLogSearch(e.target.value)}
+                className="w-full md:w-48 rounded-xl border border-slate-100 bg-slate-50 px-4 py-2 pl-9 text-[10px] font-black tracking-widest uppercase shadow-sm outline-none focus:border-emerald-400"
+              />
+              <Search size={12} className="absolute top-1/2 left-3 -translate-y-1/2 text-slate-350" />
+            </div>
+
+            <select
+              value={invLogTypeFilter}
+              onChange={(e) => setInvLogTypeFilter(e.target.value)}
+              className="w-full md:w-auto cursor-pointer rounded-xl border border-slate-100 bg-slate-50 px-4 py-2 text-[10px] font-black tracking-widest uppercase shadow-sm outline-none focus:border-emerald-400"
+            >
+              <option value="ALL">All Types</option>
+              <option value="RESTOCK">Restocks Only</option>
+              <option value="ADJUSTMENT">Adjustments Only</option>
+              <option value="DAMAGE">Damages Only</option>
+              <option value="MISC">Misc Logs</option>
+            </select>
+          </div>
+        </div>
+
+        {/* DESKTOP TABLE VIEW */}
+        <div className="hidden md:block custom-scrollbar -mx-4 overflow-x-auto overflow-y-auto px-4 pr-1 max-h-[500px]">
+          <table className="w-full min-w-[800px] border-separate border-spacing-y-2">
+            <thead>
+              <tr className="rounded-xl bg-slate-50/50 text-left">
+                <th className="rounded-l-xl py-3 pl-4 text-[9px] leading-none font-black tracking-widest text-slate-400 uppercase">
+                  Log ID & Date
+                </th>
+                <th className="py-3 text-[9px] leading-none font-black tracking-widest text-slate-400 uppercase">
+                  Product
+                </th>
+                <th className="py-3 text-[9px] leading-none font-black tracking-widest text-slate-400 uppercase">
+                  Employee
+                </th>
+                <th className="py-3 text-center text-[9px] leading-none font-black tracking-widest text-slate-400 uppercase">
+                  Type
+                </th>
+                <th className="py-3 text-center text-[9px] leading-none font-black tracking-widest text-slate-400 uppercase">
+                  Qty Adjusted
+                </th>
+                <th className="py-3 text-right text-[9px] leading-none font-black tracking-widest text-slate-400 uppercase">
+                  Valuation Cost
+                </th>
+                <th className="py-3 pl-6 text-[9px] leading-none font-black tracking-widest text-slate-400 uppercase max-w-[200px]">
+                  Notes
+                </th>
+                <th className="rounded-r-xl py-3 pr-4 text-center text-[9px] leading-none font-black tracking-widest text-slate-400 uppercase">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredInventoryLogs.map((log) => {
+                const isAddition = log.qty_added > 0
+                return (
+                  <tr key={log.id} className="group transition-colors hover:bg-slate-50/50">
+                    <td className="rounded-l-2xl border-y border-r-0 border-l border-slate-100 bg-white py-4 pl-4 shadow-sm group-hover:bg-slate-50">
+                      <div className="flex flex-col">
+                        <span className="font-mono text-xs font-black text-slate-800 uppercase tracking-tight">
+                          {log.id}
+                        </span>
+                        <span className="mt-1 text-[8px] font-black tracking-widest text-slate-400 uppercase">
+                          {new Date(log.date).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="border-y border-slate-100 bg-white py-4 shadow-sm group-hover:bg-slate-50">
+                      <div className="flex flex-col">
+                        <span className="text-xs font-black tracking-tight text-slate-900 uppercase italic">
+                          {log.product_name}
+                        </span>
+                        {log.variant_id && (
+                          <span className="mt-1 font-mono text-[8px] font-bold text-slate-400">
+                            Variant: {log.variant_id}
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="border-y border-slate-100 bg-white py-4 shadow-sm group-hover:bg-slate-50">
+                      <div className="flex items-center gap-2">
+                        <div className="h-6 w-6 rounded-full bg-slate-100 border border-slate-200 overflow-hidden flex items-center justify-center">
+                          {log.employee?.profile_picture ? (
+                            <img
+                              src={`/images/employees/${log.employee.profile_picture}`}
+                              className="h-full w-full object-cover"
+                              alt=""
+                            />
+                          ) : (
+                            <User size={10} className="text-slate-400" />
+                          )}
+                        </div>
+                        <span className="text-xs font-bold text-slate-700">
+                          {log.employee ? `${log.employee.first_name} ${log.employee.last_name}` : 'Unknown'}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="border-y border-slate-100 bg-white py-4 text-center shadow-sm group-hover:bg-slate-50">
+                      <span className={`rounded-xl px-2 py-0.5 text-[8px] font-black tracking-wider uppercase border ${
+                        log.type === 'RESTOCK'
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
+                          : log.type === 'DAMAGE'
+                          ? 'bg-rose-50 text-rose-600 border-rose-100'
+                          : 'bg-slate-100 text-slate-600 border-slate-200'
+                      }`}>
+                        {log.type}
+                      </span>
+                    </td>
+                    <td className="border-y border-slate-100 bg-white py-4 text-center shadow-sm group-hover:bg-slate-50">
+                      <span className={`text-xs font-black font-mono ${isAddition ? 'text-emerald-600' : 'text-rose-500'}`}>
+                        {isAddition ? `+${log.qty_added}` : log.qty_added}
+                      </span>
+                    </td>
+                    <td className="border-y border-slate-100 bg-white py-4 pr-4 text-right shadow-sm group-hover:bg-slate-50">
+                      <span className="font-mono text-xs font-black text-slate-900">
+                        {log.cost > 0 ? `₱${Number(log.cost).toLocaleString()}` : '—'}
+                      </span>
+                    </td>
+                    <td className="border-y border-slate-100 bg-white py-4 pl-6 shadow-sm group-hover:bg-slate-50 max-w-[200px] truncate text-xs text-slate-500 font-semibold" title={log.notes}>
+                      {log.notes || '—'}
+                    </td>
+                    <td className="rounded-r-2xl border-y border-l-0 border-r border-slate-100 bg-white py-4 pr-4 text-center shadow-sm group-hover:bg-slate-50">
+                      {user?.role !== 'inventory' && (
+                        <button
+                          onClick={() => {
+                            if (confirm('Undo this stock adjustment? This will revert the stock level and delete any linked expenditures.')) {
+                              undoInventoryLog(log.id)
+                            }
+                          }}
+                          className="rounded-xl border border-rose-100 bg-rose-50 px-3 py-1.5 text-[9px] font-black uppercase tracking-wider text-rose-600 transition-all hover:bg-rose-100 active:scale-95 flex items-center gap-1.5 mx-auto"
+                          title="Revert stock change and expenditures"
+                        >
+                          <RotateCcw size={10} /> Undo
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        {/* MOBILE VIEW LIST */}
+        <div className="block md:hidden custom-scrollbar max-h-[500px] overflow-y-auto space-y-3 pb-6">
+          <p className="text-[9px] font-black uppercase tracking-wider text-slate-400 mb-2">
+            Tap an Audit Log to view details and revert:
+          </p>
+          {filteredInventoryLogs.map((log) => {
+            const isAddition = log.qty_added > 0
+            return (
+              <div
+                key={log.id}
+                onClick={() => setMobileSelectedInvLog(log)}
+                className="cursor-pointer flex items-center justify-between rounded-2xl border border-slate-100 bg-white p-4 shadow-sm active:bg-slate-50 transition-all"
+              >
+                <div className="flex flex-col gap-1">
+                  <span className="font-mono text-xs font-black text-slate-800">
+                    {log.id}
+                  </span>
+                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider">
+                    {log.product_name}
+                  </span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className={`rounded-xl px-2 py-0.5 text-[7px] font-black tracking-wider uppercase ${
+                    log.type === 'RESTOCK'
+                      ? 'bg-emerald-50 text-emerald-700'
+                      : log.type === 'DAMAGE'
+                      ? 'bg-rose-50 text-rose-600'
+                      : 'bg-slate-100 text-slate-600'
+                  }`}>
+                    {log.type}
+                  </span>
+                  <span className={`font-mono text-xs font-black ${isAddition ? 'text-emerald-600' : 'text-rose-500'}`}>
+                    {isAddition ? `+${log.qty_added}` : log.qty_added}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {filteredInventoryLogs.length === 0 && (
+          <div className="flex flex-col items-center py-20 text-center opacity-10">
+            <HistoryIcon size={40} className="mb-4" />
+            <p className="text-[14px] font-black tracking-[10px] uppercase">
+              No Logs Found
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* MOBILE INVENTORY LOG DETAILS MODAL */}
+      <AnimatePresence>
+        {mobileSelectedInvLog && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+              onClick={() => setMobileSelectedInvLog(null)}
+            />
+            {/* Modal Body */}
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="relative w-full max-w-sm rounded-[32px] bg-white p-6 shadow-2xl space-y-6 border border-slate-100 z-10"
+            >
+              <div className="flex items-center justify-between">
+                <h4 className="text-lg font-black tracking-tight text-slate-900">Audit Log Details</h4>
+                <button
+                  onClick={() => setMobileSelectedInvLog(null)}
+                  className="h-8 w-8 rounded-lg hover:bg-slate-50 flex items-center justify-center text-slate-400 hover:text-slate-650 font-bold text-lg transition-colors"
+                >
+                  &times;
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex justify-between border-b border-slate-50 pb-2.5">
+                  <span className="text-xs text-slate-400 font-bold">Log ID</span>
+                  <span className="font-mono text-xs font-black text-slate-800">{mobileSelectedInvLog.id}</span>
+                </div>
+                <div className="flex justify-between border-b border-slate-50 pb-2.5">
+                  <span className="text-xs text-slate-400 font-bold">Product</span>
+                  <span className="text-xs font-black text-slate-800 text-right">{mobileSelectedInvLog.product_name}</span>
+                </div>
+                {mobileSelectedInvLog.variant_id && (
+                  <div className="flex justify-between border-b border-slate-50 pb-2.5">
+                    <span className="text-xs text-slate-400 font-bold">Variant ID</span>
+                    <span className="font-mono text-xs font-bold text-slate-600">{mobileSelectedInvLog.variant_id}</span>
+                  </div>
+                )}
+                <div className="flex justify-between border-b border-slate-50 pb-2.5">
+                  <span className="text-xs text-slate-400 font-bold">Employee</span>
+                  <span className="text-xs font-bold text-slate-700">
+                    {mobileSelectedInvLog.employee ? `${mobileSelectedInvLog.employee.first_name} ${mobileSelectedInvLog.employee.last_name}` : 'Unknown'}
+                  </span>
+                </div>
+                <div className="flex justify-between border-b border-slate-50 pb-2.5">
+                  <span className="text-xs text-slate-400 font-bold">Type</span>
+                  <span className={`rounded-xl px-2 py-0.5 text-[8px] font-black tracking-wider uppercase border ${
+                    mobileSelectedInvLog.type === 'RESTOCK'
+                      ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
+                      : mobileSelectedInvLog.type === 'DAMAGE'
+                      ? 'bg-rose-50 text-rose-600 border-rose-100'
+                      : 'bg-slate-100 text-slate-600 border-slate-200'
+                  }`}>
+                    {mobileSelectedInvLog.type}
+                  </span>
+                </div>
+                <div className="flex justify-between border-b border-slate-50 pb-2.5">
+                  <span className="text-xs text-slate-400 font-bold">Quantity</span>
+                  <span className={`font-mono text-xs font-black ${mobileSelectedInvLog.qty_added > 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
+                    {mobileSelectedInvLog.qty_added > 0 ? `+${mobileSelectedInvLog.qty_added}` : mobileSelectedInvLog.qty_added}
+                  </span>
+                </div>
+                <div className="flex justify-between border-b border-slate-50 pb-2.5">
+                  <span className="text-xs text-slate-400 font-bold">Cost Valuation</span>
+                  <span className="font-mono text-xs font-black text-slate-900">
+                    {mobileSelectedInvLog.cost > 0 ? `₱${Number(mobileSelectedInvLog.cost).toLocaleString()}` : '—'}
+                  </span>
+                </div>
+                <div className="flex justify-between border-b border-slate-50 pb-2.5">
+                  <span className="text-xs text-slate-400 font-bold">Date</span>
+                  <span className="text-[10px] font-black text-slate-500">
+                    {new Date(mobileSelectedInvLog.date).toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <span className="text-xs text-slate-400 font-bold">Notes</span>
+                  <span className="text-xs font-medium text-slate-600 leading-relaxed bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                    {mobileSelectedInvLog.notes || 'No description provided.'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="pt-2">
+                {user?.role !== 'inventory' && (
+                  <button
+                    onClick={() => {
+                      if (confirm('Undo this stock adjustment? This will revert the stock level and delete any linked expenditures.')) {
+                        undoInventoryLog(mobileSelectedInvLog.id)
+                        setMobileSelectedInvLog(null)
+                      }
+                    }}
+                    className="w-full flex items-center justify-center gap-2 rounded-xl bg-rose-600 hover:bg-rose-500 py-3.5 text-xs font-extrabold text-white shadow-lg shadow-rose-100 transition-all active:scale-95"
+                  >
+                    <RotateCcw size={14} /> Undo Stock Action
+                  </button>
+                )}
+              </div>
             </motion.div>
           </div>
         )}

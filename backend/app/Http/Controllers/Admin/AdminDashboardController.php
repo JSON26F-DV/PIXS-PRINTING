@@ -110,15 +110,22 @@ class AdminDashboardController extends Controller
 
     private function getExpenditureMetrics(): array
     {
-        $inventoryExpenditure = DB::table('inventory_logs')->sum('cost');
-        $otherExpenditure = DB::table('expenditures')->sum('amount');
+        // Total expenditure from expenditures table only
+        $totalExpenditure = DB::table('expenditures')->sum('amount');
 
-        $inventoryPoints = DB::table('inventory_logs')->select('date', 'cost as value')->get();
-        $otherPoints = DB::table('expenditures')->select(DB::raw('DATE(created_at) as date'), 'amount as value')->get();
+        // Data points grouped by date
+        $expenditurePoints = DB::table('expenditures')
+            ->select(
+                DB::raw('DATE(created_at) as date'),
+                DB::raw('SUM(amount) as value')
+            )
+            ->groupBy('date')
+            ->orderBy('date', 'asc')
+            ->get();
 
         return [
-            'total' => $inventoryExpenditure + $otherExpenditure,
-            'points' => $inventoryPoints->concat($otherPoints),
+            'total' => $totalExpenditure,
+            'points' => $expenditurePoints,
         ];
     }
 

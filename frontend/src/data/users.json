@@ -68,29 +68,6 @@
       "daily_rate": 750,
       "ot_rate": 120,
       "allowed_categories": ["Milktea Cup"]
-    },
-    {
-      "id": "EMP-004",
-      "first_name": "Weld",
-      "last_name": "C",
-      "name": "Weld C",
-      "profile_picture": "https://i.pravatar.cc/300?img=15",
-      "email": "weld_c@pixs.com",
-      "role": "welder",
-      "status": "active",
-      "age": 28,
-      "gender": "male",
-      "contact_numbers": [
-        { "number": "+63 912 345 6789", "is_default": true }
-      ],
-      "company_name": "PIXS PRINTING SHOP",
-      "password": "••••••••",
-      "date_created": "2024-03-15T10:00:00Z",
-      "last_login": "2026-03-28T11:45:00Z",
-      "total_orders_value": 0,
-      "daily_rate": 800,
-      "ot_rate": 150,
-      "allowed_categories": ["Accessories"]
     }
   ],
   "customers": [

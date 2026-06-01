@@ -31,7 +31,7 @@ interface TechnicianAssignmentSectionProps {
 }
 
 type AssignmentMode = 'categories' | 'products'
-type RoleFilter = 'all' | 'staff' | 'technician' | 'welder'
+type RoleFilter = 'all' | 'staff' | 'technician'
 
 const cn = (...classes: (string | boolean | undefined)[]) =>
   classes.filter(Boolean).join(' ')
@@ -78,7 +78,7 @@ export const TechnicianAssignmentSection: React.FC<
         if (isMounted) {
           const allAccounts = accountsRes.data?.data || []
           const empList = allAccounts.filter((acc: { type: string; role: string }) => 
-            acc.type === 'employee' && ['staff', 'technician', 'welder'].includes(acc.role)
+            acc.type === 'employee' && ['staff', 'technician'].includes(acc.role)
           )
           setEmployees(empList)
           
@@ -209,7 +209,7 @@ export const TechnicianAssignmentSection: React.FC<
               Workforce Operational Matrix
             </h2>
             <p className="text-xs leading-relaxed font-bold tracking-widest text-slate-400 uppercase">
-              Define granular production permissions for staff, technicians, and welders.
+              Define granular production permissions for staff and technicians.
             </p>
           </div>
         </div>
@@ -233,8 +233,7 @@ export const TechnicianAssignmentSection: React.FC<
             Workforce Operational Matrix
           </h2>
           <p className="text-xs leading-relaxed font-bold tracking-widest text-slate-400 uppercase">
-            Define granular production permissions for staff, technicians, and
-            welders.
+            Define granular production permissions for staff and technicians.
           </p>
         </div>
         <div className="flex items-center gap-4">
@@ -288,7 +287,7 @@ export const TechnicianAssignmentSection: React.FC<
               </div>
 
               <div className="no-scrollbar flex items-center gap-2 overflow-x-auto pb-1">
-                {(['all', 'staff', 'technician', 'welder'] as RoleFilter[]).map(
+                {(['all', 'staff', 'technician'] as RoleFilter[]).map(
                   (role) => (
                     <button
                       key={role}
@@ -332,9 +331,7 @@ export const TechnicianAssignmentSection: React.FC<
                             ? 'bg-rose-500 text-white'
                             : emp.role === 'technician'
                               ? 'bg-blue-500 text-white'
-                              : emp.role === 'welder'
-                                ? 'bg-amber-500 text-white'
-                                : 'bg-slate-400 text-white',
+                              : 'bg-slate-400 text-white',
                         )}
                       >
                         {emp.role.charAt(0).toUpperCase()}
