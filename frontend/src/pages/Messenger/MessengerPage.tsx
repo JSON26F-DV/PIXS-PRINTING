@@ -635,7 +635,7 @@ const MessengerPage: React.FC = () => {
                       ))}
                     </div>
                   </div>
-                  <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
+                  <div data-lenis-prevent className="flex-1 overflow-y-auto p-4 custom-scrollbar">
                     {filteredUsers.map((u) => (
                       <button
                         key={u.id}
@@ -865,7 +865,7 @@ const MessengerPage: React.FC = () => {
                   ))}
                 </div>
               </div>
-              <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
+              <div data-lenis-prevent className="flex-1 overflow-y-auto p-4 custom-scrollbar">
                 {filteredUsers.map((u) => (
                   <button
                     key={u.id}

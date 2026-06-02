@@ -52,8 +52,24 @@ const ExpenditureConfirmMessage: React.FC<ExpenditureConfirmMessageProps> = ({ e
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center p-8">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-slate-200 border-t-slate-800" />
+      <div 
+        className={clsx(
+          "w-full max-w-sm h-[290px] rounded-[32px] border p-6",
+          isCustomer ? "bg-slate-900 border-white/10" : "bg-white border-slate-100"
+        )}
+      >
+        <div className="flex flex-col h-full justify-between animate-pulse">
+          <div className="border-b border-white/10 pb-4 mb-4">
+            <div className="h-3 w-20 bg-slate-700/30 rounded mb-2" />
+            <div className="h-6 w-40 bg-slate-700/30 rounded mb-2" />
+            <div className="h-2 w-32 bg-slate-700/30 rounded" />
+          </div>
+          <div className="space-y-4 flex-1">
+            <div className="h-12 bg-slate-700/30 rounded-xl" />
+            <div className="h-14 bg-slate-700/30 rounded-xl" />
+            <div className="h-12 bg-slate-700/30 rounded-xl" />
+          </div>
+        </div>
       </div>
     )
   }

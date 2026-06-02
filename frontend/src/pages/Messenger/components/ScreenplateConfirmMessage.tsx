@@ -89,8 +89,31 @@ const ScreenplateConfirmMessage: React.FC<ScreenplateConfirmMessageProps> = ({ r
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center p-8">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-slate-200 border-t-slate-800" />
+      <div 
+        className={clsx(
+          "w-full max-w-sm h-[580px] rounded-[32px] border",
+          isCustomer ? "bg-slate-900 border-white/10 text-white" : "bg-white border-slate-100 text-slate-900"
+        )}
+      >
+        <div className="flex flex-col h-full animate-pulse">
+          <div className="p-6 border-b border-white/10">
+            <div className="h-3 w-20 bg-slate-700/30 rounded mb-2" />
+            <div className="h-6 w-40 bg-slate-700/30 rounded" />
+          </div>
+          <div className="px-6 py-4 border-b border-white/10">
+            <div className="h-16 bg-slate-700/30 rounded-xl" />
+          </div>
+          <div className="p-6 flex-1">
+            <div className="h-52 bg-slate-700/30 rounded-2xl" />
+          </div>
+          <div className="px-6 pb-6 space-y-4">
+            <div className="h-10 bg-slate-700/30 rounded-2xl" />
+            <div className="h-10 bg-slate-700/30 rounded-2xl" />
+          </div>
+          <div className="p-6 border-t border-white/10">
+            <div className="h-12 bg-slate-700/30 rounded-2xl" />
+          </div>
+        </div>
       </div>
     )
   }

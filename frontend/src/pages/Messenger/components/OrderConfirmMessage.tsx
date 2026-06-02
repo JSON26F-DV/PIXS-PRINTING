@@ -67,8 +67,32 @@ const OrderConfirmMessage: React.FC<OrderConfirmMessageProps> = ({ messageId, or
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center p-8">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-slate-200 border-t-slate-800" />
+      <div 
+        className={clsx(
+          "w-full max-w-sm h-[480px] rounded-[32px] border",
+          isCustomer ? "bg-slate-900 border-white/10 text-white" : "bg-white border-slate-100 text-slate-900"
+        )}
+      >
+        <div className="flex flex-col h-full animate-pulse">
+          <div className="p-6 border-b border-white/10">
+            <div className="h-3 w-24 bg-slate-700/30 rounded mb-2" />
+            <div className="h-6 w-48 bg-slate-700/30 rounded mb-2" />
+            <div className="h-2 w-32 bg-slate-700/30 rounded" />
+          </div>
+          <div className="p-6 space-y-4 flex-1">
+            <div className="flex gap-4 items-start">
+              <div className="h-16 w-16 bg-slate-700/30 rounded-xl shrink-0" />
+              <div className="flex-1 space-y-2">
+                <div className="h-3 w-3/4 bg-slate-700/30 rounded" />
+                <div className="h-2 w-1/2 bg-slate-700/30 rounded" />
+              </div>
+            </div>
+            <div className="h-20 bg-slate-700/30 rounded-xl" />
+          </div>
+          <div className="p-6 border-t border-white/10 flex justify-end">
+            <div className="h-12 w-36 bg-slate-700/30 rounded-2xl" />
+          </div>
+        </div>
       </div>
     )
   }

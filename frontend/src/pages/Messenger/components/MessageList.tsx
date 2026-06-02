@@ -2,7 +2,7 @@ import React, { useRef, useEffect, useState, useCallback } from 'react'
 import { Virtuoso } from 'react-virtuoso'
 
 import { createPortal } from 'react-dom'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence, MotionConfig } from 'framer-motion'
 import type { PanInfo } from 'framer-motion'
 import {
   Smile,
@@ -75,10 +75,7 @@ const QuickReactBar: React.FC<{
 
   return (
     <MessagePortal>
-      <motion.div
-        initial={{ opacity: 0, scale: 0.9, y: 10 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.9, y: 10 }}
+      <div
         style={{
           position: 'fixed',
           top: anchorRect.top - 60,
@@ -94,7 +91,7 @@ const QuickReactBar: React.FC<{
           <button
             key={emoji}
             onClick={() => onSelect(emoji)}
-            className="bubble-emoji flex h-10 w-10 items-center justify-center text-xl transition-transform hover:scale-125 active:scale-95"
+            className="bubble-emoji flex h-10 w-10 items-center justify-center text-xl active:scale-95"
           >
             {emoji}
           </button>
@@ -102,11 +99,11 @@ const QuickReactBar: React.FC<{
         <div className="mx-1 h-6 w-px bg-slate-100" />
         <button
           onClick={onShowMore}
-          className="flex h-10 w-10 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-slate-50 hover:text-slate-900"
+          className="flex h-10 w-10 items-center justify-center rounded-full text-slate-400 hover:bg-slate-50 hover:text-slate-900"
         >
           <Plus size={20} />
         </button>
-      </motion.div>
+      </div>
     </MessagePortal>
   )
 }
@@ -181,7 +178,7 @@ const MessageBubble: React.FC<{
         if (info.offset.x < -100 || info.offset.x > 100) onReply()
       }}
       className={clsx(
-        'group relative mb-3 md:mb-8 flex cursor-default flex-col transition-colors duration-1000',
+        'group relative mb-3 md:mb-8 flex cursor-default flex-col',
         isHighlighted && 'bg-pixs-mint/10',
         isCustomer ? 'items-end mr-2 min-[360px]:mr-3.5 min-[375px]:mr-3.5 min-[414px]:mr-3 sm:mr-0' : 'items-start',
       )}
@@ -214,7 +211,7 @@ const MessageBubble: React.FC<{
         {/* Message Container */}
         <div
           className={clsx(
-            'relative rounded-[14px] min-[360px]:rounded-[16px] sm:rounded-[20px] md:rounded-[28px] text-[10px] min-[360px]:text-[11px] min-[414px]:text-[12px] sm:text-[13px] md:text-sm leading-relaxed font-bold shadow-sm transition-all break-words',
+            'relative rounded-[14px] min-[360px]:rounded-[16px] sm:rounded-[20px] md:rounded-[28px] text-[10px] min-[360px]:text-[11px] min-[414px]:text-[12px] sm:text-[13px] md:text-sm leading-relaxed font-bold shadow-sm break-words',
             (hasCard && !message.isDeleted) ? '' : 'px-2 py-1 min-[360px]:px-2.5 min-[360px]:py-1.5 min-[414px]:px-3 min-[414px]:py-2 sm:px-4 sm:py-3 md:px-6 md:py-4',
             message.isDeleted
               ? 'border border-slate-200 bg-slate-100 text-slate-400 font-normal italic'
@@ -299,7 +296,7 @@ const MessageBubble: React.FC<{
 
           {message.an_email && !isEditing && !message.isDeleted && (
             <div className="mt-2 group-last:mb-0">
-               <EmailMessage messageText={message.text} created_at={message.created_at} isCustomer={isCustomer} />
+               <EmailMessage messageText={message.text} created_at={message.timestamp} isCustomer={isCustomer} />
             </div>
           )}
 
@@ -377,7 +374,7 @@ const MessageBubble: React.FC<{
                 initial={{ height: 0, opacity: 0 }}
                 animate={{ height: 'auto', opacity: 1 }}
                 exit={{ height: 0, opacity: 0 }}
-                className="mt-3 rounded-xl border-t border-white/10 bg-white/5 p-3 pt-3 text-[11px] leading-tight text-slate-400 italic blur-[0.4px] transition-all hover:blur-none"
+                className="mt-3 rounded-xl border-t border-white/10 bg-white/5 p-3 pt-3 text-[11px] leading-tight text-slate-400 italic blur-[0.4px] hover:blur-none"
               >
                 <div className="mb-1.5 flex items-center gap-1.5 opacity-50">
                   <History size={10} />
@@ -416,8 +413,7 @@ const MessageBubble: React.FC<{
               {message.attachments.map((at, idx) => (
                 <div key={idx} className="max-w-full">
                   {at.type === 'image' ? (
-                    <motion.div
-                      whileHover={{ scale: 1.02 }}
+                    <div
                       className="group/image relative cursor-pointer overflow-hidden rounded-[16px] md:rounded-[24px] border border-slate-100 bg-slate-50 shadow-lg"
                       onClick={() => onImageClick(getAssetUrl(at))}
                     >
@@ -442,14 +438,14 @@ const MessageBubble: React.FC<{
                           <Trash2 size={12} />
                         </button>
                       )}
-                    </motion.div>
+                    </div>
                   ) : (
                     <div className="relative flex items-center gap-2">
                       <a
                         href={getAssetUrl(at)}
                         download={at.name}
                         className={clsx(
-                          'group/doc flex items-center gap-3 md:gap-4 rounded-[16px] md:rounded-[22px] border p-3 md:p-4 shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98] flex-1',
+                          'group/doc flex items-center gap-3 md:gap-4 rounded-[16px] md:rounded-[22px] border p-3 md:p-4 shadow-sm flex-1',
                           isCustomer
                             ? 'hover:border-pixs-mint/50 border-slate-200 bg-slate-50 text-slate-900'
                             : 'hover:border-pixs-mint/50 border-slate-100 bg-white text-slate-900',
@@ -500,19 +496,16 @@ const MessageBubble: React.FC<{
           >
             {Array.from(new Set(message.reactions.map((r) => r.emoji))).map(
               (emoji, i) => (
-                <motion.div
+                <div
                   key={i}
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  whileHover={{ scale: 1.1 }}
-                  className="flex cursor-pointer items-center gap-1.5 rounded-full border border-slate-100 bg-white px-2 py-1 shadow-sm transition-colors hover:bg-slate-50"
+                  className="flex cursor-pointer items-center gap-1.5 rounded-full border border-slate-100 bg-white px-2 py-1 shadow-sm hover:bg-slate-50"
                   onClick={() => onReact(emoji)}
                 >
                   <span className="text-[14px] leading-none">{emoji}</span>
                   <span className="text-[9px] font-black text-slate-900">
                     {message.reactions?.filter((r) => r.emoji === emoji).length}
                   </span>
-                </motion.div>
+                </div>
               ),
             )}
           </div>
@@ -532,7 +525,7 @@ const MessageBubble: React.FC<{
                   setAnchorRect(e.currentTarget.getBoundingClientRect())
                   setShowQuickBar(!showQuickBar)
                 }}
-                className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-100 bg-white text-slate-400 shadow-md transition-all hover:scale-110 hover:text-slate-900"
+                className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-100 bg-white text-slate-400 shadow-md hover:text-slate-900"
               >
                 <Smile size={18} />
               </button>
@@ -601,7 +594,7 @@ const MessageBubble: React.FC<{
                   setAnchorRect(e.currentTarget.getBoundingClientRect())
                   setShowOptions(!showOptions)
                 }}
-                className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-100 bg-white text-slate-400 shadow-md transition-all hover:scale-110 hover:text-slate-900"
+                className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-100 bg-white text-slate-400 shadow-md hover:text-slate-900"
               >
                 <MoreHorizontal size={18} />
               </button>
@@ -609,10 +602,7 @@ const MessageBubble: React.FC<{
               <AnimatePresence>
                 {showOptions && anchorRect && (
                   <MessagePortal>
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.9, y: 10 }}
-                      animate={{ opacity: 1, scale: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.9, y: 10 }}
+                    <div
                       style={{
                         position: 'fixed',
                         top: Math.max(10, anchorRect.top - 160),
@@ -636,7 +626,7 @@ const MessageBubble: React.FC<{
                               setShowDeletedText(!showDeletedText)
                               setShowOptions(false)
                             }}
-                            className="flex w-full items-center gap-3 rounded-xl p-3 text-[10px] font-black tracking-widest text-slate-700 uppercase transition-colors hover:bg-slate-50"
+                            className="flex w-full items-center gap-3 rounded-xl p-3 text-[10px] font-black tracking-widest text-slate-700 uppercase hover:bg-slate-50"
                           >
                             <History size={16} className="text-slate-400" />{' '}
                             {showDeletedText ? 'Hide Text' : 'View Text'}
@@ -648,7 +638,7 @@ const MessageBubble: React.FC<{
                               }
                               setShowOptions(false)
                             }}
-                            className="flex w-full items-center gap-3 rounded-xl p-3 text-[10px] font-black tracking-widest text-white bg-red-600 uppercase transition-colors hover:bg-red-700"
+                            className="flex w-full items-center gap-3 rounded-xl p-3 text-[10px] font-black tracking-widest text-white bg-red-600 uppercase hover:bg-red-700"
                           >
                             <Trash2 size={16} className="text-white" /> Delete DB
                           </button>
@@ -660,7 +650,7 @@ const MessageBubble: React.FC<{
                               onReply()
                               setShowOptions(false)
                             }}
-                            className="flex w-full items-center gap-3 rounded-xl p-3 text-[10px] font-black tracking-widest text-slate-700 uppercase transition-colors hover:bg-slate-50"
+                            className="flex w-full items-center gap-3 rounded-xl p-3 text-[10px] font-black tracking-widest text-slate-700 uppercase hover:bg-slate-50"
                           >
                             <CornerUpRight size={16} className="text-slate-400" />{' '}
                             Reply
@@ -671,7 +661,7 @@ const MessageBubble: React.FC<{
                                 onStartEdit()
                                 setShowOptions(false)
                               }}
-                              className="flex w-full items-center gap-3 rounded-xl p-3 text-[10px] font-black tracking-widest text-slate-700 uppercase transition-colors hover:bg-slate-50"
+                              className="flex w-full items-center gap-3 rounded-xl p-3 text-[10px] font-black tracking-widest text-slate-700 uppercase hover:bg-slate-50"
                             >
                               <Edit2 size={16} className="text-slate-400" /> Edit
                             </button>
@@ -682,7 +672,7 @@ const MessageBubble: React.FC<{
                                 onPin()
                                 setShowOptions(false)
                               }}
-                              className="flex w-full items-center gap-3 rounded-xl p-3 text-[10px] font-black tracking-widest text-emerald-600 uppercase transition-colors hover:bg-emerald-50"
+                              className="flex w-full items-center gap-3 rounded-xl p-3 text-[10px] font-black tracking-widest text-emerald-600 uppercase hover:bg-emerald-50"
                             >
                               <Pin size={16} className="text-emerald-500" /> {message.is_pinned ? 'Unpin' : 'Pin'}
                             </button>
@@ -693,7 +683,7 @@ const MessageBubble: React.FC<{
                                 onDelete()
                                 setShowOptions(false)
                               }}
-                              className="flex w-full items-center gap-3 rounded-xl p-3 text-[10px] font-black tracking-widest text-rose-500 uppercase transition-colors hover:bg-rose-50"
+                              className="flex w-full items-center gap-3 rounded-xl p-3 text-[10px] font-black tracking-widest text-rose-500 uppercase hover:bg-rose-50"
                             >
                               <Trash2 size={16} className="text-rose-400" /> Delete
                             </button>
@@ -706,7 +696,7 @@ const MessageBubble: React.FC<{
                                 }
                                 setShowOptions(false)
                               }}
-                              className="flex w-full items-center gap-3 rounded-xl p-3 text-[10px] font-black tracking-widest text-white bg-red-600 uppercase transition-colors hover:bg-red-700"
+                              className="flex w-full items-center gap-3 rounded-xl p-3 text-[10px] font-black tracking-widest text-white bg-red-600 uppercase hover:bg-red-700"
                             >
                               <Trash2 size={16} className="text-white" /> Delete DB
                             </button>
@@ -717,7 +707,7 @@ const MessageBubble: React.FC<{
                         onClick={() => setShowOptions(false)}
                         className="fixed inset-0 z-[-1] border-none bg-transparent outline-none"
                       />
-                    </motion.div>
+                    </div>
                   </MessagePortal>
                 )}
               </AnimatePresence>
@@ -728,6 +718,19 @@ const MessageBubble: React.FC<{
     </motion.div>
   )
 }
+
+const INITIAL_FIRST_ITEM_INDEX = 10000
+
+const MessageSkeleton: React.FC<{ isCustomer?: boolean }> = ({ isCustomer }) => (
+  <div className={clsx('mb-3 md:mb-8 flex flex-col', isCustomer ? 'items-end' : 'items-start')}>
+    <div
+      className={clsx(
+        'h-20 rounded-[20px] bg-slate-200/80',
+        isCustomer ? 'w-[78%]' : 'w-[66%]',
+      )}
+    />
+  </div>
+)
 
 const MessageList: React.FC<MessageListProps> = ({
   messages,
@@ -747,6 +750,8 @@ const MessageList: React.FC<MessageListProps> = ({
   const [scrollContainer, setScrollContainer] = useState<HTMLDivElement | null>(null)
   const [hasScrolledUp, setHasScrolledUp] = useState(false)
   const prevLengthRef = useRef(messages.length)
+  const prevFirstMessageIdRef = useRef<string | null>(messages[0]?.id ?? null)
+  const prevLastMessageIdRef = useRef<string | null>(messages[messages.length - 1]?.id ?? null)
 
   const [galleryOpen, setGalleryOpen] = useState(false)
   const [activeImage, setActiveImage] = useState('')
@@ -790,24 +795,53 @@ const MessageList: React.FC<MessageListProps> = ({
   }, [scrollContainer, handleScroll])
 
   useEffect(() => {
-    const newMessage = messages.length > prevLengthRef.current
+    const currentFirstMessageId = messages[0]?.id ?? null
+    const currentLastMessageId = messages[messages.length - 1]?.id ?? null
+    const prevFirstMessageId = prevFirstMessageIdRef.current
+    const prevLastMessageId = prevLastMessageIdRef.current
+    const isPrepended = prevFirstMessageId && currentFirstMessageId !== prevFirstMessageId
+    const isAppended = prevLastMessageId && currentLastMessageId !== prevLastMessageId
+
+    prevFirstMessageIdRef.current = currentFirstMessageId
+    prevLastMessageIdRef.current = currentLastMessageId
     prevLengthRef.current = messages.length
 
-    if (newMessage || isNearBottom()) {
+    if (isAppended || isNearBottom()) {
       setTimeout(() => {
-        scrollToBottom(newMessage ? 'smooth' : 'auto')
+        scrollToBottom(isAppended ? 'smooth' : 'auto')
       }, 50)
+    }
+
+    if (isPrepended && !isNearBottom()) {
+      // Preserve the user's current view when older messages are loaded from the top.
+      return
     }
   }, [messages])
 
+  // Scroll to bottom 3 times when loading finishes or mounting (refresh or navigating to /chat)
+  useEffect(() => {
+    if (!isLoading && messages.length > 0) {
+      scrollToBottom('auto')
+      const t1 = setTimeout(() => scrollToBottom('auto'), 100)
+      const t2 = setTimeout(() => scrollToBottom('auto'), 300)
+      const t3 = setTimeout(() => scrollToBottom('auto'), 600)
+      return () => {
+        clearTimeout(t1)
+        clearTimeout(t2)
+        clearTimeout(t3)
+      }
+    }
+  }, [isLoading, messages.length])
+
   return (
-    <div className="relative w-full h-full overflow-hidden">
-      <div
-        ref={(el) => {
-          scrollContainerRef.current = el
-          setScrollContainer(el)
-        }}
-        className="MessageList flex flex-col scroll-smooth bg-emoji-pattern bg-slate-50/20 px-2 min-[360px]:px-3 min-[414px]:px-3 sm:px-8 pt-6 md:pt-12 md:pb-14"
+    <MotionConfig transition={{ duration: 0 }} reducedMotion="always">
+      <div className="relative w-full h-full overflow-hidden">
+        <div
+          ref={(el) => {
+            scrollContainerRef.current = el
+            setScrollContainer(el)
+          }}
+          className="MessageList flex flex-col bg-emoji-pattern bg-slate-50/20 px-2 min-[360px]:px-3 min-[414px]:px-3 sm:px-8 pt-6 md:pt-12 md:pb-14"
         style={{
           height: '100%',
           overflowY: 'auto',
@@ -836,7 +870,7 @@ const MessageList: React.FC<MessageListProps> = ({
             <Virtuoso
               customScrollParent={scrollContainer || undefined}
               data={messages}
-              firstItemIndex={10000 - messages.length}
+              firstItemIndex={INITIAL_FIRST_ITEM_INDEX}
               startReached={() => {
                 if (onLoadMore && !isLoadingMore) {
                   onLoadMore()
@@ -865,10 +899,14 @@ const MessageList: React.FC<MessageListProps> = ({
               )}
               components={{
                 Header: () => isLoadingMore ? (
-                  <div className="py-4 flex justify-center">
-                    <div className="h-6 w-6 animate-spin rounded-full border-2 border-slate-300 border-t-slate-800"></div>
+                  <div className="space-y-4 py-4 px-4">
+                    {[0, 1, 2].map((index) => (
+                      <MessageSkeleton key={index} isCustomer={index % 2 === 0} />
+                    ))}
                   </div>
-                ) : <div className="h-4" />,
+                ) : (
+                  <div className="h-4" />
+                ),
                 Footer: () => <div className="md:pb-10" />
               }}
             />
@@ -887,25 +925,23 @@ const MessageList: React.FC<MessageListProps> = ({
 
       <AnimatePresence>
         {hasScrolledUp && (
-          <motion.button
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.8 }}
+          <button
             onClick={() => scrollToBottom()}
-            className="group absolute bottom-4 md:bottom-6 left-1/2 z-50 flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full border border-slate-100 bg-white text-slate-900 shadow-2xl transition-all hover:scale-110 active:scale-95"
+            className="group absolute bottom-4 md:bottom-6 left-1/2 z-50 flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full border border-slate-100 bg-white text-slate-900 shadow-2xl active:scale-95"
             style={{ transform: 'translateX(-50%)' }}
           >
             <ArrowDown
               size={20}
-              className="transition-transform group-hover:translate-y-0.5 md:group-hover:translate-y-1 md:size-[24px]"
+              className="group-hover:translate-y-0.5 md:group-hover:translate-y-1 md:size-[24px]"
             />
             <div className="absolute -top-12 rounded-xl bg-slate-900 px-4 py-2 text-[10px] font-black tracking-widest whitespace-nowrap text-white uppercase opacity-0 transition-opacity group-hover:opacity-100">
               Latest fulfillment
             </div>
-          </motion.button>
+          </button>
         )}
       </AnimatePresence>
-    </div>
+      </div>
+    </MotionConfig>
   )
 }
 

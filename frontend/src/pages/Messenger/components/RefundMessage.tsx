@@ -58,8 +58,24 @@ const RefundMessage: React.FC<RefundMessageProps> = ({ refundId, isCustomer }) =
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center p-8 bg-slate-950/40 rounded-3xl border border-slate-800">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-slate-800 border-t-emerald-400" />
+      <div 
+        className={clsx(
+          "w-full max-w-sm h-[390px] rounded-[32px] border p-6",
+          isCustomer ? "bg-slate-900 border-white/10" : "bg-white border-slate-100"
+        )}
+      >
+        <div className="flex flex-col h-full justify-between animate-pulse">
+          <div className="border-b border-slate-150 dark:border-white/10 pb-4 mb-4">
+            <div className="h-3 w-20 bg-slate-700/30 rounded mb-2" />
+            <div className="h-6 w-40 bg-slate-700/30 rounded mb-2" />
+            <div className="h-2 w-32 bg-slate-700/30 rounded" />
+          </div>
+          <div className="space-y-4 flex-1">
+            <div className="h-14 bg-slate-700/30 rounded-2xl" />
+            <div className="h-16 bg-slate-700/30 rounded-2xl" />
+            <div className="h-12 bg-slate-700/30 rounded-2xl" />
+          </div>
+        </div>
       </div>
     )
   }
