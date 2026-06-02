@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\PaymentCode;
+use App\Services\AuditService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -21,7 +22,7 @@ class AdminPaymentCodeController extends Controller
         // Optional Search filter
         $search = $request->query('search');
         if ($search) {
-            $query->where('code', 'like', '%' . $search . '%');
+            $query->where('code', 'like', '%'.$search.'%');
         }
 
         // Optional is_used filter
@@ -53,15 +54,17 @@ class AdminPaymentCodeController extends Controller
         if ($customCode) {
             // Create a single custom payment code
             $paymentCode = PaymentCode::create([
-                'id' => 'pc_' . Str::random(10),
+                'id' => 'pc_'.Str::random(10),
                 'code' => strtoupper($customCode),
                 'is_used' => 0,
                 'used_at' => null,
             ]);
 
+            AuditService::created('payment_code', $paymentCode->id, ['code' => $paymentCode->code]);
+
             return response()->json([
                 'message' => 'Custom payment code created successfully.',
-                'data' => [$paymentCode]
+                'data' => [$paymentCode],
             ], 201);
         }
 
@@ -72,7 +75,7 @@ class AdminPaymentCodeController extends Controller
                 // Ensure unique code generation
                 $attempts = 0;
                 do {
-                    $codeStr = 'PIXS-' . strtoupper(Str::random(10));
+                    $codeStr = 'PIXS-'.strtoupper(Str::random(10));
                     $exists = DB::table('payment_codes')->where('code', $codeStr)->exists();
                     $attempts++;
                 } while ($exists && $attempts < 100);
@@ -82,7 +85,7 @@ class AdminPaymentCodeController extends Controller
                 }
 
                 $createdCodes[] = PaymentCode::create([
-                    'id' => 'pc_' . Str::random(10),
+                    'id' => 'pc_'.Str::random(10),
                     'code' => $codeStr,
                     'is_used' => 0,
                     'used_at' => null,
@@ -90,9 +93,11 @@ class AdminPaymentCodeController extends Controller
             }
         });
 
+        AuditService::log('bulk_create', 'payment_code', null, ['quantity' => $quantity]);
+
         return response()->json([
             'message' => "Successfully generated {$quantity} payment code(s).",
-            'data' => $createdCodes
+            'data' => $createdCodes,
         ], 201);
     }
 
@@ -103,18 +108,20 @@ class AdminPaymentCodeController extends Controller
     {
         $paymentCode = PaymentCode::find($id);
 
-        if (!$paymentCode) {
+        if (! $paymentCode) {
             return response()->json(['message' => 'Payment code not found.'], 404);
         }
 
         // Security check: do not allow deleting used codes to preserve order history
         if ($paymentCode->is_used) {
             return response()->json([
-                'message' => 'Cannot delete a payment code that has already been used.'
+                'message' => 'Cannot delete a payment code that has already been used.',
             ], 422);
         }
 
         $paymentCode->delete();
+
+        AuditService::deleted('payment_code', $id);
 
         return response()->json(['message' => 'Payment code deleted successfully.']);
     }

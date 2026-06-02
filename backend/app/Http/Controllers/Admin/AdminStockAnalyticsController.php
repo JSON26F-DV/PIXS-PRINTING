@@ -7,6 +7,7 @@ use App\Models\Expenditure;
 use App\Models\InventoryLog;
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Services\AuditService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -55,6 +56,8 @@ class AdminStockAnalyticsController extends Controller
 
         $expenditure = Expenditure::create($validated);
 
+        AuditService::created('expenditure', $expenditure->id, $validated);
+
         return response()->json([
             'status' => 'success',
             'message' => 'Expenditure logged successfully',
@@ -78,6 +81,8 @@ class AdminStockAnalyticsController extends Controller
 
         $expenditure->update($validated);
 
+        AuditService::updated('expenditure', $id, [], $validated);
+
         return response()->json([
             'status' => 'success',
             'message' => 'Expenditure updated successfully',
@@ -92,6 +97,8 @@ class AdminStockAnalyticsController extends Controller
     {
         $expenditure = Expenditure::findOrFail($id);
         $expenditure->delete();
+
+        AuditService::deleted('expenditure', $id);
 
         return response()->json([
             'status' => 'success',
@@ -179,6 +186,11 @@ class AdminStockAnalyticsController extends Controller
                 }
             });
 
+            AuditService::log('stock_update', 'product_variant', $variant_id, [
+                'action' => $action,
+                'quantity' => $quantity,
+            ]);
+
             return response()->json([
                 'status' => 'success',
                 'message' => 'Stock updated successfully.',
@@ -228,6 +240,8 @@ class AdminStockAnalyticsController extends Controller
                 // 3. Delete the inventory log itself
                 $log->delete();
             });
+
+            AuditService::log('undo_stock', 'inventory_log', $id);
 
             return response()->json([
                 'status' => 'success',

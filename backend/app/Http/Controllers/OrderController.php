@@ -11,6 +11,7 @@ use App\Models\OrderItem;
 use App\Models\OrderItemColor;
 use App\Models\Product;
 use App\Models\ProductReview;
+use App\Services\AuditService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -225,6 +226,12 @@ class OrderController extends Controller
 
         $order->save();
 
+        AuditService::updated('order', $order->id, [], [
+            'status' => $order->status,
+            'rating' => $order->rating,
+            'feedback' => $order->feedback,
+        ]);
+
         // Sync product reviews if order is reviewed
         if ($request->hasAny(['rating', 'feedback']) && $order->status === 'DELIVERED') {
             foreach ($order->items as $item) {
@@ -284,19 +291,19 @@ class OrderController extends Controller
 
         // Verify payment code if provided
         $payCode = null;
-        if (!empty($validated['payment_code'])) {
+        if (! empty($validated['payment_code'])) {
             $payCode = DB::table('payment_codes')
                 ->where('code', $validated['payment_code'])
                 ->first();
 
-            if (!$payCode) {
+            if (! $payCode) {
                 return response()->json(['message' => 'The payment code is invalid.'], 404);
             }
 
             if ($payCode->is_used) {
                 return response()->json([
                     'message' => 'This payment code has already been used.',
-                    'error_code' => 'PAYMENT_CODE_ALREADY_USED'
+                    'error_code' => 'PAYMENT_CODE_ALREADY_USED',
                 ], 422);
             }
         }
@@ -531,6 +538,12 @@ class OrderController extends Controller
                 ]);
 
                 // STEP 10: Return JSON response (201)
+                AuditService::created('order', $orderId, [
+                    'total_amount' => $finalAmount,
+                    'status' => $order->status,
+                    'item_count' => $cartItems->count(),
+                ]);
+
                 return response()->json([
                     'id' => $orderId,
                     'total_amount' => $finalAmount,

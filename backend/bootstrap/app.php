@@ -1,6 +1,10 @@
 <?php
 
+use App\Http\Middleware\CheckOwnership;
 use App\Http\Middleware\CheckRole;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Auth\AuthenticationException;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -8,6 +12,9 @@ use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
+use Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Symfony\Component\HttpKernel\Exception\ThrottleRequestsException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -19,6 +26,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'role' => CheckRole::class,
+            'ownership' => CheckOwnership::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
@@ -27,28 +35,78 @@ return Application::configure(basePath: dirname(__DIR__))
                 return null;
             }
 
-            if (
-                $e instanceof ValidationException || 
-                $e instanceof HttpExceptionInterface ||
-                $e instanceof \Illuminate\Auth\AuthenticationException ||
-                $e instanceof \Illuminate\Auth\Access\AuthorizationException ||
-                $e instanceof \Illuminate\Database\Eloquent\ModelNotFoundException
-            ) {
-                return null;
+            if ($e instanceof AuthenticationException) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthenticated. Please login.',
+                ], 401);
+            }
+
+            if ($e instanceof AuthorizationException) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Forbidden. Insufficient permissions.',
+                ], 403);
+            }
+
+            if ($e instanceof ValidationException) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation failed.',
+                    'errors' => $e->errors(),
+                ], 422);
+            }
+
+            if ($e instanceof ModelNotFoundException || $e instanceof NotFoundHttpException) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Resource not found.',
+                ], 404);
+            }
+
+            if ($e instanceof MethodNotAllowedHttpException) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Method not allowed.',
+                ], 405);
+            }
+
+            if ($e instanceof ThrottleRequestsException) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Too many requests. Please slow down.',
+                ], 429);
             }
 
             if ($e instanceof QueryException) {
                 report($e);
 
                 return response()->json([
+                    'success' => false,
                     'message' => 'Unable to process your request. Please try again later.',
-                ], 503);
+                ], 500);
+            }
+
+            if ($e instanceof HttpExceptionInterface) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $e->getMessage() ?: 'An error occurred.',
+                ], $e->getStatusCode());
             }
 
             report($e);
 
+            if (config('app.debug')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString(),
+                ], 500);
+            }
+
             return response()->json([
-                'message' => 'Something went wrong. Please try again later.',
+                'success' => false,
+                'message' => 'An error occurred. Please try again later.',
             ], 500);
         });
     })->create();

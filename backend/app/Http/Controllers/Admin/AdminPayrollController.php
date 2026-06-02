@@ -5,8 +5,8 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Employee;
 use App\Models\EmployeeAttendance;
-use Illuminate\Http\Request;
 use Carbon\Carbon;
+use Illuminate\Http\Request;
 
 class AdminPayrollController extends Controller
 {
@@ -24,22 +24,22 @@ class AdminPayrollController extends Controller
 
             return [
                 'id' => $employee->id,
-                'name' => $employee->first_name . ' ' . $employee->last_name,
+                'name' => $employee->first_name.' '.$employee->last_name,
                 'email' => $employee->email,
                 'role' => $employee->role,
                 'status_today' => $attendance ? $attendance->status : 'pending',
                 'holiday_type' => $attendance ? $attendance->holiday_type : 'none',
-                'daily_rate' => (float)$employee->daily_rate,
+                'daily_rate' => (float) $employee->daily_rate,
                 'start_time' => $attendance ? ($attendance->start_time ? Carbon::parse($attendance->start_time)->format('H:i') : null) : null,
                 'end_time' => $attendance ? ($attendance->end_time ? Carbon::parse($attendance->end_time)->format('H:i') : null) : null,
                 'break_start' => $attendance ? ($attendance->break_start ? Carbon::parse($attendance->break_start)->format('H:i') : null) : null,
                 'break_end' => $attendance ? ($attendance->break_end ? Carbon::parse($attendance->break_end)->format('H:i') : null) : null,
-                'overtime' => $attendance ? (float)$attendance->overtime : 0,
-                'late' => $attendance ? (int)$attendance->late : 0,
-                'holiday_pay' => $attendance ? (float)$attendance->holiday_pay : 0,
-                'total_earnings' => $attendance ? (float)$attendance->total_earnings : 0,
-                'is_paid' => $attendance ? (bool)$attendance->is_paid : false,
-                'hours_worked' => $attendance ? (float)$attendance->hours_worked : 0,
+                'overtime' => $attendance ? (float) $attendance->overtime : 0,
+                'late' => $attendance ? (int) $attendance->late : 0,
+                'holiday_pay' => $attendance ? (float) $attendance->holiday_pay : 0,
+                'total_earnings' => $attendance ? (float) $attendance->total_earnings : 0,
+                'is_paid' => $attendance ? (bool) $attendance->is_paid : false,
+                'hours_worked' => $attendance ? (float) $attendance->hours_worked : 0,
             ];
         });
 
@@ -77,7 +77,7 @@ class AdminPayrollController extends Controller
                 $exists = EmployeeAttendance::where('date', $formattedDate)->exists();
                 if ($exists) {
                     return response()->json([
-                        'message' => 'Attendance records already exist for ' . $formattedDate . '. You cannot overwrite existing logs.',
+                        'message' => 'Attendance records already exist for '.$formattedDate.'. You cannot overwrite existing logs.',
                     ], 400);
                 }
 
@@ -122,7 +122,7 @@ class AdminPayrollController extends Controller
         }
 
         return response()->json([
-            'message' => 'Holidays ' . ($action === 'set' ? 'applied' : 'removed') . ' successfully.',
+            'message' => 'Holidays '.($action === 'set' ? 'applied' : 'removed').' successfully.',
         ]);
     }
 
@@ -132,7 +132,7 @@ class AdminPayrollController extends Controller
     public function manageShow($id)
     {
         $employee = Employee::findOrFail($id);
-        
+
         $attendance = EmployeeAttendance::where('employee_id', $employee->id)
             ->orderBy('date', 'desc')
             ->get()
@@ -142,24 +142,24 @@ class AdminPayrollController extends Controller
                     'date' => $log->date->format('Y-m-d'),
                     'status' => $log->status,
                     'holiday_type' => $log->holiday_type,
-                    'is_paid' => (bool)$log->is_paid,
+                    'is_paid' => (bool) $log->is_paid,
                     'start_time' => $log->start_time ? Carbon::parse($log->start_time)->format('H:i') : null,
                     'end_time' => $log->end_time ? Carbon::parse($log->end_time)->format('H:i') : null,
                     'break_start' => $log->break_start ? Carbon::parse($log->break_start)->format('H:i') : null,
                     'break_end' => $log->break_end ? Carbon::parse($log->break_end)->format('H:i') : null,
-                    'overtime' => (float)$log->overtime,
-                    'late' => (int)$log->late,
-                    'total_earnings' => (float)$log->total_earnings,
-                    'holiday_pay' => (float)$log->holiday_pay,
+                    'overtime' => (float) $log->overtime,
+                    'late' => (int) $log->late,
+                    'total_earnings' => (float) $log->total_earnings,
+                    'holiday_pay' => (float) $log->holiday_pay,
                 ];
             });
 
         return response()->json([
             'employee' => [
                 'id' => $employee->id,
-                'name' => $employee->first_name . ' ' . $employee->last_name,
-                'daily_rate' => (float)$employee->daily_rate,
-                'ot_rate' => (float)$employee->ot_rate,
+                'name' => $employee->first_name.' '.$employee->last_name,
+                'daily_rate' => (float) $employee->daily_rate,
+                'ot_rate' => (float) $employee->ot_rate,
                 'role' => $employee->role,
             ],
             'attendance' => $attendance,
@@ -201,11 +201,15 @@ class AdminPayrollController extends Controller
         $otRate = $employee->ot_rate;
 
         $totalEarnings = $request->total_earnings;
-        
+
         if ($totalEarnings === null) {
             $attendancePercentage = 0;
-            if (in_array($request->status, ['full', 'present'])) $attendancePercentage = 1;
-            if ($request->status === 'half') $attendancePercentage = 0.5;
+            if (in_array($request->status, ['full', 'present'])) {
+                $attendancePercentage = 1;
+            }
+            if ($request->status === 'half') {
+                $attendancePercentage = 0.5;
+            }
 
             $totalEarnings = max(0, ($attendancePercentage * $dailyRate) + ($request->overtime * $otRate));
         }
@@ -265,19 +269,19 @@ class AdminPayrollController extends Controller
         ]);
 
         $formattedDate = Carbon::parse($date)->format('Y-m-d');
-        
+
         $log = EmployeeAttendance::where('employee_id', $id)
             ->where('date', $formattedDate)
             ->first();
-            
-        if (!$log) {
+
+        if (! $log) {
             // Create a pending record if none exists just to log the break? No, usually break is logged on an existing attendance.
             // But if they just hit break without starting, we should create a pending one.
             $log = EmployeeAttendance::create([
                 'employee_id' => $id,
                 'date' => $formattedDate,
                 'status' => 'pending',
-                'start_time' => Carbon::now()->format('H:i') // auto start if they hit break without starting
+                'start_time' => Carbon::now()->format('H:i'), // auto start if they hit break without starting
             ]);
         }
 
@@ -297,7 +301,7 @@ class AdminPayrollController extends Controller
     public function manageDestroy($id, $date)
     {
         $formattedDate = Carbon::parse($date)->format('Y-m-d');
-        
+
         $deleted = EmployeeAttendance::where('employee_id', $id)
             ->where('date', $formattedDate)
             ->delete();

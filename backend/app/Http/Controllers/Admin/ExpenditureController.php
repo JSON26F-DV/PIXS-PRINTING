@@ -12,6 +12,7 @@ class ExpenditureController extends Controller
     public function index(Request $request): JsonResponse
     {
         $expenditures = DB::table('expenditures')->orderBy('created_at', 'desc')->get();
+
         return response()->json(['data' => $expenditures]);
     }
 

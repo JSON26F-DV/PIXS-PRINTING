@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        if (!Schema::hasTable('payment_codes')) {
+        if (! Schema::hasTable('payment_codes')) {
             Schema::create('payment_codes', function (Blueprint $table) {
                 $table->string('id', 30)->primary();
                 $table->string('code', 20)->unique();
@@ -21,13 +21,13 @@ return new class extends Migration
             });
         }
 
-        if (!Schema::hasColumn('orders', 'payment_code_id')) {
+        if (! Schema::hasColumn('orders', 'payment_code_id')) {
             Schema::table('orders', function (Blueprint $table) {
                 $table->string('payment_code_id', 30)->nullable()->after('delivery_method_id');
             });
         }
 
-        if (!Schema::hasColumn('messages', 'payment_code_id')) {
+        if (! Schema::hasColumn('messages', 'payment_code_id')) {
             Schema::table('messages', function (Blueprint $table) {
                 $table->string('payment_code_id', 30)->nullable()->after('screenplate_request_id');
             });
@@ -38,15 +38,15 @@ return new class extends Migration
             Schema::table('messages', function (Blueprint $table) {
                 // Check if FK already exists or try to add it. We wrap it in a try-catch for maximum safety.
                 $table->foreign('payment_code_id', 'fk_message_payment_code')
-                      ->references('id')
-                      ->on('payment_codes')
-                      ->onDelete('set null');
+                    ->references('id')
+                    ->on('payment_codes')
+                    ->onDelete('set null');
             });
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             // Silently ignore if FK already exists
         }
 
-        if (!Schema::hasColumn('messages', 'is_pinned')) {
+        if (! Schema::hasColumn('messages', 'is_pinned')) {
             Schema::table('messages', function (Blueprint $table) {
                 $table->dateTime('is_pinned')->nullable()->after('payment_code_id');
             });
@@ -64,7 +64,8 @@ return new class extends Migration
                     $table->dropForeign('fk_message_payment_code');
                 });
             }
-        } catch (\Throwable $e) {}
+        } catch (Throwable $e) {
+        }
 
         if (Schema::hasColumn('messages', 'payment_code_id')) {
             Schema::table('messages', function (Blueprint $table) {

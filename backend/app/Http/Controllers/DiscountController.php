@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Discount;
+use App\Services\AuditService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -36,7 +37,7 @@ class DiscountController extends Controller
             'expires_at' => 'nullable|date',
         ]);
 
-        $code = !empty($validated['code'])
+        $code = ! empty($validated['code'])
             ? strtoupper($validated['code'])
             : strtoupper(Str::random(8));
 
@@ -54,6 +55,8 @@ class DiscountController extends Controller
             'already_used' => false,
             'created_at' => now(),
         ]);
+
+        AuditService::created('discount', $discount->id, ['code' => $code, 'type' => $validated['type']]);
 
         return response()->json([
             'message' => 'Discount code generated.',
@@ -136,7 +139,7 @@ class DiscountController extends Controller
     public function update(Request $request, string $id): JsonResponse
     {
         $discount = Discount::find($id);
-        if (!$discount) {
+        if (! $discount) {
             return response()->json(['message' => 'Discount not found.'], 404);
         }
 
@@ -145,7 +148,7 @@ class DiscountController extends Controller
             'customer_id' => 'nullable|string|exists:customers,id',
             'product_id' => 'nullable|string|exists:products,id',
             'variant_id' => 'nullable|string|exists:product_variants,variant_id',
-            'code' => 'required|string|max:50|unique:discounts,code,' . $id,
+            'code' => 'required|string|max:50|unique:discounts,code,'.$id,
             'type' => 'required|in:fixed,percentage',
             'value' => 'required|numeric|min:0',
             'min_spend' => 'nullable|numeric|min:0',
@@ -166,6 +169,8 @@ class DiscountController extends Controller
             'already_used' => $validated['already_used'] ?? false,
         ]);
 
+        AuditService::updated('discount', $id, [], $validated);
+
         return response()->json([
             'message' => 'Discount campaign updated.',
             'data' => Discount::with(['customer', 'product'])->find($id),
@@ -178,11 +183,13 @@ class DiscountController extends Controller
     public function destroy(string $id): JsonResponse
     {
         $discount = Discount::find($id);
-        if (!$discount) {
+        if (! $discount) {
             return response()->json(['message' => 'Discount not found.'], 404);
         }
 
         $discount->delete();
+
+        AuditService::deleted('discount', $id);
 
         return response()->json([
             'message' => 'Discount campaign deleted.',

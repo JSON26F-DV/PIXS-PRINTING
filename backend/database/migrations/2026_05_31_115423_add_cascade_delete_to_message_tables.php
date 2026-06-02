@@ -18,7 +18,7 @@ return new class extends Migration
                     ->on('messages')
                     ->onDelete('cascade');
             });
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             // Constraint might already exist
         }
 
@@ -29,7 +29,7 @@ return new class extends Migration
                     ->on('messages')
                     ->onDelete('cascade');
             });
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             // Constraint might already exist
         }
     }
@@ -43,7 +43,7 @@ return new class extends Migration
             Schema::table('message_attachments', function (Blueprint $table) {
                 $table->dropForeign('fk_attachments_message');
             });
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             // Ignored
         }
 
@@ -51,7 +51,7 @@ return new class extends Migration
             Schema::table('message_reactions', function (Blueprint $table) {
                 $table->dropForeign('fk_reactions_message');
             });
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             // Ignored
         }
     }

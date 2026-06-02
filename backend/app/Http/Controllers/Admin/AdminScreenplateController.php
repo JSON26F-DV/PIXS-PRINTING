@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Screenplate;
 use App\Models\ScreenplateCompatibility;
 use App\Models\ScreenplateIncompatible;
+use App\Services\AuditService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -99,6 +100,11 @@ class AdminScreenplateController extends Controller
 
             $plate = Screenplate::with(['compatibility', 'incompatibility'])->find($id);
 
+            AuditService::created('screenplate', $id, [
+                'plate_name' => $validated['plate_name'],
+                'owner_id' => $validated['owner_id'],
+            ]);
+
             return response()->json([
                 'status' => 'success',
                 'data' => $this->transformPlate($plate),
@@ -167,6 +173,8 @@ class AdminScreenplateController extends Controller
 
             $plate->load(['compatibility', 'incompatibility']);
 
+            AuditService::updated('screenplate', $id, [], $updateData);
+
             return response()->json([
                 'status' => 'success',
                 'data' => $this->transformPlate($plate),
@@ -185,6 +193,8 @@ class AdminScreenplateController extends Controller
         try {
             $plate = Screenplate::findOrFail($id);
             $plate->delete();
+
+            AuditService::deleted('screenplate', $id);
 
             return response()->json([
                 'status' => 'success',
@@ -223,6 +233,8 @@ class AdminScreenplateController extends Controller
             }
 
             $plate->update(['image' => $filename]);
+
+            AuditService::updated('screenplate', $id, [], ['image' => $filename]);
 
             return response()->json([
                 'status' => 'success',

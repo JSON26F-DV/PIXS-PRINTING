@@ -9,6 +9,7 @@ use App\Models\ProductTag;
 use App\Models\ProductVariant;
 use App\Models\ScreenplateCompatibility;
 use App\Models\ScreenplateIncompatible;
+use App\Services\AuditService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -134,6 +135,7 @@ class ProductController extends Controller
                         'stock' => (int) $v->stock,
                         'is_need_screenplate' => (bool) $v->is_need_screenplate,
                     ]);
+
                     return $data;
                 }),
                 'current_page' => $products->currentPage(),
@@ -281,6 +283,7 @@ class ProductController extends Controller
                         'stock' => (int) $v->stock,
                         'is_need_screenplate' => (bool) $v->is_need_screenplate,
                     ]);
+
                     return $data;
                 }),
             ]);
@@ -391,6 +394,8 @@ class ProductController extends Controller
                 return $product;
             });
 
+            AuditService::created('product', $product->id, ['name' => $product->name]);
+
             return response()->json(['data' => $this->formatProduct($product)], 201);
         } catch (ValidationException $e) {
             return response()->json(['message' => collect($e->errors())->flatten()->first()], 422);
@@ -486,6 +491,8 @@ class ProductController extends Controller
                 $this->handleProductTags($request, $product);
             });
 
+            AuditService::updated('product', $id, [], ['name' => $product->name]);
+
             return response()->json(['data' => $this->formatProduct($product)]);
         } catch (ValidationException $e) {
             return response()->json(['message' => collect($e->errors())->flatten()->first()], 422);
@@ -572,6 +579,8 @@ class ProductController extends Controller
                     File::delete($path);
                 }
             }
+
+            AuditService::deleted('product', $id);
 
             return response()->json(['message' => 'Product deleted successfully.']);
         } catch (\Throwable $e) {

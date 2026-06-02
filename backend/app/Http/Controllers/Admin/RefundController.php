@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Services\AuditService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -43,7 +44,7 @@ class RefundController extends Controller
         ]);
 
         $admin = $request->user();
-        $refundId = 'ref_' . Str::random(10);
+        $refundId = 'ref_'.Str::random(10);
 
         DB::table('refunds')->insert([
             'id' => $refundId,
@@ -56,6 +57,11 @@ class RefundController extends Controller
             'status' => 'pending',
             'created_at' => now(),
             'updated_at' => now(),
+        ]);
+
+        AuditService::created('refund', $refundId, [
+            'customer_id' => $validated['customer_id'],
+            'amount' => $validated['amount'],
         ]);
 
         return response()->json([
@@ -80,7 +86,7 @@ class RefundController extends Controller
             ->where('refunds.id', $id)
             ->first();
 
-        if (!$refund) {
+        if (! $refund) {
             return response()->json(['message' => 'Refund not found.'], 404);
         }
 
@@ -99,16 +105,18 @@ class RefundController extends Controller
             'status' => $validated['status'] ?? null,
             'amount' => $validated['amount'] ?? null,
             'message' => $validated['message'] ?? null,
-        ], fn($v) => $v !== null);
+        ], fn ($v) => $v !== null);
 
         if (($validated['status'] ?? '') === 'completed') {
             $updateData['processed_at'] = now();
         }
 
-        if (!empty($updateData)) {
+        if (! empty($updateData)) {
             $updateData['updated_at'] = now();
             DB::table('refunds')->where('id', $id)->update($updateData);
         }
+
+        AuditService::updated('refund', $id, [], $updateData);
 
         return response()->json(['message' => 'Refund updated.']);
     }
@@ -116,6 +124,8 @@ class RefundController extends Controller
     public function destroy(string $id): JsonResponse
     {
         DB::table('refunds')->where('id', $id)->delete();
+        AuditService::deleted('refund', $id);
+
         return response()->json(['message' => 'Refund deleted.']);
     }
 

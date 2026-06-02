@@ -4,13 +4,11 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Customer;
+use App\Models\CustomerAddress;
+use App\Models\DeletedAccount;
 use App\Models\Employee;
 use App\Models\EmployeeAddress;
-use App\Models\EmployeeContactNumber;
-use App\Models\CustomerAddress;
-use App\Models\CustomerContactNumber;
-use App\Models\CustomerPaymentMethod;
-use App\Models\DeletedAccount;
+use App\Services\AuditService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -26,7 +24,7 @@ class AdminAccountController extends Controller
                 'id' => $c->id,
                 'first_name' => $c->first_name,
                 'last_name' => $c->last_name,
-                'name' => $c->first_name . ' ' . $c->last_name,
+                'name' => $c->first_name.' '.$c->last_name,
                 'email' => $c->email,
                 'profile_picture' => $c->profile_picture,
                 'role' => $c->role ?? 'customer',
@@ -42,7 +40,7 @@ class AdminAccountController extends Controller
                 'id' => $e->id,
                 'first_name' => $e->first_name,
                 'last_name' => $e->last_name,
-                'name' => $e->first_name . ' ' . $e->last_name,
+                'name' => $e->first_name.' '.$e->last_name,
                 'email' => $e->email,
                 'profile_picture' => $e->profile_picture,
                 'role' => $e->role ?? 'staff',
@@ -67,7 +65,7 @@ class AdminAccountController extends Controller
     {
         $employee = Employee::with(['addresses', 'contacts'])->find($id);
 
-        if (!$employee) {
+        if (! $employee) {
             return response()->json(['message' => 'Employee not found'], 404);
         }
 
@@ -81,12 +79,12 @@ class AdminAccountController extends Controller
     {
         $employee = Employee::find($id);
         $isNew = false;
-        
-        if (!$employee) {
+
+        if (! $employee) {
             $isNew = true;
-            $employee = new Employee();
+            $employee = new Employee;
             // Assign a new ID if it's new (in a real scenario you'd generate a secure ID)
-            $employee->id = $id; 
+            $employee->id = $id;
         }
 
         $validated = $request->validate([
@@ -113,7 +111,7 @@ class AdminAccountController extends Controller
             if (isset($validated['addresses'])) {
                 $employee->addresses()->delete();
                 foreach ($validated['addresses'] as $addr) {
-                    if(!isset($addr['id'])) {
+                    if (! isset($addr['id'])) {
                         $addr['id'] = EmployeeAddress::generateNextId();
                     }
                     $employee->addresses()->create($addr);
@@ -128,9 +126,13 @@ class AdminAccountController extends Controller
             }
 
             DB::commit();
+
+            AuditService::log($isNew ? 'create' : 'update', 'employee', $id);
+
             return response()->json(['status' => 'success', 'data' => $employee->load(['addresses', 'contacts'])]);
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
         }
     }
@@ -139,7 +141,7 @@ class AdminAccountController extends Controller
     {
         $customer = Customer::with(['addresses', 'contacts', 'paymentMethods'])->find($id);
 
-        if (!$customer) {
+        if (! $customer) {
             return response()->json(['message' => 'Customer not found'], 404);
         }
 
@@ -154,9 +156,9 @@ class AdminAccountController extends Controller
         $customer = Customer::find($id);
         $isNew = false;
 
-        if (!$customer) {
+        if (! $customer) {
             $isNew = true;
-            $customer = new Customer();
+            $customer = new Customer;
             $customer->id = $id;
         }
 
@@ -186,7 +188,7 @@ class AdminAccountController extends Controller
             if (isset($validated['addresses'])) {
                 $customer->addresses()->delete();
                 foreach ($validated['addresses'] as $addr) {
-                    if(!isset($addr['id'])) {
+                    if (! isset($addr['id'])) {
                         $addr['id'] = CustomerAddress::generateNextId();
                     }
                     $customer->addresses()->create($addr);
@@ -208,9 +210,13 @@ class AdminAccountController extends Controller
             }
 
             DB::commit();
+
+            AuditService::log($isNew ? 'create' : 'update', 'customer', $id);
+
             return response()->json(['status' => 'success', 'data' => $customer->load(['addresses', 'contacts', 'paymentMethods'])]);
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
         }
     }
@@ -224,7 +230,7 @@ class AdminAccountController extends Controller
         ]);
 
         $admin = $request->user();
-        if (!Hash::check($request->password, $admin->password)) {
+        if (! Hash::check($request->password, $admin->password)) {
             return response()->json(['message' => 'Authentication failed. Invalid password.'], 403);
         }
 
@@ -237,7 +243,7 @@ class AdminAccountController extends Controller
                 $target = Customer::find($id);
             }
 
-            if (!$target) {
+            if (! $target) {
                 return response()->json(['message' => 'Account not found.'], 404);
             }
 
@@ -265,9 +271,13 @@ class AdminAccountController extends Controller
             $target->delete();
 
             DB::commit();
+
+            AuditService::log('delete', $request->type, $id, ['reason' => $request->reason]);
+
             return response()->json(['status' => 'success', 'message' => 'Account purged successfully.']);
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
         }
     }
@@ -282,10 +292,10 @@ class AdminAccountController extends Controller
         $file = $request->file('profile_picture');
         $targetDir = base_path('../frontend/src/assets/profile');
 
-        $id = $request->input('id', 'temp_' . mt_rand(1000, 9999));
-        $filename = 'profile_' . $id . '_' . time() . '.' . $file->getClientOriginalExtension();
+        $id = $request->input('id', 'temp_'.mt_rand(1000, 9999));
+        $filename = 'profile_'.$id.'_'.time().'.'.$file->getClientOriginalExtension();
 
-        if (!file_exists($targetDir)) {
+        if (! file_exists($targetDir)) {
             mkdir($targetDir, 0755, true);
         }
 
@@ -313,14 +323,15 @@ class AdminAccountController extends Controller
             'allowed_products' => $validated['allowed_products'] ?? [],
         ]);
 
+        AuditService::updated('employee_assignments', $id, [], $validated);
+
         return response()->json([
             'status' => 'success',
             'data' => [
                 'id' => $employee->id,
                 'allowed_categories' => $employee->allowed_categories,
                 'allowed_products' => $employee->allowed_products,
-            ]
+            ],
         ]);
     }
 }
-

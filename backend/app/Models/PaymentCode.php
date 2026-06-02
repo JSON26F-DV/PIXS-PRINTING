@@ -8,9 +8,13 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class PaymentCode extends Model
 {
     protected $table = 'payment_codes';
+
     protected $primaryKey = 'id';
+
     public $incrementing = false;
+
     protected $keyType = 'string';
+
     public $timestamps = false;
 
     protected $fillable = [

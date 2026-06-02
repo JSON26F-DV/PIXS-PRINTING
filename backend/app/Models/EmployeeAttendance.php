@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class EmployeeAttendance extends Model
 {
     protected $table = 'employee_attendance';
+
     public $timestamps = false;
 
     protected $fillable = [

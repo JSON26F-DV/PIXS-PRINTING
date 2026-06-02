@@ -4,13 +4,14 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
+return new class extends Migration
+{
     /**
      * Run the migrations.
      */
     public function up(): void
     {
-        if (!Schema::hasTable('expenditures')) {
+        if (! Schema::hasTable('expenditures')) {
             Schema::create('expenditures', function (Blueprint $table) {
                 $table->increments('id');
                 $table->string('variant_id', 30)->nullable();
@@ -20,7 +21,7 @@ return new class extends Migration {
                     'Utilities',
                     'Office / Operational Expenses',
                     'Extra / Miscellaneous Expenses',
-                    'Others'
+                    'Others',
                 ]);
                 $table->decimal('amount', 12, 2)->default(0);
                 $table->text('description')->nullable();

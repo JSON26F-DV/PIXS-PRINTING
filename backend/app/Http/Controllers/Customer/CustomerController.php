@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Customer;
 use App\Models\CustomerAddress;
 use App\Models\MarketingPromotion;
+use App\Services\AuditService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -62,6 +63,8 @@ class CustomerController extends Controller
 
         $customer->update($validated);
 
+        AuditService::updated('customer_profile', $customer->id, [], $validated);
+
         return response()->json(['message' => 'Profile updated successfully', 'user' => $customer]);
     }
 
@@ -100,6 +103,8 @@ class CustomerController extends Controller
 
         $address = $request->user()->addresses()->create($validated);
 
+        AuditService::created('customer_address', $address->id, ['customer_id' => $request->user()->id]);
+
         return response()->json([
             'message' => 'Address added successfully',
             'data' => $address,
@@ -130,6 +135,8 @@ class CustomerController extends Controller
 
         $address->update($validated);
 
+        AuditService::updated('customer_address', $id, [], $validated);
+
         return response()->json([
             'message' => 'Address updated successfully',
             'data' => $address,
@@ -142,6 +149,8 @@ class CustomerController extends Controller
     public function deleteAddress(Request $request, string $id): JsonResponse
     {
         $request->user()->addresses()->where('id', $id)->delete();
+
+        AuditService::deleted('customer_address', $id);
 
         return response()->json(['message' => 'Address deleted successfully']);
     }
@@ -186,6 +195,8 @@ class CustomerController extends Controller
 
         $method = $request->user()->paymentMethods()->create($validated);
 
+        AuditService::created('customer_payment_method', $method->id, ['type' => $validated['type']]);
+
         return response()->json([
             'message' => 'Payment method added successfully',
             'data' => $method,
@@ -198,6 +209,8 @@ class CustomerController extends Controller
     public function deletePaymentMethod(Request $request, string $id): JsonResponse
     {
         $request->user()->paymentMethods()->where('id', $id)->delete();
+
+        AuditService::deleted('customer_payment_method', $id);
 
         return response()->json(['message' => 'Payment method deleted successfully']);
     }
@@ -363,6 +376,8 @@ class CustomerController extends Controller
         // Store only the filename in the database as requested
         $customer->update(['profile_picture' => $filename]);
 
+        AuditService::updated('customer_profile', $customer->id, [], ['profile_picture' => $filename]);
+
         return response()->json([
             'message' => 'Profile picture updated',
             'url' => $filename,
@@ -382,6 +397,8 @@ class CustomerController extends Controller
         $customer->update([
             'password' => Hash::make($request->password),
         ]);
+
+        AuditService::log('password_change', 'customer', $customer->id);
 
         return response()->json(['message' => 'Password updated successfully']);
     }

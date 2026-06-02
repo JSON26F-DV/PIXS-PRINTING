@@ -5,13 +5,14 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Customer;
 use App\Models\Order;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 use App\Models\OrderItem;
 use App\Models\OrderItemColor;
 use App\Models\PaymentCode;
+use App\Services\AuditService;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class AdminOrderController extends Controller
 {
@@ -198,11 +199,11 @@ class AdminOrderController extends Controller
 
         try {
             return DB::transaction(function () use ($validated) {
-                $orderId = 'ORD-' . strtoupper(Str::random(10));
-                
+                $orderId = 'ORD-'.strtoupper(Str::random(10));
+
                 $paymentCodeId = null;
-                if (!empty($validated['generate_payment_code'])) {
-                    $paymentCodeId = 'PAY-' . strtoupper(Str::random(8));
+                if (! empty($validated['generate_payment_code'])) {
+                    $paymentCodeId = 'PAY-'.strtoupper(Str::random(8));
                     PaymentCode::create([
                         'id' => $paymentCodeId,
                         'code' => strtoupper(Str::random(6)),
@@ -210,7 +211,7 @@ class AdminOrderController extends Controller
                         'created_at' => now(),
                     ]);
                 }
-                
+
                 $order = Order::create([
                     'id' => $orderId,
                     'customer_id' => $validated['customer_id'],
@@ -245,7 +246,7 @@ class AdminOrderController extends Controller
                     ]);
 
                     // Update variant stock
-                    if (!empty($item['variant_id'])) {
+                    if (! empty($item['variant_id'])) {
                         DB::statement('
                             UPDATE product_variants 
                             SET stock = GREATEST(0, CAST(stock AS SIGNED) - ?)
@@ -275,7 +276,7 @@ class AdminOrderController extends Controller
                     ]);
 
                     // Add colors
-                    if (!empty($item['colors'])) {
+                    if (! empty($item['colors'])) {
                         foreach ($item['colors'] as $color) {
                             OrderItemColor::create([
                                 'order_item_id' => $orderItem->id,
@@ -287,6 +288,11 @@ class AdminOrderController extends Controller
                     }
                 }
 
+                AuditService::created('order', $orderId, [
+                    'admin_direct' => true,
+                    'customer_id' => $validated['customer_id'],
+                ]);
+
                 return response()->json([
                     'id' => $orderId,
                     'total_amount' => $validated['total_amount'],
@@ -295,7 +301,8 @@ class AdminOrderController extends Controller
             });
         } catch (\Throwable $e) {
             \Log::error('AdminOrderController@storeDirect failed', ['message' => $e->getMessage()]);
-            return response()->json(['message' => 'Failed to create direct order: ' . $e->getMessage()], 500);
+
+            return response()->json(['message' => 'Failed to create direct order: '.$e->getMessage()], 500);
         }
     }
 
@@ -306,7 +313,7 @@ class AdminOrderController extends Controller
     {
         try {
             $order = Order::with('items')->find($id);
-            if (!$order) {
+            if (! $order) {
                 return response()->json(['message' => 'Order not found'], 404);
             }
 
@@ -316,7 +323,7 @@ class AdminOrderController extends Controller
                 if ($customer) {
                     $customer->decrement('orders');
                     $customer->decrement('total_orders_value', $order->total_amount);
-                    
+
                     // Prevent stats from going below zero
                     if ($customer->orders < 0) {
                         $customer->orders = 0;
@@ -330,7 +337,7 @@ class AdminOrderController extends Controller
                 // 2. Revert stock levels and sold statistics
                 foreach ($order->items as $item) {
                     // Revert variant stock if a variant is associated
-                    if (!empty($item->variant_id)) {
+                    if (! empty($item->variant_id)) {
                         DB::statement('
                             UPDATE product_variants 
                             SET stock = stock + ?
@@ -376,14 +383,17 @@ class AdminOrderController extends Controller
                 }
             });
 
+            AuditService::deleted('order', $id);
+
             return response()->json([
                 'message' => 'Order deleted and statistics successfully reverted',
             ], 200);
 
         } catch (\Throwable $e) {
             \Log::error('AdminOrderController@destroy failed', ['message' => $e->getMessage()]);
+
             return response()->json([
-                'message' => 'Failed to delete order: ' . $e->getMessage(),
+                'message' => 'Failed to delete order: '.$e->getMessage(),
             ], 500);
         }
     }

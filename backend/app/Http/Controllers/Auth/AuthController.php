@@ -7,6 +7,7 @@ use App\Http\Requests\Auth\LoginRequest;
 use App\Models\Customer;
 use App\Models\DeletedAccount;
 use App\Models\Employee;
+use App\Services\AuditService;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -99,6 +100,8 @@ class AuthController extends Controller
                 now()->addDays(30)
             )->plainTextToken;
 
+            AuditService::login($customer->id, 'customer');
+
             return response()->json([
                 'token' => $token,
                 'account_type' => 'customer',
@@ -135,6 +138,8 @@ class AuthController extends Controller
                 now()->addHours(8)
             )->plainTextToken;
 
+            AuditService::login($employee->id, $employee->role);
+
             return response()->json([
                 'token' => $token,
                 'account_type' => 'employee',
@@ -166,7 +171,12 @@ class AuthController extends Controller
      */
     public function logout(Request $request): JsonResponse
     {
-        $request->user()->currentAccessToken()->delete();
+        $user = $request->user();
+        $userType = $user instanceof Employee ? $user->role : 'customer';
+
+        $user->currentAccessToken()->delete();
+
+        AuditService::logout($user->id, $userType);
 
         return response()->json(['message' => 'Logged out successfully.']);
     }

@@ -31,13 +31,13 @@ class Expenditure extends Model
 
     /**
      * Indicates if the model should be timestamped.
-     * Since the table only has created_at, we disable default timestamps 
+     * Since the table only has created_at, we disable default timestamps
      * and will manually manage it, or just use UPDATED_AT = null.
      *
      * @var bool
      */
     public $timestamps = false;
-    
+
     // We can also define a boot method to set created_at
     protected static function boot()
     {
@@ -55,5 +55,4 @@ class Expenditure extends Model
     {
         return $this->belongsTo(ProductVariant::class, 'variant_id', 'variant_id');
     }
-
 }

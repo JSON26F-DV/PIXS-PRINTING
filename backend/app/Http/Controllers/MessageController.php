@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Order;
 use App\Models\ScreenplateRequest;
+use App\Services\AuditService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -93,7 +94,7 @@ class MessageController extends Controller
 
         $messages = $messages->map(function ($msg) use ($attachmentsGrouped, $reactionsGrouped, $replyToMessages) {
             $msg->attachments = $attachmentsGrouped->get($msg->id, collect())->values();
-            
+
             $msg->reactions = $reactionsGrouped->get($msg->id, collect())->map(function ($react) {
                 return [
                     'user' => $react->user_id,
@@ -124,6 +125,7 @@ class MessageController extends Controller
             'next_cursor' => $nextCursor,
         ]);
     }
+
     /**
      * Get all users (employees and customers) for the chat interface.
      */
@@ -136,6 +138,7 @@ class MessageController extends Controller
                 // Ensure account_type or similar property is set if needed by frontend
                 $emp->account_type = 'employee';
                 $emp->status = 'offline'; // Mock status since we don't track online status in DB
+
                 return $emp;
             });
 
@@ -145,6 +148,7 @@ class MessageController extends Controller
             ->map(function ($cust) {
                 $cust->account_type = 'customer';
                 $cust->status = 'offline';
+
                 return $cust;
             });
 
@@ -154,7 +158,6 @@ class MessageController extends Controller
             'data' => $users,
         ]);
     }
-
 
     /**
      * Get the total image upload count for the authenticated user.
@@ -298,7 +301,7 @@ class MessageController extends Controller
                 $validated['order_id'] ?? null,
                 $validated['screenplate_request_id'] ?? null,
                 $validated['payment_code_id'] ?? null,
-                !empty($validated['product_concern']) ? 1 : 0,
+                ! empty($validated['product_concern']) ? 1 : 0,
                 $validated['expenditures_id'] ?? null,
             ]);
 
@@ -338,6 +341,11 @@ class MessageController extends Controller
 
         // Fetch saved attachments to return to client
         $savedAttachments = DB::table('message_attachments')->where('message_id', $msgId)->get();
+
+        AuditService::created('message', $msgId, [
+            'receiver_id' => $receiverId,
+            'has_attachments' => ! empty($attachments),
+        ]);
 
         return response()->json([
             'message' => 'Message transmitted securely.',
@@ -495,7 +503,7 @@ class MessageController extends Controller
     {
         $expenditure = DB::table('expenditures')->where('id', $id)->first();
 
-        if (!$expenditure) {
+        if (! $expenditure) {
             return response()->json(['notFound' => true], 404);
         }
 
@@ -518,7 +526,7 @@ class MessageController extends Controller
             ->where('refunds.id', $id)
             ->first();
 
-        if (!$refund) {
+        if (! $refund) {
             return response()->json(['notFound' => true], 404);
         }
 
@@ -541,7 +549,7 @@ class MessageController extends Controller
 
         $message = DB::table('messages')->where('id', $id)->first();
 
-        if (!$message) {
+        if (! $message) {
             return response()->json(['message' => 'Message not found.'], 404);
         }
 
@@ -586,9 +594,15 @@ class MessageController extends Controller
         $user = $request->user();
 
         $message = DB::table('messages')->where('id', $id)->first();
-        if (!$message) return response()->json(['message' => 'Not found'], 404);
-        if ($message->sender_id !== $user->id) return response()->json(['message' => 'Unauthorized'], 403);
-        if ($message->is_deleted) return response()->json(['message' => 'Cannot edit deleted message'], 400);
+        if (! $message) {
+            return response()->json(['message' => 'Not found'], 404);
+        }
+        if ($message->sender_id !== $user->id) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+        if ($message->is_deleted) {
+            return response()->json(['message' => 'Cannot edit deleted message'], 400);
+        }
 
         $originalText = $message->is_edited ? $message->original_text : $message->message;
 
@@ -596,8 +610,10 @@ class MessageController extends Controller
             'message' => $validated['message'],
             'is_edited' => 1,
             'original_text' => $originalText,
-            'updated_at' => now()
+            'updated_at' => now(),
         ]);
+
+        AuditService::updated('message', $id, [], ['message' => $validated['message']]);
 
         return response()->json(['message' => 'Message updated']);
     }
@@ -611,7 +627,9 @@ class MessageController extends Controller
         $isHardDelete = request()->query('hard') === 'true';
 
         $message = DB::table('messages')->where('id', $id)->first();
-        if (!$message) return response()->json(['message' => 'Not found'], 404);
+        if (! $message) {
+            return response()->json(['message' => 'Not found'], 404);
+        }
         if ($message->sender_id !== $user->id && $user->role !== 'admin') {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
@@ -645,9 +663,11 @@ class MessageController extends Controller
             // Soft delete message
             DB::table('messages')->where('id', $id)->update([
                 'is_deleted' => 1,
-                'updated_at' => now()
+                'updated_at' => now(),
             ]);
         }
+
+        AuditService::deleted('message', $id, ['hard' => $isHardDelete]);
 
         return response()->json(['message' => 'Message deleted']);
     }
@@ -665,11 +685,11 @@ class MessageController extends Controller
         $messageIds = DB::table('messages')
             ->where(function ($q) use ($user, $targetId) {
                 $q->where('sender_id', $user->id)
-                  ->where('receiver_id', $targetId);
+                    ->where('receiver_id', $targetId);
             })
             ->orWhere(function ($q) use ($user, $targetId) {
                 $q->where('sender_id', $targetId)
-                  ->where('receiver_id', $user->id);
+                    ->where('receiver_id', $user->id);
             })
             ->pluck('id');
 
@@ -695,6 +715,8 @@ class MessageController extends Controller
             DB::table('messages')->whereIn('id', $messageIds)->delete();
         }
 
+        AuditService::deleted('conversation', $targetId, ['message_count' => $messageIds->count()]);
+
         return response()->json(['message' => 'Conversation deleted successfully.']);
     }
 
@@ -713,7 +735,7 @@ class MessageController extends Controller
             ->where('name', $filename)
             ->first();
 
-        if (!$attachment) {
+        if (! $attachment) {
             return response()->json(['message' => 'Attachment not found'], 404);
         }
 
@@ -728,6 +750,8 @@ class MessageController extends Controller
             unlink($destPath);
         }
 
+        AuditService::deleted('message_attachment', $attachment->id, ['message_id' => $id]);
+
         return response()->json(['message' => 'Attachment deleted successfully']);
     }
 
@@ -737,16 +761,20 @@ class MessageController extends Controller
     public function togglePin(string $id): JsonResponse
     {
         $user = request()->user();
-        if ($user->role !== 'admin') return response()->json(['message' => 'Admin only'], 403);
+        if ($user->role !== 'admin') {
+            return response()->json(['message' => 'Admin only'], 403);
+        }
 
         $message = DB::table('messages')->where('id', $id)->first();
-        if (!$message) return response()->json(['message' => 'Not found'], 404);
+        if (! $message) {
+            return response()->json(['message' => 'Not found'], 404);
+        }
 
         $isPinned = $message->is_pinned ? null : now();
 
         DB::table('messages')->where('id', $id)->update([
             'is_pinned' => $isPinned,
-            'updated_at' => now()
+            'updated_at' => now(),
         ]);
 
         return response()->json(['message' => 'Pin status toggled', 'is_pinned' => $isPinned]);
@@ -758,18 +786,22 @@ class MessageController extends Controller
     public function managePaymentCode(Request $request, string $id): JsonResponse
     {
         $user = $request->user();
-        if ($user->role !== 'admin') return response()->json(['message' => 'Admin only'], 403);
+        if ($user->role !== 'admin') {
+            return response()->json(['message' => 'Admin only'], 403);
+        }
 
         $validated = $request->validate([
             'payment_code_id' => 'nullable|string|max:30',
         ]);
 
         $message = DB::table('messages')->where('id', $id)->first();
-        if (!$message) return response()->json(['message' => 'Not found'], 404);
+        if (! $message) {
+            return response()->json(['message' => 'Not found'], 404);
+        }
 
         DB::table('messages')->where('id', $id)->update([
             'payment_code_id' => $validated['payment_code_id'],
-            'updated_at' => now()
+            'updated_at' => now(),
         ]);
 
         return response()->json(['message' => 'Payment code updated']);
@@ -790,12 +822,12 @@ class MessageController extends Controller
 
         // Verify user has access to this message
         $msg = DB::table('messages')->where('id', $id)->first();
-        if (!$msg || ($msg->sender_id !== $user->id && $msg->receiver_id !== $user->id)) {
+        if (! $msg || ($msg->sender_id !== $user->id && $msg->receiver_id !== $user->id)) {
             return response()->json(['message' => 'Unauthorized.'], 403);
         }
 
         $updateData = ['updated_at' => now()];
-        
+
         if (array_key_exists('refund_id', $validated)) {
             $updateData['refund_id'] = $validated['refund_id'];
         }

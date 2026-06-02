@@ -9,6 +9,7 @@ use App\Http\Controllers\Admin\AdminPayrollController;
 use App\Http\Controllers\Admin\AdminScreenplateController;
 use App\Http\Controllers\Admin\AdminScreenplateRequestController;
 use App\Http\Controllers\Admin\AdminStockAnalyticsController;
+use App\Http\Controllers\Admin\RefundController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\CartController;
@@ -29,8 +30,8 @@ use Illuminate\Support\Facades\Route;
 // Public Data Routes
 Route::get('/delivery-methods', [DeliveryMethodController::class, 'index']);
 
-// Public Auth Routes
-Route::prefix('auth')->group(function () {
+// Public Auth Routes (rate limited)
+Route::middleware('throttle:auth')->prefix('auth')->group(function () {
     Route::post('/login', [AuthController::class, 'login'])->name('login');
     Route::post('/register', [RegisterController::class, 'register']);
 
@@ -42,18 +43,18 @@ Route::prefix('auth')->group(function () {
 });
 
 // Protected Auth Routes
-Route::middleware('auth:sanctum')->prefix('auth')->group(function () {
+Route::middleware(['auth:sanctum', 'throttle:api'])->prefix('auth')->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
     Route::post('/logout', [AuthController::class, 'logout']);
 });
 
 // User Profile Routes
-Route::middleware('auth:sanctum')->prefix('user')->group(function () {
+Route::middleware(['auth:sanctum', 'throttle:api'])->prefix('user')->group(function () {
     Route::get('/profile', [UserController::class, 'profile']);
 });
 
 // Customer Protected Routes
-Route::middleware(['auth:sanctum', 'role:customer'])->prefix('customer')->group(function () {
+Route::middleware(['auth:sanctum', 'role:customer', 'throttle:api'])->prefix('customer')->group(function () {
     Route::get('/profile', [CustomerController::class, 'profile']);
     Route::patch('/profile', [CustomerController::class, 'updateProfile']);
 
@@ -99,7 +100,7 @@ Route::middleware(['auth:sanctum', 'role:customer'])->prefix('customer')->group(
 });
 
 // Admin Routes
-Route::middleware(['auth:sanctum'])->prefix('admin')->group(function () {
+Route::middleware(['auth:sanctum', 'throttle:api'])->prefix('admin')->group(function () {
     // Accounts
     Route::get('/accounts', [AdminAccountController::class, 'index'])->middleware('role:admin');
     Route::get('/accounts/employee/{id}', [AdminAccountController::class, 'showEmployee'])->middleware('role:admin');
@@ -188,12 +189,12 @@ Route::middleware(['auth:sanctum'])->prefix('admin')->group(function () {
     Route::delete('/payment-codes/{id}', [AdminPaymentCodeController::class, 'destroy'])->middleware('role:admin');
 
     // Refunds
-    Route::get('/refunds', [\App\Http\Controllers\Admin\RefundController::class, 'index'])->middleware('role:admin');
-    Route::post('/refunds', [\App\Http\Controllers\Admin\RefundController::class, 'store'])->middleware('role:admin');
-    Route::get('/refunds/{id}', [\App\Http\Controllers\Admin\RefundController::class, 'show'])->middleware('role:admin');
-    Route::patch('/refunds/{id}', [\App\Http\Controllers\Admin\RefundController::class, 'update'])->middleware('role:admin');
-    Route::delete('/refunds/{id}', [\App\Http\Controllers\Admin\RefundController::class, 'destroy'])->middleware('role:admin');
-    Route::get('/customers/{id}/payment-methods', [\App\Http\Controllers\Admin\RefundController::class, 'customerPaymentMethods'])->middleware('role:admin');
+    Route::get('/refunds', [RefundController::class, 'index'])->middleware('role:admin');
+    Route::post('/refunds', [RefundController::class, 'store'])->middleware('role:admin');
+    Route::get('/refunds/{id}', [RefundController::class, 'show'])->middleware('role:admin');
+    Route::patch('/refunds/{id}', [RefundController::class, 'update'])->middleware('role:admin');
+    Route::delete('/refunds/{id}', [RefundController::class, 'destroy'])->middleware('role:admin');
+    Route::get('/customers/{id}/payment-methods', [RefundController::class, 'customerPaymentMethods'])->middleware('role:admin');
 
     // Expenditures (Handled fully inside AdminStockAnalyticsController above)
     // Route::get('/expenditures', [\App\Http\Controllers\Admin\ExpenditureController::class, 'index'])->middleware('role:admin');
@@ -203,7 +204,7 @@ Route::middleware(['auth:sanctum'])->prefix('admin')->group(function () {
 });
 
 // Messaging & Notifications
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::get('/messages', [MessageController::class, 'index']);
     Route::get('/messages/users', [MessageController::class, 'getUsers']);
     Route::get('/messages/orders/{id}', [MessageController::class, 'getOrderContext']);
@@ -235,12 +236,12 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 
 // Example of role-protected route
-Route::middleware(['auth:sanctum', 'role:admin'])->get('/admin/test', function () {
+Route::middleware(['auth:sanctum', 'role:admin', 'throttle:api'])->get('/admin/test', function () {
     return response()->json(['message' => 'Admin access granted']);
 });
 
 // Cart Routes
-Route::middleware(['auth:sanctum', 'role:customer'])->prefix('cart')->group(function () {
+Route::middleware(['auth:sanctum', 'role:customer', 'throttle:api'])->prefix('cart')->group(function () {
     Route::get('/', [CartController::class, 'index']);
     Route::post('/', [CartController::class, 'store']);
     Route::post('/buy-now', [CartController::class, 'buyNow']);
@@ -248,8 +249,8 @@ Route::middleware(['auth:sanctum', 'role:customer'])->prefix('cart')->group(func
     Route::delete('/{id}', [CartController::class, 'destroy']);
 });
 
-// Settings Utility Routes
-Route::middleware(['auth:sanctum', 'role:customer'])->prefix('settings')->group(function () {
+// Settings Utility Routes (sensitive operations)
+Route::middleware(['auth:sanctum', 'role:customer', 'throttle:sensitive'])->prefix('settings')->group(function () {
     Route::post('/profile-picture', [CustomerController::class, 'updateProfilePicture']);
     Route::patch('/password', [CustomerController::class, 'updatePassword']);
 });
