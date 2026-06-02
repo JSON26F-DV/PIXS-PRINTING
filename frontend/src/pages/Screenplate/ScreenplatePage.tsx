@@ -468,30 +468,26 @@ const ScreenplatePage: React.FC = () => {
       const requestId = res?.data?.id || 'SPR-NEW'
 
       setReviewOpen(false)
-      
+
       // Construct message for admin
-      try {
-        const messageBody = `Review Screenplate Request: ${requestId}`;
-        
-        const formData = new FormData();
-        formData.append('message', messageBody);
-        formData.append('receiver_id', '1'); // Admin
-        formData.append('receiver_type', 'employee');
-        formData.append('screenplate_request_id', requestId);
+      const messageBody = `Review Screenplate Request: ${requestId}`;
 
-        await axiosInstance.post('/api/messages/send', formData, {
+      const formData = new FormData();
+      formData.append('message', messageBody);
+      formData.append('receiver_id', '1'); // Admin
+      formData.append('receiver_type', 'employee');
+      formData.append('screenplate_request_id', requestId);
+
+      await Promise.all([
+        axiosInstance.post('/api/messages/send', formData, {
           headers: { 'Content-Type': 'multipart/form-data' }
-        });
-      } catch (msgErr) {
-        console.error('Failed to send screenplate message to admin:', msgErr);
-      }
-
-      await axiosInstance.post('/api/notifications', {
-        title: 'Screenplate Requested',
-        message: `Your setup request for ${selectedProduct!.name} has been processed.`,
-        type: 'success'
-      })
-      await fetchNotifications()
+        }).catch(msgErr => console.error('Failed to send screenplate message to admin:', msgErr)),
+        axiosInstance.post('/api/notifications', {
+          title: 'Screenplate Requested',
+          message: `Your setup request for ${selectedProduct!.name} has been processed.`,
+          type: 'success'
+        }).then(() => fetchNotifications()),
+      ])
 
       if ('vibrate' in navigator) {
         navigator.vibrate([80, 30, 80])

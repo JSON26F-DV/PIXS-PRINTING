@@ -184,41 +184,44 @@ const MarketingPromotions: React.FC = () => {
   const loadData = async () => {
     try {
       setIsLoading(true)
-      const discountsRes = await axiosInstance.get('/api/admin/discounts')
-      const fetchedDiscounts = discountsRes.data.data || []
-      const mappedDiscounts = fetchedDiscounts.map(mapDiscountToPromotion)
-      setPromos(mappedDiscounts)
 
-      // Fetch customers
-      try {
-        const custsRes = await axiosInstance.get('/api/admin/customers')
-        if (custsRes.data && custsRes.data.data) {
-          const formattedCustomers = custsRes.data.data.map((c: Record<string, unknown>) => ({
-            id: c.id as string,
-            name: (c.name as string) || `${c.first_name} ${c.last_name}`,
-            email: c.email as string,
-            role: 'customer'
-          }))
-          setCustomers(formattedCustomers)
-        }
-      } catch (err) {
-        console.warn("Failed to fetch customers from database, using defaults:", err)
+      const [discountsResult, custsResult, prodsResult] = await Promise.allSettled([
+        axiosInstance.get('/api/admin/discounts'),
+        axiosInstance.get('/api/admin/customers'),
+        axiosInstance.get('/api/products'),
+      ])
+
+      if (discountsResult.status === 'fulfilled') {
+        const fetchedDiscounts = discountsResult.value.data.data || []
+        const mappedDiscounts = fetchedDiscounts.map(mapDiscountToPromotion)
+        setPromos(mappedDiscounts)
+      } else {
+        throw discountsResult.reason
       }
 
-      // Fetch products
-      try {
-        const prodsRes = await axiosInstance.get('/api/products')
-        const prodData = prodsRes.data.data || prodsRes.data
+      if (custsResult.status === 'fulfilled' && custsResult.value.data?.data) {
+        const formattedCustomers = custsResult.value.data.data.map((c: Record<string, unknown>) => ({
+          id: c.id as string,
+          name: (c.name as string) || `${c.first_name} ${c.last_name}`,
+          email: c.email as string,
+          role: 'customer',
+        }))
+        setCustomers(formattedCustomers)
+      } else {
+        console.warn('Failed to fetch customers from database, using defaults:', custsResult.reason ?? 'Unknown error')
+      }
+
+      if (prodsResult.status === 'fulfilled') {
+        const prodData = prodsResult.value.data.data || prodsResult.value.data
         if (Array.isArray(prodData)) {
           setProducts(prodData)
         }
-      } catch (err) {
-        console.warn("Failed to fetch products from database, using defaults:", err)
+      } else {
+        console.warn('Failed to fetch products from database, using defaults:', prodsResult.reason ?? 'Unknown error')
       }
-
     } catch (error) {
-      console.error("Error connecting to database:", error)
-      toast.error("Telemetry pipeline offline - using localized backup")
+      console.error('Error connecting to database:', error)
+      toast.error('Telemetry pipeline offline - using localized backup')
     } finally {
       setIsLoading(false)
     }

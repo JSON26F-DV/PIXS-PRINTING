@@ -262,15 +262,21 @@ const Payroll: React.FC = () => {
           hours_worked: emp.hours_worked !== undefined ? emp.hours_worked : (emp.status_today === 'full' ? 8 : (emp.status_today === 'half' ? 4 : 0)),
         }
 
-        await axiosInstance.post(`/api/admin/payroll/manage/${emp.id}`, payload)
+        const operations = [
+          axiosInstance.post(`/api/admin/payroll/manage/${emp.id}`, payload),
+        ]
 
         if (emp.total_earnings > 0) {
-          await axiosInstance.post('/api/admin/expenditures', {
-            category: 'Employee Salaries',
-            amount: emp.total_earnings,
-            description: `Salary for ${emp.name} on ${todayStr}`,
-          })
+          operations.push(
+            axiosInstance.post('/api/admin/expenditures', {
+              category: 'Employee Salaries',
+              amount: emp.total_earnings,
+              description: `Salary for ${emp.name} on ${todayStr}`,
+            }),
+          )
         }
+
+        await Promise.all(operations)
       }))
 
       toast.success(`Successfully processed payouts for all ${unpaidEmployees.length} employees today!`)

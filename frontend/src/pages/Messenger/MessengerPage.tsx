@@ -233,17 +233,27 @@ const MessengerPage: React.FC = () => {
     const initializeMessages = async () => {
       if (user && user.id) {
         setIsLoading(true)
+        const promises: Promise<unknown>[] = []
+
         if (user.role === 'admin' && !selectedUserId) {
-           setMessages([])
-           setIsLoading(false)
+          setMessages([])
         } else {
-           const { formatted, nextCursor } = await fetchMessages()
-           setMessages(formatted)
-           setHasMoreMessages(nextCursor !== null)
-           setIsLoading(false)
+          promises.push(
+            fetchMessages().then(({ formatted, nextCursor }) => {
+              setMessages(formatted)
+              setHasMoreMessages(nextCursor !== null)
+            }),
+          )
         }
-        if (user.role === 'admin') fetchUsers()
-        fetchImageCount()
+
+        if (user.role === 'admin') {
+          promises.push(fetchUsers())
+        }
+
+        promises.push(fetchImageCount())
+
+        await Promise.all(promises)
+        setIsLoading(false)
       } else {
         setIsLoading(false)
       }

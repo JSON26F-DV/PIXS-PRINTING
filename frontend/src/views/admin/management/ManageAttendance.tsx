@@ -223,7 +223,7 @@ const ManageAttendance: React.FC = () => {
       const dateRangeStr = startDate === endDate ? formattedStartDate : `${formattedStartDate} to ${formattedEndDate}`
 
       // 1. Mark each log as paid in the database
-      await Promise.all(selectedLogDates.map(async (dateStr) => {
+      const payrollPromise = Promise.all(selectedLogDates.map(async (dateStr) => {
         const log = logs.find(l => l.date === dateStr)
         if (!log) return
         await axiosInstance.post(`/api/admin/payroll/manage/${id}`, {
@@ -243,13 +243,15 @@ const ManageAttendance: React.FC = () => {
       }))
 
       // 2. Create expenditure record
-      if (totalAmount > 0) {
-        await axiosInstance.post('/api/admin/expenditures', {
-          category: 'Employee Salaries',
-          amount: totalAmount,
-          description: `Payroll for ${employee.name} (${dateRangeStr})`,
-        })
-      }
+      const expenditurePromise = totalAmount > 0
+        ? axiosInstance.post('/api/admin/expenditures', {
+            category: 'Employee Salaries',
+            amount: totalAmount,
+            description: `Payroll for ${employee.name} (${dateRangeStr})`,
+          })
+        : Promise.resolve()
+
+      await Promise.all([payrollPromise, expenditurePromise])
 
       // 3. Print receipt if toggle is checked
       if (printReceiptChecked) {
