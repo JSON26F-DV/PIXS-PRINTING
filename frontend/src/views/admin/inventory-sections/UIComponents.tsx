@@ -1,7 +1,7 @@
 import React from 'react'
 import { Plus, Upload, Trash2, Camera, AlertCircle } from 'lucide-react'
 import { type LucideIcon } from 'lucide-react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { m, AnimatePresence } from 'framer-motion'
 import { useDropzone } from 'react-dropzone'
 import type {
   FieldError,
@@ -331,14 +331,14 @@ export const ConfirmModal: React.FC<{
   <AnimatePresence>
     {isOpen && (
       <div className="fixed inset-0 z-[200] flex items-center justify-center p-6">
-        <motion.div
+        <m.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
           onClick={onClose}
         />
-        <motion.div
+        <m.div
           initial={{ scale: 0.95, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.95, opacity: 0 }}
@@ -367,7 +367,7 @@ export const ConfirmModal: React.FC<{
               Delete Forever
             </button>
           </div>
-        </motion.div>
+        </m.div>
       </div>
     )}
   </AnimatePresence>

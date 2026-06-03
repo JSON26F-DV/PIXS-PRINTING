@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { m, AnimatePresence } from 'framer-motion'
 import { X, Pin, Search, Trash2, Zap, LayoutGrid } from 'lucide-react'
 import type { IMessage } from '../MessengerPage'
 import { format } from 'date-fns'
@@ -70,14 +70,14 @@ const AdminControlModal: React.FC<AdminControlModalProps> = ({
     <AnimatePresence>
       {isOpen && (
         <div className="fixed inset-0 z-[9999] flex justify-end">
-          <motion.div
+          <m.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="absolute inset-0 bg-slate-900/20 backdrop-blur-sm"
             onClick={onClose}
           />
-          <motion.div
+          <m.div
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
@@ -228,7 +228,7 @@ const AdminControlModal: React.FC<AdminControlModalProps> = ({
                 <Trash2 size={14} /> Delete Entire Conversation
               </button>
             </div>
-          </motion.div>
+          </m.div>
         </div>
       )}
     </AnimatePresence>

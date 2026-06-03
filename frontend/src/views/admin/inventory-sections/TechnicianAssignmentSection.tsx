@@ -10,7 +10,7 @@ import {
   LayoutGrid,
   UserCircle,
 } from 'lucide-react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { m, AnimatePresence } from 'framer-motion'
 import toast from 'react-hot-toast'
 import axiosInstance from '../../../lib/axiosInstance'
 import type { IProduct } from './types'
@@ -69,7 +69,6 @@ export const TechnicianAssignmentSection: React.FC<
     let isMounted = true
     const fetchData = async () => {
       try {
-        setIsLoadingData(true)
         const [accountsRes, productsRes] = await Promise.all([
           axiosInstance.get('/api/admin/accounts'),
           axiosInstance.get('/api/admin/products')
@@ -386,7 +385,7 @@ export const TechnicianAssignmentSection: React.FC<
         <div className="xl:col-span-8">
           <AnimatePresence mode="wait">
             {selectedEmp ? (
-              <motion.div
+              <m.div
                 key={selectedEmp.id}
                 initial={{ opacity: 0, scale: 0.98 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -570,7 +569,7 @@ export const TechnicianAssignmentSection: React.FC<
                     </div>
                   </div>
                 </div>
-              </motion.div>
+              </m.div>
             ) : (
               <div className="flex h-full flex-col items-center justify-center space-y-6 rounded-[48px] border border-dashed border-slate-200 bg-white p-20 text-center">
                 <div className="flex h-24 w-24 animate-pulse items-center justify-center rounded-[32px] bg-slate-50 text-slate-300">

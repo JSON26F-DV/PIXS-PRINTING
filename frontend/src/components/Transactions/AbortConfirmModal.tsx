@@ -1,5 +1,5 @@
 import React from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { m, AnimatePresence } from 'framer-motion'
 import { AlertTriangle, X, Terminal, Power } from 'lucide-react'
 
 interface AbortConfirmModalProps {
@@ -18,7 +18,7 @@ const AbortConfirmModal: React.FC<AbortConfirmModalProps> = ({
       {isOpen && (
         <div className="AbortConfirmModal fixed inset-0 z-[100] flex items-center justify-center p-4">
           {/* Industrial Backdrop */}
-          <motion.div
+          <m.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -27,7 +27,7 @@ const AbortConfirmModal: React.FC<AbortConfirmModalProps> = ({
           />
 
           {/* Machine-Style Modal Container */}
-          <motion.div
+          <m.div
             initial={{ opacity: 0, y: 100, rotateX: 20 }}
             animate={{ opacity: 1, y: 0, rotateX: 0 }}
             exit={{ opacity: 0, y: 100, rotateX: 20 }}
@@ -142,7 +142,7 @@ const AbortConfirmModal: React.FC<AbortConfirmModalProps> = ({
                 <div className="h-1 w-2 rounded-full bg-slate-800" />
               </div>
             </div>
-          </motion.div>
+          </m.div>
         </div>
       )}
     </AnimatePresence>

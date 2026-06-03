@@ -62,7 +62,6 @@ const PayCode: React.FC = () => {
   // Fetch payment codes
   const fetchCodes = async () => {
     try {
-      setIsLoading(true)
       const response = await axiosInstance.get('/api/admin/payment-codes')
       setCodes(response.data)
     } catch (err) {

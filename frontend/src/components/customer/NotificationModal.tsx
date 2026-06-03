@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react'
 import { X, CheckCircle2, AlertCircle, Info, Check, Trash2 } from 'lucide-react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { m, AnimatePresence } from 'framer-motion'
 import { format } from 'date-fns'
 import { useNotificationStore } from '../../store/useNotificationStore'
 import { useScrollLock } from '../../hooks/useScrollLock'
@@ -41,7 +41,7 @@ const NotificationModal: React.FC<NotificationModalProps> = ({
   return (
     <AnimatePresence>
       {isOpen && (
-        <motion.div
+        <m.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -49,7 +49,7 @@ const NotificationModal: React.FC<NotificationModalProps> = ({
           onClick={safeClose}
           data-modal-open={isOpen}
         >
-          <motion.div
+          <m.div
             initial={{ x: '100%', opacity: 0, scale: 0.95 }}
             animate={{ x: 0, opacity: 1, scale: 1 }}
             exit={{ x: '100%', opacity: 0, scale: 0.95 }}
@@ -165,8 +165,8 @@ const NotificationModal: React.FC<NotificationModalProps> = ({
                 Mark All As Read
               </button>
             </div>
-          </motion.div>
-        </motion.div>
+          </m.div>
+        </m.div>
       )}
     </AnimatePresence>
   )

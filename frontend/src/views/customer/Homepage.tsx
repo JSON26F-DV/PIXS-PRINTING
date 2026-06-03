@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { motion, AnimatePresence } from 'framer-motion'
+import { m, AnimatePresence } from 'framer-motion'
 import {
   TrendingUp,
   Activity,
@@ -320,7 +320,7 @@ const Homepage: React.FC = () => {
               {/* Filter Bar */}
               <AnimatePresence>
                 {(showFilters || !isMobile) && (
-                  <motion.div
+                  <m.div
                     initial={isMobile ? { height: 0, opacity: 0 } : false}
                     animate={{ height: 'auto', opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
@@ -470,13 +470,13 @@ const Homepage: React.FC = () => {
                         }}
                       />
                     </div>
-                  </motion.div>
+                  </m.div>
                 )}
               </AnimatePresence>
             </div>
 
             <AnimatePresence mode="wait">
-              <motion.div
+              <m.div
                 key={`${filters.category}-${filters.priceSort}-${debouncedSearch}-${currentPage}-${itemsPerPage}`}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -499,7 +499,7 @@ const Homepage: React.FC = () => {
                     onChange={handlePageChange}
                   />
                 </div>
-              </motion.div>
+              </m.div>
             </AnimatePresence>
           </div>
         </section>

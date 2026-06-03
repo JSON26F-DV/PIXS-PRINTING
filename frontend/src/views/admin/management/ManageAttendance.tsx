@@ -98,9 +98,10 @@ const ManageAttendance: React.FC = () => {
   useEffect(() => {
     if (printableRecord && shouldTriggerPrint) {
       setShouldTriggerPrint(false)
-      setTimeout(() => {
+      const timerId = setTimeout(() => {
         handlePrint()
       }, 150)
+      return () => clearTimeout(timerId)
     }
   }, [printableRecord, shouldTriggerPrint, handlePrint])
 

@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { Plus, Edit, Trash2, ChevronRight, LayoutGrid, Upload, Camera, X, CheckCircle } from 'lucide-react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { m, AnimatePresence } from 'framer-motion'
 import Cropper, { type Area } from 'react-easy-crop'
 import type { ICategory, IProduct } from './types'
 import { InputField, ConfirmModal } from './UIComponents'
@@ -205,14 +205,14 @@ export const CategoriesSection: React.FC<CategoriesSectionProps> = ({
       <AnimatePresence>
         {editingCategory && (
           <div className="fixed inset-0 z-[120] flex items-center justify-center p-6">
-            <motion.div
+            <m.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
               onClick={() => setEditingCategory(null)}
             />
-            <motion.div
+            <m.div
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
@@ -285,14 +285,14 @@ export const CategoriesSection: React.FC<CategoriesSectionProps> = ({
                   Save Changes
                 </button>
               </div>
-            </motion.div>
+            </m.div>
           </div>
         )}
 
         {/* Cropping Modal */}
         {isCropping && tempImage && (
           <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/90 backdrop-blur-xl">
-            <motion.div
+            <m.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
@@ -359,7 +359,7 @@ export const CategoriesSection: React.FC<CategoriesSectionProps> = ({
                   </button>
                 </div>
               </div>
-            </motion.div>
+            </m.div>
           </div>
         )}
       </AnimatePresence>

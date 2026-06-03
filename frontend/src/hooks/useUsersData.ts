@@ -24,7 +24,6 @@ export function useUsersData(): UseUsersDataReturn {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        setIsLoading(true)
         setError(null)
 
         // Admin endpoint to fetch all users/customers

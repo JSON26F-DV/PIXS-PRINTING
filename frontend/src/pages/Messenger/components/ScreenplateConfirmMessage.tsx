@@ -133,7 +133,7 @@ const ScreenplateConfirmMessage: React.FC<ScreenplateConfirmMessageProps> = ({ r
             </div>
             <h3 className="text-xl font-black italic uppercase leading-none">Setup Offline</h3>
           </div>
-          <div className="h-10 w-10 rounded-2xl bg-rose-500/10 flex items-center justify-center border border-rose-500/20">
+          <div className="size-10 rounded-2xl bg-rose-500/10 flex items-center justify-center border border-rose-500/20">
             <XCircle size={18} className="text-rose-500" />
           </div>
         </div>
@@ -179,9 +179,9 @@ const ScreenplateConfirmMessage: React.FC<ScreenplateConfirmMessageProps> = ({ r
       <div className="px-6 py-4 bg-white/5 border-b border-white/10">
         <p className="text-[9px] font-black uppercase text-pixs-mint tracking-[2px] mb-3">screenplate for :</p>
         <div className="flex gap-4 items-center">
-            <div className="h-16 w-16 rounded-xl bg-white border border-white/10 p-1 shrink-0">
+            <div className="size-16 rounded-xl bg-white border border-white/10 p-1 shrink-0">
                 {request.product?.main_image ? (
-                    <img src={`/images/products/${request.product.main_image}`} className="w-full h-full object-cover rounded-lg" />
+                    <img src={`/images/products/${request.product.main_image}`} alt={request.product?.name || 'Product'} className="w-full h-full object-cover rounded-lg" />
                 ) : (
                     <div className="w-full h-full flex items-center justify-center bg-slate-900 rounded-lg">
                         <Layers size={20} className="text-pixs-mint" />
@@ -211,6 +211,7 @@ const ScreenplateConfirmMessage: React.FC<ScreenplateConfirmMessageProps> = ({ r
             >
                 <img 
                     src={request.reference_image?.startsWith('data:') ? request.reference_image : `/images/screenplate_request/${request.reference_image}`} 
+                    alt="Screenplate reference design"
                     onError={() => setRefImageError(true)}
                     className="w-full h-full object-cover transition-transform group-hover:scale-105" 
                 />
@@ -220,7 +221,7 @@ const ScreenplateConfirmMessage: React.FC<ScreenplateConfirmMessageProps> = ({ r
             </div>
         ) : (
             <div className="h-52 w-full rounded-2xl overflow-hidden border border-white/10">
-                <BoxFallback className="flex h-full w-full items-center justify-center bg-white/5" iconClassName="h-10 w-10 opacity-20" />
+                <BoxFallback className="flex h-full w-full items-center justify-center bg-white/5" iconClassName="size-10 opacity-20" />
             </div>
         )}
       </div>

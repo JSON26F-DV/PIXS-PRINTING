@@ -12,7 +12,7 @@ import {
   RefreshCw, 
   Loader2 
 } from 'lucide-react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { m, AnimatePresence } from 'framer-motion'
 import toast, { Toaster } from 'react-hot-toast'
 import axiosInstance from '../../../lib/axiosInstance'
 import type { IProduct, IVariant } from '../inventory-sections/types'
@@ -377,7 +377,7 @@ export default function ManageStock() {
         {mobileSelectedVariant && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             {/* Backdrop */}
-            <motion.div
+            <m.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -385,7 +385,7 @@ export default function ManageStock() {
               onClick={() => setMobileSelectedVariant(null)}
             />
             {/* Modal Box */}
-            <motion.div
+            <m.div
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
@@ -455,7 +455,7 @@ export default function ManageStock() {
                   <Minus size={14} /> Reduce Stock
                 </button>
               </div>
-            </motion.div>
+            </m.div>
           </div>
         )}
       </AnimatePresence>
@@ -465,7 +465,7 @@ export default function ManageStock() {
         {isDrawerOpen && selectedVariant && (
           <div className="fixed inset-0 z-50 overflow-hidden">
             {/* Backdrop */}
-            <motion.div
+            <m.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -475,7 +475,7 @@ export default function ManageStock() {
 
             {/* Panel */}
             <div className="absolute inset-y-0 right-0 flex max-w-full pl-10">
-              <motion.div
+              <m.div
                 initial={{ x: '100%' }}
                 animate={{ x: 0 }}
                 exit={{ x: '100%' }}
@@ -563,7 +563,7 @@ export default function ManageStock() {
 
                     {/* Dynamic Expenditure Calculation Card (Only for Add Action) */}
                     {actionType === 'add' && (
-                      <motion.div
+                      <m.div
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         className="rounded-2xl border border-emerald-100 bg-emerald-50/20 p-5 space-y-3"
@@ -583,7 +583,7 @@ export default function ManageStock() {
                         <p className="text-[10px] text-slate-400 font-medium leading-normal italic">
                           *This amount will be registered under your business expenditures trail.
                         </p>
-                      </motion.div>
+                      </m.div>
                     )}
                   </div>
 
@@ -611,7 +611,7 @@ export default function ManageStock() {
                     </button>
                   </div>
                 </form>
-              </motion.div>
+              </m.div>
             </div>
           </div>
         )}

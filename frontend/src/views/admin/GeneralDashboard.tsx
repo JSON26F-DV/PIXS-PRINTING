@@ -26,6 +26,8 @@ import {
   Filter,
   ArrowUpDown,
   TrendingDown,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react'
 import StatCard from '../../components/StatCard'
 import { useAuth } from '../../context/AuthContext'
@@ -69,6 +71,9 @@ interface DataPoint {
   [key: string]: string | number
 }
 
+const PENDING_PAGE_SIZE = 10
+const LOYALIST_PAGE_SIZE = 5
+
 const GeneralDashboard: React.FC = () => {
   const { user } = useAuth()
   const [queueSearch, setQueueSearch] = useState('')
@@ -78,6 +83,8 @@ const GeneralDashboard: React.FC = () => {
   const [revenueFilter, setRevenueFilter] = useState<FilterType>('week')
   const [expenditureFilter, setExpenditureFilter] = useState<FilterType>('week')
   const [loyaltyFilter, setLoyaltyFilter] = useState<number>(10)
+  const [pendingPage, setPendingPage] = useState(1)
+  const [loyalistPage, setLoyalistPage] = useState(1)
 
   const [data, setData] = useState<DashboardData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -106,6 +113,10 @@ const GeneralDashboard: React.FC = () => {
       controller.abort()
     }
   }, [])
+
+  useEffect(() => {
+    setPendingPage(1)
+  }, [queueSearch, queueSort])
 
   const handleStatusUpdate = async (id: string, status: string) => {
     try {
@@ -244,6 +255,38 @@ const GeneralDashboard: React.FC = () => {
       })
   }, [data, queueSearch, queueSort])
 
+  const totalPendingPages = useMemo(() => {
+    return Math.max(1, Math.ceil(pendingQueue.length / PENDING_PAGE_SIZE))
+  }, [pendingQueue])
+
+  const safePendingPage = useMemo(() => {
+    return Math.min(pendingPage, totalPendingPages)
+  }, [pendingPage, totalPendingPages])
+
+  const paginatedPendingQueue = useMemo(() => {
+    return pendingQueue.slice(
+      (safePendingPage - 1) * PENDING_PAGE_SIZE,
+      safePendingPage * PENDING_PAGE_SIZE,
+    )
+  }, [pendingQueue, safePendingPage])
+
+  const totalLoyalistPages = useMemo(() => {
+    if (!data?.topLoyalists) return 1
+    return Math.max(1, Math.ceil(data.topLoyalists.length / LOYALIST_PAGE_SIZE))
+  }, [data?.topLoyalists])
+
+  const safeLoyalistPage = useMemo(() => {
+    return Math.min(loyalistPage, totalLoyalistPages)
+  }, [loyalistPage, totalLoyalistPages])
+
+  const paginatedLoyalists = useMemo(() => {
+    if (!data?.topLoyalists) return []
+    return data.topLoyalists.slice(
+      (safeLoyalistPage - 1) * LOYALIST_PAGE_SIZE,
+      safeLoyalistPage * LOYALIST_PAGE_SIZE,
+    )
+  }, [data?.topLoyalists, safeLoyalistPage])
+
   if (isLoading || !data) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -263,23 +306,30 @@ const GeneralDashboard: React.FC = () => {
         </p>
       </header>
 
-      <section className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          title="Total Revenue"
-          value={data.totalRevenue}
-          prefix="₱"
-          trend={12}
-          icon={TrendingUp}
-          variant="dark"
-        />
-        <StatCard
-          title="Total Expenditure"
-          value={data.totalExpenditure}
-          prefix="₱"
-          trend={-8}
-          icon={TrendingDown}
-          variant="light"
-        />
+      <section className={cn(
+        "grid grid-cols-1 gap-6 md:grid-cols-2",
+        user?.role === 'admin' ? "lg:grid-cols-4" : "lg:grid-cols-2"
+      )}>
+        {user?.role === 'admin' && (
+          <>
+            <StatCard
+              title="Total Revenue"
+              value={data.totalRevenue}
+              prefix="₱"
+              trend={12}
+              icon={TrendingUp}
+              variant="dark"
+            />
+            <StatCard
+              title="Total Expenditure"
+              value={data.totalExpenditure}
+              prefix="₱"
+              trend={-8}
+              icon={TrendingDown}
+              variant="light"
+            />
+          </>
+        )}
         <StatCard
           title="Active Orders"
           value={data.totalOrders}
@@ -297,187 +347,185 @@ const GeneralDashboard: React.FC = () => {
 
       <div className="grid min-h-[800px] grid-cols-1 gap-6 lg:grid-cols-12 lg:gap-8">
         <div className="flex flex-col gap-6 lg:col-span-8 lg:gap-8">
-          {/* Revenue Stream Section */}
-          <div className="flex flex-col rounded-[32px] border border-slate-100 bg-white p-8 shadow-lg shadow-slate-200/50">
-            <div className="mb-8 flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-bold text-slate-900">
-                  Revenue Stream Analysis
-                </h3>
-                <p className="mt-1 text-[10px] font-black tracking-[2px] text-blue-500 uppercase">
-                  Cash Inflow Matrix
-                </p>
-              </div>
-              <div className="flex gap-1 rounded-xl border border-slate-100 bg-slate-50 p-1">
-                {(['week', 'month', 'year'] as const).map((f) => (
-                  <button
-                    key={f}
-                    onClick={() => setRevenueFilter(f)}
-                    className={cn(
-                      'rounded-lg px-4 py-2 text-[10px] font-black tracking-widest uppercase transition-all',
-                      revenueFilter === f
-                        ? 'bg-slate-900 text-white shadow-lg'
-                        : 'text-slate-400 hover:text-slate-900',
-                    )}
-                  >
-                    {f}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="h-[320px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart
-                  data={revenueChartData}
-                  margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
-                >
-                  <defs>
-                    <linearGradient
-                      id="colorRevenue"
-                      x1="0"
-                      y1="0"
-                      x2="0"
-                      y2="1"
+          {user?.role === 'admin' && (
+            <>
+              {/* Revenue Stream Section */}
+              <div className="flex flex-col rounded-[32px] border border-slate-100 bg-white p-8 shadow-lg shadow-slate-200/50">
+                <div className="mb-8 flex items-center justify-between">
+                  <div>
+                    <h3 className="text-lg font-bold text-slate-900">
+                      Revenue Stream Analysis
+                    </h3>
+                    <p className="mt-1 text-[10px] font-black tracking-[2px] text-blue-500 uppercase">
+                      Cash Inflow Matrix
+                    </p>
+                  </div>
+                  <div className="flex gap-1 rounded-xl border border-slate-100 bg-slate-50 p-1">
+                    {(['week', 'month', 'year'] as const).map((f) => (
+                      <button
+                        key={f}
+                        onClick={() => setRevenueFilter(f)}
+                        className={cn(
+                          'rounded-lg px-4 py-2 text-[10px] font-black tracking-widest uppercase transition-all',
+                          revenueFilter === f
+                            ? 'bg-slate-900 text-white shadow-lg'
+                            : 'text-slate-400 hover:text-slate-900',
+                        )}
+                      >
+                        {f}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="h-[320px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart
+                      data={revenueChartData}
+                      margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
                     >
-                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.2} />
-                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    vertical={false}
-                    stroke="#f1f5f9"
-                  />
-                  <XAxis
-                    dataKey="name"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 10, fill: '#64748b', fontWeight: 800 }}
-                  />
-                  <YAxis
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 10, fill: '#64748b', fontWeight: 800 }}
-                    tickFormatter={(value) => `₱${value}`}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      border: 'none',
-                      borderRadius: '12px',
-                      fontSize: '12px',
-                      fontWeight: 'bold',
-                      boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
-                    }}
-                    cursor={{
-                      stroke: '#3b82f6',
-                      strokeWidth: 1,
-                      strokeDasharray: '3 3',
-                    }}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="value"
-                    stroke="#3b82f6"
-                    strokeWidth={4}
-                    fillOpacity={1}
-                    fill="url(#colorRevenue)"
-                    isAnimationActive={false}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
+                      <defs>
+                        <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#1e293b" stopOpacity={0.2} />
+                          <stop offset="95%" stopColor="#1e293b" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        vertical={false}
+                        stroke="#f1f5f9"
+                      />
+                      <XAxis
+                        dataKey="name"
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fontSize: 10, fill: '#64748b', fontWeight: 800 }}
+                      />
+                      <YAxis
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fontSize: 10, fill: '#64748b', fontWeight: 800 }}
+                        tickFormatter={(value) => `₱${value}`}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          border: 'none',
+                          borderRadius: '12px',
+                          fontSize: '12px',
+                          fontWeight: 'bold',
+                          boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
+                        }}
+                        cursor={{
+                          stroke: '#0f172a',
+                          strokeWidth: 1,
+                          strokeDasharray: '3 3',
+                        }}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="value"
+                        stroke="#0f172a"
+                        strokeWidth={4}
+                        fillOpacity={1}
+                        fill="url(#colorRevenue)"
+                        isAnimationActive={false}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
 
-          {/* Expenditure Section */}
-          <div className="flex flex-col rounded-[32px] border border-slate-100 bg-white p-8 shadow-lg shadow-slate-200/50">
-            <div className="mb-8 flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-bold text-slate-900">
-                  Expenditure Analysis
-                </h3>
-                <p className="mt-1 text-[10px] font-black tracking-[2px] text-rose-500 uppercase">
-                  Operational Outflow Matrix
-                </p>
-              </div>
-              <div className="flex gap-1 rounded-xl border border-slate-100 bg-slate-50 p-1">
-                {(['week', 'month', 'year'] as const).map((f) => (
-                  <button
-                    key={f}
-                    onClick={() => setExpenditureFilter(f)}
-                    className={cn(
-                      'rounded-lg px-4 py-2 text-[10px] font-black tracking-widest uppercase transition-all',
-                      expenditureFilter === f
-                        ? 'bg-rose-600 text-white shadow-lg'
-                        : 'text-slate-400 hover:text-slate-900',
-                    )}
-                  >
-                    {f}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="h-[320px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart
-                  data={expenditureChartData}
-                  margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
-                >
-                  <defs>
-                    <linearGradient
-                      id="colorExpenditure"
-                      x1="0"
-                      y1="0"
-                      x2="0"
-                      y2="1"
+              {/* Expenditure Section */}
+              <div className="flex flex-col rounded-[32px] border border-slate-100 bg-white p-8 shadow-lg shadow-slate-200/50">
+                <div className="mb-8 flex items-center justify-between">
+                  <div>
+                    <h3 className="text-lg font-bold text-slate-900">
+                      Expenditure Analysis
+                    </h3>
+                    <p className="mt-1 text-[10px] font-black tracking-[2px] text-rose-500 uppercase">
+                      Operational Outflow Matrix
+                    </p>
+                  </div>
+                  <div className="flex gap-1 rounded-xl border border-slate-100 bg-slate-50 p-1">
+                    {(['week', 'month', 'year'] as const).map((f) => (
+                      <button
+                        key={f}
+                        onClick={() => setExpenditureFilter(f)}
+                        className={cn(
+                          'rounded-lg px-4 py-2 text-[10px] font-black tracking-widest uppercase transition-all',
+                          expenditureFilter === f
+                            ? 'bg-rose-600 text-white shadow-lg'
+                            : 'text-slate-400 hover:text-slate-900',
+                        )}
+                      >
+                        {f}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="h-[320px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart
+                      data={expenditureChartData}
+                      margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
                     >
-                      <stop offset="5%" stopColor="#e11d48" stopOpacity={0.2} />
-                      <stop offset="95%" stopColor="#e11d48" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    vertical={false}
-                    stroke="#f1f5f9"
-                  />
-                  <XAxis
-                    dataKey="name"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 10, fill: '#64748b', fontWeight: 800 }}
-                  />
-                  <YAxis
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 10, fill: '#64748b', fontWeight: 800 }}
-                    tickFormatter={(value) => `₱${value}`}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      border: 'none',
-                      borderRadius: '12px',
-                      fontSize: '12px',
-                      fontWeight: 'bold',
-                      boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
-                    }}
-                    cursor={{
-                      stroke: '#e11d48',
-                      strokeWidth: 1,
-                      strokeDasharray: '3 3',
-                    }}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="value"
-                    stroke="#e11d48"
-                    strokeWidth={4}
-                    fillOpacity={1}
-                    fill="url(#colorExpenditure)"
-                    isAnimationActive={false}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
+                      <defs>
+                        <linearGradient
+                          id="colorExpenditure"
+                          x1="0"
+                          y1="0"
+                          x2="0"
+                          y2="1"
+                        >
+                          <stop offset="5%" stopColor="#e11d48" stopOpacity={0.2} />
+                          <stop offset="95%" stopColor="#e11d48" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        vertical={false}
+                        stroke="#f1f5f9"
+                      />
+                      <XAxis
+                        dataKey="name"
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fontSize: 10, fill: '#64748b', fontWeight: 800 }}
+                      />
+                      <YAxis
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fontSize: 10, fill: '#64748b', fontWeight: 800 }}
+                        tickFormatter={(value) => `₱${value}`}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          border: 'none',
+                          borderRadius: '12px',
+                          fontSize: '12px',
+                          fontWeight: 'bold',
+                          boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
+                        }}
+                        cursor={{
+                          stroke: '#e11d48',
+                          strokeWidth: 1,
+                          strokeDasharray: '3 3',
+                        }}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="value"
+                        stroke="#e11d48"
+                        strokeWidth={4}
+                        fillOpacity={1}
+                        fill="url(#colorExpenditure)"
+                        isAnimationActive={false}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </>
+          )}
 
           <div className="relative flex h-[700px] flex-col overflow-hidden rounded-[32px] border border-slate-100 bg-white p-8 shadow-lg shadow-slate-200/50">
             <div className="pointer-events-none absolute top-0 right-0 p-8 opacity-[0.03]">
@@ -542,7 +590,7 @@ const GeneralDashboard: React.FC = () => {
             </div>
 
             <div className="custom-scrollbar relative z-10 flex-1 space-y-4 overflow-y-auto pr-2">
-              {pendingQueue.length === 0 ? (
+              {paginatedPendingQueue.length === 0 ? (
                 <div className="rounded-[24px] border border-dashed border-slate-100 bg-slate-50 py-24 text-center">
                   <CheckCircle2 className="mx-auto mb-3 h-12 w-12 text-slate-300" />
                   <p className="text-sm font-bold text-slate-400">
@@ -550,7 +598,7 @@ const GeneralDashboard: React.FC = () => {
                   </p>
                 </div>
               ) : (
-                pendingQueue.map((item) => (
+                paginatedPendingQueue.map((item) => (
                   <div
                     key={item.id}
                     className="flex flex-col justify-between gap-4 rounded-[20px] border border-slate-200 bg-white p-5 transition-all hover:border-blue-300 hover:shadow-md md:flex-row md:items-center"
@@ -625,6 +673,43 @@ const GeneralDashboard: React.FC = () => {
                   </div>
                 ))
               )}
+            </div>
+
+            {/* Pending operations pagination — Always visible */}
+            <div className="mt-6 flex items-center justify-between border-t border-slate-100 pt-4 relative z-10">
+              <span className="text-[10px] font-black tracking-widest text-slate-400 uppercase">
+                Page {safePendingPage} of {totalPendingPages}
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setPendingPage(Math.max(1, safePendingPage - 1))}
+                  disabled={safePendingPage <= 1}
+                  className="rounded-xl border border-slate-100 bg-slate-50 p-2 text-slate-400 transition-all hover:text-slate-900 disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  <ChevronLeft size={14} />
+                </button>
+                {Array.from({ length: totalPendingPages }, (_, i) => i + 1).map((page) => (
+                  <button
+                    key={page}
+                    onClick={() => setPendingPage(page)}
+                    className={cn(
+                      "min-w-[28px] rounded-lg px-2 py-1 text-[10px] font-black tracking-widest uppercase transition-all",
+                      safePendingPage === page
+                        ? "bg-slate-900 text-white shadow-lg"
+                        : "border border-slate-100 bg-slate-50 text-slate-400 hover:text-slate-900"
+                    )}
+                  >
+                    {page}
+                  </button>
+                ))}
+                <button
+                  onClick={() => setPendingPage(Math.min(totalPendingPages, safePendingPage + 1))}
+                  disabled={safePendingPage >= totalPendingPages}
+                  className="rounded-xl border border-slate-100 bg-slate-50 p-2 text-slate-400 transition-all hover:text-slate-900 disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  <ChevronRight size={14} />
+                </button>
+              </div>
             </div>
           </div>
 
@@ -784,45 +869,86 @@ const GeneralDashboard: React.FC = () => {
             </div>
 
             <div className="custom-scrollbar relative z-10 max-h-[440px] flex-1 space-y-4 overflow-y-auto pr-2">
-              {data.topLoyalists.map((user, idx) => (
-                <div
-                  key={user.name}
-                  className="group flex cursor-default flex-col justify-between gap-4 rounded-2xl border border-transparent p-4 transition-all hover:border-slate-800 hover:bg-white/5 sm:flex-row sm:items-center"
+              {paginatedLoyalists.map((user, idx) => {
+                const rankIndex = (safeLoyalistPage - 1) * LOYALIST_PAGE_SIZE + idx
+                const rank = rankIndex + 1
+                return (
+                  <div
+                    key={user.name}
+                    className="group flex cursor-default flex-col justify-between gap-4 rounded-2xl border border-transparent p-4 transition-all hover:border-slate-800 hover:bg-white/5 sm:flex-row sm:items-center"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div
+                        className={cn(
+                          'flex h-12 w-12 shrink-0 items-center justify-center rounded-[16px] text-lg font-black shadow-lg transition-transform group-hover:scale-110',
+                          rankIndex === 0
+                            ? 'bg-[#75EEA5] text-slate-900 shadow-[#75EEA5]/20'
+                            : rankIndex === 1
+                              ? 'bg-slate-100 text-slate-800'
+                              : rankIndex === 2
+                                ? 'bg-orange-100 text-orange-800'
+                                : 'bg-white/10 text-white/50',
+                        )}
+                      >
+                        {rank}
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold tracking-tight text-white">
+                          {user.name}
+                        </p>
+                        <p className="mt-1 text-[10px] font-bold tracking-widest text-slate-400 uppercase">
+                          {user.transactions} TOTAL ORDERS
+                        </p>
+                      </div>
+                    </div>
+                    <div className="px-16 sm:px-0 sm:text-right">
+                      <p className="mb-1 text-[11px] font-bold tracking-widest text-slate-500 uppercase sm:hidden">
+                        Spend
+                      </p>
+                      <p className="text-base font-black text-white">
+                        ₱{user.spent.toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* Loyalist Pagination — Always visible */}
+            <div className="mt-6 flex items-center justify-between border-t border-slate-850 pt-4 relative z-10">
+              <span className="text-[10px] font-black tracking-widest text-slate-500 uppercase">
+                Page {safeLoyalistPage} of {totalLoyalistPages}
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setLoyalistPage(Math.max(1, safeLoyalistPage - 1))}
+                  disabled={safeLoyalistPage <= 1}
+                  className="rounded-xl border border-slate-850 bg-white/5 p-2 text-slate-400 transition-all hover:text-white disabled:opacity-30 disabled:cursor-not-allowed"
                 >
-                  <div className="flex items-center gap-4">
-                    <div
-                      className={cn(
-                        'flex h-12 w-12 shrink-0 items-center justify-center rounded-[16px] text-lg font-black shadow-lg transition-transform group-hover:scale-110',
-                        idx === 0
-                          ? 'bg-[#75EEA5] text-slate-900 shadow-[#75EEA5]/20'
-                          : idx === 1
-                            ? 'bg-slate-100 text-slate-800'
-                            : idx === 2
-                              ? 'bg-orange-100 text-orange-800'
-                              : 'bg-white/10 text-white/50',
-                      )}
-                    >
-                      {idx + 1}
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold tracking-tight text-white">
-                        {user.name}
-                      </p>
-                      <p className="mt-1 text-[10px] font-bold tracking-widest text-slate-400 uppercase">
-                        {user.transactions} TOTAL ORDERS
-                      </p>
-                    </div>
-                  </div>
-                  <div className="px-16 sm:px-0 sm:text-right">
-                    <p className="mb-1 text-[11px] font-bold tracking-widest text-slate-500 uppercase sm:hidden">
-                      Spend
-                    </p>
-                    <p className="text-base font-black text-white">
-                      ₱{user.spent.toLocaleString()}
-                    </p>
-                  </div>
-                </div>
-              ))}
+                  <ChevronLeft size={14} />
+                </button>
+                {Array.from({ length: totalLoyalistPages }, (_, i) => i + 1).map((page) => (
+                  <button
+                    key={page}
+                    onClick={() => setLoyalistPage(page)}
+                    className={cn(
+                      "min-w-[28px] rounded-lg px-2 py-1 text-[10px] font-black tracking-widest uppercase transition-all",
+                      safeLoyalistPage === page
+                        ? "bg-[#75EEA5] text-slate-900 shadow-lg"
+                        : "border border-slate-850 bg-white/5 text-slate-400 hover:text-white"
+                    )}
+                  >
+                    {page}
+                  </button>
+                ))}
+                <button
+                  onClick={() => setLoyalistPage(Math.min(totalLoyalistPages, safeLoyalistPage + 1))}
+                  disabled={safeLoyalistPage >= totalLoyalistPages}
+                  className="rounded-xl border border-slate-850 bg-white/5 p-2 text-slate-400 transition-all hover:text-white disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  <ChevronRight size={14} />
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -864,7 +990,7 @@ const GeneralDashboard: React.FC = () => {
               </tr>
             </thead>
             <tbody className="text-sm">
-              {data.recentOrders.slice(0, 15).map((txn) => (
+              {data.recentOrders.slice(0, 10).map((txn) => (
                 <tr
                   key={txn.id}
                   className="border-b border-slate-50 transition-colors hover:bg-slate-50/80"

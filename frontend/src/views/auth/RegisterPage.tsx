@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import type { RegisterFormData } from '../../hooks/useAuth'
 import toast, { Toaster } from 'react-hot-toast'
-import { motion, AnimatePresence } from 'framer-motion'
+import { m, AnimatePresence } from 'framer-motion'
 import { clsx } from 'clsx'
 import AuthNavbar from '../../components/auth/AuthNavbar'
 import Footer from '../../components/Footer/Footer'
@@ -157,7 +157,7 @@ const RegisterPage: React.FC = () => {
               <div className="relative min-h-[240px]">
                 <AnimatePresence mode="wait" custom={1}>
                   {step === 1 && (
-                    <motion.div
+                    <m.div
                       key="step1"
                       custom={1}
                       variants={variants}
@@ -191,11 +191,11 @@ const RegisterPage: React.FC = () => {
                           onChange={handleChange}
                         />
                       </div>
-                    </motion.div>
+                    </m.div>
                   )}
 
                   {step === 2 && (
-                    <motion.div
+                    <m.div
                       key="step2"
                       custom={1}
                       variants={variants}
@@ -254,11 +254,11 @@ const RegisterPage: React.FC = () => {
                           </select>
                         </div>
                       </div>
-                    </motion.div>
+                    </m.div>
                   )}
 
                   {step === 3 && (
-                    <motion.div
+                    <m.div
                       key="step3"
                       custom={1}
                       variants={variants}
@@ -291,7 +291,7 @@ const RegisterPage: React.FC = () => {
                           onChange={handleChange}
                         />
                       </div>
-                    </motion.div>
+                    </m.div>
                   )}
                 </AnimatePresence>
               </div>

@@ -7,7 +7,7 @@ import {
   Package,
   ShieldCheck,
 } from 'lucide-react'
-import { motion } from 'framer-motion'
+import { m } from 'framer-motion'
 
 const OrderSuccess: React.FC = () => {
   const { orderId } = useParams<{ orderId: string }>()
@@ -21,14 +21,14 @@ const OrderSuccess: React.FC = () => {
         <div className="absolute bottom-0 left-0 -mb-32 -ml-32 h-80 w-80 rounded-full bg-slate-100 blur-[80px]" />
 
         <div className="relative z-10 flex flex-col items-center space-y-10 text-center">
-          <motion.div
+          <m.div
             initial={{ scale: 0.5, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ type: 'spring', stiffness: 260, damping: 20 }}
             className="text-pixs-mint flex h-24 w-24 items-center justify-center rounded-[32px] bg-slate-900 shadow-2xl"
           >
             <CheckCircle size={48} strokeWidth={2.5} />
-          </motion.div>
+          </m.div>
 
           <div className="space-y-4">
             <h1 className="text-4xl leading-none font-black tracking-tighter text-slate-900 uppercase italic lg:text-6xl">

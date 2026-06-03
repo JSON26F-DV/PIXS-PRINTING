@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { m, AnimatePresence } from 'framer-motion'
 import {
   Paperclip,
   Image as ImageIcon,
@@ -41,12 +41,11 @@ const MessageInput: React.FC<MessageInputProps> = ({
   const [text, setText] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
   const imageInputRef = useRef<HTMLInputElement>(null)
-  const [isMobile, setIsMobile] = useState(false)
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768)
 
   // Handle responsive placeholder
   React.useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768)
-    checkMobile()
     window.addEventListener('resize', checkMobile)
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
@@ -159,14 +158,14 @@ const MessageInput: React.FC<MessageInputProps> = ({
       {/* ─── Alert Modal ─── */}
       <AnimatePresence>
         {alertModal.open && (
-          <motion.div
+          <m.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4"
             onClick={() => setAlertModal({ ...alertModal, open: false })}
           >
-            <motion.div
+            <m.div
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
@@ -194,15 +193,15 @@ const MessageInput: React.FC<MessageInputProps> = ({
                   Got it
                 </button>
               </div>
-            </motion.div>
-          </motion.div>
+            </m.div>
+          </m.div>
         )}
       </AnimatePresence>
 
       {/* Reply Context Node */}
       <AnimatePresence>
         {activeReplyTo && (
-          <motion.div
+          <m.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
@@ -229,7 +228,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
                 <X size={16} />
               </button>
             </div>
-          </motion.div>
+          </m.div>
         )}
       </AnimatePresence>
 
@@ -293,7 +292,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
             disabled={!text.trim()}
             className="group flex h-14 w-12 items-center justify-center transition-all active:scale-90 disabled:opacity-30 disabled:grayscale"
           >
-            <motion.div
+            <m.div
               whileHover={text.trim() ? { rotateX: 30, rotateY: -15, rotateZ: 10, scale: 1.1 } : {}}
               transition={{ type: 'spring', stiffness: 400, damping: 17 }}
             >
@@ -303,7 +302,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
                 style={{ color: text.trim() ? '#75eea5' : '#cbd5e1' }}
                 className="drop-shadow-sm"
               />
-            </motion.div>
+            </m.div>
           </button>
         </form>
       </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { STORAGE_KEYS } from '../constants/storageKeys'
 import { toast } from 'react-hot-toast'
 import type { IProduct } from '../types/product.types'
@@ -34,53 +34,65 @@ export interface IInventoryLog {
   }
 }
 
-export function useStockAnalytics() {
-  const [products, setProducts] = useState<IProduct[]>([])
-  const [expenditures, setExpenditures] = useState<IExpenditure[]>([])
-  const [inventoryLogs, setInventoryLogs] = useState<IInventoryLog[]>([])
-  const [isLoading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+interface StockAnalyticsData {
+  products: IProduct[]
+  expenditures: IExpenditure[]
+  inventoryLogs: IInventoryLog[]
+}
 
-  const fetchAnalytics = async (controller?: AbortController) => {
-    try {
-      const token = localStorage.getItem(STORAGE_KEYS.TOKEN)
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/stock-analytics`, {
-        signal: controller?.signal,
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token && { Authorization: `Bearer ${token}` }),
-        },
-      })
+async function fetchStockAnalytics({ signal }: { signal?: AbortSignal }): Promise<StockAnalyticsData> {
+  const token = localStorage.getItem(STORAGE_KEYS.TOKEN)
+  const res = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/stock-analytics`, {
+    signal,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token && { Authorization: `Bearer ${token}` }),
+    },
+  })
 
-      if (res.status === 401) {
-        localStorage.removeItem(STORAGE_KEYS.TOKEN)
-        window.location.href = '/login'
-        return
-      }
-
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-
-      const json = await res.json()
-      setProducts(json.data?.products || [])
-      setExpenditures(json.data?.expenditures || [])
-      setInventoryLogs(json.data?.inventory_logs || [])
-    } catch (err) {
-      if ((err as Error).name === 'AbortError') return
-      setError('Failed to load stock analytics')
-      console.error(err)
-    } finally {
-      setLoading(false)
-    }
+  if (res.status === 401) {
+    localStorage.removeItem(STORAGE_KEYS.TOKEN)
+    window.location.href = '/login'
+    throw new Error('Unauthorized')
   }
 
-  useEffect(() => {
-    const controller = new AbortController()
-    setLoading(true)
-    fetchAnalytics(controller)
-    return () => controller.abort()
-  }, [])
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
 
-  const addExpenditure = async (data: Partial<IExpenditure>) => {
+  const json = await res.json()
+  return {
+    products: json.data?.products || [],
+    expenditures: json.data?.expenditures || [],
+    inventoryLogs: json.data?.inventory_logs || [],
+  }
+}
+
+export function useStockAnalytics() {
+  const queryClient = useQueryClient()
+
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['stock-analytics'],
+    queryFn: fetchStockAnalytics,
+  })
+
+  const products = data?.products ?? []
+  const expenditures = data?.expenditures ?? []
+  const inventoryLogs = data?.inventoryLogs ?? []
+
+  const refetch = () => {
+    queryClient.invalidateQueries({ queryKey: ['stock-analytics'] })
+  }
+
+  const setProducts = (valueOrFn: IProduct[] | ((prev: IProduct[]) => IProduct[])) => {
+    queryClient.setQueryData<StockAnalyticsData>(['stock-analytics'], (prev) => {
+      if (!prev) return prev
+      const nextProducts = typeof valueOrFn === 'function'
+        ? (valueOrFn as (prev: IProduct[]) => IProduct[])(prev.products)
+        : valueOrFn
+      return { ...prev, products: nextProducts }
+    })
+  }
+
+  const addExpenditure = async (payload: Partial<IExpenditure>) => {
     try {
       const token = localStorage.getItem(STORAGE_KEYS.TOKEN)
       const res = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/expenditures`, {
@@ -89,19 +101,18 @@ export function useStockAnalytics() {
           'Content-Type': 'application/json',
           ...(token && { Authorization: `Bearer ${token}` }),
         },
-        body: JSON.stringify(data),
+        body: JSON.stringify(payload),
       })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const json = await res.json()
       toast.success('Expenditure logged')
-      setExpenditures([json.data, ...expenditures])
+      refetch()
     } catch (err) {
       toast.error('Failed to log expenditure')
       console.error(err)
     }
   }
 
-  const updateExpenditure = async (id: number, data: Partial<IExpenditure>) => {
+  const updateExpenditure = async (id: number, payload: Partial<IExpenditure>) => {
     try {
       const token = localStorage.getItem(STORAGE_KEYS.TOKEN)
       const res = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/expenditures/${id}`, {
@@ -110,12 +121,11 @@ export function useStockAnalytics() {
           'Content-Type': 'application/json',
           ...(token && { Authorization: `Bearer ${token}` }),
         },
-        body: JSON.stringify(data),
+        body: JSON.stringify(payload),
       })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const json = await res.json()
       toast.success('Expenditure updated')
-      setExpenditures(expenditures.map(e => e.id === id ? json.data : e))
+      refetch()
     } catch (err) {
       toast.error('Failed to update expenditure')
       console.error(err)
@@ -134,7 +144,7 @@ export function useStockAnalytics() {
       })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       toast.success('Expenditure deleted')
-      setExpenditures(expenditures.filter(e => e.id !== id))
+      refetch()
     } catch (err) {
       toast.error('Failed to delete expenditure')
       console.error(err)
@@ -154,7 +164,7 @@ export function useStockAnalytics() {
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const json = await res.json()
       toast.success(json.message || 'Log adjustment successfully reverted')
-      fetchAnalytics()
+      refetch()
     } catch (err) {
       toast.error('Failed to undo log adjustment')
       console.error(err)
@@ -167,11 +177,11 @@ export function useStockAnalytics() {
     expenditures,
     inventoryLogs,
     isLoading,
-    error,
+    error: error instanceof Error ? error.message : null,
     addExpenditure,
     updateExpenditure,
     deleteExpenditure,
     undoInventoryLog,
-    refetch: fetchAnalytics,
+    refetch,
   }
 }

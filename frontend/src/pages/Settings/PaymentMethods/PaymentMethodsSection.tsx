@@ -12,7 +12,7 @@ import {
   FiX,
   FiEdit2
 } from 'react-icons/fi';
-import { motion, AnimatePresence } from 'framer-motion';
+import { m, AnimatePresence } from 'framer-motion';
 import { clsx } from 'clsx';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -67,7 +67,7 @@ const PaymentMethodCard: React.FC<{
   const Icon = BRAND_ICONS[method.provider || method.bank_name || ''] || (method.type === 'bank' ? FiBriefcase : FiCreditCard);
 
   return (
-    <motion.div
+    <m.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, x: -20 }}
@@ -150,7 +150,7 @@ const PaymentMethodCard: React.FC<{
           </button>
         </div>
       </div>
-    </motion.div>
+    </m.div>
   );
 };
 
@@ -284,7 +284,7 @@ const PaymentMethodsSection: React.FC = () => {
       {/* ── Add/Edit Form ── */}
       <AnimatePresence mode="wait">
         {isAdding && (
-          <motion.div
+          <m.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
@@ -384,7 +384,7 @@ const PaymentMethodsSection: React.FC = () => {
                     </button>
                 </div>
             </form>
-          </motion.div>
+          </m.div>
         )}
       </AnimatePresence>
 
@@ -409,14 +409,14 @@ const PaymentMethodsSection: React.FC = () => {
           </AnimatePresence>
 
           {methods.length === 0 && !isLoading && (
-            <motion.div 
+            <m.div 
                initial={{ opacity: 0 }}
                animate={{ opacity: 1 }}
                className="flex flex-col items-center justify-center py-24 border-2 border-dashed border-slate-100 rounded-[48px] bg-slate-50/50"
             >
                 <FiCreditCard size={48} className="text-slate-100 mb-6" />
                 <p className="text-sm font-black uppercase tracking-[5px] text-slate-300 italic">No Payment Methods Found</p>
-            </motion.div>
+            </m.div>
           )}
         </div>
       </div>
@@ -442,14 +442,14 @@ const PaymentMethodsSection: React.FC = () => {
       <AnimatePresence>
         {confirmDelete && (
           <>
-            <motion.div 
+            <m.div 
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[500]"
                 onClick={() => setConfirmDelete(null)}
             />
-            <motion.div 
+            <m.div 
                 initial={{ opacity: 0, scale: 0.9, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.9, y: 20 }}
@@ -478,7 +478,7 @@ const PaymentMethodsSection: React.FC = () => {
                         </button>
                     </div>
                 </div>
-            </motion.div>
+            </m.div>
           </>
         )}
       </AnimatePresence>

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { m, AnimatePresence } from 'framer-motion'
 import { Eye, EyeOff, Search, ChevronDown } from 'lucide-react'
 import type { IProduct, IVariant } from './types'
 import { updateProductScreenplateVisibility, updateVariantScreenplateVisibility } from '../../../api/admin-screenplates.api'
@@ -47,8 +47,6 @@ export function ScreenplateVisibilitySection({
   }
 
   const filteredProducts = products.filter(p => {
-    if (!p.is_need_screenplate) return false
-
     const q = searchQuery.trim().toLowerCase()
     if (!q) return true
     return (
@@ -125,7 +123,7 @@ export function ScreenplateVisibilitySection({
 
               <AnimatePresence>
                 {isExpanded && (
-                  <motion.div
+                  <m.div
                     initial={{ height: 0 }}
                     animate={{ height: 'auto' }}
                     exit={{ height: 0 }}
@@ -171,7 +169,7 @@ export function ScreenplateVisibilitySection({
                         })
                       )}
                     </div>
-                  </motion.div>
+                  </m.div>
                 )}
               </AnimatePresence>
             </div>

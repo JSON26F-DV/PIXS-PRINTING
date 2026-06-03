@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { X, ShieldCheck, Mail } from 'lucide-react'
 import { FaFacebookF } from 'react-icons/fa'
-import { motion, AnimatePresence } from 'framer-motion'
+import { m, AnimatePresence } from 'framer-motion'
 import { GoogleLogin } from '@react-oauth/google'
 import FacebookLogin from 'react-facebook-login/dist/facebook-login-render-props'
 import { Link } from 'react-router-dom'
@@ -20,14 +20,14 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
 
   return (
     <AnimatePresence>
-      <motion.div
+      <m.div
         key="login-modal-overlay"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         className="fixed inset-0 z-[1000] flex items-center justify-center bg-slate-900/60 p-6 backdrop-blur-md"
       >
-        <motion.div
+        <m.div
           initial={{ scale: 0.9, opacity: 0, y: 20 }}
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.9, opacity: 0, y: 20 }}
@@ -128,8 +128,8 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
               Forgot Access Credentials?
             </button>
           </div>
-        </motion.div>
-      </motion.div>
+        </m.div>
+      </m.div>
     </AnimatePresence>
   )
 }

@@ -177,6 +177,9 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->prefix('admin')->group(func
     Route::get('/payroll/today', [AdminPayrollController::class, 'today'])->middleware('role:admin');
     Route::post('/payroll/holiday', [AdminPayrollController::class, 'holiday'])->middleware('role:admin');
 
+    // Staff view own attendance
+    Route::get('/payroll/my-attendance', [AdminPayrollController::class, 'myAttendance'])->middleware('role:admin,staff,technician,inventory');
+
     // Manage specific employee attendance
     Route::get('/payroll/manage/{id}', [AdminPayrollController::class, 'manageShow'])->middleware('role:admin');
     Route::post('/payroll/manage/{id}', [AdminPayrollController::class, 'manageStore'])->middleware('role:admin');

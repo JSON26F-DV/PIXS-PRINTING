@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { m, AnimatePresence } from 'framer-motion'
 import { FiEdit2, FiMapPin, FiPlus, FiCheckCircle } from 'react-icons/fi'
 import { ArrowLeft } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
@@ -48,7 +48,7 @@ const AddressSelectModal: React.FC<AddressSelectModalProps> = ({
       {isOpen && (
         <div className="AddressSelectModal fixed inset-0 z-[100] flex h-screen w-screen flex-col justify-end overflow-hidden">
           {/* Overlay */}
-          <motion.div
+          <m.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -57,7 +57,7 @@ const AddressSelectModal: React.FC<AddressSelectModalProps> = ({
           />
 
           {/* Modal Container */}
-          <motion.div
+          <m.div
             initial={{ y: '100%' }}
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
@@ -150,7 +150,7 @@ const AddressSelectModal: React.FC<AddressSelectModalProps> = ({
                 <FiPlus size={16} /> Add New Protocol
               </button>
             </div>
-          </motion.div>
+          </m.div>
         </div>
       )}
     </AnimatePresence>

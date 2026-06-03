@@ -15,7 +15,7 @@ import {
   RefreshCw,
   Check
 } from 'lucide-react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { m, AnimatePresence } from 'framer-motion'
 import Cropper, { type Area } from 'react-easy-crop'
 import Select from 'react-select'
 import axiosInstance from '../../../lib/axiosInstance'
@@ -773,7 +773,7 @@ const ManageCustomer = () => {
       <AnimatePresence>
         {isCropping && tempImage && (
           <div className="fixed inset-0 z-[600] flex items-center justify-center bg-slate-900/90 backdrop-blur-xl">
-            <motion.div
+            <m.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
@@ -838,7 +838,7 @@ const ManageCustomer = () => {
                   </button>
                 </div>
               </div>
-            </motion.div>
+            </m.div>
           </div>
         )}
       </AnimatePresence>

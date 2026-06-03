@@ -89,7 +89,6 @@ export function useAdminOrders(): UseAdminOrdersReturn {
 
   const fetchData = async () => {
     try {
-      setIsLoading(true)
       const response = await axiosInstance.get('/api/admin/orders')
       const data = response.data
       

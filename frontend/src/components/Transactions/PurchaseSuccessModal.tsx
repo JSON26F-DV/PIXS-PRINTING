@@ -1,5 +1,5 @@
 import React from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { m, AnimatePresence } from 'framer-motion'
 import { CheckCircle2, ChevronRight, Package } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
@@ -23,7 +23,7 @@ const PurchaseSuccessModal: React.FC<PurchaseSuccessModalProps> = ({
   return (
     <AnimatePresence>
       <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-md">
-        <motion.div
+        <m.div
           initial={{ opacity: 0, scale: 0.9, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.9, y: 20 }}
@@ -31,7 +31,7 @@ const PurchaseSuccessModal: React.FC<PurchaseSuccessModalProps> = ({
         >
           {/* Animated Success Icon */}
           <div className="mb-8 flex justify-center">
-            <motion.div
+            <m.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ type: 'spring', damping: 12, stiffness: 200, delay: 0.2 }}
@@ -40,7 +40,7 @@ const PurchaseSuccessModal: React.FC<PurchaseSuccessModalProps> = ({
               <div className="flex h-16 w-16 items-center justify-center rounded-full bg-pixs-mint shadow-lg shadow-pixs-mint/40">
                 <CheckCircle2 size={32} className="text-white" />
               </div>
-            </motion.div>
+            </m.div>
           </div>
 
           <div className="space-y-3">
@@ -90,7 +90,7 @@ const PurchaseSuccessModal: React.FC<PurchaseSuccessModalProps> = ({
             <div className="h-1 w-1 rounded-full bg-slate-400" />
             <div className="h-1 w-1 rounded-full bg-slate-400" />
           </div>
-        </motion.div>
+        </m.div>
       </div>
     </AnimatePresence>
   )

@@ -15,7 +15,7 @@ import {
   ChevronDown,
   Package,
 } from 'lucide-react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { m, AnimatePresence } from 'framer-motion'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import AddressSelectModal from './AddressSelectModal'
@@ -479,14 +479,14 @@ const CustomerNavbar: React.FC = () => {
       <AnimatePresence>
         {showMobileMenu && (
           <>
-            <motion.div
+            <m.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setShowMobileMenu(false)}
               className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-md"
             />
-            <motion.div
+            <m.div
               initial={{ x: '100%', rotate: 5 }}
               animate={{ x: 0, rotate: 0 }}
               exit={{ x: '100%', rotate: 5 }}
@@ -530,7 +530,7 @@ const CustomerNavbar: React.FC = () => {
                   </Link>
                 </div>
               </nav>
-            </motion.div>
+            </m.div>
           </>
         )}
       </AnimatePresence>

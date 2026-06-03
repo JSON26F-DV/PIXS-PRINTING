@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Search, Plus, Edit, Trash2, X, Package2, AlertTriangle } from 'lucide-react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { m, AnimatePresence } from 'framer-motion'
 import { useForm, useFieldArray, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
@@ -317,14 +317,14 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
         )}
         {productToDelete && (
           <div className="fixed inset-0 z-[200] flex items-center justify-center p-6">
-            <motion.div
+            <m.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
               onClick={() => setProductToDelete(null)}
             />
-            <motion.div
+            <m.div
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
@@ -392,21 +392,21 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
                   {isDeletingProduct ? 'Deleting...' : 'Delete Forever'}
                 </button>
               </div>
-            </motion.div>
+            </m.div>
           </div>
         )}
 
         {/* Mobile Detail Modal Overlay */}
         {selectedMobileProduct && (
           <div className="fixed inset-0 z-[160] flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200">
-            <motion.div
+            <m.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="absolute inset-0 bg-slate-900/60 backdrop-blur-md"
               onClick={() => setSelectedMobileProduct(null)}
             />
-            <motion.div
+            <m.div
               initial={{ y: '100%' }}
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
@@ -528,7 +528,7 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
                   Delete Product
                 </button>
               </div>
-            </motion.div>
+            </m.div>
           </div>
         )}
       </AnimatePresence>
@@ -572,14 +572,14 @@ const ProductModal = ({
 
   return (
     <div className="product-modal fixed inset-0 z-[150] flex justify-end">
-      <motion.div
+      <m.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         className="absolute inset-0 bg-slate-900/60 backdrop-blur-md"
         onClick={onClose}
       />
-      <motion.div
+      <m.div
         initial={{ x: '100%' }}
         animate={{ x: 0 }}
         exit={{ x: '100%' }}
@@ -919,7 +919,7 @@ const ProductModal = ({
             Save Product Record
           </button>
         </div>
-      </motion.div>
+      </m.div>
     </div>
   )
 }

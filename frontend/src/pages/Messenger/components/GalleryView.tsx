@@ -1,6 +1,6 @@
 import React from 'react'
 import { createPortal } from 'react-dom'
-import { motion } from 'framer-motion'
+import { m } from 'framer-motion'
 import {
   X,
   Image as ImageIcon,
@@ -97,7 +97,7 @@ const GalleryView: React.FC<GalleryViewProps> = ({
           {images.length > 0 ? (
             <div className="grid grid-cols-2 gap-3">
               {images.map((img, i) => (
-                <motion.div
+                <m.div
                   key={i}
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
@@ -131,7 +131,7 @@ const GalleryView: React.FC<GalleryViewProps> = ({
                       <Trash2 size={12} />
                     </button>
                   )}
-                </motion.div>
+                </m.div>
               ))}
             </div>
           ) : (
@@ -152,7 +152,7 @@ const GalleryView: React.FC<GalleryViewProps> = ({
           {files.length > 0 ? (
             <div className="space-y-3">
               {files.map((file, i) => (
-                <motion.div
+                <m.div
                   key={i}
                   initial={{ opacity: 0, x: 10 }}
                   animate={{ opacity: 1, x: 0 }}
@@ -198,7 +198,7 @@ const GalleryView: React.FC<GalleryViewProps> = ({
                       />
                     </a>
                   </div>
-                </motion.div>
+                </m.div>
               ))}
             </div>
           ) : (

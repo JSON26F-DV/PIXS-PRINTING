@@ -163,7 +163,6 @@ const Accounts: React.FC = () => {
 
   const fetchAccounts = async () => {
     try {
-      setLoading(true)
       const { data } = await axiosInstance.get('/api/admin/accounts')
       if (data.status === 'success') {
         setUsers(data.data)

@@ -19,7 +19,7 @@ import toast from 'react-hot-toast'
 import axiosInstance from '../../../lib/axiosInstance'
 import type { ICategory } from '../../../types/product.types'
 import BoxFallback from '../../../components/common/BoxFallback'
-import { motion, AnimatePresence } from 'framer-motion'
+import { m, AnimatePresence } from 'framer-motion'
 
 // ─── Schema ──────────────────────────────────────────────────────────────────
 
@@ -959,7 +959,7 @@ const ManageProduct: React.FC = () => {
       <AnimatePresence>
         {statusModal.show && (
           <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/60 p-6 backdrop-blur-md">
-            <motion.div
+            <m.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
@@ -982,7 +982,7 @@ const ManageProduct: React.FC = () => {
               >
                 {statusModal.type === 'success' ? 'Done' : 'Dismiss'}
               </button>
-            </motion.div>
+            </m.div>
           </div>
         )}
       </AnimatePresence>

@@ -20,7 +20,7 @@ import {
   // FiBriefcase,
 } from 'react-icons/fi'
 import { clsx } from 'clsx'
-import { motion, AnimatePresence } from 'framer-motion'
+import { m, AnimatePresence } from 'framer-motion'
 import Cropper, { type Area } from 'react-easy-crop'
 import getCroppedImg from './utils/cropImage'
 import AccountInputField from './components/AccountInputField'
@@ -342,7 +342,7 @@ const AccountInfoPage: React.FC = () => {
           <AnimatePresence>
             {isCropping && tempImage && (
               <div className="fixed inset-0 z-[600] flex items-center justify-center bg-slate-900/90 backdrop-blur-xl">
-                <motion.div 
+                <m.div 
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.9 }}
@@ -407,7 +407,7 @@ const AccountInfoPage: React.FC = () => {
                       </button>
                     </div>
                   </div>
-                </motion.div>
+                </m.div>
               </div>
             )}
           </AnimatePresence>

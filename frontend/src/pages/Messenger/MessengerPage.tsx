@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { m, AnimatePresence } from 'framer-motion'
 import { clsx } from 'clsx'
 import { Search, User as UserIcon } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
@@ -586,7 +586,7 @@ const MessengerPage: React.FC = () => {
             {/* Gallery Node for Desktop */}
             <AnimatePresence mode="popLayout">
               {isGalleryOpen && (
-                <motion.div
+                <m.div
                   initial={{ width: 0, opacity: 0 }}
                   animate={{ width: '33.33%', opacity: 1 }}
                   exit={{ width: 0, opacity: 0 }}
@@ -597,14 +597,14 @@ const MessengerPage: React.FC = () => {
                     onClose={() => setIsGalleryOpen(false)}
                     onDeleteMedia={handleDeleteMediaAttachment}
                   />
-                </motion.div>
+                </m.div>
               )}
             </AnimatePresence>
 
             {/* Accounts Panel for Desktop */}
             <AnimatePresence mode="popLayout">
               {isAccountsOpen && (
-                <motion.div
+                <m.div
                   initial={{ width: 0, opacity: 0 }}
                   animate={{ width: '360px', opacity: 1 }}
                   exit={{ width: 0, opacity: 0 }}
@@ -663,7 +663,7 @@ const MessengerPage: React.FC = () => {
                       </button>
                     ))}
                   </div>
-                </motion.div>
+                </m.div>
               )}
             </AnimatePresence>
           </main>
@@ -730,7 +730,7 @@ const MessengerPage: React.FC = () => {
               {/* Gallery Node for Desktop */}
               <AnimatePresence mode="popLayout">
                 {isGalleryOpen && (
-                  <motion.div
+                  <m.div
                     initial={{ width: 0, opacity: 0 }}
                     animate={{ width: '33.33%', opacity: 1 }}
                     exit={{ width: 0, opacity: 0 }}
@@ -741,7 +741,7 @@ const MessengerPage: React.FC = () => {
                       onClose={() => setIsGalleryOpen(false)}
                       onDeleteMedia={undefined}
                     />
-                  </motion.div>
+                  </m.div>
                 )}
               </AnimatePresence>
             </main>
@@ -766,7 +766,7 @@ const MessengerPage: React.FC = () => {
         {isGalleryOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center lg:hidden">
             {!isSmallMobile && (
-              <motion.div
+              <m.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
@@ -774,7 +774,7 @@ const MessengerPage: React.FC = () => {
                 onClick={() => setIsGalleryOpen(false)}
               />
             )}
-            <motion.div
+            <m.div
               initial={
                 isSmallMobile
                   ? { y: '100%' }
@@ -801,7 +801,7 @@ const MessengerPage: React.FC = () => {
                 isMobile
                 onDeleteMedia={user?.role === 'admin' ? handleDeleteMediaAttachment : undefined}
               />
-            </motion.div>
+            </m.div>
           </div>
         )}
       </AnimatePresence>
@@ -811,7 +811,7 @@ const MessengerPage: React.FC = () => {
         {isAccountsOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center lg:hidden">
             {!isSmallMobile && (
-              <motion.div
+              <m.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
@@ -819,7 +819,7 @@ const MessengerPage: React.FC = () => {
                 onClick={() => setIsAccountsOpen(false)}
               />
             )}
-            <motion.div
+            <m.div
               initial={
                 isSmallMobile
                   ? { y: '100%' }
@@ -896,7 +896,7 @@ const MessengerPage: React.FC = () => {
                   </button>
                 ))}
               </div>
-            </motion.div>
+            </m.div>
           </div>
         )}
       </AnimatePresence>

@@ -1,5 +1,5 @@
 import React from 'react'
-import { motion } from 'framer-motion'
+import { m } from 'framer-motion'
 import { MessageSquare, Sparkles, Printer, Zap } from 'lucide-react'
 
 const HeroSection: React.FC<{ onStart: () => void }> = ({ onStart }) => {
@@ -11,7 +11,7 @@ const HeroSection: React.FC<{ onStart: () => void }> = ({ onStart }) => {
       <div className="bg-pixs-mint/10 absolute top-1/2 left-1/2 h-[500px] w-[500px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-[120px]" />
 
       <div className="relative z-10 w-full max-w-3xl space-y-12 text-center">
-        <motion.div
+        <m.div
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ duration: 0.8, ease: 'easeOut' }}
@@ -23,10 +23,10 @@ const HeroSection: React.FC<{ onStart: () => void }> = ({ onStart }) => {
               <Zap size={16} className="text-slate-900" />
             </div>
           </div>
-        </motion.div>
+        </m.div>
 
         <div className="space-y-6">
-          <motion.h1
+          <m.h1
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.2, duration: 0.6 }}
@@ -36,19 +36,19 @@ const HeroSection: React.FC<{ onStart: () => void }> = ({ onStart }) => {
             <span className="via-magenta-500 bg-gradient-to-r from-cyan-500 to-yellow-500 bg-clip-text text-transparent">
               Ideas Into Prints
             </span>
-          </motion.h1>
+          </m.h1>
 
-          <motion.p
+          <m.p
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.4, duration: 0.6 }}
             className="text-[10px] font-bold tracking-[4px] text-slate-400 uppercase md:text-xs md:tracking-[8px]"
           >
             Direct Administrative Channel · Powered by PIXS Printing Hub
-          </motion.p>
+          </m.p>
         </div>
 
-        <motion.div
+        <m.div
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.6, duration: 0.6 }}
@@ -69,7 +69,7 @@ const HeroSection: React.FC<{ onStart: () => void }> = ({ onStart }) => {
             <Sparkles size={14} className="text-yellow-400" /> Premium Quality
             Assured
           </div>
-        </motion.div>
+        </m.div>
       </div>
 
       {/* Decorative Grid Node */}

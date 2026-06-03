@@ -1,5 +1,5 @@
 import React from 'react'
-import { motion } from 'framer-motion'
+import { m } from 'framer-motion'
 import type { ICategory } from '../../types/product.types'
 import CategoryImage from '../CategoryImage/CategoryImage'
 
@@ -9,7 +9,7 @@ interface CategoryCardProps {
 }
 
 const CategoryCard: React.FC<CategoryCardProps> = ({ cat, onClick }) => (
-  <motion.button
+  <m.button
     onClick={onClick}
     whileHover={{ y: -8, scale: 1.03 }}
     whileTap={{ scale: 0.97 }}
@@ -27,7 +27,7 @@ const CategoryCard: React.FC<CategoryCardProps> = ({ cat, onClick }) => (
         {(cat.count ?? 0).toLocaleString()} Products
       </span>
     </div>
-  </motion.button>
+  </m.button>
 )
 
 export default React.memo(CategoryCard)

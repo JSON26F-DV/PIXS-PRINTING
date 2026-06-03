@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
-import { motion, type HTMLMotionProps } from 'framer-motion'
+import { m, type HTMLMotionProps } from 'framer-motion'
 
 interface DecryptedTextProps extends HTMLMotionProps<'span'> {
   text: string
@@ -63,13 +63,13 @@ const DecryptedText: React.FC<DecryptedTextProps> = ({
   }, [animateOn, triggerAnimation])
 
   return (
-    <motion.span
+    <m.span
       className={parentClassName}
       onMouseEnter={() => animateOn === 'hover' && triggerAnimation()}
       {...props}
     >
       <span className={className}>{displayText}</span>
-    </motion.span>
+    </m.span>
   )
 }
 

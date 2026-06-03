@@ -1,5 +1,5 @@
 import React from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { m, AnimatePresence } from 'framer-motion'
 import { X, Receipt, MapPin, CreditCard, Truck, CheckCircle2, Loader2 } from 'lucide-react'
 import BoxFallback from '../common/BoxFallback'
 import type { IOrderData } from '../../pages/Transactions/Transactions'
@@ -26,7 +26,7 @@ const OrderReceiptModal: React.FC<ReceiptModalProps> = ({
   return (
     <AnimatePresence>
       <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
-        <motion.div
+        <m.div
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -166,7 +166,7 @@ const OrderReceiptModal: React.FC<ReceiptModalProps> = ({
               )}
             </button>
           </div>
-        </motion.div>
+        </m.div>
       </div>
     </AnimatePresence>
   )

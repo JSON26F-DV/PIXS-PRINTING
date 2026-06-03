@@ -12,7 +12,7 @@ import {
   ShoppingBag,
   Loader2,
 } from 'lucide-react'
-import { motion } from 'framer-motion'
+import { m } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import { cartService } from '../../AddToCart/services/cartService'
 import toast from 'react-hot-toast'
@@ -211,7 +211,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({
   }
 
   return (
-    <motion.div
+    <m.div
       layout
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
@@ -488,6 +488,6 @@ export const OrderCard: React.FC<OrderCardProps> = ({
           )}
         </div>
       </div>
-    </motion.div>
+    </m.div>
   )
 }

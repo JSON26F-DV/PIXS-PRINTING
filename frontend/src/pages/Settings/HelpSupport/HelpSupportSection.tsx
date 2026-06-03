@@ -6,7 +6,7 @@ import {
   FiChevronUp,
   FiMessageSquare,
 } from 'react-icons/fi'
-import { AnimatePresence, motion } from 'framer-motion'
+import { AnimatePresence, m } from 'framer-motion'
 import axiosInstance from '../../../lib/axiosInstance'
 import toast from 'react-hot-toast'
 
@@ -62,7 +62,7 @@ const FAQItem: React.FC<{ faq: FAQ }> = ({ faq }) => {
       </button>
       <AnimatePresence>
         {isOpen && (
-          <motion.div
+          <m.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
@@ -71,7 +71,7 @@ const FAQItem: React.FC<{ faq: FAQ }> = ({ faq }) => {
             <p className="border-t border-slate-50 px-5 pt-3 pb-4 text-xs leading-relaxed font-bold text-slate-500">
               {faq.answer}
             </p>
-          </motion.div>
+          </m.div>
         )}
       </AnimatePresence>
     </div>

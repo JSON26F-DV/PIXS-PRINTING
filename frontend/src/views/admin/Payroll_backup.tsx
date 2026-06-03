@@ -23,7 +23,7 @@ import {
   endOfISOWeek,
 } from 'date-fns'
 import { useReactToPrint } from 'react-to-print'
-import { motion as M, AnimatePresence } from 'framer-motion'
+import { m as M, AnimatePresence } from 'framer-motion'
 import { clsx } from 'clsx'
 import { usePermissions } from '../../hooks/usePermissions'
 import type { Employee, AttendanceLog } from '../../types'

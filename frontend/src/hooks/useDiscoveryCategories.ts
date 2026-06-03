@@ -1,59 +1,38 @@
-import { useState, useEffect } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import type { ICategory } from '../types/product.types'
 
-/**
- * Hook to fetch all categories for the DiscoveryModal.
- * Results are cached in state to prevent redundant fetches.
- */
+async function fetchDiscoveryCategories({ signal }: { signal?: AbortSignal }) {
+  const token = localStorage.getItem('pixs_token')
+  const res = await fetch(
+    `${import.meta.env.VITE_API_URL}/api/categories`,
+    {
+      signal,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
+    },
+  )
+
+  if (res.status === 401) {
+    localStorage.removeItem('pixs_token')
+    window.location.href = '/login'
+    throw new Error('Unauthorized')
+  }
+
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+
+  const json = await res.json()
+  return (json.data ?? []) as ICategory[]
+}
+
 export function useDiscoveryCategories(isOpen: boolean) {
-  const [categories, setCategories] = useState<ICategory[]>([])
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [hasFetched, setHasFetched] = useState(false)
+  const { data: categories = [], isLoading, error } = useQuery({
+    queryKey: ['discovery-categories'],
+    queryFn: fetchDiscoveryCategories,
+    enabled: isOpen,
+    staleTime: Infinity,
+  })
 
-  useEffect(() => {
-    if (!isOpen || hasFetched) return
-
-    const controller = new AbortController()
-    setIsLoading(true)
-    setError(null)
-
-    const fetchCategories = async () => {
-      try {
-        const token = localStorage.getItem('pixs_token')
-        const res = await fetch(
-          `${import.meta.env.VITE_API_URL}/api/categories`,
-          {
-            signal: controller.signal,
-            headers: {
-              'Content-Type': 'application/json',
-              ...(token && { Authorization: `Bearer ${token}` }),
-            },
-          },
-        )
-
-        if (res.status === 401) {
-          localStorage.removeItem('pixs_token')
-          window.location.href = '/login'
-          return
-        }
-
-        if (!res.ok) throw new Error(`HTTP ${res.status}`)
-
-        const json = await res.json()
-        setCategories(json.data ?? [])
-        setHasFetched(true)
-      } catch (err) {
-        if ((err as Error).name === 'AbortError') return
-        setError('Failed to load matrix categories.')
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    fetchCategories()
-    return () => controller.abort()
-  }, [isOpen, hasFetched])
-
-  return { categories, isLoading, error }
+  return { categories, isLoading, error: error instanceof Error ? error.message : null }
 }

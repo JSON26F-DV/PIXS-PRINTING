@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Employee;
 use App\Models\EmployeeAttendance;
 use Carbon\Carbon;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class AdminPayrollController extends Controller
@@ -311,5 +312,39 @@ class AdminPayrollController extends Controller
         }
 
         return response()->json(['message' => 'Record not found.'], 404);
+    }
+
+    /**
+     * Get attendance for the currently authenticated employee (staff view).
+     */
+    public function myAttendance(Request $request): JsonResponse
+    {
+        $employeeId = $request->user()->id;
+
+        $attendance = EmployeeAttendance::where('employee_id', $employeeId)
+            ->orderBy('date', 'desc')
+            ->get()
+            ->map(function ($log) {
+                return [
+                    'id' => $log->id,
+                    'date' => $log->date->format('Y-m-d'),
+                    'status' => $log->status,
+                    'holiday_type' => $log->holiday_type,
+                    'is_paid' => (bool) $log->is_paid,
+                    'start_time' => $log->start_time ? Carbon::parse($log->start_time)->format('H:i') : null,
+                    'end_time' => $log->end_time ? Carbon::parse($log->end_time)->format('H:i') : null,
+                    'break_start' => $log->break_start ? Carbon::parse($log->break_start)->format('H:i') : null,
+                    'break_end' => $log->break_end ? Carbon::parse($log->break_end)->format('H:i') : null,
+                    'overtime' => (float) $log->overtime,
+                    'late' => (int) $log->late,
+                    'total_earnings' => (float) $log->total_earnings,
+                    'holiday_pay' => (float) $log->holiday_pay,
+                    'hours_worked' => (float) $log->hours_worked,
+                ];
+            });
+
+        return response()->json([
+            'attendance' => $attendance,
+        ]);
     }
 }

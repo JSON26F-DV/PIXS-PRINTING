@@ -5,7 +5,7 @@ import {
   ArrowRight,
   X,
 } from 'lucide-react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { m, AnimatePresence } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import Footer from '../../components/Footer/Footer'
 import { orderApi } from '../../api/orders.api'
@@ -52,14 +52,14 @@ const CancelOrderModal: React.FC<{
   return (
     <AnimatePresence>
       <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-        <motion.div
+        <m.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={onClose}
           className="absolute inset-0 bg-slate-900/60 backdrop-blur-md"
         />
-        <motion.div
+        <m.div
           initial={{ opacity: 0, scale: 0.9, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.9, y: 20 }}
@@ -117,7 +117,7 @@ const CancelOrderModal: React.FC<{
             </div>
 
             {selectedReason === 'Other' && (
-              <motion.div
+              <m.div
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
                 className="space-y-2"
@@ -132,7 +132,7 @@ const CancelOrderModal: React.FC<{
                   rows={3}
                   placeholder="Tell us more about the reason..."
                 />
-              </motion.div>
+              </m.div>
             )}
 
             <div className="flex gap-4 pt-4">
@@ -155,7 +155,7 @@ const CancelOrderModal: React.FC<{
               </button>
             </div>
           </div>
-        </motion.div>
+        </m.div>
       </div>
     </AnimatePresence>
   )
@@ -310,7 +310,7 @@ const OrderPage: React.FC = () => {
         <div className="bg-pixs-mint/10 absolute top-0 right-0 -mt-20 -mr-20 h-96 w-96 rounded-full blur-[100px]" />
 
         <div className="relative mx-auto max-w-7xl space-y-4">
-          <motion.div
+          <m.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             className="flex items-center gap-4"
@@ -319,7 +319,7 @@ const OrderPage: React.FC = () => {
             <span className="text-pixs-mint text-[10px] font-black tracking-[5px] uppercase italic">
               Transaction Registry
             </span>
-          </motion.div>
+          </m.div>
 
           <h1 className="text-6xl leading-[0.8] font-black tracking-tighter text-slate-900 uppercase italic md:text-8xl">
             My <span className="text-slate-400">Orders</span>
@@ -390,7 +390,7 @@ const OrderPage: React.FC = () => {
                 )
               ))
             ) : (
-              <motion.div
+              <m.div
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 className="order-empty-state flex flex-col items-center justify-center rounded-[64px] border-2 border-dashed border-slate-100 bg-slate-50/50 py-40"
@@ -410,7 +410,7 @@ const OrderPage: React.FC = () => {
                 >
                   Return to Store <ArrowRight size={16} />
                 </Link>
-              </motion.div>
+              </m.div>
             )}
           </AnimatePresence>
         </div>

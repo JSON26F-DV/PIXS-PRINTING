@@ -1,9 +1,4 @@
-import { useState, useEffect } from 'react'
-
-interface DiscoverySearchParams {
-  query: string
-  categoryId: string | null
-}
+import { useQuery } from '@tanstack/react-query'
 
 export interface IDiscoveryProduct {
   id: string
@@ -15,79 +10,68 @@ export interface IDiscoveryProduct {
   main_image: string | null
 }
 
-/**
- * Hook to search/filter products for the DiscoveryModal results grid.
- */
+interface DiscoverySearchParams {
+  query: string
+  categoryId: string | null
+}
+
+async function fetchDiscoverySearch({
+  query,
+  categoryId,
+}: DiscoverySearchParams, { signal }: { signal?: AbortSignal }) {
+  const CAT_ID_REGEX = /^CT\d{3}$/
+  const safeQuery = query.replace(/[^a-zA-Z0-9\s\-_.₱]/g, '').trim()
+  const safeCategoryId = CAT_ID_REGEX.test(categoryId ?? '')
+    ? categoryId
+    : null
+
+  const params = new URLSearchParams()
+  if (safeQuery.length >= 3) params.append('q', safeQuery)
+  if (safeCategoryId) params.append('category_id', safeCategoryId)
+
+  const token = localStorage.getItem('pixs_token')
+  const res = await fetch(
+    `${import.meta.env.VITE_API_URL}/api/products/search?${params}`,
+    {
+      signal,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
+    },
+  )
+
+  if (res.status === 401) {
+    localStorage.removeItem('pixs_token')
+    window.location.href = '/login'
+    throw new Error('Unauthorized')
+  }
+
+  if (res.status === 429) {
+    throw new Error('Too many searches. Please slow down.')
+  }
+
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+
+  const json = await res.json()
+  return (json.data ?? []) as IDiscoveryProduct[]
+}
+
 export function useDiscoverySearch({
   query,
   categoryId,
 }: DiscoverySearchParams) {
-  const [results, setResults] = useState<IDiscoveryProduct[]>([])
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const shouldFetch = query.length >= 3 || categoryId !== null
 
-  useEffect(() => {
-    const CAT_ID_REGEX = /^CT\d{3}$/
-    const shouldFetch = query.length >= 3 || categoryId !== null
+  const { data: results = [], isLoading, error } = useQuery({
+    queryKey: ['discovery-search', { query, categoryId }],
+    queryFn: ({ signal }) => fetchDiscoverySearch({ query, categoryId }, { signal }),
+    enabled: shouldFetch,
+  })
 
-    if (!shouldFetch) {
-      setResults([])
-      return
-    }
-
-    const controller = new AbortController()
-    setIsLoading(true)
-    setError(null)
-
-    const fetchResults = async () => {
-      try {
-        const token = localStorage.getItem('pixs_token')
-        const safeQuery = query.replace(/[^a-zA-Z0-9\s\-_.₱]/g, '').trim()
-        const safeCategoryId = CAT_ID_REGEX.test(categoryId ?? '')
-          ? categoryId
-          : null
-
-        const params = new URLSearchParams()
-        if (safeQuery.length >= 3) params.append('q', safeQuery)
-        if (safeCategoryId) params.append('category_id', safeCategoryId)
-
-        const res = await fetch(
-          `${import.meta.env.VITE_API_URL}/api/products/search?${params}`,
-          {
-            signal: controller.signal,
-            headers: {
-              'Content-Type': 'application/json',
-              ...(token && { Authorization: `Bearer ${token}` }),
-            },
-          },
-        )
-
-        if (res.status === 401) {
-          localStorage.removeItem('pixs_token')
-          window.location.href = '/login'
-          return
-        }
-
-        if (res.status === 429) {
-          setError('Too many searches. Please slow down.')
-          return
-        }
-
-        if (!res.ok) throw new Error(`HTTP ${res.status}`)
-
-        const json = await res.json()
-        setResults(json.data ?? [])
-      } catch (err) {
-        if ((err as Error).name === 'AbortError') return
-        setError('Search failed. Tap to retry.')
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    fetchResults()
-    return () => controller.abort()
-  }, [query, categoryId])
-
-  return { results, isLoading, error }
+  return {
+    results,
+    isLoading,
+    error: error instanceof Error ? error.message : null,
+  }
 }

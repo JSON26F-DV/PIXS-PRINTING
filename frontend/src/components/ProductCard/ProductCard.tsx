@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react'
 import { Heart, Plus } from 'lucide-react'
-import { motion } from 'framer-motion'
+import { m } from 'framer-motion'
 import { clsx } from 'clsx'
 import type { IProduct } from '../../types/product.types'
 import { useAuth } from '../../context/AuthContext'
@@ -55,7 +55,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
   }
 
   return (
-    <motion.div
+    <m.div
       initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: '-50px' }}
@@ -211,7 +211,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
           </button>
         </div>
       </div>
-    </motion.div>
+    </m.div>
   )
 }
 

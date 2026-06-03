@@ -1,5 +1,5 @@
 import React from 'react'
-import { motion } from 'framer-motion'
+import { m } from 'framer-motion'
 import { Layers, Clock, CheckCircle2, XCircle, Info } from 'lucide-react'
 
 export interface ScreenplateRequest {
@@ -60,7 +60,7 @@ export const ScreenplateRequestCard: React.FC<ScreenplateRequestCardProps> = ({ 
   const config = getStatusConfig(request.status)
 
   return (
-    <motion.div
+    <m.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       className="group overflow-hidden rounded-[32px] border border-slate-100 bg-white p-6 shadow-sm transition-all hover:shadow-xl md:p-8"
@@ -144,6 +144,6 @@ export const ScreenplateRequestCard: React.FC<ScreenplateRequestCardProps> = ({ 
           </div>
         </div>
       </div>
-    </motion.div>
+    </m.div>
   )
 }

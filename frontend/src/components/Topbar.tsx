@@ -12,7 +12,7 @@ import {
   MessageSquare,
   AlertTriangle,
 } from 'lucide-react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { m, AnimatePresence } from 'framer-motion'
 import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 import { useAuth } from '../context/AuthContext'
@@ -215,7 +215,7 @@ const SmartSearch: React.FC<{
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center px-4 pt-20">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <motion.div
+      <m.div
         initial={{ opacity: 0, y: -20, scale: 0.95 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: -20, scale: 0.95 }}
@@ -318,7 +318,7 @@ const SmartSearch: React.FC<{
           </span>
           <span>{results.length} results</span>
         </div>
-      </motion.div>
+      </m.div>
     </div>
   )
 }
@@ -370,7 +370,7 @@ const NotificationDropdown: React.FC<{ onClose: () => void }> = ({
   }
 
   return (
-    <motion.div
+    <m.div
       initial={{ opacity: 0, y: 10, scale: 0.95 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: 10, scale: 0.95 }}
@@ -460,7 +460,7 @@ const NotificationDropdown: React.FC<{ onClose: () => void }> = ({
           </button>
         </div>
       )}
-    </motion.div>
+    </m.div>
   )
 }
 

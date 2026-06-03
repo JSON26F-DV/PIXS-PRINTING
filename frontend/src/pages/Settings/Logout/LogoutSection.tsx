@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { FiLogOut, FiAlertTriangle } from 'react-icons/fi'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../../context/AuthContext'
-import { motion, AnimatePresence } from 'framer-motion'
+import { m, AnimatePresence } from 'framer-motion'
 
 const LogoutSection: React.FC = () => {
   const { logout } = useAuth()
@@ -47,14 +47,14 @@ const LogoutSection: React.FC = () => {
       <AnimatePresence>
         {showConfirm && (
           <>
-            <motion.div
+            <m.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setShowConfirm(false)}
               className="fixed inset-0 z-[200] bg-slate-900/60 backdrop-blur-sm"
             />
-            <motion.div
+            <m.div
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
@@ -87,7 +87,7 @@ const LogoutSection: React.FC = () => {
                   Yes, Sign Out
                 </button>
               </div>
-            </motion.div>
+            </m.div>
           </>
         )}
       </AnimatePresence>

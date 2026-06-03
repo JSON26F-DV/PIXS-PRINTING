@@ -70,7 +70,7 @@ const AdminAddressSelector = ({
       <h3 className="text-[10px] font-black tracking-widest text-slate-400 uppercase">Select Shipping Address</h3>
       <div className="grid gap-3 max-h-[300px] overflow-y-auto custom-scrollbar pr-2">
         {addresses.map((a) => (
-          <div key={a.id} onClick={() => onSelect(a.id)} className={clsx("p-4 border rounded-2xl cursor-pointer transition-all", selectedId === a.id ? "border-emerald-900 bg-emerald-900 text-white shadow-xl" : "border-slate-100 bg-white hover:border-emerald-200")}>
+          <div key={a.id} onClick={() => onSelect(a.id)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(a.id); } }} role="button" tabIndex={0} className={clsx("p-4 border rounded-2xl cursor-pointer transition-all", selectedId === a.id ? "border-emerald-900 bg-emerald-900 text-white shadow-xl" : "border-slate-100 bg-white hover:border-emerald-200")}>
             <div className={clsx("font-black text-sm uppercase italic", selectedId === a.id ? "text-white" : "text-slate-900")}>{a.adress_label}</div>
             <div className={clsx("text-[10px] font-bold uppercase mt-1", selectedId === a.id ? "text-emerald-100" : "text-slate-500")}>{a.street}, {a.barangay}, {a.city}, {a.province}</div>
           </div>
@@ -102,7 +102,7 @@ const ProductDetailInner = ({ product, plates, onClose, onAdd }: { product: IPro
 
   return (
     <div className="bg-white rounded-[24px] w-full max-w-4xl max-h-[90vh] overflow-y-auto p-6 md:p-10 relative shadow-2xl custom-scrollbar">
-      <button onClick={onClose} className="absolute top-6 right-6 p-2 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-900 transition-colors">
+      <button type="button" onClick={onClose} className="absolute top-6 right-6 p-2 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-900 transition-colors">
         <X size={20} />
       </button>
       <h2 className="text-2xl md:text-3xl font-black italic uppercase text-slate-900 mb-8 pr-12 leading-tight">{product.name}</h2>
@@ -146,7 +146,7 @@ const ProductDetailModal = ({ productId, onClose, onAdd }: { productId: string; 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 overflow-y-auto animate-in fade-in duration-200">
       {isLoading || !product ? (
-        <Loader2 className="animate-spin text-emerald-500 w-12 h-12" />
+        <Loader2 className="animate-spin text-emerald-500 size-12" />
       ) : (
         <ProductDetailInner product={product} plates={plates} onClose={onClose} onAdd={onAdd} />
       )}
@@ -296,7 +296,7 @@ const ManageOrder: React.FC = () => {
       {/* 🚀 HEADER SECTION */}
       <section className="flex flex-col items-center justify-between gap-6 rounded-[24px] border border-slate-100 bg-white p-6 shadow-2xl shadow-slate-200/40 lg:flex-row">
         <div className="flex items-center gap-4 w-full">
-           <button onClick={() => navigate('/admin/orders')} className="p-3 rounded-xl bg-slate-50 border border-slate-100 hover:bg-slate-100 transition-colors">
+           <button type="button" onClick={() => navigate('/admin/orders')} className="p-3 rounded-xl bg-slate-50 border border-slate-100 hover:bg-slate-100 transition-colors">
               <ArrowLeft size={20} className="text-slate-900" />
            </button>
            <ShoppingBag className="text-emerald-500 shrink-0 ml-2" size={32} />
@@ -334,12 +334,14 @@ const ManageOrder: React.FC = () => {
                  <div className="absolute top-full left-0 right-0 mt-2 max-h-60 overflow-y-auto border border-slate-200 rounded-[16px] bg-white shadow-xl z-[100] custom-scrollbar">
                     {customers.filter(c => (c.first_name + ' ' + c.last_name + ' ' + c.email).toLowerCase().includes(customerSearch.toLowerCase())).map(c => (
                        <div 
-                         key={c.id} 
-                         onClick={() => { 
-                           setSelectedCustomer(c.id); 
-                           setCustomerSearch(''); 
-                           setIsCustomerDropdownOpen(false); 
-                         }}
+                          key={c.id} 
+                          onClick={() => { 
+                            setSelectedCustomer(c.id); 
+                            setCustomerSearch(''); 
+                            setIsCustomerDropdownOpen(false); 
+                          }}
+                          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedCustomer(c.id); setCustomerSearch(''); setIsCustomerDropdownOpen(false); } }}
+                          role="button" tabIndex={0}
                          className="p-4 text-xs font-black text-slate-900 uppercase hover:bg-emerald-50 cursor-pointer border-b border-slate-100 last:border-0 transition-colors"
                        >
                          {c.first_name} {c.last_name} <span className="text-[10px] text-slate-500 block mt-1">{c.email}</span>
@@ -369,8 +371,8 @@ const ManageOrder: React.FC = () => {
             </h3>
             <DeliverySection methods={deliveryData} selectedId={selectedDeliveryId} onSelect={setSelectedDeliveryId} />
             
-            <div className="mt-8 flex items-center gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-100 cursor-pointer" onClick={() => setGeneratePaymentCode(!generatePaymentCode)}>
-               <div className={`w-5 h-5 rounded-[6px] border flex items-center justify-center transition-colors ${generatePaymentCode ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-slate-300 bg-white'}`}>
+            <div className="mt-8 flex items-center gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-100 cursor-pointer" onClick={() => setGeneratePaymentCode(!generatePaymentCode)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setGeneratePaymentCode(!generatePaymentCode); } }} role="button" tabIndex={0}>
+               <div className={`size-5 rounded-[6px] border flex items-center justify-center transition-colors ${generatePaymentCode ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-slate-300 bg-white'}`}>
                   {generatePaymentCode && <CheckCircle2 size={14} />}
                </div>
                <span className="text-xs font-black text-slate-900 uppercase italic">Generate Payment Code Automatically</span>
@@ -399,7 +401,7 @@ const ManageOrder: React.FC = () => {
                     </div>
                     <div className="flex items-center gap-4">
                       <div className="font-black text-white italic">₱{item.totalCartPrice.toLocaleString()}</div>
-                      <button onClick={() => removeCartItem(item.id)} className="text-rose-400 p-2 hover:bg-rose-500/20 rounded-xl transition-colors"><Trash2 size={16} /></button>
+                      <button type="button" onClick={() => removeCartItem(item.id)} className="text-rose-400 p-2 hover:bg-rose-500/20 rounded-xl transition-colors"><Trash2 size={16} /></button>
                     </div>
                   </div>
                 ))}
@@ -415,7 +417,7 @@ const ManageOrder: React.FC = () => {
                   </div>
                 </div>
 
-                <button 
+                <button type="button" 
                   onClick={handlePurchase}
                   disabled={isProcessing || !selectedCustomer || !selectedAddressId}
                   className="w-full mt-8 flex items-center justify-center gap-3 bg-emerald-500 text-slate-900 font-black italic uppercase tracking-widest py-5 rounded-[16px] hover:bg-emerald-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-emerald-500/20"
@@ -454,7 +456,7 @@ const ManageOrder: React.FC = () => {
 
             {prodLoading ? (
               <div className="flex justify-center items-center h-[400px]">
-                <Loader2 className="animate-spin text-emerald-500 w-10 h-10" />
+                <Loader2 className="animate-spin text-emerald-500 size-10" />
               </div>
             ) : (
               <div className="animate-in fade-in duration-500 overflow-x-auto">
@@ -471,9 +473,9 @@ const ManageOrder: React.FC = () => {
                       <tr key={p.id} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
                         <td className="p-4 flex items-center gap-4">
                           {p.main_image ? (
-                            <img src={p.main_image} className="w-12 h-12 rounded-xl object-cover bg-slate-100" onError={(e) => e.currentTarget.style.display = 'none'} />
+                            <img src={p.main_image} alt={p.name} className="size-12 rounded-xl object-cover bg-slate-100" onError={(e) => e.currentTarget.style.display = 'none'} />
                           ) : (
-                            <BoxFallback className="w-12 h-12 rounded-xl flex items-center justify-center bg-slate-100" iconClassName="h-5 w-5 opacity-30" />
+                            <BoxFallback className="size-12 rounded-xl flex items-center justify-center bg-slate-100" iconClassName="size-5 opacity-30" />
                           )}
                           <div>
                             <div className="font-black text-sm uppercase italic text-slate-900">{p.name}</div>
@@ -484,7 +486,7 @@ const ManageOrder: React.FC = () => {
                            ₱{p.base_price.toLocaleString()}
                         </td>
                         <td className="p-4 text-center">
-                          <button onClick={() => setActiveProductId(p.id)} className="px-4 py-2 bg-slate-900 text-white rounded-[12px] text-[10px] font-black uppercase italic hover:bg-emerald-500 transition-colors">Select</button>
+                          <button type="button" onClick={() => setActiveProductId(p.id)} className="px-4 py-2 bg-slate-900 text-white rounded-[12px] text-[10px] font-black uppercase italic hover:bg-emerald-500 transition-colors">Select</button>
                         </td>
                       </tr>
                     ))}

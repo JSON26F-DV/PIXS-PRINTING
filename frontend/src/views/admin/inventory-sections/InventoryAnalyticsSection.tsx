@@ -23,7 +23,7 @@ import {
   ResponsiveContainer,
   Cell,
 } from 'recharts'
-import { motion, AnimatePresence } from 'framer-motion'
+import { m, AnimatePresence } from 'framer-motion'
 import type { IProduct, IProductVariant } from '../../../types/product.types'
 import type { IExpenditure, IInventoryLog } from '../../../hooks/useStockAnalytics'
 import { useNavigate } from 'react-router-dom'
@@ -58,14 +58,14 @@ const renderPagination = (
   return (
     <div className="flex items-center justify-between border-t border-slate-100 dark:border-white/5 px-4 py-3 sm:px-6 mt-4">
       <div className="flex flex-1 justify-between sm:hidden">
-        <button
+        <button type="button"
           disabled={currentPage === 1}
           onClick={() => onPageChange(currentPage - 1)}
           className="relative inline-flex items-center rounded-xl bg-transparent px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 disabled:opacity-35 disabled:hover:bg-transparent transition-all"
         >
           Previous
         </button>
-        <button
+        <button type="button"
           disabled={currentPage === totalPages}
           onClick={() => onPageChange(currentPage + 1)}
           className="relative ml-3 inline-flex items-center rounded-xl bg-transparent px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 disabled:opacity-35 disabled:hover:bg-transparent transition-all"
@@ -83,7 +83,7 @@ const renderPagination = (
         </div>
         <div>
           <nav className="isolate inline-flex gap-1" aria-label="Pagination">
-            <button
+            <button type="button"
               disabled={currentPage === 1}
               onClick={() => onPageChange(currentPage - 1)}
               className="relative inline-flex items-center rounded-xl bg-transparent p-2 text-slate-400 hover:bg-slate-100 disabled:opacity-30 disabled:hover:bg-transparent transition-all"
@@ -95,7 +95,7 @@ const renderPagination = (
               const p = idx + 1
               const isCurrent = p === currentPage
               return (
-                <button
+                <button type="button"
                   key={p}
                   onClick={() => onPageChange(p)}
                   className={`relative inline-flex items-center rounded-xl px-3 py-1.5 text-xs font-black transition-all ${
@@ -108,7 +108,7 @@ const renderPagination = (
                 </button>
               )
             })}
-            <button
+            <button type="button"
               disabled={currentPage === totalPages}
               onClick={() => onPageChange(currentPage + 1)}
               className="relative inline-flex items-center rounded-xl bg-transparent p-2 text-slate-400 hover:bg-slate-100 disabled:opacity-30 disabled:hover:bg-transparent transition-all"
@@ -496,19 +496,19 @@ export const InventoryAnalyticsSection: React.FC<InventoryAnalyticsSectionProps>
 
             {/* INSUFFICIENT & RUNNING LOW STOCK FILTERS */}
             <div className="flex flex-wrap gap-1.5 border-b border-slate-50 pb-3">
-              <button
+              <button type="button"
                 onClick={() => { setDirectControlStockFilter('ALL'); setDirectControlPage(1); }}
                 className={`rounded-xl px-3 py-1.5 text-[8px] font-black tracking-wider uppercase border transition-all ${directControlStockFilter === 'ALL' ? 'bg-slate-900 border-slate-900 text-white shadow-md' : 'bg-slate-50 border-slate-100 text-slate-400 hover:text-slate-700'}`}
               >
                 All
               </button>
-              <button
+              <button type="button"
                 onClick={() => { setDirectControlStockFilter('INSUFFICIENT'); setDirectControlPage(1); }}
                 className={`rounded-xl px-3 py-1.5 text-[8px] font-black tracking-wider uppercase border transition-all ${directControlStockFilter === 'INSUFFICIENT' ? 'bg-rose-600 border-rose-600 text-white shadow-md shadow-rose-200' : 'bg-rose-50 border-rose-100 text-rose-500 hover:bg-rose-100/50'}`}
               >
                 Insufficient
               </button>
-              <button
+              <button type="button"
                 onClick={() => { setDirectControlStockFilter('RUNNING_LOW'); setDirectControlPage(1); }}
                 className={`rounded-xl px-3 py-1.5 text-[8px] font-black tracking-wider uppercase border transition-all ${directControlStockFilter === 'RUNNING_LOW' ? 'bg-amber-500 border-amber-500 text-white shadow-md shadow-amber-200' : 'bg-amber-50 border-amber-100 text-amber-600 hover:bg-amber-100/50'}`}
               >
@@ -657,7 +657,7 @@ export const InventoryAnalyticsSection: React.FC<InventoryAnalyticsSectionProps>
                 className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-900 shadow-sm transition-all outline-none focus:border-blue-500"
               />
             </div>
-            <button
+            <button type="button"
               onClick={handleAddExpense}
               className="w-full rounded-2xl bg-slate-900 py-4 text-[10px] font-black tracking-[3px] text-white uppercase shadow-2xl transition hover:scale-105 active:scale-95"
             >
@@ -789,14 +789,14 @@ export const InventoryAnalyticsSection: React.FC<InventoryAnalyticsSectionProps>
                     <td className="rounded-r-2xl border-y border-l-0 border-r border-slate-100 bg-white py-4 pr-4 text-center shadow-sm group-hover:bg-slate-50">
                       {editingExpId === log.id ? (
                         <div className="flex items-center justify-center gap-2">
-                          <button onClick={handleUpdateExpense} className="text-[10px] bg-emerald-500 text-white px-2 py-1 rounded font-bold">Save</button>
-                          <button onClick={() => setEditingExpId(null)} className="text-[10px] bg-slate-300 text-slate-800 px-2 py-1 rounded font-bold">Cancel</button>
+                          <button type="button" onClick={handleUpdateExpense} className="text-[10px] bg-emerald-500 text-white px-2 py-1 rounded font-bold">Save</button>
+                          <button type="button" onClick={() => setEditingExpId(null)} className="text-[10px] bg-slate-300 text-slate-800 px-2 py-1 rounded font-bold">Cancel</button>
                         </div>
                       ) : (
                         <div className="flex items-center justify-center gap-3">
                           {user?.role === 'admin' ? (
                             <>
-                              <button 
+                              <button type="button" 
                                 onClick={() => {
                                   setEditingExpId(log.id)
                                   setEditExpenseForm({ category: log.category, description: log.description || '', amount: String(log.amount) })
@@ -806,7 +806,7 @@ export const InventoryAnalyticsSection: React.FC<InventoryAnalyticsSectionProps>
                               >
                                 <Edit2 size={14} />
                               </button>
-                              <button 
+                              <button type="button" 
                                 onClick={() => handleDeleteExpense(log.id)}
                                 className="text-rose-500 hover:text-rose-700 transition"
                                 title="Delete"
@@ -815,7 +815,7 @@ export const InventoryAnalyticsSection: React.FC<InventoryAnalyticsSectionProps>
                               </button>
                             </>
                           ) : (
-                            <button
+                            <button type="button"
                               onClick={() => setConcernModal({ isOpen: true, expenditureId: log.id, concernText: '' })}
                               className="text-emerald-500 hover:text-emerald-700 transition"
                               title="Report Concern"
@@ -890,7 +890,7 @@ export const InventoryAnalyticsSection: React.FC<InventoryAnalyticsSectionProps>
         {mobileSelectedLog && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             {/* Backdrop */}
-            <motion.div
+            <m.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -901,7 +901,7 @@ export const InventoryAnalyticsSection: React.FC<InventoryAnalyticsSectionProps>
               }}
             />
             {/* Modal Body */}
-            <motion.div
+            <m.div
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
@@ -911,12 +911,12 @@ export const InventoryAnalyticsSection: React.FC<InventoryAnalyticsSectionProps>
                 <h4 className="text-lg font-black tracking-tight text-slate-900">
                   {isEditingInMobileModal ? 'Edit Log Entry' : 'Log Details'}
                 </h4>
-                <button
+                <button type="button"
                   onClick={() => {
                     setMobileSelectedLog(null)
                     setIsEditingInMobileModal(false)
                   }}
-                  className="h-8 w-8 rounded-lg hover:bg-slate-50 flex items-center justify-center text-slate-400 hover:text-slate-650 font-bold text-lg transition-colors"
+                  className="size-8 rounded-lg hover:bg-slate-50 flex items-center justify-center text-slate-400 hover:text-slate-650 font-bold text-lg transition-colors"
                 >
                   &times;
                 </button>
@@ -959,13 +959,13 @@ export const InventoryAnalyticsSection: React.FC<InventoryAnalyticsSectionProps>
                     />
                   </div>
                   <div className="flex gap-2 pt-2">
-                    <button
+                    <button type="button"
                       onClick={() => setIsEditingInMobileModal(false)}
                       className="flex-1 rounded-xl bg-slate-50 py-3 text-xs font-bold tracking-widest text-slate-500 uppercase transition-all hover:bg-slate-100"
                     >
                       Back
                     </button>
-                    <button
+                    <button type="button"
                       onClick={handleUpdateExpenseFromMobileModal}
                       className="flex-1 rounded-xl bg-emerald-600 py-3 text-xs font-bold tracking-widest text-white uppercase shadow-lg shadow-emerald-100 transition-all hover:bg-emerald-500"
                     >
@@ -1012,13 +1012,13 @@ export const InventoryAnalyticsSection: React.FC<InventoryAnalyticsSectionProps>
                   <div className="flex gap-3 pt-2">
                     {user?.role === 'admin' ? (
                       <>
-                        <button
+                        <button type="button"
                           onClick={() => setIsEditingInMobileModal(true)}
                           className="flex-1 flex items-center justify-center gap-1 rounded-xl bg-blue-50 hover:bg-blue-100 py-3 text-xs font-extrabold text-blue-700 border border-blue-100 transition-all active:scale-95"
                         >
                           <Edit2 size={12} /> Edit Entry
                         </button>
-                        <button
+                        <button type="button"
                           onClick={() => handleDeleteExpense(mobileSelectedLog.id)}
                           className="flex-1 flex items-center justify-center gap-1 rounded-xl bg-rose-50 hover:bg-rose-100 py-3 text-xs font-extrabold text-rose-600 border border-rose-100 transition-all active:scale-95"
                         >
@@ -1026,7 +1026,7 @@ export const InventoryAnalyticsSection: React.FC<InventoryAnalyticsSectionProps>
                         </button>
                       </>
                     ) : (
-                      <button
+                      <button type="button"
                         onClick={() => {
                           setMobileSelectedLog(null)
                           setConcernModal({ isOpen: true, expenditureId: mobileSelectedLog.id, concernText: '' })
@@ -1039,7 +1039,7 @@ export const InventoryAnalyticsSection: React.FC<InventoryAnalyticsSectionProps>
                   </div>
                 </>
               )}
-            </motion.div>
+            </m.div>
           </div>
         )}
       </AnimatePresence>
@@ -1142,7 +1142,7 @@ export const InventoryAnalyticsSection: React.FC<InventoryAnalyticsSectionProps>
                     </td>
                     <td className="border-y border-slate-100 bg-white py-4 shadow-sm group-hover:bg-slate-50">
                       <div className="flex items-center gap-2">
-                        <div className="h-6 w-6 rounded-full bg-slate-100 border border-slate-200 overflow-hidden flex items-center justify-center">
+                        <div className="size-6 rounded-full bg-slate-100 border border-slate-200 overflow-hidden flex items-center justify-center">
                           <User size={10} className="text-slate-400" />
                         </div>
                         <span className="text-xs font-bold text-slate-700">
@@ -1176,7 +1176,7 @@ export const InventoryAnalyticsSection: React.FC<InventoryAnalyticsSectionProps>
                     </td>
                     <td className="rounded-r-2xl border-y border-l-0 border-r border-slate-100 bg-white py-4 pr-4 text-center shadow-sm group-hover:bg-slate-50">
                       {user?.role === 'admin' ? (
-                        <button
+                        <button type="button"
                           onClick={() => {
                             if (confirm('Undo this stock adjustment? This will revert the stock level and delete any linked expenditures.')) {
                               undoInventoryLog(log.id)
@@ -1258,7 +1258,7 @@ export const InventoryAnalyticsSection: React.FC<InventoryAnalyticsSectionProps>
         {mobileSelectedInvLog && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             {/* Backdrop */}
-            <motion.div
+            <m.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -1266,7 +1266,7 @@ export const InventoryAnalyticsSection: React.FC<InventoryAnalyticsSectionProps>
               onClick={() => setMobileSelectedInvLog(null)}
             />
             {/* Modal Body */}
-            <motion.div
+            <m.div
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
@@ -1274,9 +1274,9 @@ export const InventoryAnalyticsSection: React.FC<InventoryAnalyticsSectionProps>
             >
               <div className="flex items-center justify-between">
                 <h4 className="text-lg font-black tracking-tight text-slate-900">Audit Log Details</h4>
-                <button
+                <button type="button"
                   onClick={() => setMobileSelectedInvLog(null)}
-                  className="h-8 w-8 rounded-lg hover:bg-slate-50 flex items-center justify-center text-slate-400 hover:text-slate-650 font-bold text-lg transition-colors"
+                  className="size-8 rounded-lg hover:bg-slate-50 flex items-center justify-center text-slate-400 hover:text-slate-650 font-bold text-lg transition-colors"
                 >
                   &times;
                 </button>
@@ -1341,7 +1341,7 @@ export const InventoryAnalyticsSection: React.FC<InventoryAnalyticsSectionProps>
                 </div>
               {user?.role === 'admin' && (
                 <div className="pt-2">
-                  <button
+                  <button type="button"
                     onClick={() => {
                       if (confirm('Undo this stock adjustment? This will revert the stock level and delete any linked expenditures.')) {
                         undoInventoryLog(mobileSelectedInvLog.id)
@@ -1355,7 +1355,7 @@ export const InventoryAnalyticsSection: React.FC<InventoryAnalyticsSectionProps>
                 </div>
               )}
               </div>
-            </motion.div>
+            </m.div>
           </div>
         )}
       </AnimatePresence>
@@ -1364,14 +1364,14 @@ export const InventoryAnalyticsSection: React.FC<InventoryAnalyticsSectionProps>
       <AnimatePresence>
         {concernModal.isOpen && (
           <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
-            <motion.div 
+            <m.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="absolute inset-0 bg-slate-900/60 backdrop-blur-md"
               onClick={() => setConcernModal({ ...concernModal, isOpen: false })}
             />
-            <motion.div 
+            <m.div 
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
@@ -1405,13 +1405,13 @@ export const InventoryAnalyticsSection: React.FC<InventoryAnalyticsSectionProps>
               </div>
 
               <div className="flex gap-4">
-                <button
+                <button type="button"
                   onClick={() => setConcernModal({ ...concernModal, isOpen: false })}
                   className="flex-1 rounded-xl border border-slate-100 py-5 text-[10px] font-black tracking-widest text-slate-400 uppercase italic transition-all hover:bg-slate-50"
                 >
                   Cancel
                 </button>
-                <button
+                <button type="button"
                   disabled={!concernModal.concernText.trim()}
                   onClick={handleCreateExpenditureConcernConfirm}
                   className="flex-1 rounded-xl bg-emerald-500 py-5 text-[10px] font-black tracking-widest text-white uppercase italic shadow-xl shadow-emerald-900/20 transition-all hover:bg-emerald-600 hover:scale-105 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100"
@@ -1419,7 +1419,7 @@ export const InventoryAnalyticsSection: React.FC<InventoryAnalyticsSectionProps>
                   Confirm & Transmit
                 </button>
               </div>
-            </motion.div>
+            </m.div>
           </div>
         )}
       </AnimatePresence>

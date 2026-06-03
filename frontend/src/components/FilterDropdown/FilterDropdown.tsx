@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { ChevronDown } from 'lucide-react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { m, AnimatePresence } from 'framer-motion'
 import { clsx } from 'clsx'
 
 interface FilterDropdownProps {
@@ -91,7 +91,7 @@ const FilterDropdown: React.FC<FilterDropdownProps> = ({
 
       <AnimatePresence>
         {isOpen && (
-          <motion.div
+          <m.div
             initial={{ opacity: 0, y: 10, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 10, scale: 0.95 }}
@@ -118,7 +118,7 @@ const FilterDropdown: React.FC<FilterDropdownProps> = ({
                 </button>
               )
             })}
-          </motion.div>
+          </m.div>
         )}
       </AnimatePresence>
     </div>

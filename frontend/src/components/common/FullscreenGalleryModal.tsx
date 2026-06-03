@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { m, AnimatePresence } from 'framer-motion'
 import { X, ChevronLeft, ChevronRight, Download, Maximize2, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react'
 import { clsx } from 'clsx'
 import BoxFallback from './BoxFallback'
@@ -102,7 +102,7 @@ const FullscreenGalleryModal: React.FC<FullscreenGalleryModalProps> = ({
 
   return (
     <AnimatePresence>
-      <motion.div
+      <m.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
@@ -169,7 +169,7 @@ const FullscreenGalleryModal: React.FC<FullscreenGalleryModalProps> = ({
             )}
         >
           <AnimatePresence mode="wait">
-            <motion.div
+            <m.div
               key={currentIndex}
               initial={{ opacity: 0, scale: 0.9, x: 40 }}
               animate={{ 
@@ -198,13 +198,13 @@ const FullscreenGalleryModal: React.FC<FullscreenGalleryModalProps> = ({
               ) : (
                 <BoxFallback className="flex h-[50vh] w-[50vh] items-center justify-center rounded-2xl bg-white/5" />
               )}
-            </motion.div>
+            </m.div>
           </AnimatePresence>
 
           {/* Navigation Controls */}
           {images.length > 1 && scale === 1 && (
             <>
-              <motion.button
+              <m.button
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 onClick={handlePrev}
@@ -214,8 +214,8 @@ const FullscreenGalleryModal: React.FC<FullscreenGalleryModalProps> = ({
                   size={32}
                   className="transition-transform group-hover:-translate-x-1"
                 />
-              </motion.button>
-              <motion.button
+              </m.button>
+              <m.button
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 onClick={handleNext}
@@ -225,7 +225,7 @@ const FullscreenGalleryModal: React.FC<FullscreenGalleryModalProps> = ({
                   size={32}
                   className="transition-transform group-hover:translate-x-1"
                 />
-              </motion.button>
+              </m.button>
             </>
           )}
 
@@ -256,6 +256,7 @@ const FullscreenGalleryModal: React.FC<FullscreenGalleryModalProps> = ({
               {img && !imageErrors[i] ? (
                 <img
                   src={img}
+                  alt={`${productName} thumbnail ${i + 1}`}
                   className="h-full w-full rounded-lg object-cover"
                   onError={() => handleImageError(i)}
                 />
@@ -270,7 +271,7 @@ const FullscreenGalleryModal: React.FC<FullscreenGalleryModalProps> = ({
             </button>
           ))}
         </div>
-      </motion.div>
+      </m.div>
     </AnimatePresence>
   )
 }

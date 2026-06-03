@@ -1,5 +1,5 @@
 import React from 'react'
-import { motion } from 'framer-motion'
+import { m } from 'framer-motion'
 import {
   ChevronRight,
   Printer,
@@ -31,7 +31,7 @@ const FloatingCard: React.FC<{
   yRange = [-15, 15],
   rotate = 0,
 }) => (
-  <motion.div
+  <m.div
     initial={{ opacity: 0, scale: 0.8, rotate: rotate - 10, y: 20 }}
     animate={{
       opacity: 1,
@@ -46,7 +46,7 @@ const FloatingCard: React.FC<{
     }}
     className={`absolute hidden lg:block ${className}`}
   >
-    <motion.div
+    <m.div
       animate={{
         y: yRange,
       }}
@@ -58,8 +58,8 @@ const FloatingCard: React.FC<{
       }}
     >
       {children}
-    </motion.div>
-  </motion.div>
+    </m.div>
+  </m.div>
 )
 
 const LandingPage: React.FC = () => {
@@ -153,7 +153,7 @@ const LandingPage: React.FC = () => {
                   <span className="text-white">88%</span>
                 </div>
                 <div className="mt-3 h-1 w-full rounded-full bg-slate-800">
-                  <motion.div
+                  <m.div
                     animate={{ width: ['20%', '90%', '20%'] }}
                     transition={{ duration: 3, repeat: Infinity }}
                     className="h-full rounded-full bg-[#75EEA5]"
@@ -205,37 +205,37 @@ const LandingPage: React.FC = () => {
             </div>
           </FloatingCard>
 
-          <motion.div
+          <m.div
             initial="initial"
             animate="animate"
             variants={stagger}
             className="relative z-10 max-w-6xl text-center"
           >
-            <motion.div variants={fadeInUp} className="mb-6 flex justify-center">
+            <m.div variants={fadeInUp} className="mb-6 flex justify-center">
               <span className="rounded-full border border-slate-200 bg-white px-4 py-1.5 text-[10px] font-black tracking-[4px] text-slate-400 uppercase italic">
                 Industrial Printing Hub
               </span>
-            </motion.div>
+            </m.div>
 
-            <motion.h1
+            <m.h1
               variants={fadeInUp}
               className="mb-8 font-display text-5xl leading-[0.95] font-black tracking-tighter text-slate-900 uppercase italic sm:text-7xl md:text-8xl lg:text-[9rem]"
             >
               Industrial <br />
               <span className="text-slate-400 opacity-50">Precision.</span> <br />
               Every Print.
-            </motion.h1>
+            </m.h1>
 
-            <motion.p
+            <m.p
               variants={fadeInUp}
               className="mx-auto mb-12 max-w-2xl text-sm leading-relaxed font-medium text-slate-500 uppercase tracking-wide md:text-lg"
             >
               The definitive substrate matrix for milk tea franchises and
               B2B packaging. High-volume screenplate manufacturing with
               technical precision.
-            </motion.p>
+            </m.p>
 
-            <motion.div
+            <m.div
               variants={fadeInUp}
               className="flex flex-col items-center justify-center gap-4 sm:flex-row"
             >
@@ -257,11 +257,11 @@ const LandingPage: React.FC = () => {
               >
                 View Catalog
               </button>
-            </motion.div>
-          </motion.div>
+            </m.div>
+          </m.div>
 
           {/* Decorative Terminal Line at bottom */}
-          <motion.div
+          <m.div
             initial={{ width: 0 }}
             animate={{ width: '100%' }}
             transition={{ delay: 1.2, duration: 1.5 }}
@@ -326,7 +326,7 @@ const LandingPage: React.FC = () => {
                   icon: Activity,
                 },
               ].map((feat, i) => (
-                <motion.div
+                <m.div
                   key={i}
                   whileHover={{ y: -10 }}
                   className="group rounded-[44px] border border-slate-100 bg-white p-10 shadow-sm transition-all hover:border-[#75EEA5]/30 hover:shadow-xl"
@@ -340,7 +340,7 @@ const LandingPage: React.FC = () => {
                   <p className="text-xs leading-relaxed font-medium text-slate-400 uppercase tracking-widest">
                     {feat.desc}
                   </p>
-                </motion.div>
+                </m.div>
               ))}
             </div>
           </div>
@@ -420,7 +420,7 @@ const LandingPage: React.FC = () => {
 
         {/* ── FINAL CTA ────────────────────────────────────────────────────── */}
         <section className="px-6 py-24 text-center md:px-12 md:py-48">
-          <motion.div
+          <m.div
             initial={{ opacity: 0, scale: 0.95 }}
             whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true }}
@@ -439,7 +439,7 @@ const LandingPage: React.FC = () => {
             >
               Initialize Account
             </Link>
-          </motion.div>
+          </m.div>
         </section>
       </main>
 

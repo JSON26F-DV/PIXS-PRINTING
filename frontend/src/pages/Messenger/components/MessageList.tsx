@@ -2,7 +2,7 @@ import React, { useRef, useEffect, useState, useCallback } from 'react'
 import { Virtuoso } from 'react-virtuoso'
 
 import { createPortal } from 'react-dom'
-import { motion, AnimatePresence, MotionConfig } from 'framer-motion'
+import { m, AnimatePresence, MotionConfig } from 'framer-motion'
 import type { PanInfo } from 'framer-motion'
 import {
   Smile,
@@ -171,7 +171,7 @@ const MessageBubble: React.FC<{
   const hasCard = !!(message.order_id || message.screenplate_request_id || message.expenditures_id || message.refund_id || message.an_email);
 
   return (
-    <motion.div
+    <m.div
       drag="x"
       dragConstraints={{ left: 0, right: 0 }}
       onDragEnd={(_, info: PanInfo) => {
@@ -370,7 +370,7 @@ const MessageBubble: React.FC<{
 
           <AnimatePresence>
             {showOriginal && message.originalText && (
-              <motion.div
+              <m.div
                 initial={{ height: 0, opacity: 0 }}
                 animate={{ height: 'auto', opacity: 1 }}
                 exit={{ height: 0, opacity: 0 }}
@@ -383,7 +383,7 @@ const MessageBubble: React.FC<{
                   </span>
                 </div>
                 {message.originalText}
-              </motion.div>
+              </m.div>
             )}
           </AnimatePresence>
 
@@ -715,7 +715,7 @@ const MessageBubble: React.FC<{
           </div>
         )}
       </div>
-    </motion.div>
+    </m.div>
   )
 }
 
@@ -806,16 +806,20 @@ const MessageList: React.FC<MessageListProps> = ({
     prevLastMessageIdRef.current = currentLastMessageId
     prevLengthRef.current = messages.length
 
+    let timerId: ReturnType<typeof setTimeout> | undefined
+
     if (isAppended || isNearBottom()) {
-      setTimeout(() => {
+      timerId = setTimeout(() => {
         scrollToBottom(isAppended ? 'smooth' : 'auto')
       }, 50)
     }
 
     if (isPrepended && !isNearBottom()) {
       // Preserve the user's current view when older messages are loaded from the top.
-      return
+      return () => { if (timerId) clearTimeout(timerId) }
     }
+
+    return () => { if (timerId) clearTimeout(timerId) }
   }, [messages])
 
   // Scroll to bottom 3 times when loading finishes or mounting (refresh or navigating to /chat)

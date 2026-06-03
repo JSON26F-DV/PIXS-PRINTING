@@ -42,7 +42,7 @@ const ImageUploadAlert: React.FC<ImageUploadAlertProps> = ({ open, onClose, mess
     >
       <div className="relative flex w-full max-w-sm flex-col rounded-[28px] border border-slate-100 bg-white shadow-2xl">
         <div className="px-8 pt-8 pb-6">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-rose-100">
+          <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-full bg-rose-100">
             <FiAlertTriangle className="text-rose-600" size={24} />
           </div>
           <p className="text-center text-[10px] font-black tracking-[4px] text-slate-400 uppercase">
@@ -72,7 +72,7 @@ const ImageUploadAlert: React.FC<ImageUploadAlertProps> = ({ open, onClose, mess
           </div>
         </div>
         <div className="border-t border-slate-100 px-8 py-6">
-          <button
+          <button type="button"
             onClick={onClose}
             className="w-full rounded-[14px] border-2 border-slate-900 bg-slate-900 py-3.5 text-[10px] font-black tracking-[3px] text-white uppercase italic shadow-xl transition-all hover:scale-105 active:scale-95"
           >
@@ -156,7 +156,7 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
       {/* Modal Card */}
       <div className="relative flex w-full max-w-md flex-col rounded-[28px] border border-slate-100 bg-white shadow-2xl">
         {/* Close */}
-        <button
+        <button type="button"
           onClick={onClose}
           className="absolute top-5 right-5 rounded-full p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
         >
@@ -237,14 +237,14 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
 
         {/* Actions */}
         <div className="flex gap-3 border-t border-slate-100 px-8 py-6">
-          <button
+          <button type="button"
             onClick={onClose}
             disabled={isSubmitting}
             className="flex-1 rounded-[14px] border-2 border-slate-200 py-3.5 text-[10px] font-black tracking-[3px] text-slate-600 uppercase transition-all hover:border-slate-300 hover:bg-slate-50 disabled:opacity-50"
           >
             Go Back
           </button>
-          <button
+          <button type="button"
             onClick={onConfirm}
             disabled={isSubmitting}
             className="flex-1 rounded-[14px] border-2 border-slate-900 bg-slate-900 py-3.5 text-[10px] font-black tracking-[3px] text-white uppercase italic shadow-xl transition-all hover:scale-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
@@ -649,7 +649,7 @@ const ScreenplatePage: React.FC = () => {
                     onFocus={() => setDropdownOpen(true)}
                   />
                   {(selectedProduct || selectedVariant) && (
-                    <button
+                    <button type="button"
                       onClick={() => {
                         setSelectedProduct(null)
                         setSelectedVariant(null)
@@ -681,7 +681,7 @@ const ScreenplatePage: React.FC = () => {
                         </div>
                         <div className="flex flex-wrap gap-2">
                           {product.variants?.map((v: IProductVariant) => (
-                            <button
+                            <button type="button"
                               key={v.variant_id}
                               onClick={() => handleSelectVariant(product, v)}
                               className="rounded-lg bg-slate-100 px-3 py-1.5 text-[10px] font-black tracking-widest text-slate-600 uppercase transition-colors hover:bg-slate-900 hover:text-white"
@@ -699,7 +699,7 @@ const ScreenplatePage: React.FC = () => {
                 {selectedProduct && (
                   <div className="animate-in fade-in slide-in-from-top-4 mt-6 flex flex-col gap-4 duration-300">
                     <div className="flex gap-4 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
-                      <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl border border-slate-100 bg-slate-50">
+                      <div className="size-20 shrink-0 overflow-hidden rounded-xl border border-slate-100 bg-slate-50">
                         {selectedProduct.main_image ? (
                           <img
                             src={`/images/products/${selectedProduct.main_image}`}
@@ -849,7 +849,7 @@ const ScreenplatePage: React.FC = () => {
                 {!referenceImage ? (
                   <label className="flex h-32 w-full cursor-pointer appearance-none justify-center rounded-2xl border-2 border-dashed border-slate-200 bg-white px-4 transition hover:border-slate-400 hover:bg-slate-50 focus:outline-none">
                     <span className="flex flex-col items-center justify-center space-y-2">
-                      <FiUploadCloud className="h-6 w-6 text-slate-400" />
+                      <FiUploadCloud className="size-6 text-slate-400" />
                       <span className="text-[10px] font-black tracking-widest text-slate-400 uppercase">
                         Drop logo or click
                       </span>
@@ -935,7 +935,7 @@ const ScreenplatePage: React.FC = () => {
             </div>
 
             {/* FIX 3: onClick now opens the review modal instead of submitting directly */}
-            <button
+            <button type="button"
               className={`ScreenplateSubmitButton w-full rounded-[16px] border-2 py-4 text-[10px] font-black tracking-[4px] uppercase italic transition-all ${
                 isValid
                   ? 'border-slate-900 bg-slate-900 text-white shadow-xl hover:scale-105 active:scale-95'

@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { motion } from 'framer-motion'
+import { m } from 'framer-motion'
 import { Check, X, ImageIcon, Search, ArrowUpDown } from 'lucide-react'
 import type { IScreenplateRequest } from './types'
 import { updateScreenplateRequestStatus } from '../../../api/admin-screenplates.api'
@@ -133,7 +133,7 @@ export function ScreenplateRequestSection({
           </div>
         ) : (
           filteredAndSortedRequests.map((req) => (
-            <motion.div
+            <m.div
               key={req.id}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -230,7 +230,7 @@ export function ScreenplateRequestSection({
                   </div>
                 )}
               </div>
-            </motion.div>
+            </m.div>
           ))
         )}
       </div>

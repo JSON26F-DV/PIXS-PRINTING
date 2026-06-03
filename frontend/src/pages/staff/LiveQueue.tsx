@@ -15,6 +15,7 @@ import { orderBy } from 'lodash'
 import { format } from 'date-fns'
 import toast from 'react-hot-toast'
 
+import { useQuery } from '@tanstack/react-query'
 import axios from 'axios'
 import { type Order } from '../../types/order'
 import allProducts from '../../data/products.json'
@@ -33,12 +34,6 @@ interface StaffAssignment {
 
 const LiveQueue: React.FC = () => {
   // --- STATE ---
-  const [orders, setOrders] = useState<Order[]>([])
-  const [assignment, setAssignment] = useState<StaffAssignment | null>(null)
-  const [, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  // Execution tracking (Simulating persistence via localStorage)
   const [execution, setExecution] = useState<ExecutionState>(() => {
     try {
       const saved = localStorage.getItem('pixs_staff_execution_v1')
@@ -62,27 +57,16 @@ const LiveQueue: React.FC = () => {
   }, [execution])
 
   // --- LOAD DATA ---
-  useEffect(() => {
-    const fetchQueueData = async () => {
-      try {
-        setLoading(true)
-        const response = await axios.get('/api/staff/orders')
-        const { data, assignments } = response.data
+  const { data: queueData, error } = useQuery({
+    queryKey: ['staff-queue'],
+    queryFn: async () => {
+      const response = await axios.get('/api/staff/orders')
+      return response.data as { data: Order[]; assignments: StaffAssignment }
+    },
+  })
 
-        setOrders(data)
-        setAssignment(assignments)
-        setError(null)
-      } catch (err: unknown) {
-        const error = err as Error
-        console.error('Failed to load production queue:', error.message)
-        setError('Unable to retrieve processing orders.')
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchQueueData()
-  }, [])
+  const orders = queueData?.data ?? []
+  const assignment = queueData?.assignments ?? null
 
   // --- LOGIC: FILTERING & SORTING ---
   const usersOptions = useMemo(() => {
@@ -265,7 +249,7 @@ const LiveQueue: React.FC = () => {
           <h2 className="text-2xl font-black tracking-tighter text-slate-900 uppercase italic">
             System Malfunction
           </h2>
-          <p className="font-medium text-slate-500">{error}</p>
+          <p className="font-medium text-slate-500">{error instanceof Error ? error.message : 'Unable to retrieve processing orders.'}</p>
           <button
             onClick={() => window.location.reload()}
             className="w-full rounded-2xl bg-slate-900 py-4 text-[10px] font-black tracking-widest text-white uppercase transition-all hover:bg-slate-800"

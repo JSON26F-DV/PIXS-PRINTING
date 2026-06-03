@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import axiosInstance from '../lib/axiosInstance'
 import type { Order } from '../types/order'
 
@@ -8,32 +8,20 @@ interface UseOrdersDataReturn {
   error: string | null
 }
 
+async function fetchOrders() {
+  const response = await axiosInstance.get('/admin/orders')
+  return (response.data.data || response.data || []) as Order[]
+}
+
 export function useOrdersData(): UseOrdersDataReturn {
-  const [orders, setOrders] = useState<Order[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const { data: orders = [], isLoading, error } = useQuery({
+    queryKey: ['admin-orders'],
+    queryFn: fetchOrders,
+  })
 
-  useEffect(() => {
-    const fetchOrders = async () => {
-      try {
-        setIsLoading(true)
-        setError(null)
-
-        // Admin endpoint to fetch all orders
-        const response = await axiosInstance.get('/admin/orders')
-        setOrders(response.data.data || response.data || [])
-      } catch (err) {
-        const errorMsg =
-          err instanceof Error ? err.message : 'Failed to fetch orders'
-        setError(errorMsg)
-        setOrders([])
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    fetchOrders()
-  }, [])
-
-  return { orders, isLoading, error }
+  return {
+    orders,
+    isLoading,
+    error: error instanceof Error ? error.message : null,
+  }
 }

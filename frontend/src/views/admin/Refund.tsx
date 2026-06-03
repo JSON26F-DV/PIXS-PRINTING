@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { m, AnimatePresence } from 'framer-motion'
 import {
   Plus, Search, Eye, X, Check, 
   CreditCard,
@@ -284,14 +284,14 @@ const RefundPage: React.FC = () => {
       {/* Create Modal */}
       <AnimatePresence>
         {showCreateModal && (
-          <motion.div
+          <m.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4"
             onClick={() => setShowCreateModal(false)}
           >
-            <motion.div
+            <m.div
               initial={{ scale: 0.95, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.95, y: 20 }}
@@ -440,22 +440,22 @@ const RefundPage: React.FC = () => {
                   Create Refund
                 </button>
               </div>
-            </motion.div>
-          </motion.div>
+            </m.div>
+          </m.div>
         )}
       </AnimatePresence>
 
       {/* View Modal */}
       <AnimatePresence>
         {showViewModal && selectedRefund && (
-          <motion.div
+          <m.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4"
             onClick={() => setShowViewModal(false)}
           >
-            <motion.div
+            <m.div
               initial={{ scale: 0.95, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.95, y: 20 }}
@@ -517,8 +517,8 @@ const RefundPage: React.FC = () => {
                   </button>
                 </div>
               )}
-            </motion.div>
-          </motion.div>
+            </m.div>
+          </m.div>
         )}
       </AnimatePresence>
     </div>

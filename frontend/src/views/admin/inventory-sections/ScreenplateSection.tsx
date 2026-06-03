@@ -14,7 +14,7 @@ import {
   Menu,
   X,
 } from 'lucide-react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { m, AnimatePresence } from 'framer-motion'
 import type { IUser, IScreenplate, IProduct } from './types'
 import {
   ConfirmModal,
@@ -82,11 +82,10 @@ export const ScreenplateSection: React.FC<ScreenplateSectionProps> = ({
   )
   const [plateToDelete, setPlateToDelete] = useState<IScreenplate | null>(null)
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
-  const [isDesktop, setIsDesktop] = useState(true)
+  const [isDesktop, setIsDesktop] = useState(() => window.innerWidth >= 1024)
 
   useEffect(() => {
     const check = () => setIsDesktop(window.innerWidth >= 1024)
-    check()
     window.addEventListener('resize', check)
     return () => window.removeEventListener('resize', check)
   }, [])
@@ -249,14 +248,14 @@ export const ScreenplateSection: React.FC<ScreenplateSectionProps> = ({
       <AnimatePresence>
         {!isDesktop && isMobileSidebarOpen && (
           <div className="fixed inset-0 z-[100] lg:hidden">
-            <motion.div
+            <m.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
               onClick={() => setIsMobileSidebarOpen(false)}
             />
-            <motion.div
+            <m.div
               initial={{ x: '-100%' }}
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
@@ -264,7 +263,7 @@ export const ScreenplateSection: React.FC<ScreenplateSectionProps> = ({
               className="relative h-full w-[320px] max-w-[85vw] overflow-hidden bg-white shadow-2xl"
             >
               {sidebarContent}
-            </motion.div>
+            </m.div>
           </div>
         )}
       </AnimatePresence>
@@ -327,7 +326,7 @@ export const ScreenplateSection: React.FC<ScreenplateSectionProps> = ({
         <div className="custom-scrollbar relative z-0 flex-1 overflow-y-auto p-4 lg:p-8 xl:p-12">
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
             {platesForSelected.map((plate) => (
-              <motion.div
+              <m.div
                 layout
                 id={`plate-${plate.id}`}
                 key={plate.id}
@@ -469,7 +468,7 @@ export const ScreenplateSection: React.FC<ScreenplateSectionProps> = ({
                     </div>
                   </div>
                 </div>
-              </motion.div>
+              </m.div>
             ))}
 
             {platesForSelected.length === 0 && (

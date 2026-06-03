@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { STORAGE_KEYS } from '../constants/storageKeys'
 import type { IProduct } from '../types/product.types'
 import { toast } from 'react-hot-toast'
@@ -18,138 +18,101 @@ export interface ProductQueryParams {
   per_page?: number
 }
 
-export function useProducts(params: ProductQueryParams) {
-  const [products, setProducts] = useState<IProduct[]>([])
-  const [totalPages, setTotalPages] = useState(1)
-  const [isLoading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+interface ProductsResponse {
+  products: IProduct[]
+  totalPages: number
+}
 
-  const {
-    category,
-    search,
-    price_min,
-    price_max,
-    sort,
-    status,
-    screenplate_id,
-    most_sold,
-    min_rating,
-    in_stock_only,
-    page,
-    per_page,
-  } = params
+async function fetchProducts(
+  params: ProductQueryParams,
+  { signal }: { signal?: AbortSignal },
+): Promise<ProductsResponse> {
+  const token = localStorage.getItem(STORAGE_KEYS.TOKEN)
 
-  useEffect(() => {
-    const controller = new AbortController()
-    setLoading(true)
-    setError(null)
+  const queryParams = new URLSearchParams()
+  const pMap: Record<string, string | number | boolean | null | undefined> = {
+    category: params.category,
+    search: params.search,
+    price_min: params.price_min,
+    price_max: params.price_max,
+    sort: params.sort,
+    status: params.status,
+    screenplate_id: params.screenplate_id,
+    most_sold: params.most_sold,
+    min_rating: params.min_rating,
+    page: params.page,
+    per_page: params.per_page,
+  }
 
-    const fetchProducts = async () => {
-      try {
-        const token = localStorage.getItem(STORAGE_KEYS.TOKEN)
-
-        const queryParams = new URLSearchParams()
-        const pMap: Record<
-          string,
-          string | number | boolean | null | undefined
-        > = {
-          category,
-          search,
-          price_min,
-          price_max,
-          sort,
-          status,
-          screenplate_id,
-          most_sold,
-          min_rating,
-          page,
-          per_page,
-        }
-
-        Object.entries(pMap).forEach(([key, value]) => {
-          if (
-            value !== undefined &&
-            value !== null &&
-            value !== '' &&
-            value !== 'All' &&
-            value !== 'All Prices' &&
-            value !== 'All Status' &&
-            value !== 'All Plates'
-          ) {
-            queryParams.append(key, value.toString())
-          }
-        })
-
-        if (in_stock_only) {
-          queryParams.append('in_stock_only', '1')
-        }
-
-        const query = queryParams.toString()
-        const res = await fetch(
-          `${import.meta.env.VITE_API_URL}/api/products${query ? '?' + query : ''}`,
-          {
-            signal: controller.signal,
-            headers: {
-              'Content-Type': 'application/json',
-              ...(token && { Authorization: `Bearer ${token}` }),
-            },
-          },
-        )
-
-        if (res.status === 429) {
-          toast.error('Too many requests. Please slow down.')
-          setLoading(false)
-          return
-        }
-
-        if (res.status === 401) {
-          localStorage.removeItem(STORAGE_KEYS.TOKEN)
-          window.location.href = '/login'
-          return
-        }
-
-        if (res.status === 403) {
-          setError('Access Denied')
-          return
-        }
-
-        if (!res.ok) throw new Error(`HTTP ${res.status}`)
-
-        const data = await res.json()
-        const list = Array.isArray(data.data) ? data.data : []
-        setProducts(list)
-        const lastPage =
-          typeof data.last_page === 'number'
-            ? data.last_page
-            : typeof data.meta?.last_page === 'number'
-              ? data.meta.last_page
-              : 1
-        setTotalPages(lastPage > 0 ? lastPage : 1)
-      } catch (err) {
-        if ((err as Error).name === 'AbortError') return
-        setError('Failed to load products. Please try again.')
-        console.error(err)
-      } finally {
-        setLoading(false)
-      }
+  Object.entries(pMap).forEach(([key, value]) => {
+    if (
+      value !== undefined &&
+      value !== null &&
+      value !== '' &&
+      value !== 'All' &&
+      value !== 'All Prices' &&
+      value !== 'All Status' &&
+      value !== 'All Plates'
+    ) {
+      queryParams.append(key, value.toString())
     }
+  })
 
-    fetchProducts()
-    return () => controller.abort()
-  }, [
-    category,
-    search,
-    price_min,
-    price_max,
-    sort,
-    status,
-    screenplate_id,
-    most_sold,
-    min_rating,
-    in_stock_only,
-    page,
-    per_page,
-  ])
+  if (params.in_stock_only) {
+    queryParams.append('in_stock_only', '1')
+  }
 
-  return { products, totalPages, isLoading, error }
+  const query = queryParams.toString()
+  const res = await fetch(
+    `${import.meta.env.VITE_API_URL}/api/products${query ? '?' + query : ''}`,
+    {
+      signal,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
+    },
+  )
+
+  if (res.status === 429) {
+    toast.error('Too many requests. Please slow down.')
+    throw new Error('Rate limited')
+  }
+
+  if (res.status === 401) {
+    localStorage.removeItem(STORAGE_KEYS.TOKEN)
+    window.location.href = '/login'
+    throw new Error('Unauthorized')
+  }
+
+  if (res.status === 403) {
+    throw new Error('Access Denied')
+  }
+
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+
+  const data = await res.json()
+  const list = Array.isArray(data.data) ? data.data : []
+  const lastPage =
+    typeof data.last_page === 'number'
+      ? data.last_page
+      : typeof data.meta?.last_page === 'number'
+        ? data.meta.last_page
+        : 1
+
+  return { products: list as IProduct[], totalPages: lastPage > 0 ? lastPage : 1 }
+}
+
+export function useProducts(params: ProductQueryParams) {
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['products', params],
+    queryFn: ({ signal }) => fetchProducts(params, { signal }),
+  })
+
+  return {
+    products: data?.products ?? [],
+    totalPages: data?.totalPages ?? 1,
+    isLoading,
+    error: error instanceof Error ? error.message : null,
+  }
 }

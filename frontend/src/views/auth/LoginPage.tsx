@@ -6,7 +6,7 @@ import {
   EyeOff,
   ShieldCheck,
 } from 'lucide-react'
-import { motion } from 'framer-motion'
+import { m } from 'framer-motion'
 import { useAuth } from '../../context/AuthContext'
 import AuthNavbar from '../../components/auth/AuthNavbar'
 import Footer from '../../components/Footer/Footer'
@@ -116,7 +116,7 @@ const LoginPage: React.FC = () => {
       <AuthNavbar />
 
       <main className="flex flex-grow items-center justify-center bg-slate-50 p-6 pt-24 pb-12">
-        <motion.div
+        <m.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="relative grid w-full max-w-[1100px] grid-cols-1 overflow-hidden rounded-[28px] border border-slate-100 bg-white shadow-2xl md:grid-cols-2"
@@ -173,20 +173,20 @@ const LoginPage: React.FC = () => {
             </div>
 
             {displayError && (
-              <motion.div
+              <m.div
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
                 role="alert"
                 aria-live="polite"
                 className="mb-8 border-l-4 border-rose-500 bg-rose-50 p-5"
               >
-                <motion.div className="flex items-center gap-2">
+                <m.div className="flex items-center gap-2">
                   <div className="h-1.5 w-1.5 rounded-full bg-rose-500 animate-pulse" />
                   <p className="text-[10px] font-black tracking-widest text-rose-700 uppercase italic">
                     {displayError}
                   </p>
-                </motion.div>
-              </motion.div>
+                </m.div>
+              </m.div>
             )}
 
             <form onSubmit={handleLogin} className="space-y-8" noValidate>
@@ -335,7 +335,7 @@ const LoginPage: React.FC = () => {
               </div>
             </div>
           </div>
-        </motion.div>
+        </m.div>
       </main>
 
       <Footer />

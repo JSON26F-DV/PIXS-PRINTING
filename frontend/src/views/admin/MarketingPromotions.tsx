@@ -208,7 +208,7 @@ const MarketingPromotions: React.FC = () => {
         }))
         setCustomers(formattedCustomers)
       } else {
-        console.warn('Failed to fetch customers from database, using defaults:', custsResult.reason ?? 'Unknown error')
+        console.warn('Failed to fetch customers from database, using defaults:', custsResult.status === 'rejected' ? custsResult.reason : 'Unknown error')
       }
 
       if (prodsResult.status === 'fulfilled') {

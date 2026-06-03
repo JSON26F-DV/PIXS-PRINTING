@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react'
-import { motion } from 'framer-motion'
+import { m } from 'framer-motion'
 
 interface SplitTextProps {
   text: string
@@ -21,7 +21,7 @@ const SplitText: React.FC<SplitTextProps> = ({
       {words.map((word, wordIndex) => (
         <span key={wordIndex} className="inline-block whitespace-nowrap">
           {word.split('').map((char, charIndex) => (
-            <motion.span
+            <m.span
               key={charIndex}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -33,7 +33,7 @@ const SplitText: React.FC<SplitTextProps> = ({
               className="inline-block"
             >
               {char}
-            </motion.span>
+            </m.span>
           ))}
           <span className="inline-block">&nbsp;</span>
         </span>

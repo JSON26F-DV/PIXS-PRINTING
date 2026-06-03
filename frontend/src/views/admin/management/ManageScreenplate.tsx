@@ -8,7 +8,7 @@ import {
   ChevronLeft,
   Upload,
 } from 'lucide-react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { m, AnimatePresence } from 'framer-motion'
 import { useDebounce } from '../../../hooks/useDebounce'
 import toast from 'react-hot-toast'
 import type { IProduct, IScreenplate, IUser, ICompatibilityNode, IVariant } from '../inventory-sections/types'
@@ -282,7 +282,7 @@ export default function ManageScreenplate() {
       {/* Header */}
       <div className="sticky top-0 z-40 flex items-center justify-between border-b border-slate-100 bg-white p-6 lg:p-8">
         <div className="flex items-center gap-4">
-          <button
+          <button type="button"
             onClick={() => navigate('/admin/screenplate')}
             className="rounded-2xl p-3 text-slate-400 transition-all hover:bg-slate-50 hover:text-slate-900 active:scale-90"
           >
@@ -532,7 +532,7 @@ export default function ManageScreenplate() {
               <div className="flex items-center gap-4">
                 <div
                   className={cn(
-                    'flex h-12 w-12 items-center justify-center rounded-2xl transition-all',
+                    'flex size-12 items-center justify-center rounded-2xl transition-all',
                     data.is_flatscreen
                       ? 'bg-[#75EEA5] text-slate-900'
                       : 'bg-slate-700 text-slate-400 group-hover:bg-slate-600',
@@ -559,7 +559,7 @@ export default function ManageScreenplate() {
               >
                 <div
                   className={cn(
-                    'absolute top-1 h-4 w-4 rounded-full bg-white transition-all duration-300',
+                    'absolute top-1 size-4 rounded-full bg-white transition-all duration-300',
                     data.is_flatscreen ? 'right-1' : 'left-1',
                   )}
                 />
@@ -660,7 +660,7 @@ export default function ManageScreenplate() {
 
                     <AnimatePresence>
                       {isExpanded && (
-                        <motion.div
+                        <m.div
                           initial={{ height: 0 }}
                           animate={{ height: 'auto' }}
                           exit={{ height: 0 }}
@@ -688,7 +688,7 @@ export default function ManageScreenplate() {
                                     className="space-y-2"
                                   >
                                     <div className="flex items-start gap-2">
-                                      <button
+                                      <button type="button"
                                         onClick={() => toggleVariant(p.id, v.variant_id, true)}
                                         className={cn(
                                           'mt-0.5 shrink-0 rounded-lg border p-1.5 transition-all',
@@ -701,7 +701,7 @@ export default function ManageScreenplate() {
                                         <Check size={10} strokeWidth={4} />
                                       </button>
 
-                                      <button
+                                      <button type="button"
                                         onClick={() => toggleVariant(p.id, v.variant_id, false)}
                                         className={cn(
                                           'mt-0.5 shrink-0 rounded-lg border p-1.5 transition-all',
@@ -736,7 +736,7 @@ export default function ManageScreenplate() {
                               })
                             )}
                           </div>
-                        </motion.div>
+                        </m.div>
                       )}
                     </AnimatePresence>
                   </div>
@@ -756,7 +756,7 @@ export default function ManageScreenplate() {
               {saveModal.message}
             </p>
             <div className="mt-8 flex justify-end">
-              <button
+              <button type="button"
                 onClick={closeSaveModal}
                 className="rounded-2xl bg-slate-900 px-6 py-3 text-[10px] font-black uppercase tracking-[0.3em] text-[#75EEA5] transition-all hover:bg-slate-800"
               >
@@ -769,13 +769,13 @@ export default function ManageScreenplate() {
 
       {/* Footer actions */}
       <div className="sticky bottom-0 z-50 mt-auto flex gap-4 border-t border-slate-100 bg-white p-6 lg:p-10">
-        <button
+        <button type="button"
           onClick={handleAbort}
           className="rounded-2xl bg-slate-900/5 px-8 py-4 text-[10px] font-black tracking-[3px] text-slate-900 uppercase transition-all hover:bg-slate-900/10 lg:py-5"
         >
           ABORT
         </button>
-        <button
+        <button type="button"
           onClick={handleSave}
           disabled={isSaving}
           className="flex-1 rounded-2xl bg-slate-900 py-4 text-[10px] font-black tracking-[3px] text-[#75EEA5] uppercase shadow-2xl shadow-slate-900/20 transition-all hover:-translate-y-1 disabled:opacity-50 lg:py-5"

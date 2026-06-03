@@ -24,7 +24,7 @@ import {
   PieChart,
   Pie,
 } from 'recharts'
-import { motion, AnimatePresence } from 'framer-motion'
+import { m, AnimatePresence } from 'framer-motion'
 import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 import { format, parseISO } from 'date-fns'
@@ -677,7 +677,7 @@ const Orders: React.FC = () => {
               {paginatedOrders.map((order) => {
                 const customer = customers.find((c) => c.id === order.user_id)
                 return (
-                  <motion.div
+                  <m.div
                     key={order.order_id}
                     whileHover={{ scale: 1.01 }}
                     whileTap={{ scale: 0.98 }}
@@ -750,7 +750,7 @@ const Orders: React.FC = () => {
                           )}
                        </div>
                     </div>
-                  </motion.div>
+                  </m.div>
                 )
               })}
             </div>
@@ -920,7 +920,7 @@ const Orders: React.FC = () => {
                         {/* Order Item Details */}
                         <AnimatePresence>
                           {isExpanded && (
-                            <motion.tr 
+                            <m.tr 
                               initial={{ opacity: 0, height: 0 }}
                               animate={{ opacity: 1, height: 'auto' }}
                               exit={{ opacity: 0, height: 0 }}
@@ -1112,7 +1112,7 @@ const Orders: React.FC = () => {
                                   </div>
                                 </div>
                               </td>
-                            </motion.tr>
+                            </m.tr>
                           )}
                         </AnimatePresence>
                       </React.Fragment>
@@ -1281,14 +1281,14 @@ const Orders: React.FC = () => {
       <AnimatePresence>
         {statusModal.isOpen && (
           <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
-            <motion.div 
+            <m.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="absolute inset-0 bg-slate-900/60 backdrop-blur-md"
               onClick={() => setStatusModal({ ...statusModal, isOpen: false })}
             />
-            <motion.div 
+            <m.div 
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
@@ -1323,7 +1323,7 @@ const Orders: React.FC = () => {
                   Execute Update
                 </button>
               </div>
-            </motion.div>
+            </m.div>
           </div>
         )}
       </AnimatePresence>
@@ -1332,14 +1332,14 @@ const Orders: React.FC = () => {
       <AnimatePresence>
         {deleteModal.isOpen && (
           <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
-            <motion.div 
+            <m.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="absolute inset-0 bg-slate-900/60 backdrop-blur-md"
               onClick={() => setDeleteModal({ ...deleteModal, isOpen: false })}
             />
-            <motion.div 
+            <m.div 
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
@@ -1374,7 +1374,7 @@ const Orders: React.FC = () => {
                   Delete Permanently
                 </button>
               </div>
-            </motion.div>
+            </m.div>
           </div>
         )}
       </AnimatePresence>
@@ -1383,14 +1383,14 @@ const Orders: React.FC = () => {
       <AnimatePresence>
         {concernModal.isOpen && (
           <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
-            <motion.div 
+            <m.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="absolute inset-0 bg-slate-900/60 backdrop-blur-md"
               onClick={() => setConcernModal({ ...concernModal, isOpen: false })}
             />
-            <motion.div 
+            <m.div 
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
@@ -1438,7 +1438,7 @@ const Orders: React.FC = () => {
                   Confirm & Transmit
                 </button>
               </div>
-            </motion.div>
+            </m.div>
           </div>
         )}
       </AnimatePresence>
@@ -1447,14 +1447,14 @@ const Orders: React.FC = () => {
       <AnimatePresence>
         {mobileDetailOrder && (
           <div className="fixed inset-0 z-[110] flex items-end sm:items-center justify-center p-0 sm:p-4">
-            <motion.div 
+            <m.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="absolute inset-0 bg-slate-900/60 backdrop-blur-md"
               onClick={() => setMobileDetailOrder(null)}
             />
-            <motion.div 
+            <m.div 
               initial={{ opacity: 0, y: 100 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 100 }}
@@ -1633,7 +1633,7 @@ const Orders: React.FC = () => {
                     Dismiss
                   </button>
                </div>
-            </motion.div>
+            </m.div>
           </div>
         )}
       </AnimatePresence>
@@ -1642,14 +1642,14 @@ const Orders: React.FC = () => {
       <AnimatePresence>
         {messageModal.isOpen && (
           <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
-            <motion.div 
+            <m.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="absolute inset-0 bg-slate-900/60 backdrop-blur-md"
               onClick={() => !messageModal.isSubmitting && setMessageModal({ ...messageModal, isOpen: false })}
             />
-            <motion.div 
+            <m.div 
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
@@ -1697,7 +1697,7 @@ const Orders: React.FC = () => {
                   {messageModal.isSubmitting ? 'Sending...' : 'Send Message'}
                 </button>
               </div>
-            </motion.div>
+            </m.div>
           </div>
         )}
       </AnimatePresence>

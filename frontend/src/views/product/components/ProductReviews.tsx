@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { Star, MessageCircle, Calendar, User, Filter } from 'lucide-react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { m, AnimatePresence } from 'framer-motion'
 import { clsx } from 'clsx'
 
 interface Review {
@@ -87,7 +87,7 @@ const ProductReviews: React.FC<ProductReviewsProps> = ({ reviews = [] }) => {
         <AnimatePresence mode='popLayout'>
           {filteredReviews.length > 0 ? (
             filteredReviews.map((review) => (
-              <motion.div
+              <m.div
                 key={review.id}
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -132,7 +132,7 @@ const ProductReviews: React.FC<ProductReviewsProps> = ({ reviews = [] }) => {
                 <div className="absolute -right-2 -bottom-2 -rotate-12 opacity-5 transition-opacity group-hover:opacity-10">
                   <MessageCircle size={64} />
                 </div>
-              </motion.div>
+              </m.div>
             ))
           ) : (
             <div className="col-span-full py-12 text-center text-xs font-black tracking-widest text-slate-300 uppercase italic">

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useMemo } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { m, AnimatePresence } from 'framer-motion'
 import { clsx } from 'clsx'
 import {
   Menu,
@@ -248,7 +248,7 @@ const AdminSettingsContent: React.FC = () => {
             </div>
 
             <AnimatePresence mode="wait">
-              <motion.div
+              <m.div
                 key={activeSection}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -257,7 +257,7 @@ const AdminSettingsContent: React.FC = () => {
                 className="AdminSettingsCard"
               >
                 {renderSection()}
-              </motion.div>
+              </m.div>
             </AnimatePresence>
           </div>
         </main>

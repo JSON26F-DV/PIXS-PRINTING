@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { FiTag, FiCopy, FiGift } from 'react-icons/fi'
-import { motion, AnimatePresence } from 'framer-motion'
+import { m, AnimatePresence } from 'framer-motion'
 import { clsx } from 'clsx'
 
 import toast from 'react-hot-toast'
@@ -91,7 +91,7 @@ const AwardsSection: React.FC = () => {
       <div className="space-y-3">
         <AnimatePresence>
           {vouchers.length === 0 ? (
-            <motion.div
+            <m.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               className="flex flex-col items-center justify-center py-12 text-center"
@@ -102,10 +102,10 @@ const AwardsSection: React.FC = () => {
               <p className="text-[10px] font-black tracking-[3px] text-slate-400 uppercase">
                 No rewards discovered yet
               </p>
-            </motion.div>
+            </m.div>
           ) : (
             vouchers.map((v) => (
-              <motion.div
+              <m.div
                 key={v.id}
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -167,7 +167,7 @@ const AwardsSection: React.FC = () => {
                     </button>
                   )}
                 </div>
-              </motion.div>
+              </m.div>
             ))
           )}
         </AnimatePresence>

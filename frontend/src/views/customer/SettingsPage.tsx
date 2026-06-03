@@ -1,6 +1,6 @@
 import React, { useState, useRef, lazy, Suspense } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { motion, AnimatePresence } from 'framer-motion'
+import { m, AnimatePresence } from 'framer-motion'
 import { clsx } from 'clsx'
 import { FiArrowLeft, FiMenu, FiX } from 'react-icons/fi'
 import { useAuth } from '../../context/AuthContext'
@@ -253,14 +253,14 @@ const SettingsPage: React.FC = () => {
       <AnimatePresence>
         {mobileNavOpen && (
           <>
-            <motion.div
+            <m.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setMobileNavOpen(false)}
               className="fixed inset-0 z-[110] bg-slate-900/50 backdrop-blur-sm lg:hidden"
             />
-            <motion.div
+            <m.div
               initial={{ x: '-100%' }}
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
@@ -288,7 +288,7 @@ const SettingsPage: React.FC = () => {
                 activeSection={activeSection}
                 onSelect={handleSectionChange}
               />
-            </motion.div>
+            </m.div>
           </>
         )}
       </AnimatePresence>
@@ -326,7 +326,7 @@ const SettingsPage: React.FC = () => {
 
             {/* Section Content */}
             <AnimatePresence mode="wait">
-              <motion.div
+              <m.div
                 key={activeSection}
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -347,7 +347,7 @@ const SettingsPage: React.FC = () => {
                     </Suspense>
                   </div>
                 )}
-              </motion.div>
+              </m.div>
             </AnimatePresence>
           </main>
         </div>

@@ -18,7 +18,6 @@ function ProductManagementContent() {
 
   const initializeData = async () => {
     try {
-      setIsLoading(true)
       setLoadError(false)
 
       const [productsRes, categoriesRes] = await Promise.all([
