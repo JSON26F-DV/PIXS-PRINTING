@@ -12,6 +12,8 @@ export interface IProduct {
   id: string
   name: string
   category: string
+  category_id?: string
+  category_label?: string
   short_description: string
   long_description: string
   best_for: string
@@ -59,7 +61,6 @@ export interface IScreenplate {
   base_setup_fee?: number
   is_flatscreen: boolean
   compatibility: ICompatibilityNode[]
-  incompatible_products: string[]
 }
 
 export interface IUser {

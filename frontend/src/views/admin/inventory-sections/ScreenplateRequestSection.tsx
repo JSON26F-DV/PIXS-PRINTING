@@ -4,6 +4,7 @@ import { m } from 'framer-motion'
 import { Check, X, ImageIcon, Search, ArrowUpDown } from 'lucide-react'
 import type { IScreenplateRequest } from './types'
 import { updateScreenplateRequestStatus } from '../../../api/admin-screenplates.api'
+import { Pagination } from './UIComponents'
 import toast from 'react-hot-toast'
 
 export function ScreenplateRequestSection({
@@ -18,6 +19,8 @@ export function ScreenplateRequestSection({
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<'All' | 'Pending' | 'Approved' | 'Rejected'>('All')
   const [sortOrder, setSortOrder] = useState<'latest' | 'oldest'>('latest')
+  const [requestPage, setRequestPage] = useState(1)
+  const REQUESTS_PER_PAGE = 12
 
   const filteredAndSortedRequests = useMemo(() => {
     let res = requests
@@ -44,6 +47,12 @@ export function ScreenplateRequestSection({
       return sortOrder === 'latest' ? dateB - dateA : dateA - dateB
     })
   }, [requests, statusFilter, searchQuery, sortOrder])
+
+  const paginatedRequests = filteredAndSortedRequests.slice(
+    (requestPage - 1) * REQUESTS_PER_PAGE,
+    requestPage * REQUESTS_PER_PAGE,
+  )
+  const totalRequestPages = Math.max(1, Math.ceil(filteredAndSortedRequests.length / REQUESTS_PER_PAGE))
 
   const handleApprove = async (req: IScreenplateRequest) => {
     try {
@@ -84,7 +93,7 @@ export function ScreenplateRequestSection({
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
           <input
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => { setSearchQuery(e.target.value); setRequestPage(1) }}
             placeholder="Search requests by customer, product..."
             className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-12 pr-4 text-sm font-bold text-slate-700 outline-none transition-colors focus:border-slate-900"
           />
@@ -97,7 +106,7 @@ export function ScreenplateRequestSection({
             {(['All', 'Pending', 'Approved', 'Rejected'] as const).map((status) => (
               <button
                 key={status}
-                onClick={() => setStatusFilter(status)}
+                onClick={() => { setStatusFilter(status); setRequestPage(1) }}
                 className={`rounded-xl px-4 py-2 text-[10px] font-black uppercase tracking-wider transition-all ${
                   statusFilter === status
                     ? 'bg-slate-900 text-white shadow-md'
@@ -114,7 +123,7 @@ export function ScreenplateRequestSection({
             <ArrowUpDown size={14} className="text-slate-400" />
             <select
               value={sortOrder}
-              onChange={(e) => setSortOrder(e.target.value as 'latest' | 'oldest')}
+              onChange={(e) => { setSortOrder(e.target.value as 'latest' | 'oldest'); setRequestPage(1) }}
               className="bg-transparent text-[10px] font-black uppercase tracking-wider text-slate-700 outline-none cursor-pointer"
             >
               <option value="latest">LATEST</option>
@@ -132,7 +141,7 @@ export function ScreenplateRequestSection({
             <p className="text-sm font-black tracking-widest uppercase">No requests found</p>
           </div>
         ) : (
-          filteredAndSortedRequests.map((req) => (
+          paginatedRequests.map((req) => (
             <m.div
               key={req.id}
               initial={{ opacity: 0, y: 10 }}
@@ -168,12 +177,12 @@ export function ScreenplateRequestSection({
                   </p>
                   {req.customer?.company_name && (
                     <p className="text-[9px] font-bold text-slate-500 uppercase tracking-wider mt-0.5">
-                      🏢 {req.customer.company_name}
+                      {req.customer.company_name}
                     </p>
                   )}
                   {req.customer?.email && (
                     <p className="text-[9px] font-medium text-slate-400 mt-0.5 lowercase">
-                      ✉️ {req.customer.email}
+                      {req.customer.email}
                     </p>
                   )}
                 </div>
@@ -234,6 +243,12 @@ export function ScreenplateRequestSection({
           ))
         )}
       </div>
+
+      <Pagination
+        currentPage={requestPage}
+        totalPages={totalRequestPages}
+        onPageChange={setRequestPage}
+      />
     </div>
   )
 }

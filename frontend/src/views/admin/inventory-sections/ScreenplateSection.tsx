@@ -18,6 +18,7 @@ import { m, AnimatePresence } from 'framer-motion'
 import type { IUser, IScreenplate, IProduct } from './types'
 import {
   ConfirmModal,
+  Pagination,
 } from './UIComponents'
 import BoxFallback from '../../../components/common/BoxFallback'
 import toast from 'react-hot-toast'
@@ -84,6 +85,13 @@ export const ScreenplateSection: React.FC<ScreenplateSectionProps> = ({
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
   const [isDesktop, setIsDesktop] = useState(() => window.innerWidth >= 1024)
 
+  const [customerPage, setCustomerPage] = useState(1)
+  const [platePage, setPlatePage] = useState(1)
+  const CUSTOMERS_PER_PAGE = 8
+  const PLATES_PER_PAGE = 10
+
+  const [selectedPlateForModal, setSelectedPlateForModal] = useState<IScreenplate | null>(null)
+
   useEffect(() => {
     const check = () => setIsDesktop(window.innerWidth >= 1024)
     window.addEventListener('resize', check)
@@ -99,6 +107,12 @@ export const ScreenplateSection: React.FC<ScreenplateSectionProps> = ({
     )
   })
 
+  const paginatedCustomers = filteredCustomers.slice(
+    (customerPage - 1) * CUSTOMERS_PER_PAGE,
+    customerPage * CUSTOMERS_PER_PAGE,
+  )
+  const totalCustomerPages = Math.max(1, Math.ceil(filteredCustomers.length / CUSTOMERS_PER_PAGE))
+
   const platesForSelected = screenplates.filter((p) => {
     const matchesCustomer =
       selectedCustomer && p.owner_id === selectedCustomer.id
@@ -107,6 +121,12 @@ export const ScreenplateSection: React.FC<ScreenplateSectionProps> = ({
       p.id.toLowerCase().includes(plateSearch.toLowerCase())
     return matchesCustomer && matchesSearch
   })
+
+  const paginatedPlates = platesForSelected.slice(
+    (platePage - 1) * PLATES_PER_PAGE,
+    platePage * PLATES_PER_PAGE,
+  )
+  const totalPlatePages = Math.max(1, Math.ceil(platesForSelected.length / PLATES_PER_PAGE))
 
   const handleDeletePlate = async () => {
     if (!plateToDelete) return
@@ -122,6 +142,7 @@ export const ScreenplateSection: React.FC<ScreenplateSectionProps> = ({
   const selectCustomer = (c: IUser) => {
     setSelectedCustomer(c)
     setIsMobileSidebarOpen(false)
+    setPlatePage(1)
   }
 
   const sidebarContent = (
@@ -167,7 +188,7 @@ export const ScreenplateSection: React.FC<ScreenplateSectionProps> = ({
       </div>
 
       <div className="custom-scrollbar flex-1 space-y-3 overflow-y-auto p-4">
-        {filteredCustomers.map((c) => (
+        {paginatedCustomers.map((c) => (
           <button
             key={c.id}
             onClick={() => selectCustomer(c)}
@@ -232,11 +253,19 @@ export const ScreenplateSection: React.FC<ScreenplateSectionProps> = ({
           </div>
         )}
       </div>
+
+      <div className="border-t border-slate-100 px-4 py-3">
+        <Pagination
+          currentPage={customerPage}
+          totalPages={totalCustomerPages}
+          onPageChange={setCustomerPage}
+        />
+      </div>
     </aside>
   )
 
   return (
-    <div className="-mx-4 flex min-h-[70vh] flex-col overflow-hidden lg:-mx-8 lg:flex-row lg:min-h-screen">
+    <div className="-mx-4 flex min-h-[70vh] flex-col items-center overflow-hidden lg:-mx-8 lg:flex-row lg:items-stretch lg:min-h-screen">
       {/* DESKTOP SIDEBAR */}
       {isDesktop && (
         <div className="z-10 hidden w-full lg:flex lg:w-[380px]">
@@ -324,152 +353,93 @@ export const ScreenplateSection: React.FC<ScreenplateSectionProps> = ({
 
         {/* Plate grid */}
         <div className="custom-scrollbar relative z-0 flex-1 overflow-y-auto p-4 lg:p-8 xl:p-12">
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
-            {platesForSelected.map((plate) => (
-              <m.div
-                layout
-                id={`plate-${plate.id}`}
-                key={plate.id}
-                className="group relative flex h-full flex-col overflow-hidden rounded-[24px] border border-slate-100 bg-white p-5 transition-all duration-500 hover:border-[#75EEA5]/30 hover:shadow-2xl hover:shadow-[#75EEA5]/5 lg:rounded-[32px] lg:p-6"
-              >
-                <div className="relative mb-5 aspect-[16/10] overflow-hidden rounded-[20px] border-4 border-white bg-slate-100 shadow-inner lg:rounded-[24px] lg:mb-6">
-                  <SafeImage
-                    src={plate.image}
-                    alt={plate.plate_name || 'Mesh'}
-                    className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
-                    pathPrefix="/images/screenplate/"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-900/40 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
-                </div>
-
-                <div className="flex-1">
-                  <h4 className="mb-1 text-base font-black tracking-tight text-slate-900 uppercase italic lg:text-lg">
-                    {plate.plate_name}
-                  </h4>
-                  <p className="mb-5 text-[10px] font-black tracking-widest text-slate-400 uppercase lg:mb-6">
-                    ID: {plate.id}
-                  </p>
-
-                  <div className="mb-4 grid grid-cols-2 gap-3 lg:gap-4">
-                    <div className="rounded-2xl border border-slate-100 bg-slate-50 p-3 lg:p-3.5">
-                      <p className="mb-1 text-[8px] font-black tracking-[2px] text-slate-400 uppercase">
-                        CHANNELS
-                      </p>
-                      <p className="text-sm font-black text-slate-900">
-                        {plate.channels} COLORS
-                      </p>
-                    </div>
-                    <div className="rounded-2xl border border-slate-100 bg-slate-50 p-3 lg:p-3.5">
-                      <p className="mb-1 text-[8px] font-black tracking-[2px] text-slate-400 uppercase">
-                        SETUP FEE
-                      </p>
-                      <p className="text-sm font-black text-emerald-600 uppercase">
-                        ₱{plate.base_setup_fee ?? 0}
-                      </p>
-                    </div>
-                    <div className="rounded-2xl border border-slate-100 bg-slate-50 p-3 lg:p-3.5">
-                      <p className="mb-1 text-[8px] font-black tracking-[2px] text-slate-400 uppercase">
-                        ALIGNMENT
-                      </p>
-                      <p className="truncate text-xs font-black text-slate-900 uppercase">
-                        {plate.alignment}
-                      </p>
-                    </div>
-                    <div className="rounded-2xl border border-slate-100 bg-slate-50 p-3 lg:p-3.5">
-                      <p className="mb-1 text-[8px] font-black tracking-[2px] text-slate-400 uppercase">
-                        DIMENSIONS
-                      </p>
-                      <p className="truncate text-[10px] font-black text-slate-900 uppercase">
-                        {plate.dimensions || 'N/A'}
-                      </p>
-                    </div>
+          <div className="mx-auto grid max-w-7xl grid-cols-2 gap-4 md:grid-cols-2 xl:grid-cols-3 xl:gap-6">
+            {paginatedPlates.map((plate) => {
+              const isMobile = !isDesktop
+              return (
+                <div
+                  key={plate.id}
+                  onClick={() => isMobile && setSelectedPlateForModal(plate)}
+                  className="group relative flex h-full flex-col overflow-hidden rounded-[24px] border border-slate-100 bg-white p-4 transition-all duration-500 hover:border-[#75EEA5]/30 hover:shadow-2xl hover:shadow-[#75EEA5]/5 lg:cursor-default lg:rounded-[32px] lg:p-6"
+                >
+                  <div className="relative mb-4 aspect-[16/10] overflow-hidden rounded-[20px] border-4 border-white bg-slate-100 shadow-inner lg:rounded-[24px] lg:mb-6">
+                    <SafeImage
+                      src={plate.image}
+                      alt={plate.plate_name || 'Mesh'}
+                      className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
+                      pathPrefix="/images/screenplate/"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900/40 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
                   </div>
 
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h5 className="text-[10px] font-black tracking-[2px] text-slate-900 uppercase italic">
-                        Compatibility Hub
-                      </h5>
-                      <span className="rounded-full bg-[#10b981]/10 px-2 py-0.5 text-[9px] font-black text-[#10b981]">
-                        {plate.compatibility.length} Nodes
-                      </span>
-                    </div>
-                    <div className="flex max-h-[70px] flex-wrap gap-1.5 overflow-hidden transition-all duration-500 group-hover:max-h-none">
-                      {plate.compatibility.map((c) => {
-                        const prod = products.find(
-                          (p) => p.id === c.product_id,
-                        )
-                        return (
-                          <div
-                            key={c.product_id}
-                            className="cursor-default rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-1.5 text-[9px] font-black tracking-tight text-emerald-700 uppercase transition-all hover:border-emerald-600 hover:text-emerald-900"
-                          >
-                            {prod?.name || c.product_id}
-                          </div>
-                        )
-                      })}
-                      {plate.compatibility.length === 0 && (
-                        <p className="text-[10px] font-bold text-slate-300 italic">
-                          No compatible nodes mapped
-                        </p>
-                      )}
-                    </div>
-
-                    {plate.incompatible_products &&
-                      plate.incompatible_products.length > 0 && (
-                        <div className="mt-4 space-y-2">
-                          <div className="flex items-center justify-between">
-                            <h5 className="text-[10px] font-black tracking-[2px] text-rose-500 uppercase italic">
-                              Incompatibility Matrix
-                            </h5>
-                          </div>
-                          <div className="flex flex-wrap gap-1.5">
-                            {plate.incompatible_products.map((id) => {
-                              const prod = products.find((p) => p.id === id)
-                              return (
-                                <div
-                                  key={id}
-                                  className="rounded-lg border border-rose-100 bg-rose-50 px-3 py-1.5 text-[8px] font-black tracking-tight text-rose-400 uppercase"
-                                >
-                                  {prod?.name || id}
-                                </div>
-                              )
-                            })}
-                          </div>
-                        </div>
-                      )}
-                  </div>
-                </div>
-
-                <div className="mt-6 flex items-center justify-between border-t border-slate-50 pt-5 lg:mt-8 lg:pt-6">
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => navigate(`/admin/screenplate/manage/${plate.id}`)}
-                      className="rounded-xl border border-slate-100 bg-slate-50 p-3 text-slate-400 shadow-sm transition-all hover:border-blue-100 hover:bg-blue-50 hover:text-blue-600 active:scale-90"
-                    >
-                      <Edit size={14} />
-                    </button>
-                    <button
-                      onClick={() => setPlateToDelete(plate)}
-                      className="rounded-xl border border-slate-100 bg-slate-50 p-3 text-slate-400 shadow-sm transition-all hover:border-rose-100 hover:bg-rose-50 hover:text-rose-600 active:scale-90"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-[8px] font-black tracking-widest text-slate-300 uppercase">
-                      METRIC READY
+                  <div className="flex-1">
+                    <h4 className="mb-1 text-sm font-black tracking-tight text-slate-900 uppercase italic lg:text-lg">
+                      {plate.plate_name}
+                    </h4>
+                    <p className="mb-4 text-[9px] font-black tracking-widest text-slate-400 uppercase lg:mb-6">
+                      ID: {plate.id}
                     </p>
-                    <div className="mt-1 flex items-center justify-end gap-1 text-[#75EEA5]">
-                      <Check size={12} strokeWidth={4} />
-                      <span className="text-[10px] font-black uppercase">
-                        VALID
-                      </span>
+
+                    <div className="mb-3 grid grid-cols-2 gap-2 lg:mb-4 lg:gap-4">
+                      <div className="rounded-2xl border border-slate-100 bg-slate-50 p-2 lg:p-3.5">
+                        <p className="mb-1 text-[7px] font-black tracking-[2px] text-slate-400 uppercase lg:text-[8px]">
+                          CHANNELS
+                        </p>
+                        <p className="text-xs font-black text-slate-900 lg:text-sm">
+                          {plate.channels}
+                        </p>
+                      </div>
+                      <div className="rounded-2xl border border-slate-100 bg-slate-50 p-2 lg:p-3.5">
+                        <p className="mb-1 text-[7px] font-black tracking-[2px] text-slate-400 uppercase lg:text-[8px]">
+                          FEE
+                        </p>
+                        <p className="text-xs font-black text-emerald-600 uppercase lg:text-sm">
+                          ₱{plate.base_setup_fee ?? 0}
+                        </p>
+                      </div>
                     </div>
                   </div>
+
+                  {/* Desktop only */}
+                  <div className="mt-auto hidden lg:block">
+                    <div className="flex items-center justify-between border-t border-slate-50 pt-5 lg:mt-8 lg:pt-6">
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => navigate(`/admin/screenplate/manage/${plate.id}`)}
+                          className="rounded-xl border border-slate-100 bg-slate-50 p-3 text-slate-400 shadow-sm transition-all hover:border-blue-100 hover:bg-blue-50 hover:text-blue-600 active:scale-90"
+                        >
+                          <Edit size={14} />
+                        </button>
+                        <button
+                          onClick={() => setPlateToDelete(plate)}
+                          className="rounded-xl border border-slate-100 bg-slate-50 p-3 text-slate-400 shadow-sm transition-all hover:border-rose-100 hover:bg-rose-50 hover:text-rose-600 active:scale-90"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[8px] font-black tracking-widest text-slate-300 uppercase">
+                          METRIC READY
+                        </p>
+                        <div className="mt-1 flex items-center justify-end gap-1 text-[#75EEA5]">
+                          <Check size={12} strokeWidth={4} />
+                          <span className="text-[10px] font-black uppercase">
+                            VALID
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Mobile tap indicator */}
+                  {isMobile && (
+                    <div className="mt-3 text-center text-[8px] font-black tracking-widest text-slate-300 uppercase">
+                      Tap to view
+                    </div>
+                  )}
                 </div>
-              </m.div>
-            ))}
+              )
+            })}
 
             {platesForSelected.length === 0 && (
               <div className="col-span-full flex flex-col items-center justify-center py-20 opacity-10 grayscale lg:py-40">
@@ -483,8 +453,107 @@ export const ScreenplateSection: React.FC<ScreenplateSectionProps> = ({
               </div>
             )}
           </div>
+
+          <Pagination
+            currentPage={platePage}
+            totalPages={totalPlatePages}
+            onPageChange={setPlatePage}
+          />
         </div>
       </main>
+
+      {/* Mobile Bottom Sheet Modal (rendered outside main to avoid stacking context clipping) */}
+      <AnimatePresence>
+        {selectedPlateForModal && !isDesktop && (
+          <>
+            <m.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[999] bg-slate-900/60 backdrop-blur-sm"
+              onClick={() => setSelectedPlateForModal(null)}
+            />
+            <m.div
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 30, stiffness: 350 }}
+              className="fixed bottom-0 left-0 right-0 z-[999] max-h-[85vh] overflow-y-auto rounded-t-[32px] bg-white p-6 shadow-2xl"
+            >
+              <div className="mx-auto mb-6 h-1.5 w-12 rounded-full bg-slate-200" />
+
+              <div className="relative mb-5 aspect-[16/10] overflow-hidden rounded-[24px] border-4 border-white bg-slate-100 shadow-inner">
+                <SafeImage
+                  src={selectedPlateForModal.image}
+                  alt={selectedPlateForModal.plate_name}
+                  className="h-full w-full object-cover"
+                  pathPrefix="/images/screenplate/"
+                />
+              </div>
+
+              <h3 className="text-xl font-black tracking-tight text-slate-900 uppercase italic">
+                {selectedPlateForModal.plate_name}
+              </h3>
+              <p className="mb-5 text-[11px] font-black tracking-widest text-slate-400 uppercase">
+                ID: {selectedPlateForModal.id}
+              </p>
+
+              <div className="mb-5 grid grid-cols-2 gap-3">
+                <div className="rounded-2xl border border-slate-100 bg-slate-50 p-3.5">
+                  <p className="mb-1 text-[8px] font-black tracking-[2px] text-slate-400 uppercase">CHANNELS</p>
+                  <p className="text-sm font-black text-slate-900">{selectedPlateForModal.channels} COLORS</p>
+                </div>
+                <div className="rounded-2xl border border-slate-100 bg-slate-50 p-3.5">
+                  <p className="mb-1 text-[8px] font-black tracking-[2px] text-slate-400 uppercase">SETUP FEE</p>
+                  <p className="text-sm font-black text-emerald-600 uppercase">₱{selectedPlateForModal.base_setup_fee ?? 0}</p>
+                </div>
+                <div className="rounded-2xl border border-slate-100 bg-slate-50 p-3.5">
+                  <p className="mb-1 text-[8px] font-black tracking-[2px] text-slate-400 uppercase">ALIGNMENT</p>
+                  <p className="truncate text-xs font-black text-slate-900 uppercase">{selectedPlateForModal.alignment}</p>
+                </div>
+                <div className="rounded-2xl border border-slate-100 bg-slate-50 p-3.5">
+                  <p className="mb-1 text-[8px] font-black tracking-[2px] text-slate-400 uppercase">DIMENSIONS</p>
+                  <p className="truncate text-[10px] font-black text-slate-900 uppercase">{selectedPlateForModal.dimensions || 'N/A'}</p>
+                </div>
+              </div>
+
+              <div className="mb-6">
+                <h5 className="mb-2 text-[10px] font-black tracking-[2px] text-slate-900 uppercase italic">
+                  Compatibility Hub
+                </h5>
+                <div className="flex flex-wrap gap-1.5">
+                  {selectedPlateForModal.compatibility.map((c) => {
+                    const prod = products.find((p) => p.id === c.product_id)
+                    return (
+                      <div key={c.product_id} className="rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-1.5 text-[9px] font-black tracking-tight text-emerald-700 uppercase">
+                        {prod?.name || c.product_id}
+                      </div>
+                    )
+                  })}
+                  {selectedPlateForModal.compatibility.length === 0 && (
+                    <p className="text-[10px] font-bold text-slate-300 italic">No compatible nodes mapped</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-4 border-t border-slate-100">
+                <button
+                  onClick={() => { setSelectedPlateForModal(null); navigate(`/admin/screenplate/manage/${selectedPlateForModal.id}`) }}
+                  className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-slate-900 py-4 text-[11px] font-black tracking-widest text-[#75EEA5] uppercase shadow-xl shadow-slate-900/10 transition-all hover:bg-slate-800 active:scale-95"
+                >
+                  <Edit size={16} /> Edit
+                </button>
+                <button
+                  onClick={() => { setPlateToDelete(selectedPlateForModal); setSelectedPlateForModal(null) }}
+                  className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-rose-200 bg-rose-50 py-4 text-[11px] font-black tracking-widest text-rose-500 uppercase transition-all hover:bg-rose-100 active:scale-95"
+                >
+                  <Trash2 size={16} /> Delete
+                </button>
+              </div>
+            </m.div>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* DELETE MODAL */}
       {plateToDelete && (

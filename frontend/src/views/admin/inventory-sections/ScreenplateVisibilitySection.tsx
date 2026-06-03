@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { m, AnimatePresence } from 'framer-motion'
 import { Eye, EyeOff, Search, ChevronDown } from 'lucide-react'
 import type { IProduct, IVariant } from './types'
@@ -18,7 +18,18 @@ export function ScreenplateVisibilitySection({
   onVariantUpdate: (productId: string, variantId: string, isVisible: boolean) => void
 }) {
   const [searchQuery, setSearchQuery] = useState('')
+  const [categoryFilter, setCategoryFilter] = useState<string>('All')
   const [expandedProduct, setExpandedProduct] = useState<string | null>(null)
+
+  const categories = useMemo(() => {
+    const map = new Map<string, string>()
+    products.forEach(p => {
+      const id = (p as any).category_id
+      const label = (p as any).category_label || p.category
+      if (id) map.set(id, label)
+    })
+    return [{ id: 'All', label: 'All' }, ...Array.from(map.entries()).map(([id, label]) => ({ id, label }))]
+  }, [products])
 
   const handleToggleProduct = async (e: React.MouseEvent, p: IProduct) => {
     e.stopPropagation()
@@ -48,11 +59,12 @@ export function ScreenplateVisibilitySection({
 
   const filteredProducts = products.filter(p => {
     const q = searchQuery.trim().toLowerCase()
-    if (!q) return true
-    return (
+    const matchesSearch = !q || (
       p.name.toLowerCase().includes(q) ||
-      (p.category || '').toLowerCase().includes(q)
+      ((p as any).category_label || p.category || '').toLowerCase().includes(q)
     )
+    const matchesCategory = categoryFilter === 'All' || (p as any).category_id === categoryFilter
+    return matchesSearch && matchesCategory
   })
 
   return (
@@ -66,6 +78,26 @@ export function ScreenplateVisibilitySection({
             placeholder="Search catalog to manage visibility..."
             className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-12 pr-4 text-sm font-bold text-slate-700 outline-none transition-colors focus:border-slate-900"
           />
+        </div>
+      </div>
+
+      {/* Category Filter */}
+      <div className="flex w-full flex-col items-center gap-3 pb-2 sm:flex-row sm:gap-2">
+        <span className="text-[10px] font-black tracking-widest text-slate-400 uppercase sm:mr-1">Category:</span>
+        <div className="flex w-full flex-wrap justify-center gap-1.5 sm:w-auto">
+          {categories.map((cat) => (
+            <button
+              key={cat.id}
+              onClick={() => setCategoryFilter(cat.id)}
+              className={`rounded-xl px-3.5 py-2 text-[9px] font-black tracking-wider uppercase transition-all ${
+                categoryFilter === cat.id
+                  ? 'bg-slate-900 text-white shadow-md'
+                  : 'border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-900'
+              }`}
+            >
+              {cat.label}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -94,7 +126,7 @@ export function ScreenplateVisibilitySection({
                       {p.name}
                     </p>
                     <p className="text-[9px] font-bold tracking-widest text-slate-400 uppercase">
-                      {p.category}
+                      {(p as any).category_label || p.category}
                     </p>
                   </div>
                   <button

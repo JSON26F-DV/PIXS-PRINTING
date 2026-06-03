@@ -1,5 +1,5 @@
 import React from 'react'
-import { Plus, Upload, Trash2, Camera, AlertCircle } from 'lucide-react'
+import { Plus, Upload, Trash2, Camera, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react'
 import { type LucideIcon } from 'lucide-react'
 import { m, AnimatePresence } from 'framer-motion'
 import { useDropzone } from 'react-dropzone'
@@ -372,3 +372,43 @@ export const ConfirmModal: React.FC<{
     )}
   </AnimatePresence>
 )
+
+export const Pagination: React.FC<{
+  currentPage: number
+  totalPages: number
+  onPageChange: (page: number) => void
+}> = ({ currentPage, totalPages, onPageChange }) => {
+  const pages = Array.from({ length: totalPages }, (_, i) => i + 1)
+
+  return (
+    <div className="flex items-center justify-center gap-1.5 py-4">
+      <button
+        onClick={() => onPageChange(currentPage - 1)}
+        disabled={currentPage <= 1}
+        className="rounded-xl border border-slate-200 bg-white p-2.5 text-slate-500 transition-all hover:bg-slate-50 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-30"
+      >
+        <ChevronLeft size={14} />
+      </button>
+      {pages.map((page) => (
+        <button
+          key={page}
+          onClick={() => onPageChange(page)}
+          className={`min-w-[36px] rounded-xl px-3 py-2 text-[10px] font-black tracking-wider uppercase transition-all ${
+            currentPage === page
+              ? 'bg-slate-900 text-white shadow-md'
+              : 'border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-900'
+          }`}
+        >
+          {page}
+        </button>
+      ))}
+      <button
+        onClick={() => onPageChange(currentPage + 1)}
+        disabled={currentPage >= totalPages}
+        className="rounded-xl border border-slate-200 bg-white p-2.5 text-slate-500 transition-all hover:bg-slate-50 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-30"
+      >
+        <ChevronRight size={14} />
+      </button>
+    </div>
+  )
+}
