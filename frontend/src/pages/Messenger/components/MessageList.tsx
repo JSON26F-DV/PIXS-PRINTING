@@ -65,6 +65,60 @@ const MessagePortal: React.FC<PortalProps> = ({ children }) => {
   return createPortal(children, mount)
 }
 
+// ---------------------------------------------------------------------------
+// LazyCard — viewport-gated card renderer
+// Renders a skeleton-height placeholder until the card is near the viewport,
+// then mounts the real component ONCE and never unmounts it again.
+// This prevents Virtuoso's virtual-scroll from remounting cards on scroll,
+// which was causing one API call per remount.
+// ---------------------------------------------------------------------------
+interface LazyCardProps {
+  /** Approximate height of the loaded card (keeps scroll stable while loading) */
+  approxHeight: number
+  children: React.ReactNode
+  /** Extra bottom margin added below card in the list */
+  className?: string
+}
+
+const LazyCard: React.FC<LazyCardProps> = ({ approxHeight, children, className }) => {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [revealed, setRevealed] = useState(false)
+
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setRevealed(true)
+          observer.disconnect() // one-shot — stays rendered forever after this
+        }
+      },
+      { rootMargin: '300px 0px' }, // start loading 300px before entering viewport
+    )
+
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
+
+  return (
+    <div
+      ref={containerRef}
+      className={className}
+      style={!revealed ? { minHeight: approxHeight, width: '100%' } : undefined}
+    >
+      {revealed ? children : (
+        // Placeholder while offscreen — matches approximate card height
+        <div
+          style={{ height: approxHeight }}
+          className="w-full max-w-sm rounded-[32px] border border-slate-100 bg-white animate-pulse"
+        />
+      )}
+    </div>
+  )
+}
+
 const QuickReactBar: React.FC<{
   onSelect: (emoji: string) => void
   onShowMore: () => void
@@ -278,31 +332,48 @@ const MessageBubble: React.FC<{
 
           {message.order_id && !isEditing && !message.isDeleted && (
             <div className="mt-2 group-last:mb-0">
-               <OrderConfirmMessage messageId={message.id} orderId={message.order_id} isCustomer={isCustomer} isConfirm={message.is_confirm} productConcern={message.product_concern} />
+              <LazyCard approxHeight={480}>
+                <OrderConfirmMessage
+                  messageId={message.id}
+                  orderId={message.order_id}
+                  isCustomer={isCustomer}
+                  isConfirm={message.is_confirm}
+                  productConcern={message.product_concern}
+                  messageText={message.text}
+                />
+              </LazyCard>
             </div>
           )}
 
           {message.expenditures_id && !isEditing && !message.isDeleted && (
             <div className="mt-2 group-last:mb-0">
-               <ExpenditureConfirmMessage expenditureId={message.expenditures_id} isCustomer={isCustomer} />
+              <LazyCard approxHeight={290}>
+                <ExpenditureConfirmMessage expenditureId={message.expenditures_id} isCustomer={isCustomer} />
+              </LazyCard>
             </div>
           )}
 
           {message.refund_id && !isEditing && !message.isDeleted && (
             <div className="mt-2 group-last:mb-0">
-               <RefundMessage refundId={message.refund_id} isCustomer={isCustomer} />
+              <LazyCard approxHeight={390}>
+                <RefundMessage refundId={message.refund_id} isCustomer={isCustomer} />
+              </LazyCard>
             </div>
           )}
 
           {message.an_email && !isEditing && !message.isDeleted && (
             <div className="mt-2 group-last:mb-0">
-               <EmailMessage messageText={message.text} created_at={message.timestamp} isCustomer={isCustomer} />
+              <LazyCard approxHeight={160}>
+                <EmailMessage messageText={message.text} created_at={message.timestamp} isCustomer={isCustomer} />
+              </LazyCard>
             </div>
           )}
 
           {message.screenplate_request_id && !isEditing && !message.isDeleted && (
             <div className="mt-2 group-last:mb-0">
-               <ScreenplateConfirmMessage requestId={message.screenplate_request_id} isCustomer={isCustomer} onImageClick={onImageClick} />
+              <LazyCard approxHeight={580}>
+                <ScreenplateConfirmMessage requestId={message.screenplate_request_id} isCustomer={isCustomer} onImageClick={onImageClick} />
+              </LazyCard>
             </div>
           )}
 
@@ -355,16 +426,28 @@ const MessageBubble: React.FC<{
             </div>
           )}
 
-          {message.product_concern && !message.refund_id && !message.an_email && (
-            <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50/50 p-4">
+          {message.product_concern && !message.refund_id && !message.an_email && !message.text?.startsWith('[LIVE_QUEUE_COMPLETED]') && (
+            <div className={clsx(
+              "mt-3 rounded-xl border p-4",
+              message.text?.startsWith('[LIVE_QUEUE_NOT_COMPLETED]') 
+                ? "border-rose-200 bg-rose-50/50 text-rose-950" 
+                : "border-amber-200 bg-amber-50/50 text-amber-950"
+            )}>
               <div className="flex items-center gap-2 mb-2">
-                <AlertCircle size={16} className="text-amber-500" />
-                <span className="text-[10px] font-black tracking-widest uppercase text-amber-500">
-                  PRODUCT CONCERN
+                <AlertCircle size={16} className={message.text?.startsWith('[LIVE_QUEUE_NOT_COMPLETED]') ? "text-rose-500" : "text-amber-500"} />
+                <span className={clsx(
+                  "text-[10px] font-black tracking-widest uppercase",
+                  message.text?.startsWith('[LIVE_QUEUE_NOT_COMPLETED]') ? "text-rose-500" : "text-amber-500"
+                )}>
+                  {message.text?.startsWith('[LIVE_QUEUE_NOT_COMPLETED]') ? "PRODUCTION TASK INCOMPLETE" : "PRODUCT CONCERN"}
                 </span>
               </div>
-              <p className="text-sm font-medium">{message.text}</p>
-              <p className="mt-2 text-xs text-slate-500">Awaiting admin response</p>
+              <p className="text-sm font-medium">
+                {message.text?.startsWith('[LIVE_QUEUE_NOT_COMPLETED]') 
+                  ? message.text.replace('[LIVE_QUEUE_NOT_COMPLETED] ', '') 
+                  : message.text}
+              </p>
+              <p className="mt-2 text-xs opacity-60">Awaiting admin response</p>
             </div>
           )}
 
@@ -721,16 +804,7 @@ const MessageBubble: React.FC<{
 
 const INITIAL_FIRST_ITEM_INDEX = 10000
 
-const MessageSkeleton: React.FC<{ isCustomer?: boolean }> = ({ isCustomer }) => (
-  <div className={clsx('mb-3 md:mb-8 flex flex-col', isCustomer ? 'items-end' : 'items-start')}>
-    <div
-      className={clsx(
-        'h-20 rounded-[20px] bg-slate-200/80',
-        isCustomer ? 'w-[78%]' : 'w-[66%]',
-      )}
-    />
-  </div>
-)
+
 
 const MessageList: React.FC<MessageListProps> = ({
   messages,
@@ -822,13 +896,16 @@ const MessageList: React.FC<MessageListProps> = ({
     return () => { if (timerId) clearTimeout(timerId) }
   }, [messages])
 
-  // Scroll to bottom 3 times when loading finishes or mounting (refresh or navigating to /chat)
+  // Scroll to bottom when loading finishes or on mount.
+  // We attempt multiple times at increasing intervals to account for
+  // card components that expand as their data loads (e.g. OrderConfirmMessage).
+  // The 800ms attempt gives even slow API responses time to settle.
   useEffect(() => {
     if (!isLoading && messages.length > 0) {
       scrollToBottom('auto')
-      const t1 = setTimeout(() => scrollToBottom('auto'), 100)
-      const t2 = setTimeout(() => scrollToBottom('auto'), 300)
-      const t3 = setTimeout(() => scrollToBottom('auto'), 600)
+      const t1 = setTimeout(() => scrollToBottom('auto'), 150)
+      const t2 = setTimeout(() => scrollToBottom('auto'), 400)
+      const t3 = setTimeout(() => scrollToBottom('auto'), 800)
       return () => {
         clearTimeout(t1)
         clearTimeout(t2)
@@ -836,6 +913,21 @@ const MessageList: React.FC<MessageListProps> = ({
       }
     }
   }, [isLoading, messages.length])
+
+  // Scroll-lock while loading older messages.
+  // Prevents the user from scrolling up while the server is fetching
+  // more history — avoids layout confusion from prepended items mid-scroll.
+  useEffect(() => {
+    const container = scrollContainerRef.current
+    if (!container) return
+    if (isLoadingMore) {
+      // Freeze the scroll container completely
+      container.style.overflowY = 'hidden'
+    } else {
+      // Restore normal scroll
+      container.style.overflowY = 'auto'
+    }
+  }, [isLoadingMore])
 
   return (
     <MotionConfig transition={{ duration: 0 }} reducedMotion="always">
@@ -903,15 +995,20 @@ const MessageList: React.FC<MessageListProps> = ({
               )}
               components={{
                 Header: () => isLoadingMore ? (
-                  <div className="space-y-4 py-4 px-4">
-                    {[0, 1, 2].map((index) => (
-                      <MessageSkeleton key={index} isCustomer={index % 2 === 0} />
-                    ))}
+                  // Spinner shown at top while older messages load.
+                  // Scroll is locked (see effect above) so user stays put.
+                  <div className="flex items-center justify-center py-6">
+                    <div className="flex items-center gap-3 rounded-full border border-slate-200 bg-white px-5 py-3 shadow-md">
+                      <div className="h-4 w-4 animate-spin rounded-full border-[2.5px] border-slate-200 border-t-slate-800" />
+                      <span className="text-[9px] font-black uppercase tracking-[3px] text-slate-500">
+                        Loading messages
+                      </span>
+                    </div>
                   </div>
                 ) : (
                   <div className="h-4" />
                 ),
-                Footer: () => <div className="md:pb-10" />
+                Footer: () => <div className="md:pb-10" />,
               }}
             />
           )}

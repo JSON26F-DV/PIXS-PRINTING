@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from 'react'
+import React, { useState } from 'react'
 import { Check, MapPin, Phone } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../../context/AuthContext'
 import type { Order } from '../../Order/components/OrderCard'
 import { clsx } from 'clsx'
 import axiosInstance from '../../../lib/axiosInstance'
+import { useCardCache } from '../hooks/useCardCache'
 
 interface ExtendedOrder extends Order {
   customer_name?: string | null
@@ -17,33 +18,34 @@ interface OrderConfirmMessageProps {
   isCustomer: boolean
   isConfirm?: number
   productConcern?: number | boolean
+  messageText?: string
 }
 
-const OrderConfirmMessage: React.FC<OrderConfirmMessageProps> = ({ messageId, orderId, isCustomer, isConfirm, productConcern }) => {
+const OrderConfirmMessage: React.FC<OrderConfirmMessageProps> = ({ messageId, orderId, isCustomer, isConfirm, productConcern, messageText }) => {
   const { user } = useAuth()
   const navigate = useNavigate()
-  const [order, setOrder] = useState<ExtendedOrder | null>(null)
-  const [loading, setLoading] = useState(true)
   const [confirmed, setConfirmed] = useState(() => {
     return isConfirm === 1 || localStorage.getItem(`confirmed_order_${orderId}`) === 'true'
   })
   const isProductConcern = productConcern === 1 || productConcern === true
 
-  useEffect(() => {
-    let mounted = true
-    axiosInstance.get(`/api/messages/orders/${orderId}`)
-      .then(res => {
-        if (mounted) {
-          setOrder(res.data)
-          setLoading(false)
-        }
-      })
-      .catch(err => {
-        console.error('Failed to fetch order for message:', err)
-        if (mounted) setLoading(false)
-      })
-    return () => { mounted = false }
-  }, [orderId])
+  const isLiveQueueCompleted = messageText?.startsWith('[LIVE_QUEUE_COMPLETED]')
+  const isLiveQueueNotCompleted = messageText?.startsWith('[LIVE_QUEUE_NOT_COMPLETED]')
+  const isLiveQueueUpdate = isLiveQueueCompleted || isLiveQueueNotCompleted
+
+  const cleanMessageText = messageText
+    ? messageText
+        .replace('[LIVE_QUEUE_COMPLETED] ', '')
+        .replace('[LIVE_QUEUE_NOT_COMPLETED] ', '')
+        .replace('[LIVE_QUEUE_COMPLETED]', '')
+        .replace('[LIVE_QUEUE_NOT_COMPLETED]', '')
+    : ''
+
+  const { data: order, loading } = useCardCache<ExtendedOrder>(
+    'orders',
+    orderId,
+    () => axiosInstance.get(`/api/messages/orders/${orderId}`).then(r => r.data),
+  )
 
   const handleConfirm = async () => {
     setConfirmed(true)
@@ -98,6 +100,115 @@ const OrderConfirmMessage: React.FC<OrderConfirmMessageProps> = ({ messageId, or
   }
 
   if (!order) return <div className="p-4 text-[10px] uppercase font-black text-rose-500">Order Data Corrupted or Deleted</div>
+
+  if (isLiveQueueUpdate) {
+    return (
+      <div 
+        onClick={handleCardClick}
+        className={clsx(
+          "w-full max-w-sm rounded-[32px] overflow-hidden shadow-2xl border transition-all",
+          user && user.role !== 'customer' && "cursor-pointer hover:shadow-lg",
+          isLiveQueueCompleted 
+            ? "border-emerald-500/30 bg-emerald-50/5 hover:border-emerald-500/50" 
+            : "border-rose-500/30 bg-rose-50/5 hover:border-rose-500/50",
+          isCustomer ? "bg-slate-900 border-white/10 text-white" : "bg-white border-slate-100 text-slate-900"
+        )}
+      >
+        {/* Header */}
+        <div className={clsx(
+          "p-6 border-b",
+          isCustomer ? "border-white/10" : "border-slate-100"
+        )}>
+          <div className="flex items-center justify-between mb-4">
+            <span className={clsx(
+              "text-[10px] font-black tracking-[4px] uppercase italic px-3 py-1 rounded-full",
+              isLiveQueueCompleted 
+                ? "bg-emerald-500/10 text-emerald-500" 
+                : "bg-rose-500/10 text-rose-500"
+            )}>
+              {isLiveQueueCompleted ? "Task Completed" : "Task Incomplete"}
+            </span>
+            <span className="text-[9px] font-bold opacity-50 uppercase tracking-widest">ID: {orderId}</span>
+          </div>
+
+          <h3 className="text-xl font-black italic uppercase leading-tight mb-2">
+            {isLiveQueueCompleted ? "Production finished successfully" : "Production task halted"}
+          </h3>
+
+          <div className="mt-3 text-[10px] font-bold space-y-1 opacity-70 uppercase tracking-wider">
+            {order.customer_name && <p>Customer: <span className="font-black text-slate-900 dark:text-white">{order.customer_name}</span></p>}
+            {order.company_name && <p>Company: <span className="font-black text-slate-900 dark:text-white">{order.company_name}</span></p>}
+          </div>
+
+          {/* Status Message / Reason Section */}
+          <div className={clsx(
+            "mt-4 rounded-2xl p-4 text-xs font-semibold leading-relaxed border",
+            isLiveQueueCompleted 
+              ? "bg-emerald-500/5 border-emerald-500/20 text-emerald-600 dark:text-emerald-400" 
+              : "bg-rose-500/5 border-rose-500/20 text-rose-600 dark:text-rose-400"
+          )}>
+            <div className="text-[9px] font-black uppercase tracking-wider mb-1 opacity-70">
+              {isLiveQueueCompleted ? "Completion Message:" : "Reason / Remarks:"}
+            </div>
+            <p className="italic font-bold">"{cleanMessageText}"</p>
+          </div>
+        </div>
+
+        {/* Items */}
+        <div className={clsx(
+          "p-6 space-y-4 border-b",
+          isCustomer ? "border-white/10" : "border-slate-100"
+        )}>
+          <div className="text-[9px] font-black uppercase tracking-wider text-slate-400 mb-2">Payload Contents</div>
+          {order.order_items.map((item, idx) => (
+            <div key={idx} className="flex gap-4 items-start">
+              <div className="h-16 w-16 bg-white rounded-xl overflow-hidden shrink-0 border border-slate-100">
+                <img src={item.productImage} alt={item.productName} className="h-full w-full object-cover" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h4 className="text-[11px] font-black uppercase italic truncate">{item.productName}</h4>
+                <p className="text-[9px] font-bold opacity-50 uppercase mt-1">
+                  {item.variant.size}
+                  {item.order_item_colors && item.order_item_colors.length > 0 && (
+                    <> | {item.order_item_colors.map(c => c.name).join(', ')}</>
+                  )}
+                </p>
+                <div className="flex items-center gap-4 mt-2">
+                  <div className="flex-1">
+                     <p className="text-[8px] font-black tracking-widest text-emerald-500 uppercase leading-none mb-1">Total Items</p>
+                     <p className="text-[12px] font-black italic">x{item.quantity}</p>
+                  </div>
+                  <div className="text-right">
+                     <p className="text-[8px] font-black tracking-widest text-slate-400 uppercase leading-none mb-1">Net Price</p>
+                     <p className="text-[12px] font-mono font-black italic">₱{((item.variant.unitPrice) * item.quantity).toLocaleString()}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Address (If available) */}
+        {order.shipping_address && (
+          <div className="px-6 py-5 bg-white/5 opacity-80">
+             <div className="flex items-center gap-2 mb-2">
+               <MapPin size={12} className={isLiveQueueCompleted ? "text-emerald-500" : "text-rose-500"} />
+               <span className="text-[10px] font-black tracking-widest uppercase">{order.shipping_address.label}</span>
+             </div>
+             <div className="space-y-1">
+                <p className="text-[10px] font-bold leading-relaxed">
+                  {order.shipping_address.region} {order.shipping_address.province} {order.shipping_address.city} {order.shipping_address.barangay} {order.shipping_address.street} {order.shipping_address.postal_code}
+                </p>
+                <div className="flex items-center gap-2 pt-1">
+                  <Phone size={10} className={isLiveQueueCompleted ? "text-emerald-500" : "text-rose-500"} />
+                  <p className="text-[10px] font-mono font-bold tracking-tighter">{order.shipping_address.contact_number}</p>
+                </div>
+             </div>
+          </div>
+        )}
+      </div>
+    )
+  }
 
   return (
     <div 

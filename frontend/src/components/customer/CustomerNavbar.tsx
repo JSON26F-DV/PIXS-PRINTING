@@ -37,10 +37,12 @@ const CustomerNavbar: React.FC = () => {
     useCustomerAddressStore()
 
   React.useEffect(() => {
-    if (user?.isLoggedIn) {
+    // Only fetch customer addresses for customer accounts.
+    // Staff/admin using the Messenger page would 401 otherwise.
+    if (user?.isLoggedIn && user?.role === 'customer') {
       fetchAddresses()
     }
-  }, [user?.isLoggedIn, fetchAddresses])
+  }, [user?.isLoggedIn, user?.role, fetchAddresses])
 
   const selectedAddress = useMemo(
     () => addresses.find((a) => a.id === defaultAddressId),
@@ -71,6 +73,12 @@ const CustomerNavbar: React.FC = () => {
   }
 
   if (location.pathname.startsWith('/admin')) {
+    return null
+  }
+
+  // Also hide for non-customer roles on any path
+  // (staff/inventory/technician use the Messenger via nested routes)
+  if (user?.isLoggedIn && user?.role !== 'customer') {
     return null
   }
 

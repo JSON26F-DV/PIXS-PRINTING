@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react'
+import React from 'react'
 import { User, Mail, CheckCircle, Clock, XCircle } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../../context/AuthContext'
 import { clsx } from 'clsx'
 import axiosInstance from '../../../lib/axiosInstance'
+import { useCardCache } from '../hooks/useCardCache'
 
 interface Refund {
   id: string
@@ -31,24 +32,12 @@ interface RefundMessageProps {
 const RefundMessage: React.FC<RefundMessageProps> = ({ refundId, isCustomer }) => {
   const { user } = useAuth()
   const navigate = useNavigate()
-  const [refund, setRefund] = useState<Refund | null>(null)
-  const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    let mounted = true
-    axiosInstance.get(`/api/messages/refunds/${refundId}`)
-      .then(res => {
-        if (mounted) {
-          setRefund(res.data)
-          setLoading(false)
-        }
-      })
-      .catch(err => {
-        console.error('Failed to fetch refund details:', err)
-        if (mounted) setLoading(false)
-      })
-    return () => { mounted = false }
-  }, [refundId])
+  const { data: refund, loading } = useCardCache<Refund>(
+    'refunds',
+    refundId,
+    () => axiosInstance.get(`/api/messages/refunds/${refundId}`).then(r => r.data),
+  )
 
   const handleCardClick = () => {
     if (user?.role === 'admin') {

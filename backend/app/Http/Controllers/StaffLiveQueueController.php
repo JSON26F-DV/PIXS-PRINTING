@@ -38,6 +38,7 @@ class StaffLiveQueueController extends Controller
             $formattedOrder = [
                 'order_id' => (string) $o->id,
                 'user_id' => $o->customer ? "{$o->customer->first_name} {$o->customer->last_name}" : (string) $o->customer_id,
+                'company_name' => $o->customer ? $o->customer->company_name : null,
                 'customer_id' => (string) $o->customer_id,
                 'total_amount' => (float) $o->total_amount,
                 'status' => $o->status,
@@ -51,7 +52,7 @@ class StaffLiveQueueController extends Controller
                     'productImage' => $item->product && $item->product->main_image 
                         ? '/images/products/'.$item->product->main_image 
                         : '',
-                    'category' => $item->product?->category ?? 'General',
+                    'category' => $item->product?->category?->label ?? 'General',
                     'quantity' => $item->quantity,
                     'variant' => [
                         'id' => $item->variant_id,
@@ -112,9 +113,9 @@ class StaffLiveQueueController extends Controller
 
         // Define message text
         if ($taskStatus === 'COMPLETED') {
-            $messageText = 'successfully na natapos ang task.';
+            $messageText = '[LIVE_QUEUE_COMPLETED] The production task for this order has been successfully completed.';
         } else {
-            $messageText = !empty($validated['message']) ? $validated['message'] : 'hindi natapos';
+            $messageText = '[LIVE_QUEUE_NOT_COMPLETED] ' . (!empty($validated['message']) ? $validated['message'] : 'The production task for this order could not be completed at this time.');
         }
 
         try {

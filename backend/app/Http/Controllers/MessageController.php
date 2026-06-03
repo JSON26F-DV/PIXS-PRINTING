@@ -131,24 +131,34 @@ class MessageController extends Controller
      */
     public function getUsers(Request $request): JsonResponse
     {
+        $adminId = $request->user()->id;
+
+        // Build unread counts: messages sent TO admin (receiver_id = admin) with is_read = 0
+        $unreadCounts = DB::table('messages')
+            ->select('sender_id', DB::raw('COUNT(*) as unread_count'))
+            ->where('receiver_id', $adminId)
+            ->where('is_read', 0)
+            ->where('is_deleted', 0)
+            ->groupBy('sender_id')
+            ->pluck('unread_count', 'sender_id');
+
         $employees = DB::table('employees')
             ->select('id', DB::raw("CONCAT(first_name, ' ', last_name) as name"), 'email', 'role', 'profile_picture')
             ->get()
-            ->map(function ($emp) {
-                // Ensure account_type or similar property is set if needed by frontend
+            ->map(function ($emp) use ($unreadCounts) {
                 $emp->account_type = 'employee';
-                $emp->status = 'offline'; // Mock status since we don't track online status in DB
-
+                $emp->status = 'offline';
+                $emp->unread_count = (int) ($unreadCounts[$emp->id] ?? 0);
                 return $emp;
             });
 
         $customers = DB::table('customers')
             ->select('id', DB::raw("CONCAT(first_name, ' ', last_name) as name"), 'email', 'role', 'profile_picture')
             ->get()
-            ->map(function ($cust) {
+            ->map(function ($cust) use ($unreadCounts) {
                 $cust->account_type = 'customer';
                 $cust->status = 'offline';
-
+                $cust->unread_count = (int) ($unreadCounts[$cust->id] ?? 0);
                 return $cust;
             });
 

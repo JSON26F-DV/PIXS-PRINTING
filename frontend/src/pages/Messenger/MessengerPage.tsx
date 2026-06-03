@@ -24,6 +24,7 @@ interface UserData {
   account_type: 'employee' | 'customer'
   profile_picture?: string
   status?: 'online' | 'offline'
+  unread_count?: number
 }
 
 export interface IMessage {
@@ -279,16 +280,17 @@ const MessengerPage: React.FC = () => {
   const [activeReplyTo, setActiveReplyTo] = useState<IMessage | null>(null)
 
   // Auto-manage panel visibility based on terminal viewport
+  // Accounts panel is admin-only — never auto-open for other roles
   useEffect(() => {
     const handleResize = () => {
       setWindowWidth(window.innerWidth)
-      if (window.innerWidth >= 1024) {
+      if (window.innerWidth >= 1024 && user?.role === 'admin') {
         setIsAccountsOpen(true)
       }
     }
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)
-  }, [])
+  }, [user?.role])
 
   const handleToggleGallery = () => {
     setIsGalleryOpen(!isGalleryOpen)
@@ -655,11 +657,23 @@ const MessengerPage: React.FC = () => {
                           selectedUserId === u.id ? 'bg-slate-900 text-white shadow-lg' : 'bg-white hover:bg-slate-50 border border-slate-100 text-slate-900'
                         )}
                       >
-                        <SidebarUserAvatar src={u.profile_picture} name={u.name} />
+                        <div className="relative shrink-0">
+                          <SidebarUserAvatar src={u.profile_picture} name={u.name} />
+                          {(u.unread_count ?? 0) > 0 && (
+                            <span className="absolute -top-1 -right-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-rose-500 px-1 text-[8px] font-black text-white shadow-sm">
+                              {u.unread_count! > 99 ? '99+' : u.unread_count}
+                            </span>
+                          )}
+                        </div>
                         <div className="text-left flex-1 min-w-0">
                           <p className="truncate text-xs font-black uppercase leading-tight">{u.name}</p>
                           <p className={clsx("text-[8px] font-black uppercase tracking-widest", selectedUserId === u.id ? 'text-slate-300' : 'text-slate-400')}>{u.account_type}</p>
                         </div>
+                        {(u.unread_count ?? 0) > 0 && selectedUserId !== u.id && (
+                          <span className="text-[8px] font-black text-rose-500 uppercase tracking-widest shrink-0">
+                            {u.unread_count} new
+                          </span>
+                        )}
                       </button>
                     ))}
                   </div>
@@ -806,9 +820,9 @@ const MessengerPage: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* Accounts Modal for Mobile */}
+      {/* Accounts Modal for Mobile — admin only */}
       <AnimatePresence>
-        {isAccountsOpen && (
+        {isAccountsOpen && user?.role === 'admin' && (
           <div className="fixed inset-0 z-50 flex items-center justify-center lg:hidden">
             {!isSmallMobile && (
               <m.div
@@ -876,25 +890,37 @@ const MessengerPage: React.FC = () => {
                 </div>
               </div>
               <div data-lenis-prevent className="flex-1 overflow-y-auto p-4 custom-scrollbar">
-                {filteredUsers.map((u) => (
-                  <button
-                    key={u.id}
-                    onClick={() => {
-                      setSelectedUserId(u.id);
-                      setIsAccountsOpen(false);
-                    }}
-                    className={clsx(
-                      'flex w-full items-center gap-3 rounded-2xl p-3 transition-all mb-2',
-                      selectedUserId === u.id ? 'bg-slate-900 text-white shadow-lg' : 'bg-white hover:bg-slate-50 border border-slate-100 text-slate-900'
-                    )}
-                  >
-                    <SidebarUserAvatar src={u.profile_picture} name={u.name} />
-                    <div className="text-left flex-1 min-w-0">
-                      <p className="truncate text-xs font-black uppercase leading-tight">{u.name}</p>
-                      <p className={clsx("text-[8px] font-black uppercase tracking-widest", selectedUserId === u.id ? 'text-slate-300' : 'text-slate-400')}>{u.account_type}</p>
-                    </div>
-                  </button>
-                ))}
+                  {filteredUsers.map((u) => (
+                    <button
+                      key={u.id}
+                      onClick={() => {
+                        setSelectedUserId(u.id);
+                        setIsAccountsOpen(false);
+                      }}
+                      className={clsx(
+                        'flex w-full items-center gap-3 rounded-2xl p-3 transition-all mb-2',
+                        selectedUserId === u.id ? 'bg-slate-900 text-white shadow-lg' : 'bg-white hover:bg-slate-50 border border-slate-100 text-slate-900'
+                      )}
+                    >
+                      <div className="relative shrink-0">
+                        <SidebarUserAvatar src={u.profile_picture} name={u.name} />
+                        {(u.unread_count ?? 0) > 0 && (
+                          <span className="absolute -top-1 -right-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-rose-500 px-1 text-[8px] font-black text-white shadow-sm">
+                            {u.unread_count! > 99 ? '99+' : u.unread_count}
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-left flex-1 min-w-0">
+                        <p className="truncate text-xs font-black uppercase leading-tight">{u.name}</p>
+                        <p className={clsx("text-[8px] font-black uppercase tracking-widest", selectedUserId === u.id ? 'text-slate-300' : 'text-slate-400')}>{u.account_type}</p>
+                      </div>
+                      {(u.unread_count ?? 0) > 0 && selectedUserId !== u.id && (
+                        <span className="text-[8px] font-black text-rose-500 uppercase tracking-widest shrink-0">
+                          {u.unread_count} new
+                        </span>
+                      )}
+                    </button>
+                  ))}
               </div>
             </m.div>
           </div>
@@ -906,18 +932,21 @@ const MessengerPage: React.FC = () => {
         className="pointer-events-none fixed inset-0 z-[10000]"
       />
 
-      <AdminControlModal
-        isOpen={isAdminControlsOpen}
-        onClose={() => setIsAdminControlsOpen(false)}
-        messages={messages}
-        targetUser={users.find(u => u.id === selectedUserId)}
-        onDeleteConversation={handleDeleteConversation}
-        onSendMessage={handleSendMessage}
-        onToggleGallery={() => {
-          setIsGalleryOpen(true)
-          setIsAccountsOpen(false)
-        }}
-      />
+      {/* AdminControlModal — admin only */}
+      {user?.role === 'admin' && (
+        <AdminControlModal
+          isOpen={isAdminControlsOpen}
+          onClose={() => setIsAdminControlsOpen(false)}
+          messages={messages}
+          targetUser={users.find(u => u.id === selectedUserId)}
+          onDeleteConversation={handleDeleteConversation}
+          onSendMessage={handleSendMessage}
+          onToggleGallery={() => {
+            setIsGalleryOpen(true)
+            setIsAccountsOpen(false)
+          }}
+        />
+      )}
     </div>
   )
 }

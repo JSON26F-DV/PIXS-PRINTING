@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react'
+import React from 'react'
 import { FileText } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../../context/AuthContext'
 import { clsx } from 'clsx'
 import axiosInstance from '../../../lib/axiosInstance'
+import { useCardCache } from '../hooks/useCardCache'
 
 interface Expenditure {
   id: number
@@ -21,24 +22,12 @@ interface ExpenditureConfirmMessageProps {
 const ExpenditureConfirmMessage: React.FC<ExpenditureConfirmMessageProps> = ({ expenditureId, isCustomer }) => {
   const { user } = useAuth()
   const navigate = useNavigate()
-  const [expenditure, setExpenditure] = useState<Expenditure | null>(null)
-  const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    let mounted = true
-    axiosInstance.get(`/api/messages/expenditures/${expenditureId}`)
-      .then(res => {
-        if (mounted) {
-          setExpenditure(res.data)
-          setLoading(false)
-        }
-      })
-      .catch(err => {
-        console.error('Failed to fetch expenditure:', err)
-        if (mounted) setLoading(false)
-      })
-    return () => { mounted = false }
-  }, [expenditureId])
+  const { data: expenditure, loading } = useCardCache<Expenditure>(
+    'expenditures',
+    expenditureId,
+    () => axiosInstance.get(`/api/messages/expenditures/${expenditureId}`).then(r => r.data),
+  )
 
   const handleCardClick = () => {
     if (!user || user.role === 'customer') return

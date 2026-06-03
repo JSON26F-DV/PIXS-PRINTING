@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react'
+import React, { useState } from 'react'
 import { Layers, Clock, CheckCircle2, XCircle, Info } from 'lucide-react'
 import BoxFallback from '../../../components/common/BoxFallback'
 import axiosInstance from '../../../lib/axiosInstance'
 import { clsx } from 'clsx'
+import { useCardCache } from '../hooks/useCardCache'
 
 interface ScreenplateRequest {
   id: string
@@ -28,31 +29,19 @@ interface ScreenplateConfirmMessageProps {
 }
 
 const ScreenplateConfirmMessage: React.FC<ScreenplateConfirmMessageProps> = ({ requestId, isCustomer, onImageClick }) => {
-  const [request, setRequest] = useState<ScreenplateRequest | null>(null)
-  const [loading, setLoading] = useState(true)
   const [refImageError, setRefImageError] = useState(false)
 
-  useEffect(() => {
-    let mounted = true
-    axiosInstance.get(`/api/messages/screenplate-requests/${requestId}`)
-      .then(res => {
-        if (mounted) {
-          if (res.data && !res.data.notFound) {
-            setRequest(res.data)
-          } else {
-            setRequest(null)
-          }
-          setLoading(false)
-        }
-      })
-      .catch(() => {
-        if (mounted) {
-          setRequest(null)
-          setLoading(false)
-        }
-      })
-    return () => { mounted = false }
-  }, [requestId])
+  const { data: rawRequest, loading } = useCardCache<ScreenplateRequest>(
+    'screenplate',
+    requestId,
+    () => axiosInstance.get(`/api/messages/screenplate-requests/${requestId}`).then(r => {
+      if (r.data && !r.data.notFound) return r.data
+      return null
+    }),
+  )
+
+  // notFound is stored as null in cache — treat same as no data
+  const request = rawRequest ?? null
 
   const getStatusConfig = (status: string) => {
     switch (status) {
