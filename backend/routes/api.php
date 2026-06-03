@@ -208,6 +208,9 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->prefix('admin')->group(func
 
 // Messaging & Notifications
 Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
+    Route::get('/staff/live-queue', [\App\Http\Controllers\StaffLiveQueueController::class, 'index']);
+    Route::post('/staff/orders/{id}/task-status', [\App\Http\Controllers\StaffLiveQueueController::class, 'updateTaskStatus']);
+
     Route::get('/messages', [MessageController::class, 'index']);
     Route::get('/messages/users', [MessageController::class, 'getUsers']);
     Route::get('/messages/orders/{id}', [MessageController::class, 'getOrderContext']);

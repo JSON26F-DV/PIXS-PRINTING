@@ -9,6 +9,8 @@ import {
   ShoppingBag,
   Calendar,
   Image as ImageIcon,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react'
 import Select, { type SingleValue } from 'react-select'
 import { orderBy } from 'lodash'
@@ -20,29 +22,23 @@ import axios from 'axios'
 import { type Order } from '../../types/order'
 import allProducts from '../../data/products.json'
 
-// Types for staff execution tracking
-interface ExecutionState {
-  startedIds: Record<string, string> // order_id -> timestamp
-  completedIds: string[] // local list of orders finished in this session
-}
-
 interface StaffAssignment {
   allowed_categories: string[]
   allowed_products: string[]
   is_admin: boolean
 }
 
-const LiveQueue: React.FC = () => {
-  // --- STATE ---
-  const [execution, setExecution] = useState<ExecutionState>(() => {
-    try {
-      const saved = localStorage.getItem('pixs_staff_execution_v1')
-      return saved ? JSON.parse(saved) : { startedIds: {}, completedIds: [] }
-    } catch {
-      return { startedIds: {}, completedIds: [] }
-    }
-  })
+interface LiveQueueOrder extends Order {
+  task_status?: 'COMPLETED' | 'NOT_COMPLETED'
+  requested_at?: string
+}
 
+const cn = (...classes: (string | boolean | undefined)[]) =>
+  classes.filter(Boolean).join(' ')
+
+const PAGE_SIZE = 4
+
+const LiveQueue: React.FC = () => {
   // Filters
   const [searchQuery, setSearchQuery] = useState('')
   const [userFilter, setUserFilter] =
@@ -51,33 +47,58 @@ const LiveQueue: React.FC = () => {
     SingleValue<{ value: string; label: string }>
   >({ value: 'date-desc', label: 'Newest First' })
 
-  // --- PERSISTENCE ---
-  useEffect(() => {
-    localStorage.setItem('pixs_staff_execution_v1', JSON.stringify(execution))
-  }, [execution])
+  // Pagination
+  const [pendingOrdersPage, setPendingOrdersPage] = useState(1)
+  const [productionLogsPage, setProductionLogsPage] = useState(1)
 
-  // --- LOAD DATA ---
-  const { data: queueData, error } = useQuery({
+  // Status submission modal state
+  const [modalState, setModalState] = useState<{
+    isOpen: boolean
+    order: LiveQueueOrder | null
+    taskStatus: 'COMPLETED' | 'NOT_COMPLETED' | null
+    customMessage: string
+  }>({
+    isOpen: false,
+    order: null,
+    taskStatus: null,
+    customMessage: '',
+  })
+
+  // Load Data
+  const { data: queueData, error, refetch, isLoading } = useQuery({
     queryKey: ['staff-queue'],
     queryFn: async () => {
-      const response = await axios.get('/api/staff/orders')
-      return response.data as { data: Order[]; assignments: StaffAssignment }
+      const response = await axios.get('/api/staff/live-queue')
+      return response.data as {
+        pending_orders: LiveQueueOrder[]
+        production_orders: LiveQueueOrder[]
+        assignments: StaffAssignment
+      }
     },
   })
 
-  const orders = queueData?.data ?? []
+  const rawPendingOrders = queueData?.pending_orders ?? []
+  const rawProductionOrders = queueData?.production_orders ?? []
   const assignment = queueData?.assignments ?? null
 
-  // --- LOGIC: FILTERING & SORTING ---
+  // Reset pagination when filter parameters change
+  useEffect(() => {
+    setPendingOrdersPage(1)
+    setProductionLogsPage(1)
+  }, [searchQuery, userFilter, sortOption])
+
+  // Aggregate user options for select dropdown
   const usersOptions = useMemo(() => {
-    const uniqueUsers = Array.from(new Set(orders.map((o) => o.user_id)))
+    const allRaw = [...rawPendingOrders, ...rawProductionOrders]
+    const uniqueUsers = Array.from(new Set(allRaw.map((o) => o.user_id)))
     return [
       { value: 'all', label: 'All Users' },
-      ...uniqueUsers.map((uid) => ({ value: uid, label: `Entity: ${uid}` })),
+      ...uniqueUsers.map((uid) => ({ value: uid, label: uid })),
     ]
-  }, [orders])
+  }, [rawPendingOrders, rawProductionOrders])
 
-  const filteredOrders = useMemo(() => {
+  // Filter and sort helper
+  const filterAndSortOrders = (rawList: LiveQueueOrder[]) => {
     if (!assignment) return []
 
     // 1. Assignments from backend
@@ -90,18 +111,16 @@ const LiveQueue: React.FC = () => {
       productCategoryMap[p.name] = p.category
     })
 
-    // 3. Apply category & product restriction
-    const filteredByCategory = orders
-      .filter((o) => !execution.completedIds.includes(o.order_id))
+    // 3. Apply category & product restrictions
+    const filteredByCategory = rawList
       .map((order) => {
-        // If admin, show all products
         const isPrivileged = assignment.is_admin
         const noConstraints =
           allowedCategories.length === 0 && allowedProducts.length === 0
 
         if (isPrivileged || noConstraints) return order
 
-        // Filter products within the order
+        // Filter products in the order to match employee allowed assignments
         const assignedProducts = order.products.filter((p) => {
           const cat = productCategoryMap[p.productName]
           const isCatAllowed = allowedCategories.includes(cat)
@@ -111,29 +130,27 @@ const LiveQueue: React.FC = () => {
 
         return { ...order, products: assignedProducts }
       })
-      .filter((o) => o.products.length > 0) // Hide orders that have no matching products
+      .filter((o) => o.products.length > 0)
 
     let result = filteredByCategory
 
-    // Search logic
+    // Search query match
     if (searchQuery) {
       const q = searchQuery.toLowerCase()
       result = result.filter(
         (o) =>
           o.order_id.toLowerCase().includes(q) ||
           o.user_id.toLowerCase().includes(q) ||
-          o.products.some((p: { productName: string }) =>
-            p.productName.toLowerCase().includes(q),
-          ),
+          o.products.some((p) => p.productName.toLowerCase().includes(q)),
       )
     }
 
-    // User filter
+    // Client user filter
     if (userFilter && userFilter.value !== 'all') {
       result = result.filter((o) => o.user_id === userFilter.value)
     }
 
-    // Sorting logic using lodash
+    // Sort options
     switch (sortOption?.value) {
       case 'date-desc':
         result = orderBy(
@@ -160,10 +177,7 @@ const LiveQueue: React.FC = () => {
           result,
           [
             (o) =>
-              o.products.reduce(
-                (acc: number, p: { quantity: number }) => acc + p.quantity,
-                0,
-              ),
+              o.products.reduce((acc, p) => acc + p.quantity, 0),
           ],
           ['desc'],
         )
@@ -177,68 +191,58 @@ const LiveQueue: React.FC = () => {
         break
     }
 
-    // MANDATORY logic: Started orders float to top
-    return orderBy(
-      result,
-      [(o) => (execution.startedIds[o.order_id] ? 1 : 0)],
-      ['desc'],
-    )
-  }, [orders, searchQuery, userFilter, sortOption, execution, assignment])
-
-  // Split into sections
-  const activeOrders = filteredOrders.filter(
-    (o) => !!execution.startedIds[o.order_id],
-  )
-  const pendingOrders = filteredOrders.filter(
-    (o) => !execution.startedIds[o.order_id],
-  )
-
-  // --- ACTIONS ---
-  const handleInitiateExecution = (orderId: string) => {
-    setExecution((prev: ExecutionState) => ({
-      ...prev,
-      startedIds: {
-        ...prev.startedIds,
-        [orderId]: new Date().toISOString(),
-      },
-    }))
-    toast.success(`Operational sequence initiated for ${orderId}`, {
-      icon: '⚡',
-      style: { borderRadius: '16px', background: '#0f172a', color: '#fff' },
-    })
+    return result
   }
 
-  const handleMarkCompletion = async (order: Order) => {
+  // Filtered lists
+  const pendingOrders = useMemo(() => {
+    return filterAndSortOrders(rawPendingOrders)
+  }, [rawPendingOrders, searchQuery, userFilter, sortOption, assignment])
+
+  const productionOrders = useMemo(() => {
+    return filterAndSortOrders(rawProductionOrders)
+  }, [rawProductionOrders, searchQuery, userFilter, sortOption, assignment])
+
+  // Paginated lists
+  const totalPendingPages = Math.max(1, Math.ceil(pendingOrders.length / PAGE_SIZE))
+  const safePendingPage = Math.min(pendingOrdersPage, totalPendingPages)
+  const paginatedPendingOrders = useMemo(() => {
+    return pendingOrders.slice(
+      (safePendingPage - 1) * PAGE_SIZE,
+      safePendingPage * PAGE_SIZE,
+    )
+  }, [pendingOrders, safePendingPage])
+
+  const totalProductionPages = Math.max(1, Math.ceil(productionOrders.length / PAGE_SIZE))
+  const safeProductionPage = Math.min(productionLogsPage, totalProductionPages)
+  const paginatedProductionOrders = useMemo(() => {
+    return productionOrders.slice(
+      (safeProductionPage - 1) * PAGE_SIZE,
+      safeProductionPage * PAGE_SIZE,
+    )
+  }, [productionOrders, safeProductionPage])
+
+  // Handle task status submission
+  const handleSubmitTaskStatus = async () => {
+    if (!modalState.order || !modalState.taskStatus) return
+
     try {
-      // Log each product production event to backend
-      await Promise.all(
-        order.products.map((p) =>
-          axios.post('/api/staff/log-production', {
-            order_id: order.order_id,
-            product_name: p.productName,
-            quantity: p.quantity,
-            category: p.category,
-          }),
-        ),
+      await axios.post(
+        `/api/staff/orders/${modalState.order.order_id}/task-status`,
+        {
+          task_status: modalState.taskStatus,
+          message: modalState.customMessage,
+        },
       )
-
-      // Persistence: Mark as completed in session
-      setExecution((prev) => ({
-        ...prev,
-        completedIds: [...prev.completedIds, order.order_id],
-      }))
-
-      toast.success(`Production Log persistent for ${order.order_id}`, {
-        icon: '🏛️',
-        duration: 5000,
-        style: { borderRadius: '16px', background: '#0F172A', color: '#fff' },
-      })
-    } catch {
-      toast.error('Failed to log production completion.')
+      toast.success('Task status logged successfully!')
+      setModalState({ isOpen: false, order: null, taskStatus: null, customMessage: '' })
+      refetch()
+    } catch (err: any) {
+      console.error(err)
+      toast.error(err.response?.data?.message || 'Failed to update task status.')
     }
   }
 
-  // --- FALLBACKS ---
   if (error) {
     return (
       <div className="LiveQueueErrorFallback flex min-h-screen items-center justify-center bg-slate-50 p-10">
@@ -249,7 +253,9 @@ const LiveQueue: React.FC = () => {
           <h2 className="text-2xl font-black tracking-tighter text-slate-900 uppercase italic">
             System Malfunction
           </h2>
-          <p className="font-medium text-slate-500">{error instanceof Error ? error.message : 'Unable to retrieve processing orders.'}</p>
+          <p className="font-medium text-slate-500">
+            {error instanceof Error ? error.message : 'Unable to retrieve processing orders.'}
+          </p>
           <button
             onClick={() => window.location.reload()}
             className="w-full rounded-2xl bg-slate-900 py-4 text-[10px] font-black tracking-widest text-white uppercase transition-all hover:bg-slate-800"
@@ -261,14 +267,25 @@ const LiveQueue: React.FC = () => {
     )
   }
 
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-50">
+        <div className="text-center">
+          <div className="h-12 w-12 animate-spin rounded-full border-4 border-slate-900 border-t-transparent mx-auto" />
+          <p className="mt-4 text-sm font-bold text-slate-500">Loading terminal...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="LiveQueuePage min-h-screen bg-[#F8FAFC] pb-20">
-      {/* 🚀 HEADER */}
+      {/* HEADER */}
       <header className="LiveQueueHeader mx-auto max-w-[1700px] px-6 pt-12 md:px-12">
         <div className="flex flex-col justify-between gap-8 lg:flex-row lg:items-end">
           <div className="space-y-3">
             <div className="flex items-center gap-4">
-              <div className="animate-pulse rounded-[22px] bg-slate-900 p-4 text-emerald-400 shadow-2xl shadow-slate-900/20">
+              <div className="animate-pulse rounded-[22px] bg-slate-900 p-4 text-[#75EEA5] shadow-2xl shadow-slate-900/20">
                 <Activity size={28} />
               </div>
               <div>
@@ -289,28 +306,15 @@ const LiveQueue: React.FC = () => {
                   Active Processing
                 </span>
                 <span className="text-2xl font-black tracking-tighter text-slate-900 italic">
-                  {activeOrders.length + pendingOrders.length} Nodes
+                  {pendingOrders.length} Pending / {productionOrders.length} Logged
                 </span>
-              </div>
-              <div className="flex -space-x-3">
-                {orders.slice(0, 3).map((o, i) => (
-                  <div
-                    key={i}
-                    className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-white bg-slate-100 text-[10px] font-black text-slate-400 uppercase"
-                  >
-                    {o.user_id.slice(-2)}
-                  </div>
-                ))}
-                <div className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-white bg-emerald-500 text-[10px] font-black text-white">
-                  +{orders.length}
-                </div>
               </div>
             </div>
           </div>
         </div>
       </header>
 
-      {/* 🛠️ FILTERS BAR */}
+      {/* FILTERS BAR */}
       <section className="LiveQueueFiltersBar mx-auto mt-10 max-w-[1700px] px-6 md:px-12">
         <div className="flex flex-col items-center gap-6 rounded-[32px] border border-slate-100 bg-white p-6 shadow-xl shadow-slate-200/40 lg:flex-row">
           <div className="group relative w-full flex-1">
@@ -358,112 +362,276 @@ const LiveQueue: React.FC = () => {
         </div>
       </section>
 
-      {/* 📋 PRODUCTION BOARD */}
+      {/* PRODUCTION BOARD */}
       <main className="LiveQueueBoard mx-auto mt-10 max-w-[1700px] space-y-16 px-6 md:px-12">
-        {/* ACTIVE SECTION */}
-        {activeOrders.length > 0 && (
-          <section className="LiveQueueActiveSection animate-in slide-in-from-top-4 space-y-8 duration-500">
-            <div className="flex items-center gap-4">
-              <div className="h-3 w-3 animate-ping rounded-full bg-emerald-500"></div>
-              <h2 className="text-xl font-black tracking-widest text-slate-900 uppercase italic">
-                Active Operations{' '}
-                <span className="ml-2 text-emerald-500">
-                  ({activeOrders.length})
-                </span>
-              </h2>
-              <div className="h-px flex-1 bg-slate-200"></div>
-            </div>
-
-            <div className="grid grid-cols-1 gap-8 xl:grid-cols-2">
-              {activeOrders.map((order) => (
-                <OrderCard
-                  key={order.order_id}
-                  order={order}
-                  startedAt={execution.startedIds[order.order_id]}
-                  onComplete={() => handleMarkCompletion(order)}
-                  isActive
-                />
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* PENDING SECTION */}
-        <section className="LiveQueuePendingSection space-y-8">
+        {/* PENDING ORDERS SECTION */}
+        <section className="LiveQueuePendingSection space-y-8 animate-in fade-in duration-500">
           <div className="flex items-center gap-4">
-            <div className="h-3 w-3 rounded-full bg-slate-300"></div>
+            <div className="h-3 w-3 rounded-full bg-[#75EEA5] animate-pulse"></div>
             <h2 className="text-xl font-black tracking-widest text-slate-900 uppercase italic">
-              Waiting for Execution{' '}
-              <span className="ml-2 text-slate-400">
+              Orders Pending Execution{' '}
+              <span className="ml-2 text-emerald-500">
                 ({pendingOrders.length})
               </span>
             </h2>
             <div className="h-px flex-1 bg-slate-200"></div>
           </div>
 
-          {pendingOrders.length === 0 && !activeOrders.length ? (
-            <div className="flex flex-col items-center rounded-[44px] border border-dashed border-slate-200 bg-white py-32 text-center">
+          {paginatedPendingOrders.length === 0 ? (
+            <div className="flex flex-col items-center rounded-[44px] border border-dashed border-slate-200 bg-white py-32 text-center shadow-sm">
               <div className="mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-slate-50 text-slate-200">
                 <Clock size={48} />
               </div>
               <h3 className="text-2xl font-black tracking-tighter text-slate-900 uppercase italic">
-                Queue Empty
+                No Pending Orders
               </h3>
               <p className="mt-2 text-[10px] font-bold tracking-[2px] text-slate-400 uppercase">
-                No active processing orders detected in master ledger
+                All order payloads have been routed to production
               </p>
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-8 xl:grid-cols-2">
-              {pendingOrders.map((order) => (
+              {paginatedPendingOrders.map((order) => (
                 <OrderCard
                   key={order.order_id}
                   order={order}
-                  onStart={() => handleInitiateExecution(order.order_id)}
+                  onStatusSelect={(status) => setModalState({
+                    isOpen: true,
+                    order,
+                    taskStatus: status,
+                    customMessage: '',
+                  })}
                 />
               ))}
             </div>
           )}
+
+          {/* Pagination Controls — Always Shown */}
+          <div className="flex items-center justify-between border border-slate-100 bg-white px-8 py-5 rounded-[24px] shadow-sm mt-6">
+            <span className="text-[10px] font-black tracking-widest text-slate-400 uppercase">
+              Page {safePendingPage} of {totalPendingPages}
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setPendingOrdersPage(Math.max(1, safePendingPage - 1))}
+                disabled={safePendingPage <= 1}
+                className="rounded-xl border border-slate-100 bg-slate-50 p-2.5 text-slate-400 transition-all hover:text-slate-900 disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                <ChevronLeft size={16} />
+              </button>
+              {Array.from({ length: totalPendingPages }, (_, i) => i + 1).map((page) => (
+                <button
+                  key={page}
+                  onClick={() => setPendingOrdersPage(page)}
+                  className={cn(
+                    "min-w-[36px] rounded-xl px-3 py-2 text-[11px] font-black tracking-widest uppercase transition-all",
+                    safePendingPage === page
+                      ? "bg-slate-900 text-white shadow-lg"
+                      : "border border-slate-100 bg-slate-50 text-slate-400 hover:text-slate-900"
+                  )}
+                >
+                  {page}
+                </button>
+              ))}
+              <button
+                onClick={() => setPendingOrdersPage(Math.min(totalPendingPages, safePendingPage + 1))}
+                disabled={safePendingPage >= totalPendingPages}
+                className="rounded-xl border border-slate-100 bg-slate-50 p-2.5 text-slate-400 transition-all hover:text-slate-900 disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                <ChevronRight size={16} />
+              </button>
+            </div>
+          </div>
+        </section>
+
+        {/* PRODUCTION LOGS SECTION */}
+        <section className="LiveQueueLogsSection space-y-8 animate-in fade-in duration-500">
+          <div className="flex items-center gap-4">
+            <div className="h-3 w-3 rounded-full bg-slate-400"></div>
+            <h2 className="text-xl font-black tracking-widest text-slate-900 uppercase italic">
+              Production Registry Log{' '}
+              <span className="ml-2 text-slate-400">
+                ({productionOrders.length})
+              </span>
+            </h2>
+            <div className="h-px flex-1 bg-slate-200"></div>
+          </div>
+
+          {paginatedProductionOrders.length === 0 ? (
+            <div className="flex flex-col items-center rounded-[44px] border border-dashed border-slate-200 bg-white py-32 text-center shadow-sm">
+              <div className="mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-slate-50 text-slate-200">
+                <Clock size={48} />
+              </div>
+              <h3 className="text-2xl font-black tracking-tighter text-slate-900 uppercase italic">
+                Log Registry Empty
+              </h3>
+              <p className="mt-2 text-[10px] font-bold tracking-[2px] text-slate-400 uppercase">
+                No orders are registered in the production log database
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-8 xl:grid-cols-2">
+              {paginatedProductionOrders.map((order) => (
+                <OrderCard
+                  key={order.order_id}
+                  order={order}
+                  isLogged
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Pagination Controls — Always Shown */}
+          <div className="flex items-center justify-between border border-slate-100 bg-white px-8 py-5 rounded-[24px] shadow-sm mt-6">
+            <span className="text-[10px] font-black tracking-widest text-slate-400 uppercase">
+              Page {safeProductionPage} of {totalProductionPages}
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setProductionLogsPage(Math.max(1, safeProductionPage - 1))}
+                disabled={safeProductionPage <= 1}
+                className="rounded-xl border border-slate-100 bg-slate-50 p-2.5 text-slate-400 transition-all hover:text-slate-900 disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                <ChevronLeft size={16} />
+              </button>
+              {Array.from({ length: totalProductionPages }, (_, i) => i + 1).map((page) => (
+                <button
+                  key={page}
+                  onClick={() => setProductionLogsPage(page)}
+                  className={cn(
+                    "min-w-[36px] rounded-xl px-3 py-2 text-[11px] font-black tracking-widest uppercase transition-all",
+                    safeProductionPage === page
+                      ? "bg-slate-900 text-white shadow-lg"
+                      : "border border-slate-100 bg-slate-50 text-slate-400 hover:text-slate-900"
+                  )}
+                >
+                  {page}
+                </button>
+              ))}
+              <button
+                onClick={() => setProductionLogsPage(Math.min(totalProductionPages, safeProductionPage + 1))}
+                disabled={safeProductionPage >= totalProductionPages}
+                className="rounded-xl border border-slate-100 bg-slate-50 p-2.5 text-slate-400 transition-all hover:text-slate-900 disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                <ChevronRight size={16} />
+              </button>
+            </div>
+          </div>
         </section>
       </main>
+
+      {/* STATUS SUBMISSION MODAL */}
+      {modalState.isOpen && modalState.order && modalState.taskStatus && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm animate-in fade-in duration-200">
+          <div 
+            className="w-full max-w-md overflow-hidden rounded-[32px] bg-white shadow-2xl animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className={cn(
+              "px-6 py-5 text-white flex justify-between items-center",
+              modalState.taskStatus === 'COMPLETED' ? "bg-slate-900" : "bg-rose-600"
+            )}>
+              <div>
+                <h4 className="text-lg font-black tracking-tight uppercase italic">
+                  {modalState.taskStatus === 'COMPLETED' ? 'Mark Task as Completed' : 'Mark Task as Not Completed'}
+                </h4>
+                <p className="text-[9px] font-bold tracking-widest text-[#75EEA5] uppercase">
+                  Order ID: {modalState.order.order_id}
+                </p>
+              </div>
+              <button
+                onClick={() => setModalState({ isOpen: false, order: null, taskStatus: null, customMessage: '' })}
+                className="rounded-full bg-white/10 p-1.5 text-white/80 hover:bg-white/20 hover:text-white transition-colors"
+              >
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 space-y-4">
+              {modalState.taskStatus === 'COMPLETED' ? (
+                <div className="space-y-3">
+                  <p className="text-sm font-semibold text-slate-600 leading-relaxed">
+                    This will mark the production task as completed and automatically send the following message to the client:
+                  </p>
+                  <div className="rounded-2xl bg-emerald-50 border border-emerald-100 p-4">
+                    <span className="text-[9px] font-bold text-emerald-500 uppercase tracking-wider block mb-1">Auto-Generated Message</span>
+                    <p className="text-xs font-bold text-emerald-800">"successfully na natapos ang task."</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <p className="text-sm font-semibold text-slate-600 leading-relaxed">
+                    Please provide an optional reason/message detailing why the task was not completed.
+                  </p>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Custom Message (Optional)</label>
+                    <textarea
+                      placeholder="e.g. Awaiting raw materials, machine downtime..."
+                      value={modalState.customMessage}
+                      onChange={(e) => setModalState(prev => ({ ...prev, customMessage: e.target.value }))}
+                      rows={3}
+                      className="w-full rounded-2xl border border-slate-200 p-4 text-xs font-semibold focus:ring-2 focus:ring-rose-500/20 focus:outline-none placeholder:text-slate-300"
+                    />
+                    <span className="text-[9px] text-slate-400 italic block">
+                      Leave blank to default to: "hindi natapos"
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="bg-slate-50 px-6 py-4 flex justify-end gap-3">
+              <button
+                onClick={() => setModalState({ isOpen: false, order: null, taskStatus: null, customMessage: '' })}
+                className="rounded-2xl border border-slate-200 bg-white px-5 py-2.5 text-xs font-black tracking-widest text-slate-600 uppercase hover:bg-slate-100 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSubmitTaskStatus}
+                className={cn(
+                  "rounded-2xl px-6 py-2.5 text-xs font-black tracking-widest text-white uppercase shadow-md transition-all hover:scale-105 active:scale-95",
+                  modalState.taskStatus === 'COMPLETED' ? "bg-slate-900 hover:bg-slate-800" : "bg-rose-600 hover:bg-rose-500"
+                )}
+              >
+                Confirm Submit
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
 
 // --- SUB-COMPONENTS ---
-
 const OrderCard: React.FC<{
-  order: Order
-  isActive?: boolean
-  startedAt?: string
-  onStart?: () => void
-  onComplete?: () => void
-}> = ({ order, isActive, startedAt, onStart, onComplete }) => {
+  order: LiveQueueOrder
+  isLogged?: boolean
+  onStatusSelect?: (status: 'COMPLETED' | 'NOT_COMPLETED') => void
+}> = ({ order, isLogged, onStatusSelect }) => {
   return (
     <div
-      className={`LiveQueueOrderCard overflow-hidden rounded-[44px] border transition-all ${isActive ? 'scale-[1.02] border-slate-800 bg-slate-900 shadow-2xl' : 'border-slate-100 bg-white shadow-xl shadow-slate-200/20 hover:border-slate-200'}`}
+      className="LiveQueueOrderCard overflow-hidden rounded-[44px] border border-slate-100 bg-white shadow-xl shadow-slate-200/20 hover:border-slate-200 transition-all"
     >
       {/* CARD HEADER */}
-      <div
-        className={`border-b p-8 ${isActive ? 'border-white/5 bg-white/5' : 'border-slate-50'}`}
-      >
+      <div className="border-b border-slate-50 p-8">
         <div className="flex flex-col items-start justify-between gap-6 sm:flex-row sm:items-center">
           <div className="flex items-center gap-5">
-            <div
-              className={`flex h-14 w-14 items-center justify-center rounded-[22px] shadow-lg ${isActive ? 'bg-[#75EEA5] text-slate-900' : 'bg-slate-900 text-white'}`}
-            >
+            <div className="flex h-14 w-14 items-center justify-center rounded-[22px] shadow-lg bg-slate-900 text-white">
               <ShoppingBag size={24} />
             </div>
             <div>
-              <p
-                className={`mb-1 text-[10px] font-black tracking-[3px] uppercase ${isActive ? 'text-emerald-400' : 'text-slate-400'}`}
-              >
+              <p className="mb-1 text-[10px] font-black tracking-[3px] uppercase text-slate-400">
                 Order Terminal {order.order_id}
               </p>
               <div className="flex items-center gap-3">
-                <h3
-                  className={`text-xl font-black tracking-tight uppercase italic ${isActive ? 'text-white' : 'text-slate-900'}`}
-                >
+                <h3 className="text-xl font-black tracking-tight uppercase italic text-slate-900">
                   Payload Recipient: {order.user_id}
                 </h3>
                 <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-blue-500"></div>
@@ -472,14 +640,10 @@ const OrderCard: React.FC<{
           </div>
 
           <div className="text-right">
-            <p
-              className={`mb-1 text-[9px] font-black tracking-widest uppercase ${isActive ? 'text-white/40' : 'text-slate-400'}`}
-            >
+            <p className="mb-1 text-[9px] font-black tracking-widest uppercase text-slate-400">
               Master Vault Total
             </p>
-            <span
-              className={`text-2xl font-black tracking-tighter italic ${isActive ? 'text-[#75EEA5]' : 'text-slate-900'}`}
-            >
+            <span className="text-2xl font-black tracking-tighter italic text-slate-900">
               ₱{order.total_amount.toLocaleString()}
             </span>
           </div>
@@ -491,7 +655,7 @@ const OrderCard: React.FC<{
         {order.products.map((p, idx) => (
           <div
             key={`${order.order_id}-p-${idx}`}
-            className={`LiveQueueProductCard rounded-[32px] border p-6 transition-all ${isActive ? 'border-white/10 bg-white/5' : 'border-slate-100 bg-slate-50/50 hover:bg-white hover:shadow-lg'}`}
+            className="LiveQueueProductCard rounded-[32px] border border-slate-100 bg-slate-50/50 hover:bg-white hover:shadow-lg p-6 transition-all"
           >
             <div className="flex flex-col gap-6 lg:flex-row">
               {/* Image Node */}
@@ -510,9 +674,7 @@ const OrderCard: React.FC<{
               <div className="flex-1 space-y-4">
                 <div className="flex items-start justify-between">
                   <div>
-                    <h4
-                      className={`text-lg font-black tracking-tight uppercase italic ${isActive ? 'text-white' : 'text-slate-900'}`}
-                    >
+                    <h4 className="text-lg font-black tracking-tight uppercase italic text-slate-900">
                       {p.productName}
                     </h4>
                     <div className="mt-1 flex items-center gap-3">
@@ -521,22 +683,14 @@ const OrderCard: React.FC<{
                       </span>
                       <span className="text-[10px] font-bold text-slate-400">
                         Qty:{' '}
-                        <span
-                          className={
-                            isActive
-                              ? 'font-black text-white'
-                              : 'font-black text-slate-900'
-                          }
-                        >
+                        <span className="font-black text-slate-900">
                           {p.quantity.toLocaleString()} pcs
                         </span>
                       </span>
                     </div>
                   </div>
                   <div className="text-right">
-                    <span
-                      className={`text-sm font-black italic ${isActive ? 'text-[#75EEA5]' : 'text-slate-900'}`}
-                    >
+                    <span className="text-sm font-black italic text-slate-900">
                       ₱{p.variant.unitPrice.toFixed(2)}/u
                     </span>
                   </div>
@@ -562,37 +716,27 @@ const OrderCard: React.FC<{
 
                 {/* Technical Requirement Grid */}
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div
-                    className={`rounded-2xl p-4 ${isActive ? 'bg-black/20' : 'bg-white shadow-sm'}`}
-                  >
+                  <div className="rounded-2xl p-4 bg-white shadow-sm">
                     <p className="mb-1 text-[9px] font-black tracking-widest text-slate-400 uppercase">
                       Plate Strategy
                     </p>
-                    <p
-                      className={`text-[10px] font-black italic ${isActive ? 'text-white' : 'text-slate-900'}`}
-                    >
+                    <p className="text-[10px] font-black italic text-slate-900">
                       {p.plate?.name || 'TBD - Standard'}
                     </p>
                     <div className="mt-2 flex justify-between border-t border-slate-100/10 pt-2">
                       <span className="text-[8px] font-bold tracking-widest text-slate-400 uppercase">
                         Setup Cost
                       </span>
-                      <span
-                        className={`text-[9px] font-black italic ${isActive ? 'text-emerald-400' : 'text-slate-900'}`}
-                      >
+                      <span className="text-[9px] font-black italic text-slate-900">
                         ₱{p.plate?.setupFee || 0}
                       </span>
                     </div>
                   </div>
-                  <div
-                    className={`rounded-2xl p-4 ${isActive ? 'bg-black/20' : 'bg-white shadow-sm'}`}
-                  >
+                  <div className="rounded-2xl p-4 bg-white shadow-sm">
                     <p className="mb-1 text-[9px] font-black tracking-widest text-slate-400 uppercase">
                       Print Yield Rate
                     </p>
-                    <p
-                      className={`text-[10px] font-black italic ${isActive ? 'text-white' : 'text-slate-900'}`}
-                    >
+                    <p className="text-[10px] font-black italic text-slate-900">
                       ₱{p.plate?.printPricePerUnit.toFixed(2) || '0.00'}/u
                     </p>
                   </div>
@@ -614,59 +758,62 @@ const OrderCard: React.FC<{
       </div>
 
       {/* FOOTER ACTIONS */}
-      <div
-        className={`flex flex-col items-center justify-between gap-6 p-8 sm:flex-row ${isActive ? 'border-t border-white/5 bg-white/5' : 'border-t border-slate-50 bg-slate-50/30'}`}
-      >
-        {isActive ? (
-          <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-2">
-              <div className="h-2 w-2 animate-pulse rounded-full bg-[#75EEA5]"></div>
-              <p className="text-[10px] font-black tracking-[2px] text-white uppercase italic">
-                Execution In Progress
+      <div className="flex flex-col items-center justify-between gap-6 p-8 sm:flex-row border-t border-slate-50 bg-slate-50/30">
+        {isLogged ? (
+          <>
+            <div className="flex items-center gap-3">
+              <Calendar size={14} className="text-slate-400" />
+              <p className="text-[10px] leading-none font-black tracking-widest text-slate-400 uppercase italic">
+                Logged: {format(new Date(order.requested_at!), 'MMM dd, yyyy HH:mm')}
               </p>
             </div>
-            <p className="text-[9px] font-medium text-slate-400">
-              Triggered at {format(new Date(startedAt!), 'HH:mm:ss · MMM dd')}
-            </p>
-          </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-black tracking-widest text-slate-400 uppercase">
+                Task Status:
+              </span>
+              <span className={cn(
+                "rounded-xl px-4 py-2 text-[10px] font-black tracking-widest uppercase shadow-sm",
+                order.task_status === 'COMPLETED' 
+                  ? "bg-emerald-100 text-emerald-600" 
+                  : "bg-rose-100 text-rose-600"
+              )}>
+                {order.task_status}
+              </span>
+            </div>
+          </>
         ) : (
-          <div className="flex items-center gap-3">
-            <Calendar size={14} className="text-slate-400" />
-            <p className="text-[10px] leading-none font-black tracking-widest text-slate-400 uppercase italic">
-              Registered: {format(new Date(order.created_at), 'MMM dd, yyyy')}
-            </p>
-          </div>
-        )}
+          <>
+            <div className="flex items-center gap-3">
+              <Calendar size={14} className="text-slate-400" />
+              <p className="text-[10px] leading-none font-black tracking-widest text-slate-400 uppercase italic">
+                Registered: {format(new Date(order.created_at), 'MMM dd, yyyy')}
+              </p>
+            </div>
 
-        <div className="flex w-full items-center gap-4 sm:w-auto">
-          {isActive ? (
-            <button
-              onClick={onComplete}
-              className="LiveQueueCompleteButton flex w-full items-center justify-center gap-3 rounded-[24px] bg-[#75EEA5] px-8 py-5 text-[11px] font-black tracking-[3px] text-slate-900 uppercase italic shadow-xl shadow-emerald-500/20 transition-all hover:bg-emerald-400 sm:w-auto"
-            >
-              <CheckCircle2 size={18} />
-              Mark Operational Completion
-            </button>
-          ) : (
-            <button
-              onClick={onStart}
-              className="LiveQueueStartButton group flex w-full items-center justify-center gap-3 rounded-[24px] bg-slate-900 px-8 py-5 text-[11px] font-black tracking-[3px] text-white uppercase italic shadow-xl shadow-slate-900/30 transition-all hover:bg-slate-800 sm:w-auto"
-            >
-              <Play
-                size={18}
-                className="text-emerald-400 transition-transform group-hover:scale-110"
-              />
-              Initiate Execution
-            </button>
-          )}
-        </div>
+            <div className="flex w-full items-center gap-4 sm:w-auto">
+              <button
+                onClick={() => onStatusSelect?.('COMPLETED')}
+                className="flex-1 sm:flex-initial flex items-center justify-center gap-2 rounded-[24px] bg-[#75EEA5] hover:bg-emerald-400 px-6 py-4 text-[10px] font-black tracking-widest text-slate-900 uppercase italic shadow-lg shadow-emerald-500/10 transition-all hover:scale-105 active:scale-95"
+              >
+                <CheckCircle2 size={16} />
+                COMPLETED
+              </button>
+              <button
+                onClick={() => onStatusSelect?.('NOT_COMPLETED')}
+                className="flex-1 sm:flex-initial flex items-center justify-center gap-2 rounded-[24px] bg-rose-500 hover:bg-rose-600 px-6 py-4 text-[10px] font-black tracking-widest text-white uppercase italic shadow-lg shadow-rose-500/10 transition-all hover:scale-105 active:scale-95"
+              >
+                <AlertCircle size={16} />
+                NOT COMPLETED
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   )
 }
 
 // --- STYLES ---
-
 const selectStyles = {
   control: (base: object, state: { isFocused: boolean }) => ({
     ...base,
