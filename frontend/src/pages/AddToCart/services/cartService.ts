@@ -9,7 +9,7 @@ import type {
   CartColorInfo,
   AddToCartData,
 } from '../../../types/cart'
-import type { IProduct, IScreenPlateCompatibility, IScreenPlateIncompatibility } from '../../../types/product.types'
+import type { IProduct, IScreenPlateCompatibility } from '../../../types/product.types'
 
 const mapBackendToFrontend = (item: {
   id: string
@@ -46,7 +46,6 @@ const mapBackendToFrontend = (item: {
     base_setup_fee: string
     technical_info?: string
     compatibility?: IScreenPlateCompatibility[]
-    incompatibility?: IScreenPlateIncompatibility[]
   }
   screenplate_id: string
   plate_price: string
@@ -88,7 +87,6 @@ const mapBackendToFrontend = (item: {
           printingInfo: item.screenplate.technical_info || '',
           isOwned: true,
           compatibility: item.screenplate.compatibility,
-          incompatibility: item.screenplate.incompatibility,
         }
       : null,
     customRequirements: '',

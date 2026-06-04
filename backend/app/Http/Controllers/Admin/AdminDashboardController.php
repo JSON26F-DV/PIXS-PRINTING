@@ -20,7 +20,7 @@ class AdminDashboardController extends Controller
         $order = Order::findOrFail($id);
         $status = $request->input('status');
 
-        $allowedStatuses = ['UNPAID', 'PENDING', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED'];
+        $allowedStatuses = ['UNPAID', 'PENDING', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED', 'REFUND'];
         if (! in_array($status, $allowedStatuses)) {
             return response()->json(['message' => 'Invalid status update'], 422);
         }
@@ -144,6 +144,7 @@ class AdminDashboardController extends Controller
                     'SHIPPED' => '#10b981',
                     'DELIVERED' => '#10b981',
                     'CANCELLED' => '#ef4444',
+                    'REFUND' => '#a855f7',
                 ];
 
                 return [

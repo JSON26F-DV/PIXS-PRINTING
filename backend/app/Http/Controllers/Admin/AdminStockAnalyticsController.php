@@ -48,7 +48,7 @@ class AdminStockAnalyticsController extends Controller
     public function storeExpenditure(Request $request)
     {
         $validated = $request->validate([
-            'category' => 'required|string|in:Employee Salaries,Raw Materials / Products,Utilities,Office / Operational Expenses,Extra / Miscellaneous Expenses,Others',
+            'category' => 'required|string|in:Employee Salaries,Raw Materials / Products,Utilities,Office / Operational Expenses,Extra / Miscellaneous Expenses,Refund,Others',
             'amount' => 'required|numeric|min:0',
             'description' => 'nullable|string',
             'variant_id' => 'nullable|string|exists:product_variants,variant_id',
@@ -73,7 +73,7 @@ class AdminStockAnalyticsController extends Controller
         $expenditure = Expenditure::findOrFail($id);
 
         $validated = $request->validate([
-            'category' => 'sometimes|string|in:Employee Salaries,Raw Materials / Products,Utilities,Office / Operational Expenses,Extra / Miscellaneous Expenses,Others',
+            'category' => 'sometimes|string|in:Employee Salaries,Raw Materials / Products,Utilities,Office / Operational Expenses,Extra / Miscellaneous Expenses,Refund,Others',
             'amount' => 'sometimes|numeric|min:0',
             'description' => 'nullable|string',
             'variant_id' => 'nullable|string|exists:product_variants,variant_id',

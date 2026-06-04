@@ -149,6 +149,7 @@ class MessageController extends Controller
                 $emp->account_type = 'employee';
                 $emp->status = 'offline';
                 $emp->unread_count = (int) ($unreadCounts[$emp->id] ?? 0);
+
                 return $emp;
             });
 
@@ -159,6 +160,7 @@ class MessageController extends Controller
                 $cust->account_type = 'customer';
                 $cust->status = 'offline';
                 $cust->unread_count = (int) ($unreadCounts[$cust->id] ?? 0);
+
                 return $cust;
             });
 
@@ -331,7 +333,7 @@ class MessageController extends Controller
                             mkdir($destPath, 0755, true);
                         }
 
-                        $filename = time().'_'.$file->getClientOriginalName();
+                        $filename = Str::uuid()->toString().'.'.$file->extension();
                         $file->move($destPath, $filename);
 
                         // Per requirement, save only the filename

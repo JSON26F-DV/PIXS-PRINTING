@@ -40,7 +40,6 @@ return new class extends Migration
         'product_variants',
         'screenplates',
         'screenplate_compatibility',
-        'screenplate_incompatible',
         'screenplate_requests',
     ];
 

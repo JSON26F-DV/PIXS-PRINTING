@@ -51,7 +51,7 @@ export const uploadScreenplateImage = async (id: string, file: File): Promise<st
   return response.data.data.image
 }
 
-// Single-row compatibility/incompatible helpers
+// Single-row compatibility helper
 export const addScreenplateCompatibility = async (
   screenplateId: string,
   data: { product_id: string; variant_id?: string; print_price_per_unit?: number },
@@ -65,22 +65,6 @@ export const removeScreenplateCompatibility = async (
   data: { product_id: string; variant_id?: string },
 ) => {
   const response = await axiosInstance.delete(`/api/admin/screenplates/${screenplateId}/compatibility`, { data })
-  return response.data
-}
-
-export const addScreenplateIncompatible = async (
-  screenplateId: string,
-  data: { product_id: string },
-) => {
-  const response = await axiosInstance.post(`/api/admin/screenplates/${screenplateId}/incompatible`, data)
-  return response.data
-}
-
-export const removeScreenplateIncompatible = async (
-  screenplateId: string,
-  data: { product_id: string },
-) => {
-  const response = await axiosInstance.delete(`/api/admin/screenplates/${screenplateId}/incompatible`, { data })
   return response.data
 }
 

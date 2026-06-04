@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { m, AnimatePresence } from 'framer-motion'
 import { clsx } from 'clsx'
 import { Search, User as UserIcon } from 'lucide-react'
+import toast from 'react-hot-toast'
 import { useAuth } from '../../hooks/useAuth'
 import BoxFallback from '../../components/common/BoxFallback'
 import { format } from 'date-fns'
@@ -278,6 +279,8 @@ const MessengerPage: React.FC = () => {
   const [isAccountsOpen, setIsAccountsOpen] = useState(window.innerWidth >= 1024)
   const [isAdminControlsOpen, setIsAdminControlsOpen] = useState(false)
   const [activeReplyTo, setActiveReplyTo] = useState<IMessage | null>(null)
+  // scrollToMessageId: set by AdminControlModal pin/search; consumed by MessageList
+  const [scrollToMessageId, setScrollToMessageId] = useState<string | null>(null)
 
   // Auto-manage panel visibility based on terminal viewport
   // Accounts panel is admin-only — never auto-open for other roles
@@ -398,6 +401,11 @@ const MessengerPage: React.FC = () => {
           return msg
         })
       )
+
+      // Show success alert if message had attachments
+      if (attachments.length > 0) {
+        toast.success('Upload successful')
+      }
 
       // Refresh image count after successful send if attachments contained images
       if (attachments.some(a => a.type === 'image')) {
@@ -572,6 +580,7 @@ const MessengerPage: React.FC = () => {
                   isLoading={isLoading} 
                   onLoadMore={loadMoreMessages}
                   isLoadingMore={isLoadingMore}
+                  scrollToMessageId={scrollToMessageId}
                   onDeleteMedia={handleDeleteMediaAttachment}
                 />
               </div>
@@ -737,6 +746,7 @@ const MessengerPage: React.FC = () => {
                   isLoading={isLoading}
                   onLoadMore={loadMoreMessages}
                   isLoadingMore={isLoadingMore}
+                  scrollToMessageId={scrollToMessageId}
                   onDeleteMedia={undefined}
                 />
               </div>
@@ -944,6 +954,12 @@ const MessengerPage: React.FC = () => {
           onToggleGallery={() => {
             setIsGalleryOpen(true)
             setIsAccountsOpen(false)
+          }}
+          onScrollToMessage={(id) => {
+            setScrollToMessageId(id)
+            setIsAdminControlsOpen(false)   // hide the modal so message is visible
+            // Reset after a moment so the same message can be re-scrolled to
+            setTimeout(() => setScrollToMessageId(null), 800)
           }}
         />
       )}

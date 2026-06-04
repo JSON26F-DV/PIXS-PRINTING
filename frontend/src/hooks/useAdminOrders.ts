@@ -45,6 +45,7 @@ export interface Customer {
   email: string
   role: string
   profile_picture: string | null
+  company_name?: string | null
   orderCount: number
   totalSpent: number
 }

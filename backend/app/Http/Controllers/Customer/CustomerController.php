@@ -10,6 +10,7 @@ use App\Services\AuditService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 class CustomerController extends Controller
 {
@@ -365,7 +366,7 @@ class CustomerController extends Controller
             }
         }
 
-        $filename = 'profile_'.$customer->id.'_'.time().'.'.$file->getClientOriginalExtension();
+        $filename = Str::uuid()->toString().'.'.$file->extension();
 
         if (! file_exists($targetDir)) {
             mkdir($targetDir, 0755, true);

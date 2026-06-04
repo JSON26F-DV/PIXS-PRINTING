@@ -30,6 +30,7 @@ const GalleryView: React.FC<GalleryViewProps> = ({
   const [fullscreenOpen, setFullscreenOpen] = React.useState(false)
   const [fullscreenIndex, setFullscreenIndex] = React.useState(0)
   const [windowWidth, setWindowWidth] = React.useState(window.innerWidth)
+  const portalRoot = typeof document !== 'undefined' ? document.body : null
 
   React.useEffect(() => {
     const handleResize = () => setWindowWidth(window.innerWidth)
@@ -137,7 +138,7 @@ const GalleryView: React.FC<GalleryViewProps> = ({
           ) : (
             <div className="rounded-[28px] border-2 border-dashed border-slate-50 bg-slate-50/20 py-10 text-center">
               <p className="text-[9px] font-black tracking-[3px] text-slate-300 uppercase">
-                Zero Media Assets Identified
+                No image yet
               </p>
             </div>
           )}
@@ -225,7 +226,7 @@ const GalleryView: React.FC<GalleryViewProps> = ({
         </div>
       )}
 
-      {fullscreenOpen && document.getElementById('messenger-portal-root') && 
+      {fullscreenOpen && portalRoot && 
         createPortal(
           <FullscreenGalleryModal
             isOpen={fullscreenOpen}
@@ -234,7 +235,7 @@ const GalleryView: React.FC<GalleryViewProps> = ({
             initialIndex={fullscreenIndex}
             productName="Production Assets"
           />,
-          document.getElementById('messenger-portal-root')!
+          portalRoot
         )
       }
     </div>

@@ -1,11 +1,14 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { m, AnimatePresence } from 'framer-motion'
-import { X, Pin, Search, Trash2, Zap, LayoutGrid } from 'lucide-react'
+import { X, Pin, Search, Trash2, Zap, LayoutGrid, ChevronRight, Image as ImageIcon, ShoppingBag } from 'lucide-react'
 import type { IMessage } from '../MessengerPage'
 import { format } from 'date-fns'
 import toast from 'react-hot-toast'
 import axiosInstance from '../../../lib/axiosInstance.ts'
 import BoxFallback from '../../../components/common/BoxFallback'
+import MessageImageGrid from './MessageImageGrid'
+import FullscreenGalleryModal from '../../../components/common/FullscreenGalleryModal'
 
 interface AdminControlModalProps {
   isOpen: boolean
@@ -18,22 +21,210 @@ interface AdminControlModalProps {
   onScrollToMessage?: (messageId: string) => void
 }
 
-const AdminControlModal: React.FC<AdminControlModalProps> = ({ 
-  isOpen, 
-  onClose, 
-  messages, 
-  targetUser, 
-  onDeleteConversation, 
+// ─── Sub-panel: Pinned Messages ──────────────────────────────────────────────
+
+const PinnedPanel: React.FC<{
+  pinnedMsgs: IMessage[]
+  onScrollTo?: (id: string) => void
+  onBack: () => void
+}> = ({ pinnedMsgs, onScrollTo, onBack }) => (
+  <m.div
+    key="pinned"
+    initial={{ x: '100%' }}
+    animate={{ x: 0 }}
+    exit={{ x: '100%' }}
+    transition={{ type: 'spring', damping: 28, stiffness: 220 }}
+    className="absolute inset-0 flex flex-col bg-white z-10"
+  >
+    <div className="flex items-center gap-3 p-5 border-b border-slate-100 shrink-0">
+      <button onClick={onBack} className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-400 hover:bg-slate-200 hover:text-slate-900 transition-colors">
+        <ChevronRight size={16} className="rotate-180" />
+      </button>
+      <div className="flex items-center gap-2">
+        <Pin size={14} className="text-slate-400" />
+        <h3 className="text-[11px] font-black uppercase tracking-widest text-slate-900">
+          Pinned Messages ({pinnedMsgs.length})
+        </h3>
+      </div>
+    </div>
+    <div className="flex-1 overflow-y-auto p-5 space-y-2 custom-scrollbar">
+      {pinnedMsgs.length === 0 ? (
+        <p className="text-xs font-bold text-slate-300 italic p-6 text-center bg-slate-50 rounded-2xl">
+          No pinned messages.
+        </p>
+      ) : pinnedMsgs.map(msg => (
+        <button
+          key={msg.id}
+          onClick={() => { if (onScrollTo) onScrollTo(msg.id); onBack() }}
+          className="w-full text-left p-4 bg-slate-50 rounded-2xl border border-slate-100 hover:border-slate-300 transition-colors"
+        >
+          <div className="flex justify-between items-center text-[9px] text-slate-400 uppercase font-black tracking-widest mb-1.5">
+            <span>{msg.senderName}</span>
+            <span>{format(new Date(msg.timestamp), 'MMM d, HH:mm')}</span>
+          </div>
+          <p className="text-xs font-bold text-slate-800 line-clamp-3">{msg.text}</p>
+        </button>
+      ))}
+    </div>
+  </m.div>
+)
+
+// ─── Sub-panel: Search ───────────────────────────────────────────────────────
+
+const SearchPanel: React.FC<{
+  messages: IMessage[]
+  onScrollTo?: (id: string) => void
+  onBack: () => void
+}> = ({ messages, onScrollTo, onBack }) => {
+  const [query, setQuery] = useState('')
+  const [debouncedQuery, setDebouncedQuery] = useState('')
+
+  // Debounce: wait 300ms after the user stops typing before filtering
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedQuery(query), 300)
+    return () => clearTimeout(t)
+  }, [query])
+
+  const results = debouncedQuery.trim() !== ''
+    ? messages.filter(m => !m.isDeleted && m.text && m.text.toLowerCase().includes(debouncedQuery.toLowerCase()))
+    : []
+
+  return (
+    <m.div
+      key="search"
+      initial={{ x: '100%' }}
+      animate={{ x: 0 }}
+      exit={{ x: '100%' }}
+      transition={{ type: 'spring', damping: 28, stiffness: 220 }}
+      className="absolute inset-0 flex flex-col bg-white z-10"
+    >
+      <div className="flex items-center gap-3 p-5 border-b border-slate-100 shrink-0">
+        <button onClick={onBack} className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-400 hover:bg-slate-200 hover:text-slate-900 transition-colors">
+          <ChevronRight size={16} className="rotate-180" />
+        </button>
+        <div className="flex-1 relative">
+          <Search className="absolute top-1/2 left-3 -translate-y-1/2 text-slate-400" size={14} />
+          <input
+            autoFocus
+            type="text"
+            placeholder="Search messages..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-4 text-xs font-bold focus:outline-none focus:border-slate-400 transition-colors"
+          />
+        </div>
+      </div>
+      <div className="flex-1 overflow-y-auto p-5 space-y-2 custom-scrollbar">
+        {query.trim() === '' ? (
+          <p className="text-[10px] font-bold text-slate-300 p-6 text-center">Start typing to search…</p>
+        ) : debouncedQuery.trim() === '' ? (
+          <div className="flex items-center justify-center py-6">
+            <div className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-slate-500" />
+          </div>
+        ) : results.length === 0 ? (
+          <p className="text-[10px] font-bold text-slate-400 p-6 text-center">No results found.</p>
+        ) : results.map(msg => (
+          <button
+            key={msg.id}
+            onClick={() => { if (onScrollTo) onScrollTo(msg.id); onBack() }}
+            className="w-full text-left p-4 bg-white rounded-2xl border border-slate-200 hover:border-slate-400 transition-colors shadow-sm"
+          >
+            <div className="flex justify-between items-center text-[9px] text-slate-400 uppercase font-black tracking-widest mb-1.5">
+              <span>{msg.senderName}</span>
+              <span>{format(new Date(msg.timestamp), 'MMM d, HH:mm')}</span>
+            </div>
+            <p className="text-xs font-bold text-slate-800 line-clamp-2">{msg.text}</p>
+          </button>
+        ))}
+      </div>
+    </m.div>
+  )
+}
+
+// ─── Sub-panel: Orders & Screenplates ────────────────────────────────────────
+
+const OrdersScreenplatesPanel: React.FC<{
+  msgs: IMessage[]
+  onScrollTo?: (id: string) => void
+  onBack: () => void
+}> = ({ msgs, onScrollTo, onBack }) => (
+  <m.div
+    key="orders-screenplates"
+    initial={{ x: '100%' }}
+    animate={{ x: 0 }}
+    exit={{ x: '100%' }}
+    transition={{ type: 'spring', damping: 28, stiffness: 220 }}
+    className="absolute inset-0 flex flex-col bg-white z-10"
+  >
+    <div className="flex items-center gap-3 p-5 border-b border-slate-100 shrink-0">
+      <button onClick={onBack} className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-400 hover:bg-slate-200 hover:text-slate-900 transition-colors">
+        <ChevronRight size={16} className="rotate-180" />
+      </button>
+      <div className="flex items-center gap-2">
+        <ShoppingBag size={14} className="text-slate-400" />
+        <h3 className="text-[11px] font-black uppercase tracking-widest text-slate-900">
+          Orders & Screenplates ({msgs.length})
+        </h3>
+      </div>
+    </div>
+    <div className="flex-1 overflow-y-auto p-5 space-y-2 custom-scrollbar">
+      {msgs.length === 0 ? (
+        <p className="text-xs font-bold text-slate-300 italic p-6 text-center bg-slate-50 rounded-2xl">
+          No orders or screenplates.
+        </p>
+      ) : msgs.map(msg => (
+        <button
+          key={msg.id}
+          onClick={() => { if (onScrollTo) onScrollTo(msg.id); onBack() }}
+          className="w-full text-left p-4 bg-slate-50 rounded-2xl border border-slate-100 hover:border-slate-300 transition-colors"
+        >
+          <div className="flex justify-between items-center text-[9px] text-slate-400 uppercase font-black tracking-widest mb-1.5">
+            <span>{msg.senderName}</span>
+            <span>{format(new Date(msg.timestamp), 'MMM d, HH:mm')}</span>
+          </div>
+          <div className="flex flex-wrap gap-1 mb-2">
+            {msg.order_id && (
+              <span className="px-2 py-0.5 text-[8px] font-black bg-pixs-mint/20 text-slate-800 rounded uppercase tracking-wider">
+                Order
+              </span>
+            )}
+            {msg.screenplate_request_id && (
+              <span className="px-2 py-0.5 text-[8px] font-black bg-blue-50 text-blue-600 border border-blue-100 rounded uppercase tracking-wider">
+                Screenplate
+              </span>
+            )}
+          </div>
+          <p className="text-xs font-bold text-slate-800 line-clamp-3">
+            {msg.text || (msg.order_id ? 'Order Confirmation Message' : 'Screenplate Confirmation Message')}
+          </p>
+        </button>
+      ))}
+    </div>
+  </m.div>
+)
+
+// ─── Main Modal ──────────────────────────────────────────────────────────────
+
+const AdminControlModal: React.FC<AdminControlModalProps> = ({
+  isOpen,
+  onClose,
+  messages,
+  targetUser,
+  onDeleteConversation,
   onSendMessage,
   onToggleGallery,
   onScrollToMessage
 }) => {
-  const [searchQuery, setSearchQuery] = useState('')
   const [imgError, setImgError] = useState(false)
+  const [activePanel, setActivePanel] = useState<null | 'pinned' | 'search' | 'orders'>(null)
+  const [fullscreenOpen, setFullscreenOpen] = useState(false)
+  const [fullscreenIndex, setFullscreenIndex] = useState(0)
 
   React.useEffect(() => {
     setImgError(false)
-  }, [targetUser?.profile_picture])
+    // Reset sub-panel when modal opens/closes
+    if (!isOpen) setActivePanel(null)
+  }, [targetUser?.profile_picture, isOpen])
 
   if (!isOpen) return null
 
@@ -62,9 +253,28 @@ const AdminControlModal: React.FC<AdminControlModalProps> = ({
   }
 
   const pinnedMsgs = messages.filter(m => m.is_pinned && !m.isDeleted)
-  const searchResults = searchQuery.trim() !== '' 
-    ? messages.filter(m => !m.isDeleted && m.text && m.text.toLowerCase().includes(searchQuery.toLowerCase()))
-    : []
+  const orderScreenplateMsgs = messages.filter(m => !m.isDeleted && (m.order_id || m.screenplate_request_id))
+
+  // Build all image URLs from conversation attachments
+  const getAssetUrl = (at: { type: string; name: string; url: string }) => {
+    if (at.url.startsWith('blob:') || at.url.startsWith('http')) return at.url
+    return at.type === 'image'
+      ? `/src/assets/message_media/${at.name}`
+      : `/src/assets/message_document/${at.name}`
+  }
+
+  const conversationImages = messages
+    .filter(m => !m.isDeleted)
+    .flatMap(m => (m.attachments || []).filter(a => a.type === 'image').map(a => getAssetUrl(a)))
+
+  const handleImageClick = (index: number) => {
+    setFullscreenIndex(index)
+    setFullscreenOpen(true)
+  }
+
+  // Use document.body as portal target — messenger-portal-root has pointer-events:none
+  // which would make the gallery modal's buttons unclickable.
+  const portalRoot = typeof document !== 'undefined' ? document.body : null
 
   return (
     <AnimatePresence>
@@ -82,7 +292,7 @@ const AdminControlModal: React.FC<AdminControlModalProps> = ({
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="relative w-full max-w-sm md:max-w-md bg-white h-full shadow-2xl flex flex-col z-10"
+            className="relative w-full max-w-sm md:max-w-md bg-white h-full shadow-2xl flex flex-col z-10 overflow-hidden"
           >
             {/* Header: Profile Info */}
             <div className="p-6 border-b border-slate-100 bg-slate-50/50 flex flex-col items-center relative shrink-0">
@@ -113,11 +323,78 @@ const AdminControlModal: React.FC<AdminControlModalProps> = ({
             </div>
 
             {/* Scrollable Actions Content */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar">
+            <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar relative">
+
               
-              {/* Media & Links */}
+              {/* ── Search Chat — button that opens sub-panel ── */}
               <section>
-                <button 
+                <button
+                  onClick={() => setActivePanel('search')}
+                  className="w-full flex items-center gap-3 p-4 rounded-2xl border border-slate-100 bg-white hover:border-slate-300 transition-all group"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-slate-900 group-hover:text-white transition-colors">
+                    <Search size={18} />
+                  </div>
+                  <div className="text-left flex-1">
+                    <h3 className="text-[11px] font-black uppercase text-slate-900">Search Chat</h3>
+                    <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mt-0.5">Find messages by keyword</p>
+                  </div>
+                  <ChevronRight size={14} className="text-slate-300 group-hover:text-slate-900 transition-colors" />
+                </button>
+              </section>
+
+              {/* ── Orders & Screenplates — button that opens sub-panel ── */}
+              <section>
+                <button
+                  onClick={() => setActivePanel('orders')}
+                  className="w-full flex items-center gap-3 p-4 rounded-2xl border border-slate-100 bg-white hover:border-slate-300 transition-all group"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-slate-900 group-hover:text-white transition-colors">
+                    <ShoppingBag size={18} />
+                  </div>
+                  <div className="text-left flex-1">
+                    <h3 className="text-[11px] font-black uppercase text-slate-900">Orders & Screenplates</h3>
+                    <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mt-0.5">
+                      {orderScreenplateMsgs.length === 0 ? 'None found' : `${orderScreenplateMsgs.length} items`}
+                    </p>
+                  </div>
+                  <ChevronRight size={14} className="text-slate-300 group-hover:text-slate-900 transition-colors" />
+                </button>
+              </section>
+
+              {/* ── Quick Image Preview ── */}
+              <section className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                    <ImageIcon size={12} /> Recent Media ({conversationImages.length})
+                  </h3>
+                  {conversationImages.length > 0 && (
+                    <button
+                      onClick={() => { if (onToggleGallery) onToggleGallery(); onClose() }}
+                      className="text-[9px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-900 transition-colors"
+                    >
+                      View All →
+                    </button>
+                  )}
+                </div>
+                {conversationImages.length > 0 ? (
+                  <MessageImageGrid
+                    images={conversationImages}
+                    onImageClick={handleImageClick}
+                    className="rounded-[20px] overflow-hidden"
+                    maxVisible={6}
+                  />
+                ) : (
+                  <div className="rounded-[20px] border-2 border-dashed border-slate-100 bg-slate-50/30 py-8 text-center">
+                    <ImageIcon size={24} className="mx-auto mb-2 text-slate-200" />
+                    <p className="text-[9px] font-black tracking-[3px] text-slate-300 uppercase">No image yet</p>
+                  </div>
+                )}
+              </section>
+
+              {/* ── Media & Links button ── */}
+              <section>
+                <button
                   onClick={() => {
                     if (onToggleGallery) onToggleGallery()
                     onClose()
@@ -131,10 +408,11 @@ const AdminControlModal: React.FC<AdminControlModalProps> = ({
                     <h3 className="text-[11px] font-black uppercase text-slate-900">Media, Files & Links</h3>
                     <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mt-0.5">View & Manage Shared Assets</p>
                   </div>
+                  <ChevronRight size={14} className="text-slate-300 group-hover:text-slate-900 transition-colors" />
                 </button>
               </section>
 
-              {/* Generate PayCode */}
+              {/* ── Generate PayCode ── */}
               <section>
                 <button
                   onClick={handleGeneratePayCode}
@@ -144,71 +422,50 @@ const AdminControlModal: React.FC<AdminControlModalProps> = ({
                 </button>
               </section>
 
-              {/* Pinned Messages */}
-              <section className="space-y-3">
-                <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
-                  <Pin size={12} className="text-slate-400" /> Pinned Messages ({pinnedMsgs.length})
-                </h3>
-                <div className="space-y-2">
-                  {pinnedMsgs.length === 0 ? (
-                    <p className="text-xs font-bold text-slate-300 italic p-4 text-center bg-slate-50 rounded-xl">No pinned messages.</p>
-                  ) : pinnedMsgs.map(msg => (
-                    <button 
-                      key={msg.id}
-                      onClick={() => {
-                        if (onScrollToMessage) onScrollToMessage(msg.id)
-                        onClose()
-                      }}
-                      className="w-full text-left p-3 bg-slate-50 rounded-xl border border-slate-100 hover:border-slate-300 transition-colors"
-                    >
-                      <div className="flex justify-between items-center text-[9px] text-slate-400 uppercase font-black tracking-widest mb-1">
-                        <span>{msg.senderName}</span>
-                        <span>{format(new Date(msg.timestamp), 'MMM d, HH:mm')}</span>
-                      </div>
-                      <p className="text-xs font-bold text-slate-800 line-clamp-2">{msg.text}</p>
-                    </button>
-                  ))}
-                </div>
+              {/* ── Pinned Messages — button that opens sub-panel ── */}
+              <section>
+                <button
+                  onClick={() => setActivePanel('pinned')}
+                  className="w-full flex items-center gap-3 p-4 rounded-2xl border border-slate-100 bg-white hover:border-slate-300 transition-all group"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-slate-900 group-hover:text-white transition-colors">
+                    <Pin size={18} />
+                  </div>
+                  <div className="text-left flex-1">
+                    <h3 className="text-[11px] font-black uppercase text-slate-900">Pinned Messages</h3>
+                    <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mt-0.5">
+                      {pinnedMsgs.length === 0 ? 'None pinned' : `${pinnedMsgs.length} pinned`}
+                    </p>
+                  </div>
+                  <ChevronRight size={14} className="text-slate-300 group-hover:text-slate-900 transition-colors" />
+                </button>
               </section>
 
-              {/* Search */}
-              <section className="space-y-3">
-                <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
-                  <Search size={12} className="text-slate-400" /> Search Chat
-                </h3>
-                <div className="relative">
-                  <Search className="absolute top-1/2 left-3 -translate-y-1/2 text-slate-400" size={14} />
-                  <input
-                    type="text"
-                    placeholder="Search messages..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-4 text-xs font-bold focus:outline-none focus:border-slate-400 transition-colors"
+
+              {/* Sub-panels slide in over the content */}
+              <AnimatePresence>
+                {activePanel === 'pinned' && (
+                  <PinnedPanel
+                    pinnedMsgs={pinnedMsgs}
+                    onScrollTo={onScrollToMessage}
+                    onBack={() => setActivePanel(null)}
                   />
-                </div>
-                {searchQuery.trim() !== '' && (
-                  <div className="space-y-2 max-h-48 overflow-y-auto custom-scrollbar pr-1">
-                    {searchResults.length === 0 ? (
-                      <p className="text-[10px] font-bold text-slate-400 p-2 text-center">No results found.</p>
-                    ) : searchResults.map(msg => (
-                      <button 
-                        key={msg.id}
-                        onClick={() => {
-                          if (onScrollToMessage) onScrollToMessage(msg.id)
-                          onClose()
-                        }}
-                        className="w-full text-left p-3 bg-white rounded-xl border border-slate-200 hover:border-slate-400 transition-colors shadow-sm"
-                      >
-                        <div className="flex justify-between items-center text-[9px] text-slate-400 uppercase font-black tracking-widest mb-1">
-                          <span>{msg.senderName}</span>
-                          <span>{format(new Date(msg.timestamp), 'MMM d, HH:mm')}</span>
-                        </div>
-                        <p className="text-xs font-bold text-slate-800 line-clamp-2">{msg.text}</p>
-                      </button>
-                    ))}
-                  </div>
                 )}
-              </section>
+                {activePanel === 'search' && (
+                  <SearchPanel
+                    messages={messages}
+                    onScrollTo={onScrollToMessage}
+                    onBack={() => setActivePanel(null)}
+                  />
+                )}
+                {activePanel === 'orders' && (
+                  <OrdersScreenplatesPanel
+                    msgs={orderScreenplateMsgs}
+                    onScrollTo={onScrollToMessage}
+                    onBack={() => setActivePanel(null)}
+                  />
+                )}
+              </AnimatePresence>
             </div>
 
             {/* Footer: Delete Chat */}
@@ -231,6 +488,20 @@ const AdminControlModal: React.FC<AdminControlModalProps> = ({
           </m.div>
         </div>
       )}
+
+      {/* Fullscreen image viewer — portalled to body to escape pointer-events:none container */}
+      {fullscreenOpen && portalRoot &&
+        createPortal(
+          <FullscreenGalleryModal
+            isOpen={fullscreenOpen}
+            onClose={() => setFullscreenOpen(false)}
+            images={conversationImages}
+            initialIndex={fullscreenIndex}
+            productName="Conversation Media"
+          />,
+          portalRoot,
+        )
+      }
     </AnimatePresence>
   )
 }

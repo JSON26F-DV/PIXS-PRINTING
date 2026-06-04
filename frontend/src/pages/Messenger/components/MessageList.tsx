@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react'
-import { Virtuoso } from 'react-virtuoso'
+import { Virtuoso, type VirtuosoHandle } from 'react-virtuoso'
 
 import { createPortal } from 'react-dom'
 import { m, AnimatePresence, MotionConfig } from 'framer-motion'
@@ -15,7 +15,6 @@ import {
   Plus,
   FileText,
   Download,
-  ExternalLink,
   ArrowDown,
   Pin,
   Copy,
@@ -36,6 +35,7 @@ import ScreenplateConfirmMessage from './ScreenplateConfirmMessage'
 import ExpenditureConfirmMessage from './ExpenditureConfirmMessage'
 import RefundMessage from './RefundMessage'
 import EmailMessage from './EmailMessage'
+import MessageImageGrid from './MessageImageGrid'
 import FullscreenGalleryModal from '../../../components/common/FullscreenGalleryModal'
 
 interface MessageListProps {
@@ -486,88 +486,96 @@ const MessageBubble: React.FC<{
         {/* Fulfillment Asset Node: Images & Documents */}
         {message.attachments &&
           message.attachments.length > 0 &&
-          !message.isDeleted && (
-            <div
-              className={clsx(
-                'mt-3 flex w-full flex-col gap-3',
-                isCustomer ? 'items-end' : 'items-start',
-              )}
-            >
-              {message.attachments.map((at, idx) => (
-                <div key={idx} className="max-w-full">
-                  {at.type === 'image' ? (
-                    <div
-                      className="group/image relative cursor-pointer overflow-hidden rounded-[16px] md:rounded-[24px] border border-slate-100 bg-slate-50 shadow-lg"
-                      onClick={() => onImageClick(getAssetUrl(at))}
-                    >
-                      <img
-                        src={getAssetUrl(at)}
-                        alt={at.name}
-                        className="max-h-[180px] sm:max-h-[240px] md:max-h-[300px] w-auto object-cover"
-                      />
-                      <div className="absolute inset-0 flex items-center justify-center bg-slate-900/40 opacity-0 transition-opacity group-hover/image:opacity-100">
-                        <ExternalLink size={24} className="text-white" />
+          !message.isDeleted && (() => {
+            const imageAttachments = message.attachments!.filter(a => a.type === 'image')
+            const fileAttachments  = message.attachments!.filter(a => a.type !== 'image')
+            const imageUrls = imageAttachments.map(a => getAssetUrl(a))
+
+            return (
+              <div
+                className={clsx(
+                  'mt-3 flex w-full flex-col gap-3',
+                  isCustomer ? 'items-end' : 'items-start',
+                )}
+              >
+                {/* Mosaic image grid */}
+                {imageUrls.length > 0 && (
+                  <div className={clsx('w-full max-w-[320px] md:max-w-[380px]')}>
+                    <MessageImageGrid
+                      images={imageUrls}
+                      onImageClick={(idx) => {
+                        onImageClick(imageUrls[idx])
+                      }}
+                      className="rounded-[20px] overflow-hidden"
+                    />
+                    {isAdmin && onDeleteMedia && imageAttachments.length > 0 && (
+                      <div className="mt-1 flex flex-wrap gap-1 justify-end">
+                        {imageAttachments.map((at, idx) => (
+                          <button
+                            key={idx}
+                            onClick={() => {
+                              if (window.confirm('Delete this image permanently?')) {
+                                onDeleteMedia(message.id, at.name)
+                              }
+                            }}
+                            className="text-[8px] font-black uppercase tracking-widest text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg px-2 py-1 transition"
+                          >
+                            ✕ img {idx + 1}
+                          </button>
+                        ))}
                       </div>
-                      {isAdmin && onDeleteMedia && (
-                        <button
-                          className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1.5 opacity-0 group-hover/image:opacity-100 transition-opacity z-10 hover:bg-red-600 shadow-md"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            if (window.confirm('Delete this media permanently?')) {
-                              onDeleteMedia(message.id, at.name)
-                            }
-                          }}
-                        >
-                          <Trash2 size={12} />
-                        </button>
+                    )}
+                  </div>
+                )}
+
+                {/* File / document attachments — one-per-row */}
+                {fileAttachments.map((at, idx) => (
+                  <div key={idx} className="max-w-full relative flex items-center gap-2">
+                    <a
+                      href={getAssetUrl(at)}
+                      download={at.name}
+                      className={clsx(
+                        'group/doc flex items-center gap-3 md:gap-4 rounded-[16px] md:rounded-[22px] border p-3 md:p-4 shadow-sm flex-1',
+                        isCustomer
+                          ? 'hover:border-pixs-mint/50 border-slate-200 bg-slate-50 text-slate-900'
+                          : 'hover:border-pixs-mint/50 border-slate-100 bg-white text-slate-900',
                       )}
-                    </div>
-                  ) : (
-                    <div className="relative flex items-center gap-2">
-                      <a
-                        href={getAssetUrl(at)}
-                        download={at.name}
-                        className={clsx(
-                          'group/doc flex items-center gap-3 md:gap-4 rounded-[16px] md:rounded-[22px] border p-3 md:p-4 shadow-sm flex-1',
-                          isCustomer
-                            ? 'hover:border-pixs-mint/50 border-slate-200 bg-slate-50 text-slate-900'
-                            : 'hover:border-pixs-mint/50 border-slate-100 bg-white text-slate-900',
-                        )}
+                    >
+                      <div className="flex h-10 w-10 md:h-12 md:w-12 shrink-0 items-center justify-center rounded-xl md:rounded-2xl bg-slate-900 shadow-lg shadow-slate-900/10">
+                        <FileText size={18} className="text-pixs-mint md:hidden" />
+                        <FileText size={20} className="text-pixs-mint hidden md:block" />
+                      </div>
+                      <div className="min-w-0 pr-2 md:pr-4">
+                        <p className="truncate text-[9px] md:text-[10px] leading-none font-black uppercase italic">
+                          {at.name}
+                        </p>
+                        <p className="mt-1.5 md:mt-2 flex items-center gap-1.5 text-[7px] md:text-[8px] font-bold tracking-widest text-slate-400 uppercase">
+                          Click to Download{' '}
+                          <Download size={10} className="text-pixs-mint" />
+                        </p>
+                      </div>
+                    </a>
+                    {isAdmin && onDeleteMedia && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          e.preventDefault()
+                          if (window.confirm('Delete this document permanently?')) {
+                            onDeleteMedia(message.id, at.name)
+                          }
+                        }}
+                        className="p-2 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 transition shrink-0"
                       >
-                        <div className="flex h-10 w-10 md:h-12 md:w-12 shrink-0 items-center justify-center rounded-xl md:rounded-2xl bg-slate-900 shadow-lg shadow-slate-900/10">
-                          <FileText size={18} className="text-pixs-mint md:hidden" />
-                          <FileText size={20} className="text-pixs-mint hidden md:block" />
-                        </div>
-                        <div className="min-w-0 pr-2 md:pr-4">
-                          <p className="truncate text-[9px] md:text-[10px] leading-none font-black uppercase italic">
-                            {at.name}
-                          </p>
-                          <p className="mt-1.5 md:mt-2 flex items-center gap-1.5 text-[7px] md:text-[8px] font-bold tracking-widest text-slate-400 uppercase">
-                            Click to Download{' '}
-                            <Download size={10} className="text-pixs-mint" />
-                          </p>
-                        </div>
-                      </a>
-                      {isAdmin && onDeleteMedia && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            e.preventDefault()
-                            if (window.confirm('Delete this document permanently?')) {
-                              onDeleteMedia(message.id, at.name)
-                            }
-                          }}
-                          className="p-2 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 transition shrink-0"
-                        >
-                          <Trash2 size={18} />
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
+                        <Trash2 size={14} />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )
+          })()}
+
+
 
         {/* Reaction Display Node */}
         {message.reactions && message.reactions.length > 0 && (
@@ -817,10 +825,12 @@ const MessageList: React.FC<MessageListProps> = ({
   isLoading,
   onLoadMore,
   isLoadingMore,
+  scrollToMessageId,
   onDeleteMedia,
 }) => {
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const virtuosoRef = useRef<VirtuosoHandle>(null)
   const [scrollContainer, setScrollContainer] = useState<HTMLDivElement | null>(null)
   const [hasScrolledUp, setHasScrolledUp] = useState(false)
   const prevLengthRef = useRef(messages.length)
@@ -834,6 +844,18 @@ const MessageList: React.FC<MessageListProps> = ({
     setActiveImage(url)
     setGalleryOpen(true)
   }
+
+  // Scroll to a specific message by ID (triggered by AdminControlModal pin/search)
+  useEffect(() => {
+    if (!scrollToMessageId || !virtuosoRef.current) return
+    const idx = messages.findIndex(m => m.id === scrollToMessageId)
+    if (idx === -1) return
+    virtuosoRef.current.scrollToIndex({
+      index: idx,
+      behavior: 'smooth',
+      align: 'center',
+    })
+  }, [scrollToMessageId, messages])
 
   // Check if viewport is at the bottom
   const isNearBottom = (): boolean => {
@@ -964,6 +986,7 @@ const MessageList: React.FC<MessageListProps> = ({
             </div>
           ) : (
             <Virtuoso
+              ref={virtuosoRef}
               customScrollParent={scrollContainer || undefined}
               data={messages}
               firstItemIndex={INITIAL_FIRST_ITEM_INDEX}

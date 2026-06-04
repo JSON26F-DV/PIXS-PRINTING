@@ -151,10 +151,29 @@ const Orders: React.FC = () => {
       result = result.filter((o) => o.status?.trim().toUpperCase() === statusHeaderFilter.toUpperCase())
     }
 
-    // Order Search ID Filter
+    // Order Search ID/Items/Company/Customer Filter
     if (orderSearch.trim()) {
       const q = orderSearch.toLowerCase().trim()
-      result = result.filter((o) => o.order_id.toLowerCase().includes(q))
+      result = result.filter((o) => {
+        const customer = customers.find((c) => c.id === o.user_id)
+        
+        // Search by order ID
+        const matchOrderId = o.order_id.toLowerCase().includes(q)
+        
+        // Search by customer name
+        const matchCustomerName = customer ? customer.name.toLowerCase().includes(q) : false
+        
+        // Search by customer email
+        const matchCustomerEmail = customer ? customer.email.toLowerCase().includes(q) : false
+        
+        // Search by customer company name
+        const matchCompanyName = customer?.company_name ? customer.company_name.toLowerCase().includes(q) : false
+        
+        // Search by order items (product names)
+        const matchOrderItems = o.products.some((p) => p.productName.toLowerCase().includes(q))
+        
+        return matchOrderId || matchCustomerName || matchCustomerEmail || matchCompanyName || matchOrderItems
+      })
     }
 
     // Sorting
@@ -425,6 +444,7 @@ const Orders: React.FC = () => {
             <option value="SHIPPED">Shipped</option>
             <option value="DELIVERED">Delivered</option>
             <option value="CANCELLED">Cancelled</option>
+            <option value="REFUND">Refund</option>
           </select>
 
           <select
@@ -659,7 +679,7 @@ const Orders: React.FC = () => {
                 <div className="relative">
                   <input
                     type="text"
-                    placeholder="Search Order ID..."
+                    placeholder="Search order ID, items, company..."
                     value={orderSearch}
                     onChange={(e) => setOrderSearch(e.target.value)}
                     className="w-full md:w-60 rounded-xl border border-slate-100 bg-slate-50 px-4 py-2.5 pl-9 text-[10px] font-black tracking-widest uppercase shadow-sm outline-none focus:border-amber-400 focus:bg-white transition-colors"
@@ -698,6 +718,7 @@ const Orders: React.FC = () => {
                         order.status?.toUpperCase() === 'UNPAID' ? 'bg-slate-100 text-slate-600' :
                         order.status?.toUpperCase() === 'PROCESSING' ? 'bg-blue-50 text-blue-600' :
                         order.status?.toUpperCase() === 'CANCELLED' ? 'bg-rose-50 text-rose-600' :
+                        order.status?.toUpperCase() === 'REFUND' ? 'bg-purple-50 text-purple-600' :
                         'bg-slate-50 text-slate-400'
                       )}>
                         {order.status?.toUpperCase()}
@@ -848,7 +869,9 @@ const Orders: React.FC = () => {
                                             ? 'border-blue-100 bg-blue-50 text-blue-600'
                                             : order.status?.toUpperCase() === 'CANCELLED'
                                               ? 'border-rose-100 bg-rose-50 text-rose-600'
-                                              : 'border-slate-200 bg-slate-100 text-slate-600',
+                                              : order.status?.toUpperCase() === 'REFUND'
+                                                ? 'border-purple-100 bg-purple-50 text-purple-600'
+                                                : 'border-slate-200 bg-slate-100 text-slate-600',
                                   )}
                                   value={order.status?.toUpperCase()}
                                   onChange={(e) =>
@@ -865,6 +888,7 @@ const Orders: React.FC = () => {
                                   <option value="SHIPPED">Shipped</option>
                                   <option value="DELIVERED">Delivered</option>
                                   <option value="CANCELLED">Cancelled</option>
+                                  <option value="REFUND">Refund</option>
                                 </select>
                                 <MoreVertical
                                   className="pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 text-current opacity-30"
@@ -1570,7 +1594,7 @@ const Orders: React.FC = () => {
                           <div className="rounded-xl border border-slate-100 bg-white p-6">
                              <p className="mb-4 text-[10px] font-bold text-slate-400 uppercase italic">Update Lifecycle Status</p>
                              <div className="grid grid-cols-2 gap-2">
-                                {['UNPAID', 'PENDING', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED'].map((s) => (
+                                {['UNPAID', 'PENDING', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED', 'REFUND'].map((s) => (
                                    <button
                                      key={s}
                                      disabled={['staff', 'inventory'].includes(user?.role || '')}

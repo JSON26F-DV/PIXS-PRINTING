@@ -15,7 +15,6 @@ export interface CartPlateInfo {
   printingInfo: string
   isOwned: boolean
   compatibility?: IScreenPlateCompatibility[]
-  incompatibility?: IScreenPlateIncompatibility[]
 }
 
 export interface CartVariantInfo {
@@ -27,7 +26,7 @@ export interface CartVariantInfo {
   stock: number
 }
 
-import type { IProduct, IScreenPlateCompatibility, IScreenPlateIncompatibility } from './product.types'
+import type { IProduct, IScreenPlateCompatibility } from './product.types'
 
 export interface CartItem {
   id: string

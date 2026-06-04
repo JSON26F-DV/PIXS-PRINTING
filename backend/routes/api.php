@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\AdminAccountController;
+use App\Http\Controllers\Admin\AdminAuditLogController;
 use App\Http\Controllers\Admin\AdminCustomerController;
 use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\AdminOrderController;
@@ -24,6 +25,7 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ScreenplateRequestController;
+use App\Http\Controllers\StaffLiveQueueController;
 use App\Http\Controllers\User\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -143,6 +145,14 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->prefix('admin')->group(func
     // Dashboard
     Route::get('/dashboard-stats', [AdminDashboardController::class, 'index'])->middleware('role:admin,staff,technician,inventory');
 
+    // Audit Logs
+    Route::get('/audit-logs', [AdminAuditLogController::class, 'index'])->middleware('role:admin');
+    Route::get('/audit-logs/stats', [AdminAuditLogController::class, 'stats'])->middleware('role:admin');
+    Route::post('/audit-logs/bulk-delete', [AdminAuditLogController::class, 'bulkDestroy'])->middleware('role:admin');
+    Route::get('/audit-logs/{id}', [AdminAuditLogController::class, 'show'])->middleware('role:admin');
+    Route::put('/audit-logs/{id}', [AdminAuditLogController::class, 'update'])->middleware('role:admin');
+    Route::delete('/audit-logs/{id}', [AdminAuditLogController::class, 'destroy'])->middleware('role:admin');
+
     // Order Management
     Route::get('/orders', [AdminOrderController::class, 'index'])->middleware('role:admin,staff,technician,inventory');
     Route::post('/orders/direct', [AdminOrderController::class, 'storeDirect'])->middleware('role:admin');
@@ -198,6 +208,7 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->prefix('admin')->group(func
     Route::patch('/refunds/{id}', [RefundController::class, 'update'])->middleware('role:admin');
     Route::delete('/refunds/{id}', [RefundController::class, 'destroy'])->middleware('role:admin');
     Route::get('/customers/{id}/payment-methods', [RefundController::class, 'customerPaymentMethods'])->middleware('role:admin');
+    Route::get('/customers/{id}/orders', [RefundController::class, 'customerOrders'])->middleware('role:admin');
 
     // Expenditures (Handled fully inside AdminStockAnalyticsController above)
     // Route::get('/expenditures', [\App\Http\Controllers\Admin\ExpenditureController::class, 'index'])->middleware('role:admin');
@@ -208,8 +219,8 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->prefix('admin')->group(func
 
 // Messaging & Notifications
 Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
-    Route::get('/staff/live-queue', [\App\Http\Controllers\StaffLiveQueueController::class, 'index']);
-    Route::post('/staff/orders/{id}/task-status', [\App\Http\Controllers\StaffLiveQueueController::class, 'updateTaskStatus']);
+    Route::get('/staff/live-queue', [StaffLiveQueueController::class, 'index']);
+    Route::post('/staff/orders/{id}/task-status', [StaffLiveQueueController::class, 'updateTaskStatus']);
 
     Route::get('/messages', [MessageController::class, 'index']);
     Route::get('/messages/users', [MessageController::class, 'getUsers']);

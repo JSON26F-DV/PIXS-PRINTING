@@ -82,35 +82,20 @@ const AddToCartPage: React.FC = () => {
         }
 
         const comp = plate.compatibility?.find((c) => c.product_id === product.id)
-        const incomp = plate.incompatibility?.find(
-          (i) => i.product_id === product.id,
-        )
 
-        // If no compatibility record exists for this specific product, we default to compatible
-        // because the plate is already assigned to this cart item.
-        if (!comp && !incomp) {
+        if (!comp) {
           map[v.variant_id] = { isCompatible: true }
           return
         }
 
         const isAllowed =
-          comp &&
-          (comp.allowed_variants?.includes(v.variant_id) ||
-            comp.allowed_variants?.includes(v.size) ||
-            comp.allowed_variants?.includes('ALL'))
+          comp.allowed_variants?.includes(v.variant_id) ||
+          comp.allowed_variants?.includes(v.size) ||
+          comp.allowed_variants?.includes('ALL')
 
-        const isDenied =
-          incomp &&
-          (incomp.variant_ids?.length === 0 ||
-            incomp.variant_ids?.includes(v.variant_id) ||
-            incomp.variant_ids?.includes(v.size))
-
-        if (isDenied) {
-          map[v.variant_id] = { isCompatible: false, reason: 'Not Compatible' }
-        } else if (isAllowed) {
+        if (isAllowed) {
           map[v.variant_id] = { isCompatible: true }
         } else {
-          // If a compatibility record EXISTS for this product but this variant isn't in it, then it's incompatible
           map[v.variant_id] = { isCompatible: false, reason: 'Not Compatible' }
         }
       })

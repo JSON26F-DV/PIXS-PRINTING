@@ -410,6 +410,8 @@ const ScreenplatePage: React.FC = () => {
       return
     }
 
+    toast.success('Brand reference image uploaded')
+
     const reader = new FileReader()
     reader.onloadend = () => {
       setReferenceImage(reader.result as string)

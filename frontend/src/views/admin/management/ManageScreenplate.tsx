@@ -17,6 +17,7 @@ import {
   InputField,
   TextArea,
   SectionTitle,
+  Pagination,
 } from '../inventory-sections/UIComponents'
 import {
   getAdminScreenplate,
@@ -42,7 +43,6 @@ const DEFAULT_PLATE: IScreenplate = {
   comment: '',
   compatibility: [],
   is_flatscreen: false,
-  incompatible_products: [],
   base_setup_fee: 450,
   dimensions: '',
 }
@@ -60,6 +60,9 @@ export default function ManageScreenplate() {
   const [isUploading, setIsUploading] = useState(false)
   const [expandedProduct, setExpandedProduct] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
+  const [categoryFilter, setCategoryFilter] = useState<string>('All')
+  const [mappingPage, setMappingPage] = useState(1)
+  const MAPPING_PER_PAGE = 9
   const [searchParams] = useSearchParams()
   const [saveModal, setSaveModal] = useState({
     open: false,
@@ -157,34 +160,36 @@ export default function ManageScreenplate() {
 
     if (targetState === isCurrentlyChecked) return
 
-    if (targetState) {
-      if (idx === -1) {
-        next.push({ product_id: productId, allowed_variants: [variantId] })
-      } else {
-        next[idx].allowed_variants.push(variantId)
-      }
-      update('compatibility', next)
-
-      const currentIncompat = data.incompatible_products || []
-      if (currentIncompat.includes(productId)) {
-        update('incompatible_products', currentIncompat.filter((id: string) => id !== productId))
-      }
-    } else {
-      if (idx !== -1) {
-        next[idx].allowed_variants = next[idx].allowed_variants.filter((v: string) => v !== variantId)
-        if (next[idx].allowed_variants.length === 0) {
-          next.splice(idx, 1)
-          const currentIncompat = data.incompatible_products || []
-          if (!currentIncompat.includes(productId)) {
-            update('incompatible_products', [...currentIncompat, productId])
-          }
+      if (targetState) {
+        if (idx === -1) {
+          next.push({ product_id: productId, allowed_variants: [variantId], print_price_per_unit: {} })
+        } else {
+          next[idx].allowed_variants.push(variantId)
         }
         update('compatibility', next)
+      } else {
+        if (idx !== -1) {
+          next[idx].allowed_variants = next[idx].allowed_variants.filter((v: string) => v !== variantId)
+          if (next[idx].allowed_variants.length === 0) {
+            next.splice(idx, 1)
+          }
+          update('compatibility', next)
+        }
       }
-    }
   }
 
 
+
+  const handlePriceChange = (productId: string, variantId: string, price: number) => {
+    setData((prev: IScreenplate) => {
+      const next = [...prev.compatibility]
+      const idx = next.findIndex((c) => c.product_id === productId)
+      if (idx === -1) return prev
+      const prices = { ...(next[idx].print_price_per_unit || {}), [variantId]: price }
+      next[idx] = { ...next[idx], print_price_per_unit: prices }
+      return { ...prev, compatibility: next }
+    })
+  }
 
   const loadVariants = async (productId: string) => {
     try {
@@ -224,17 +229,8 @@ export default function ManageScreenplate() {
   const handleSave = async () => {
     setIsSaving(true)
     try {
-      const allProductIds = products.map((p) => p.id)
-      const compatibleIds = data.compatibility.map((c: ICompatibilityNode) => c.product_id)
-      const computedIncompatible = allProductIds.filter(
-        (id) => !compatibleIds.includes(id),
-      )
-      const manualIncompat = data.incompatible_products || []
-      const finalIncompat = manualIncompat.length ? manualIncompat : computedIncompatible
-
       const payload = {
         ...data,
-        incompatible_products: finalIncompat,
         base_setup_fee: data.base_setup_fee ?? 0,
       }
 
@@ -596,19 +592,51 @@ export default function ManageScreenplate() {
             />
           </div>
 
+          {/* Category Filter */}
+          <div className="flex w-full flex-col items-center gap-3 pb-2 sm:flex-row sm:gap-2">
+            <span className="text-[10px] font-black tracking-widest text-slate-400 uppercase sm:mr-1">Category:</span>
+            <div className="flex w-full flex-wrap justify-center gap-1.5 sm:w-auto">
+              {(() => {
+                const map = new Map<string, string>()
+                products.forEach(p => {
+                  if (!p.is_need_screenplate) return
+                  const id = p.category_id || ''
+                  const label = p.category_label || p.category
+                  if (id) map.set(id, label)
+                })
+                return [{ id: 'All', label: 'All' }, ...Array.from(map.entries()).map(([id, label]) => ({ id, label }))]
+              })().map((cat) => (
+                <button
+                  key={cat.id}
+                  onClick={() => { setCategoryFilter(cat.id); setMappingPage(1) }}
+                  className={`rounded-xl px-3.5 py-2 text-[9px] font-black tracking-wider uppercase transition-all ${
+                    categoryFilter === cat.id
+                      ? 'bg-slate-900 text-white shadow-md'
+                      : 'border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-900'
+                  }`}
+                >
+                  {cat.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 lg:gap-6">
             {products
               .filter((p) => {
                 // Only show products that need screenplate
                 if (!p.is_need_screenplate) return false
+                const matchesCategory = categoryFilter === 'All' || p.category_id === categoryFilter
+                if (!matchesCategory) return false
                 const q = searchQuery.trim().toLowerCase()
                 if (!q) return true
                 return (
                   p.name.toLowerCase().includes(q) ||
-                  (p.category || '').toLowerCase().includes(q) ||
+                  (p.category_label || p.category || '').toLowerCase().includes(q) ||
                   (p.variants || []).some((v: IVariant) => v.size.toLowerCase().includes(q))
                 )
               })
+              .slice((mappingPage - 1) * MAPPING_PER_PAGE, mappingPage * MAPPING_PER_PAGE)
               .map((p) => {
                 const isExpanded = expandedProduct === p.id
 
@@ -634,7 +662,7 @@ export default function ManageScreenplate() {
                           {p.name}
                         </p>
                         <p className="text-[8px] font-bold tracking-widest text-slate-400 uppercase">
-                          {p.category}
+                          {p.category_label || p.category}
                         </p>
                       </div>
 
@@ -672,7 +700,9 @@ export default function ManageScreenplate() {
                                 No variants available
                               </p>
                             ) : (
-                              (p.variants || []).map((v: IVariant) => {
+                              (p.variants || [])
+                                .filter((v: IVariant) => v.is_need_screenplate !== false)
+                                .map((v: IVariant) => {
                                 const config = data.compatibility.find(
                                   (c: ICompatibilityNode) => c.product_id === p.id,
                                 )
@@ -680,7 +710,7 @@ export default function ManageScreenplate() {
                                   config?.allowed_variants.includes(
                                     v.variant_id,
                                   )
-
+                                const currentPrice = config?.print_price_per_unit?.[v.variant_id]
 
                                 return (
                                   <div
@@ -731,6 +761,20 @@ export default function ManageScreenplate() {
                                         </div>
                                       )}
                                     </div>
+
+                                    {isLinked && (
+                                      <div className="pl-10">
+                                        <input
+                                          type="number"
+                                          step="0.01"
+                                          min="0"
+                                          placeholder="Print price per unit (₱)"
+                                          value={currentPrice ?? ''}
+                                          onChange={(e) => handlePriceChange(p.id, v.variant_id, parseFloat(e.target.value) || 0)}
+                                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-[9px] font-bold text-slate-700 outline-none transition-all focus:border-[#75EEA5] focus:ring-2 focus:ring-[#75EEA5]/20"
+                                        />
+                                      </div>
+                                    )}
                                   </div>
                                 )
                               })
@@ -743,11 +787,27 @@ export default function ManageScreenplate() {
                 )
               })}
           </div>
+
+          <Pagination
+            currentPage={mappingPage}
+            totalPages={Math.max(1, Math.ceil(products.filter(p => {
+              if (!p.is_need_screenplate) return false
+              if (categoryFilter !== 'All' && p.category_id !== categoryFilter) return false
+              const q = searchQuery.trim().toLowerCase()
+              if (!q) return true
+              return (
+                p.name.toLowerCase().includes(q) ||
+                (p.category_label || p.category || '').toLowerCase().includes(q) ||
+                (p.variants || []).some((v: IVariant) => v.size.toLowerCase().includes(q))
+              )
+            }).length / MAPPING_PER_PAGE))}
+            onPageChange={setMappingPage}
+          />
         </div>
       </div>
 
       {saveModal.open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[999] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
           <div className="w-full max-w-md rounded-[32px] bg-white p-8 shadow-2xl shadow-slate-950/20">
             <h2 className="text-xl font-black uppercase tracking-[0.3em] text-slate-900">
               {saveModal.type === 'success' ? 'Success' : 'Error'}

@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Screenplate;
 use App\Models\ScreenplateCompatibility;
-use App\Models\ScreenplateIncompatible;
 use App\Services\AuditService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -18,7 +17,7 @@ class AdminScreenplateController extends Controller
     public function index(Request $request): JsonResponse
     {
         try {
-            $query = Screenplate::with(['compatibility', 'incompatibility', 'owner']);
+            $query = Screenplate::with(['compatibility', 'owner']);
 
             if ($request->has('owner_id')) {
                 $query->where('owner_id', $request->owner_id);
@@ -40,7 +39,7 @@ class AdminScreenplateController extends Controller
     public function show(string $id): JsonResponse
     {
         try {
-            $plate = Screenplate::with(['compatibility', 'incompatibility', 'owner'])->findOrFail($id);
+            $plate = Screenplate::with(['compatibility', 'owner'])->findOrFail($id);
 
             return response()->json([
                 'status' => 'success',
@@ -70,8 +69,6 @@ class AdminScreenplateController extends Controller
                 'compatibility.*.product_id' => 'required|string',
                 'compatibility.*.allowed_variants' => 'nullable|array',
                 'compatibility.*.print_price_per_unit' => 'nullable|array',
-                'incompatible_products' => 'nullable|array',
-                'incompatible_products.*' => 'string',
             ]);
 
             $id = $this->generateNextId();
@@ -94,11 +91,10 @@ class AdminScreenplateController extends Controller
             ]);
 
             $this->syncCompatibility($id, $validated['compatibility'] ?? []);
-            $this->syncIncompatibility($id, $validated['incompatible_products'] ?? []);
 
             DB::commit();
 
-            $plate = Screenplate::with(['compatibility', 'incompatibility'])->find($id);
+            $plate = Screenplate::with(['compatibility'])->find($id);
 
             AuditService::created('screenplate', $id, [
                 'plate_name' => $validated['plate_name'],
@@ -139,8 +135,6 @@ class AdminScreenplateController extends Controller
                 'compatibility.*.product_id' => 'required|string',
                 'compatibility.*.allowed_variants' => 'nullable|array',
                 'compatibility.*.print_price_per_unit' => 'nullable|array',
-                'incompatible_products' => 'nullable|array',
-                'incompatible_products.*' => 'string',
             ]);
 
             DB::beginTransaction();
@@ -164,14 +158,9 @@ class AdminScreenplateController extends Controller
                 $this->syncCompatibility($id, $validated['compatibility']);
             }
 
-            if ($request->has('incompatible_products')) {
-                ScreenplateIncompatible::where('screenplate_id', $id)->delete();
-                $this->syncIncompatibility($id, $validated['incompatible_products']);
-            }
-
             DB::commit();
 
-            $plate->load(['compatibility', 'incompatibility']);
+            $plate->load(['compatibility']);
 
             AuditService::updated('screenplate', $id, [], $updateData);
 
@@ -270,8 +259,6 @@ class AdminScreenplateController extends Controller
             ];
         })->values();
 
-        $incomp = $plate->incompatibility->pluck('product_id')->unique()->values()->toArray();
-
         return [
             'id' => $plate->id,
             'owner_id' => $plate->owner_id,
@@ -286,7 +273,6 @@ class AdminScreenplateController extends Controller
             'comment' => $plate->comment,
             'technical_info' => $plate->technical_info,
             'compatibility' => $comp,
-            'incompatible_products' => $incomp,
         ];
     }
 
@@ -314,16 +300,6 @@ class AdminScreenplateController extends Controller
                     'print_price_per_unit' => $prices['ALL'] ?? 0,
                 ]);
             }
-        }
-    }
-
-    private function syncIncompatibility(string $screenplateId, array $productIds): void
-    {
-        foreach ($productIds as $productId) {
-            ScreenplateIncompatible::create([
-                'screenplate_id' => $screenplateId,
-                'product_id' => $productId,
-            ]);
         }
     }
 
@@ -381,51 +357,6 @@ class AdminScreenplateController extends Controller
             Log::error('AdminScreenplateController@removeCompatibility failed', ['message' => $e->getMessage()]);
 
             return response()->json(['status' => 'error', 'message' => 'Failed to remove compatibility.'], 500);
-        }
-    }
-
-    // Create a single incompatible product row
-    public function addIncompatible(Request $request, string $id): JsonResponse
-    {
-        try {
-            $validated = $request->validate([
-                'product_id' => 'required|string|exists:products,id',
-            ]);
-
-            $plate = Screenplate::findOrFail($id);
-
-            $row = ScreenplateIncompatible::create([
-                'screenplate_id' => $plate->id,
-                'product_id' => $validated['product_id'],
-            ]);
-
-            return response()->json(['status' => 'success', 'data' => $row]);
-        } catch (\Throwable $e) {
-            Log::error('AdminScreenplateController@addIncompatible failed', ['message' => $e->getMessage()]);
-
-            return response()->json(['status' => 'error', 'message' => 'Failed to add incompatible product.'], 500);
-        }
-    }
-
-    // Remove incompatible row(s) by product_id
-    public function removeIncompatible(Request $request, string $id): JsonResponse
-    {
-        try {
-            $validated = $request->validate([
-                'product_id' => 'required|string|exists:products,id',
-            ]);
-
-            $plate = Screenplate::findOrFail($id);
-
-            $deleted = ScreenplateIncompatible::where('screenplate_id', $plate->id)
-                ->where('product_id', $validated['product_id'])
-                ->delete();
-
-            return response()->json(['status' => 'success', 'deleted' => $deleted]);
-        } catch (\Throwable $e) {
-            Log::error('AdminScreenplateController@removeIncompatible failed', ['message' => $e->getMessage()]);
-
-            return response()->json(['status' => 'error', 'message' => 'Failed to remove incompatible product.'], 500);
         }
     }
 

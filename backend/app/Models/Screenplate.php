@@ -42,9 +42,4 @@ class Screenplate extends Model
     {
         return $this->hasMany(ScreenplateCompatibility::class, 'screenplate_id', 'id');
     }
-
-    public function incompatibility()
-    {
-        return $this->hasMany(ScreenplateIncompatible::class, 'screenplate_id', 'id');
-    }
 }

@@ -13,6 +13,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class AdminAccountController extends Controller
@@ -293,7 +294,7 @@ class AdminAccountController extends Controller
         $targetDir = base_path('../frontend/src/assets/profile');
 
         $id = $request->input('id', 'temp_'.mt_rand(1000, 9999));
-        $filename = 'profile_'.$id.'_'.time().'.'.$file->getClientOriginalExtension();
+        $filename = Str::uuid()->toString().'.'.$file->extension();
 
         if (! file_exists($targetDir)) {
             mkdir($targetDir, 0755, true);

@@ -8,7 +8,6 @@ use App\Models\ProductReview;
 use App\Models\ProductTag;
 use App\Models\ProductVariant;
 use App\Models\ScreenplateCompatibility;
-use App\Models\ScreenplateIncompatible;
 use App\Services\AuditService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -74,15 +73,6 @@ class ProductController extends Controller
                     ->pluck('product_id')
                     ->unique()
                     ->toArray();
-                $incompatibleIds = ScreenplateIncompatible::where('screenplate_id', $screenplateId)
-                    ->pluck('product_id')
-                    ->unique()
-                    ->toArray();
-
-                if (! empty($incompatibleIds)) {
-                    $compatibleIds = array_diff($compatibleIds, $incompatibleIds);
-                }
-
                 if (! empty($compatibleIds)) {
                     $query->whereIn('id', $compatibleIds);
                 } else {

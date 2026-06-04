@@ -25,7 +25,6 @@ class CartController extends Controller
                 'product.variants',
                 'variant',
                 'screenplate.compatibility',
-                'screenplate.incompatibility',
             ])
                 ->where('customer_id', $user->id)
                 ->get();
@@ -106,7 +105,7 @@ class CartController extends Controller
                     }
                 }
 
-                $cartItem->load(['colors.color', 'product.variants', 'variant', 'screenplate.compatibility', 'screenplate.incompatibility']);
+                $cartItem->load(['colors.color', 'product.variants', 'variant', 'screenplate.compatibility']);
                 if ($cartItem->screenplate) {
                     $this->transformScreenplate($cartItem->screenplate);
                 }
@@ -181,7 +180,7 @@ class CartController extends Controller
                     }
                 }
 
-                $cartItem->load(['colors.color', 'product.variants', 'variant', 'screenplate.compatibility', 'screenplate.incompatibility']);
+                $cartItem->load(['colors.color', 'product.variants', 'variant', 'screenplate.compatibility']);
                 if ($cartItem->screenplate) {
                     $this->transformScreenplate($cartItem->screenplate);
                 }
@@ -235,7 +234,7 @@ class CartController extends Controller
                     }
                 }
 
-                $cartItem->load(['colors.color', 'product.variants', 'variant', 'screenplate.compatibility', 'screenplate.incompatibility']);
+                $cartItem->load(['colors.color', 'product.variants', 'variant', 'screenplate.compatibility']);
                 if ($cartItem->screenplate) {
                     $this->transformScreenplate($cartItem->screenplate);
                 }
@@ -283,14 +282,6 @@ class CartController extends Controller
             ];
         })->values();
 
-        $screenplate->incompatibilityMapped = $screenplate->incompatibility->groupBy('product_id')->map(function ($rows, $productId) {
-            return [
-                'product_id' => $productId,
-                'variant_ids' => $rows->pluck('variant_id')->filter()->values()->toArray(),
-            ];
-        })->values();
-
         $screenplate->setRelation('compatibility', $screenplate->compatibilityMapped);
-        $screenplate->setRelation('incompatibility', $screenplate->incompatibilityMapped);
     }
 }

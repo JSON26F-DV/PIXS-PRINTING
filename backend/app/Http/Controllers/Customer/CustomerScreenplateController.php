@@ -23,7 +23,7 @@ class CustomerScreenplateController extends Controller
         }
 
         try {
-            $plates = Screenplate::with(['compatibility', 'incompatibility'])
+            $plates = Screenplate::with(['compatibility'])
                 ->where('owner_id', $user->id)
                 ->orderBy('plate_name')
                 ->get();
@@ -36,8 +36,6 @@ class CustomerScreenplateController extends Controller
                     $variants = [];
                     foreach ($items as $item) {
                         if ($item->variant_id) {
-                            // Find variant size from DB? For now assume variant_id is the size or we'll just use it
-                            // Actually the frontend expects allowed_variants as array of sizes
                             $variants[] = $item->variant_id;
                             $prices[$item->variant_id] = (float) $item->print_price_per_unit;
                         } else {
@@ -51,13 +49,6 @@ class CustomerScreenplateController extends Controller
                         'product_id' => $productId,
                         'allowed_variants' => $variants,
                         'print_price_per_unit' => $prices,
-                    ];
-                })->values();
-
-                $incomp = $plate->incompatibility->groupBy('product_id')->map(function ($items, $productId) {
-                    return [
-                        'product_id' => $productId,
-                        'variant_ids' => $items->pluck('variant_id')->filter()->values()->toArray(),
                     ];
                 })->values();
 
@@ -75,7 +66,6 @@ class CustomerScreenplateController extends Controller
                     'comment' => $plate->comment,
                     'technical_info' => $plate->technical_info,
                     'compatibility' => $comp,
-                    'incompatibility' => $incomp,
                 ];
             });
 

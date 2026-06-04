@@ -183,27 +183,16 @@ export const useProductDetail = ({
     const variant = product.variants.find(v => v.variant_id === selectedVariantId)
     if (!variant) return []
 
-    // Use the screenplate_incompatible logic if available or derived from compatibility missing
+    // Incompatibility is derived from missing entries in screenplate_compatibility
     return selectablePlates
       .filter(plate => {
-        // If there's an explicit incompatibility list
-        const incomp = plate.incompatibility?.find(i => i.product_id === product.id)
-        if (incomp) {
-          // If variant_ids is empty, the entire product is incompatible with this plate
-          if (incomp.variant_ids.length === 0) return true
-          return incomp.variant_ids.includes(variant.variant_id) || incomp.variant_ids.includes(variant.size)
-        }
-
-        // Check if THIS specific variant matches any in the compatibility allow-list
         const comp = plate.compatibility.find(c => c.product_id === product.id)
-        if (!comp) return true // Should not happen due to selectablePlates filter
+        if (!comp) return true
 
-        // If allowed_variants is empty or contains 'ALL', it's compatible with everything
         if (!comp.allowed_variants || comp.allowed_variants.length === 0 || comp.allowed_variants.includes('ALL')) {
            return false 
         }
 
-        // If not in the allow-list, it's incompatible
         return !comp.allowed_variants.includes(variant.variant_id) && !comp.allowed_variants.includes(variant.size)
       })
       .map(p => p.id)
@@ -227,7 +216,6 @@ export const useProductDetail = ({
       }
 
       const comp = plate.compatibility.find(c => c.product_id === product.id)
-      const incomp = plate.incompatibility?.find(i => i.product_id === product.id)
 
       const isAllowed = comp && (
         comp.allowed_variants.includes(v.variant_id) || 
@@ -235,19 +223,9 @@ export const useProductDetail = ({
         comp.allowed_variants.includes('ALL')
       )
 
-      const isDenied = incomp && (
-        incomp.variant_ids.length === 0 || // Empty variant_ids means whole product is denied
-        incomp.variant_ids.includes(v.variant_id) || 
-        incomp.variant_ids.includes(v.size)
-      )
-      
-      // Rule 4: INCOMPATIBLE takes priority
-      if (isDenied) {
-        map[v.variant_id] = { isCompatible: false, reason: 'Not Compatible' }
-      } else if (isAllowed) {
+      if (isAllowed) {
         map[v.variant_id] = { isCompatible: true }
       } else {
-        // Rule 2.3: Not listed in compatibility -> Not Compatible
         map[v.variant_id] = { isCompatible: false, reason: 'Not Compatible' }
       }
     })

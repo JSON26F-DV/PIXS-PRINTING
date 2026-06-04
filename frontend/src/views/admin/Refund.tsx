@@ -3,17 +3,26 @@ import { m, AnimatePresence } from 'framer-motion'
 import {
   Plus, Search, Eye, X, Check, 
   CreditCard,
-  ChevronDown, Copy
+  ChevronDown, Copy, User as UserIcon
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { format } from 'date-fns'
 import axiosInstance from '../../lib/axiosInstance'
 import { toast } from 'react-hot-toast'
+
+interface ICustomer {
+  id: string
+  first_name: string
+  last_name: string
+  email: string
+  company_name?: string
+}
+
 interface Refund {
   id: string
   customer_id: string
   order_id: string | null
-  payment_code_id: string | null
+  payment_id: string | null
   amount: number
   message: string | null
   status: 'pending' | 'completed' | 'cancelled'
@@ -21,13 +30,18 @@ interface Refund {
   created_at: string
   customer_first_name?: string
   customer_last_name?: string
-  payment_code?: string
+  payment_method_type?: string
+  payment_method_masked_number?: string
+  payment_method_bank_name?: string | null
+  payment_method_provider?: string | null
 }
 
 interface PaymentMethod {
   id: string
   type: string
-  last_four: string
+  masked_number: string
+  bank_name?: string | null
+  provider?: string | null
   is_default: boolean
 }
 
@@ -35,6 +49,13 @@ interface PaymentCode {
   id: string
   code: string
   amount: number
+  status: string
+  created_at: string
+}
+
+interface IOrder {
+  id: string
+  total_amount: number
   status: string
   created_at: string
 }
@@ -54,11 +75,17 @@ const RefundPage: React.FC = () => {
     order_id: '',
     amount: '',
     message: '',
-    payment_code_id: '',
+    payment_id: '',
   })
   const [customerPaymentMethods, setCustomerPaymentMethods] = useState<PaymentMethod[]>([])
   const [customerPaycodes, setCustomerPaycodes] = useState<PaymentCode[]>([])
+  const [customerOrders, setCustomerOrders] = useState<IOrder[]>([])
   const [showPaycodes, setShowPaycodes] = useState(false)
+
+  // Customer search autocomplete
+  const [allCustomers, setAllCustomers] = useState<ICustomer[]>([])
+  const [customerSearch, setCustomerSearch] = useState('')
+  const [isCustomerDropdownOpen, setIsCustomerDropdownOpen] = useState(false)
 
   useEffect(() => {
     fetchRefunds()
@@ -67,11 +94,28 @@ const RefundPage: React.FC = () => {
   useEffect(() => {
     if (formData.customer_id) {
       fetchCustomerPaymentData(formData.customer_id)
+      fetchCustomerOrders(formData.customer_id)
     } else {
       setCustomerPaymentMethods([])
       setCustomerPaycodes([])
+      setCustomerOrders([])
     }
   }, [formData.customer_id])
+
+  const fetchCustomers = async () => {
+    try {
+      const res = await axiosInstance.get('/api/admin/customers')
+      setAllCustomers(res.data.data || res.data || [])
+    } catch (error) {
+      console.error('Failed to fetch customers', error)
+    }
+  }
+
+  useEffect(() => {
+    if (showCreateModal) {
+      fetchCustomers()
+    }
+  }, [showCreateModal])
 
   const fetchRefunds = async () => {
     try {
@@ -94,6 +138,15 @@ const RefundPage: React.FC = () => {
     }
   }
 
+  const fetchCustomerOrders = async (customerId: string) => {
+    try {
+      const res = await axiosInstance.get(`/api/admin/customers/${customerId}/orders`)
+      setCustomerOrders(res.data.data || [])
+    } catch (error) {
+      console.error('Failed to fetch customer orders', error)
+    }
+  }
+
   const handleCreateRefund = async () => {
     if (!formData.customer_id || !formData.amount) {
       toast.error('Customer and amount are required')
@@ -104,14 +157,14 @@ const RefundPage: React.FC = () => {
       await axiosInstance.post('/api/admin/refunds', {
         customer_id: formData.customer_id,
         order_id: formData.order_id || null,
-        payment_code_id: formData.payment_code_id || null,
+        payment_id: formData.payment_id || null,
         amount: parseFloat(formData.amount),
         message: formData.message || null,
       })
       
       toast.success('Refund created successfully')
       setShowCreateModal(false)
-      setFormData({ customer_id: '', order_id: '', amount: '', message: '', payment_code_id: '' })
+      setFormData({ customer_id: '', order_id: '', amount: '', message: '', payment_id: '' })
       fetchRefunds()
     } catch (error) {
       console.error('Failed to create refund', error)
@@ -306,17 +359,72 @@ const RefundPage: React.FC = () => {
               </div>
 
               <div className="space-y-4">
-                <div>
+                <div className="relative">
                   <label className="mb-2 block text-xs font-bold tracking-widest text-slate-500 uppercase">
-                    Customer ID
+                    Customer *
                   </label>
-                  <input
-                    type="text"
-                    value={formData.customer_id}
-                    onChange={(e) => setFormData({ ...formData, customer_id: e.target.value })}
-                    className="w-full rounded-xl border border-slate-200 px-4 py-3"
-                    placeholder="Enter customer ID"
-                  />
+                  <div className="relative">
+                    <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input
+                      type="text"
+                      value={customerSearch}
+                      onChange={(e) => {
+                        setCustomerSearch(e.target.value)
+                        setIsCustomerDropdownOpen(true)
+                        if (!e.target.value) {
+                          setFormData({ ...formData, customer_id: '', payment_id: '' })
+                          setCustomerPaymentMethods([])
+                          setCustomerPaycodes([])
+                        }
+                      }}
+                      onFocus={() => setIsCustomerDropdownOpen(true)}
+                      onBlur={() => setTimeout(() => setIsCustomerDropdownOpen(false), 200)}
+                      className="w-full rounded-xl border border-slate-200 py-3 pl-11 pr-4 text-sm"
+                      placeholder="Search by name, email, or company..."
+                    />
+                  </div>
+                  {isCustomerDropdownOpen && customerSearch && (
+                    <div className="absolute top-full left-0 right-0 z-50 mt-2 max-h-60 overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-xl">
+                      {allCustomers.filter(c =>
+                        (`${c.first_name} ${c.last_name} ${c.email} ${c.company_name || ''}`)
+                          .toLowerCase()
+                          .includes(customerSearch.toLowerCase())
+                      ).map(c => (
+                        <div
+                          key={c.id}
+                          onClick={() => {
+                            setFormData({ ...formData, customer_id: c.id, payment_id: '' })
+                            setCustomerSearch(`${c.first_name} ${c.last_name}`)
+                            setIsCustomerDropdownOpen(false)
+                            setCustomerPaymentMethods([])
+                            setCustomerPaycodes([])
+                          }}
+                          className="flex cursor-pointer items-center gap-3 border-b border-slate-100 p-4 text-sm transition-colors hover:bg-rose-50 last:border-0"
+                        >
+                          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-rose-100">
+                            <UserIcon size={16} className="text-rose-600" />
+                          </div>
+                          <div>
+                            <p className="font-bold text-slate-900">
+                              {c.first_name} {c.last_name}
+                            </p>
+                            <p className="text-xs text-slate-500">
+                              {c.company_name ? `${c.company_name} · ` : ''}{c.email}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                      {allCustomers.filter(c =>
+                        (`${c.first_name} ${c.last_name} ${c.email} ${c.company_name || ''}`)
+                          .toLowerCase()
+                          .includes(customerSearch.toLowerCase())
+                      ).length === 0 && (
+                        <div className="p-4 text-center text-sm text-slate-400">
+                          No customers found
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* Payment Methods & Paycodes Section */}
@@ -337,21 +445,45 @@ const RefundPage: React.FC = () => {
 
                     {customerPaymentMethods.length > 0 && (
                       <div>
-                        <p className="mb-2 text-[10px] font-bold tracking-widest text-slate-400 uppercase">
-                          Saved Payment Methods
+                        <p className="mb-2 text-[10px] font-bold tracking-widest text-slate-450 uppercase">
+                          Select Refund Payment Method *
                         </p>
                         <div className="space-y-2">
-                          {customerPaymentMethods.map((pm) => (
-                            <div key={pm.id} className="flex items-center justify-between rounded-lg bg-white p-3">
-                              <div className="flex items-center gap-2">
-                                <CreditCard size={16} className="text-slate-400" />
-                                <span className="text-sm font-medium">{pm.type} ****{pm.last_four}</span>
+                          {customerPaymentMethods.map((pm) => {
+                            const isSelected = formData.payment_id === pm.id
+                            return (
+                              <div
+                                key={pm.id}
+                                onClick={() => setFormData({ ...formData, payment_id: pm.id })}
+                                className={clsx(
+                                  "flex cursor-pointer items-center justify-between rounded-lg border p-3 transition-all",
+                                  isSelected
+                                    ? "border-rose-500 bg-rose-50/50 shadow-sm"
+                                    : "border-slate-200 bg-white hover:border-rose-250"
+                                )}
+                              >
+                                <div className="flex items-center gap-2">
+                                  <CreditCard size={16} className={isSelected ? "text-rose-600" : "text-slate-400"} />
+                                  <span className="text-sm font-medium">
+                                    {pm.type.toUpperCase()} {pm.bank_name ? `(${pm.bank_name})` : pm.provider ? `(${pm.provider})` : ''} — {pm.masked_number}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  {pm.is_default && (
+                                    <span className="text-[10px] font-bold text-emerald-600">DEFAULT</span>
+                                  )}
+                                  <div
+                                    className={clsx(
+                                      "h-4 w-4 rounded-full border flex items-center justify-center",
+                                      isSelected ? "border-rose-600 bg-rose-600 text-white" : "border-slate-300"
+                                    )}
+                                  >
+                                    {isSelected && <div className="h-1.5 w-1.5 rounded-full bg-white" />}
+                                  </div>
+                                </div>
                               </div>
-                              {pm.is_default && (
-                                <span className="text-[10px] font-bold text-emerald-600">DEFAULT</span>
-                              )}
-                            </div>
-                          ))}
+                            )
+                          })}
                         </div>
                       </div>
                     )}
@@ -359,7 +491,7 @@ const RefundPage: React.FC = () => {
                     {showPaycodes && customerPaycodes.length > 0 && (
                       <div>
                         <p className="mb-2 text-[10px] font-bold tracking-widest text-slate-400 uppercase">
-                          Payment Codes
+                          Payment Codes (Reference)
                         </p>
                         <div className="space-y-2">
                           {customerPaycodes.map((pc) => (
@@ -390,13 +522,27 @@ const RefundPage: React.FC = () => {
                     <label className="mb-2 block text-xs font-bold tracking-widest text-slate-500 uppercase">
                       Order ID (Optional)
                     </label>
-                    <input
-                      type="text"
-                      value={formData.order_id}
-                      onChange={(e) => setFormData({ ...formData, order_id: e.target.value })}
-                      className="w-full rounded-xl border border-slate-200 px-4 py-3"
-                      placeholder="Order ID"
-                    />
+                    <div className="relative">
+                      <select
+                        value={formData.order_id}
+                        onChange={(e) => setFormData({ ...formData, order_id: e.target.value })}
+                        className="w-full appearance-none rounded-xl border border-slate-200 bg-white px-4 py-3 pr-10 text-sm"
+                      >
+                        <option value="">-- No order --</option>
+                        {customerOrders.map(o => (
+                          <option key={o.id} value={o.id}>
+                            {o.id} — ₱{o.total_amount.toLocaleString()} ({o.status})
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown size={16} className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                    </div>
+                    {!formData.customer_id && (
+                      <p className="mt-1 text-xs text-slate-400">Select a customer first to see their orders</p>
+                    )}
+                    {formData.customer_id && customerOrders.length === 0 && (
+                      <p className="mt-1 text-xs text-slate-400">No orders found for this customer</p>
+                    )}
                   </div>
                   <div>
                     <label className="mb-2 block text-xs font-bold tracking-widest text-slate-500 uppercase">
@@ -493,6 +639,16 @@ const RefundPage: React.FC = () => {
                     {selectedRefund.status}
                   </span>
                 </div>
+                {selectedRefund.payment_id && (
+                  <div className="flex flex-col gap-1 rounded-xl bg-slate-50 p-4">
+                    <span className="text-xs text-slate-500 font-bold">Payment Method</span>
+                    <span className="text-xs font-semibold text-slate-800 mt-1">
+                      {selectedRefund.payment_method_type?.toUpperCase()}{' '}
+                      {selectedRefund.payment_method_bank_name ? `(${selectedRefund.payment_method_bank_name})` : selectedRefund.payment_method_provider ? `(${selectedRefund.payment_method_provider})` : ''}
+                      {' — '}{selectedRefund.payment_method_masked_number}
+                    </span>
+                  </div>
+                )}
                 {selectedRefund.message && (
                   <div className="rounded-xl bg-slate-50 p-4">
                     <p className="mb-2 text-xs font-bold tracking-widest text-slate-500 uppercase">Message</p>

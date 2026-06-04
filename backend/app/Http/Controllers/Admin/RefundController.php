@@ -20,13 +20,13 @@ class RefundController extends Controller
                 'refunds.*',
                 'customers.first_name as customer_first_name',
                 'customers.last_name as customer_last_name',
-                'employees.first_name as employee_first_name',
-                'employees.last_name as employee_last_name',
-                'payment_codes.code as payment_code'
+                'customer_payment_methods.type as payment_method_type',
+                'customer_payment_methods.masked_number as payment_method_masked_number',
+                'customer_payment_methods.bank_name as payment_method_bank_name',
+                'customer_payment_methods.provider as payment_method_provider'
             )
             ->leftJoin('customers', 'refunds.customer_id', '=', 'customers.id')
-            ->leftJoin('employees', 'refunds.employee_id', '=', 'employees.id')
-            ->leftJoin('payment_codes', 'refunds.payment_code_id', '=', 'payment_codes.id')
+            ->leftJoin('customer_payment_methods', 'refunds.payment_id', '=', 'customer_payment_methods.id')
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);
 
@@ -38,25 +38,37 @@ class RefundController extends Controller
         $validated = $request->validate([
             'customer_id' => 'required|string|max:20',
             'order_id' => 'nullable|string|max:30',
-            'payment_code_id' => 'nullable|string|max:30',
+            'payment_id' => 'nullable|string|max:30',
             'amount' => 'required|numeric|min:0',
             'message' => 'nullable|string|max:5000',
         ]);
 
-        $admin = $request->user();
         $refundId = 'ref_'.Str::random(10);
 
         DB::table('refunds')->insert([
             'id' => $refundId,
-            'employee_id' => $admin->id,
             'customer_id' => $validated['customer_id'],
             'order_id' => $validated['order_id'] ?? null,
-            'payment_code_id' => $validated['payment_code_id'] ?? null,
+            'payment_id' => $validated['payment_id'] ?? null,
             'amount' => $validated['amount'],
             'message' => $validated['message'] ?? null,
             'status' => 'pending',
             'created_at' => now(),
             'updated_at' => now(),
+        ]);
+
+        if ($validated['order_id'] ?? null) {
+            DB::table('orders')
+                ->where('id', $validated['order_id'])
+                ->update(['status' => 'REFUND']);
+        }
+
+        // Create a corresponding expenditure with category = 'Refund'
+        DB::table('expenditures')->insert([
+            'category' => 'Refund',
+            'amount' => $validated['amount'],
+            'description' => 'Refund for Order ID: ' . ($validated['order_id'] ?? 'N/A'),
+            'created_at' => now(),
         ]);
 
         AuditService::created('refund', $refundId, [
@@ -65,7 +77,7 @@ class RefundController extends Controller
         ]);
 
         return response()->json([
-            'message' => 'Refund created.',
+            'message' => 'Refund created and expenditure tracked.',
             'data' => ['id' => $refundId],
         ], 201);
     }
@@ -78,11 +90,13 @@ class RefundController extends Controller
                 'customers.first_name as customer_first_name',
                 'customers.last_name as customer_last_name',
                 'customers.email as customer_email',
-                'employees.first_name as employee_first_name',
-                'employees.last_name as employee_last_name',
+                'customer_payment_methods.type as payment_method_type',
+                'customer_payment_methods.masked_number as payment_method_masked_number',
+                'customer_payment_methods.bank_name as payment_method_bank_name',
+                'customer_payment_methods.provider as payment_method_provider'
             )
             ->leftJoin('customers', 'refunds.customer_id', '=', 'customers.id')
-            ->leftJoin('employees', 'refunds.employee_id', '=', 'employees.id')
+            ->leftJoin('customer_payment_methods', 'refunds.payment_id', '=', 'customer_payment_methods.id')
             ->where('refunds.id', $id)
             ->first();
 
@@ -144,6 +158,19 @@ class RefundController extends Controller
                 'payment_methods' => $paymentMethods,
                 'payment_codes' => $paymentCodes,
             ],
+        ]);
+    }
+
+    public function customerOrders(string $customerId): JsonResponse
+    {
+        $orders = DB::table('orders')
+            ->select('id', 'total_amount', 'status', 'created_at')
+            ->where('customer_id', $customerId)
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return response()->json([
+            'data' => $orders,
         ]);
     }
 }

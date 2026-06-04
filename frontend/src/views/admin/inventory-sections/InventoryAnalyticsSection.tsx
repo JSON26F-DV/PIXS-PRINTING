@@ -631,6 +631,8 @@ export const InventoryAnalyticsSection: React.FC<InventoryAnalyticsSectionProps>
                 <option value="Utilities">Utilities</option>
                 <option value="Office / Operational Expenses">Office / Operational</option>
                 <option value="Extra / Miscellaneous Expenses">Extra / Misc</option>
+                <option value="Refund">Refund</option>
+                <option value="Others">Others</option>
               </select>
             </div>
             <div>
@@ -697,6 +699,7 @@ export const InventoryAnalyticsSection: React.FC<InventoryAnalyticsSectionProps>
                 <option value="Utilities">Utilities</option>
                 <option value="Office / Operational Expenses">Office / Operational</option>
                 <option value="Extra / Miscellaneous Expenses">Extra / Misc</option>
+                <option value="Refund">Refund</option>
               </select>
             </div>
           </div>
@@ -765,6 +768,7 @@ export const InventoryAnalyticsSection: React.FC<InventoryAnalyticsSectionProps>
                           <option value="Utilities">Utilities</option>
                           <option value="Office / Operational Expenses">Office / Operational</option>
                           <option value="Extra / Miscellaneous Expenses">Extra / Misc</option>
+                          <option value="Refund">Refund</option>
                         </select>
                       ) : (
                         <span className="rounded px-2 py-1 text-[9px] font-black tracking-widest uppercase bg-blue-500 text-white shadow-lg shadow-blue-500/20">
@@ -938,6 +942,7 @@ export const InventoryAnalyticsSection: React.FC<InventoryAnalyticsSectionProps>
                       <option value="Utilities">Utilities</option>
                       <option value="Office / Operational Expenses">Office / Operational</option>
                       <option value="Extra / Miscellaneous Expenses">Extra / Misc</option>
+                      <option value="Refund">Refund</option>
                     </select>
                   </div>
                   <div className="space-y-1">

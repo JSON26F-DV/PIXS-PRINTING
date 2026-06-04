@@ -8,7 +8,6 @@ import {
   CornerUpRight,
   AlertTriangle,
 } from 'lucide-react'
-import toast from 'react-hot-toast'
 import type { IMessage } from '../MessengerPage.tsx'
 
 // --- Upload Constraints ---
@@ -140,8 +139,6 @@ const MessageInput: React.FC<MessageInputProps> = ({
       }
     }
 
-    toast.success(`Uploading ${type}: ${file.name}`)
-
     const attachment = {
       type,
       url: type === 'image' ? URL.createObjectURL(file) : '#',
@@ -149,7 +146,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
       fileObj: file
     }
 
-    onSend(`Sent a ${type}: ${file.name}`, [attachment])
+    onSend(type === 'image' ? 'Sent an image' : 'Sent a file', [attachment])
   }
 
   return (

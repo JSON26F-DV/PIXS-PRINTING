@@ -42,7 +42,7 @@ class AdminOrderController extends Controller
     private function getOrderStats(): array
     {
         $totalOrders = Order::count();
-        $allowedStatuses = ['UNPAID', 'PENDING', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED'];
+        $allowedStatuses = ['UNPAID', 'PENDING', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED', 'REFUND'];
         $deliveredOrdersCount = Order::where('status', 'DELIVERED')->count();
         $completionRate = $totalOrders > 0 ? round(($deliveredOrdersCount / $totalOrders) * 100, 2) : 0;
 
@@ -75,6 +75,7 @@ class AdminOrderController extends Controller
                     'COMPLETED' => '#10b981',
                     'DELIVERED' => '#10b981',
                     'CANCELLED' => '#ef4444',
+                    'REFUND' => '#a855f7',
                 ];
 
                 return [
@@ -114,6 +115,7 @@ class AdminOrderController extends Controller
             'email' => $c->email,
             'role' => $c->role,
             'profile_picture' => $c->profile_picture,
+            'company_name' => $c->company_name,
             'orderCount' => $c->orders,
             'totalSpent' => (float) $c->total_orders_value,
         ]);
