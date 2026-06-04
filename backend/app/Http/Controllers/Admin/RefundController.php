@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Order;
 use App\Services\AuditService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -71,6 +72,12 @@ class RefundController extends Controller
 
         $refundId = 'ref_'.Str::random(10);
 
+        // Determine message text — auto-generate if admin didn't provide one
+        $messageText = $validated['message'] ?? null;
+        if (! $messageText) {
+            $messageText = 'Refund request'.($validated['order_id'] ? ' for Order ID: '.$validated['order_id'] : '').' — ₱'.number_format($validated['amount'], 2);
+        }
+
         DB::table('refunds')->insert([
             'id' => $refundId,
             'customer_id' => $validated['customer_id'],
@@ -78,7 +85,7 @@ class RefundController extends Controller
             'payment_id' => $validated['payment_id'] ?? null,
             'payment_code_id' => $paymentCodeId,
             'amount' => $validated['amount'],
-            'message' => $validated['message'] ?? null,
+            'message' => $messageText,
             'status' => 'pending',
             'created_at' => now(),
             'updated_at' => now(),
@@ -94,8 +101,31 @@ class RefundController extends Controller
         DB::table('expenditures')->insert([
             'category' => 'Refund',
             'amount' => $validated['amount'],
-            'description' => 'Refund for Order ID: ' . ($validated['order_id'] ?? 'N/A'),
+            'description' => 'Refund for Order ID: '.($validated['order_id'] ?? 'N/A'),
             'created_at' => now(),
+        ]);
+
+        // Create a message record linked to this refund
+        $adminId = $request->user()->id;
+        $convId = $adminId.'_'.$validated['customer_id'];
+
+        DB::table('conversations')->insertOrIgnore([
+            'id' => $convId,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        DB::table('messages')->insert([
+            'id' => 'msg_'.Str::random(10),
+            'conversation_id' => $convId,
+            'sender_id' => $adminId,
+            'sender_type' => 'employee',
+            'receiver_id' => $validated['customer_id'],
+            'receiver_type' => 'customer',
+            'message' => $messageText,
+            'refund_id' => $refundId,
+            'created_at' => now(),
+            'updated_at' => now(),
         ]);
 
         AuditService::created('refund', $refundId, [
@@ -194,19 +224,19 @@ class RefundController extends Controller
 
     public function customerOrders(string $customerId): JsonResponse
     {
-        $orders = \App\Models\Order::with('items.product')
+        $orders = Order::with('items.product')
             ->where('customer_id', $customerId)
             ->where('status', 'DELIVERED')
             ->orderBy('created_at', 'desc')
             ->get();
 
         return response()->json([
-            'data' => $orders->map(fn($o) => [
+            'data' => $orders->map(fn ($o) => [
                 'id' => $o->id,
                 'total_amount' => (float) $o->total_amount,
                 'status' => $o->status,
                 'created_at' => $o->created_at->toIso8601String(),
-                'product_names' => $o->items->map(fn($item) => $item->product?->name ?? 'Unknown Product')->toArray(),
+                'product_names' => $o->items->map(fn ($item) => $item->product?->name ?? 'Unknown Product')->toArray(),
             ]),
         ]);
     }

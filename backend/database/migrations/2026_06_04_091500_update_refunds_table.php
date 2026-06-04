@@ -23,7 +23,7 @@ return new class extends Migration
             }
 
             // Add payment_id if it does not exist
-            if (!Schema::hasColumn('refunds', 'payment_id')) {
+            if (! Schema::hasColumn('refunds', 'payment_id')) {
                 $table->string('payment_id', 30)->nullable()->after('order_id');
             }
         });
@@ -33,7 +33,7 @@ return new class extends Migration
             Schema::table('refunds', function (Blueprint $table) {
                 $table->foreign('payment_id')->references('id')->on('customer_payment_methods')->onDelete('restrict')->onUpdate('restrict');
             });
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             // Already exists or failed to add
         }
     }
@@ -46,17 +46,18 @@ return new class extends Migration
         Schema::table('refunds', function (Blueprint $table) {
             try {
                 $table->dropForeign(['payment_id']);
-            } catch (\Exception $e) {}
+            } catch (Exception $e) {
+            }
 
             if (Schema::hasColumn('refunds', 'payment_id')) {
                 $table->dropColumn('payment_id');
             }
 
-            if (!Schema::hasColumn('refunds', 'payment_code_id')) {
+            if (! Schema::hasColumn('refunds', 'payment_code_id')) {
                 $table->string('payment_code_id', 30)->nullable()->after('order_id');
             }
 
-            if (!Schema::hasColumn('refunds', 'employee_id')) {
+            if (! Schema::hasColumn('refunds', 'employee_id')) {
                 $table->string('employee_id', 20)->nullable()->after('id');
             }
         });

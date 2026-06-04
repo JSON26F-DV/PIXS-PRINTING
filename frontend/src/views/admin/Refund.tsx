@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { m, AnimatePresence } from 'framer-motion'
 import {
   Plus, Search, Eye, X, Check, 
   CreditCard,
-  ChevronDown, Copy, User as UserIcon,
+  ChevronDown, ChevronLeft, ChevronRight, Copy, User as UserIcon,
   CheckCircle2, Landmark, Wallet, Ticket
 } from 'lucide-react'
 import { clsx } from 'clsx'
@@ -77,6 +77,27 @@ const RefundPage: React.FC = () => {
   const [selectedRefund, setSelectedRefund] = useState<Refund | null>(null)
   
   const [isLoading, setIsLoading] = useState(true)
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 10
+
+  const filteredRefunds = useMemo(() => refunds.filter(refund => {
+    const matchesSearch = 
+      `${refund.customer_first_name} ${refund.customer_last_name}`.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
+      refund.id.toLowerCase().includes(debouncedSearchQuery.toLowerCase())
+    const matchesStatus = statusFilter === 'all' || refund.status === statusFilter
+    return matchesSearch && matchesStatus
+  }), [refunds, debouncedSearchQuery, statusFilter])
+
+  const paginatedRefunds = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage
+    return filteredRefunds.slice(start, start + itemsPerPage)
+  }, [filteredRefunds, currentPage])
+
+  const totalPages = Math.max(1, Math.ceil(filteredRefunds.length / itemsPerPage))
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [debouncedSearchQuery, statusFilter])
   // Create form state
   const [formData, setFormData] = useState({
     customer_id: '',
@@ -242,14 +263,6 @@ const RefundPage: React.FC = () => {
     }
   }
 
-  const filteredRefunds = refunds.filter(refund => {
-    const matchesSearch = 
-      `${refund.customer_first_name} ${refund.customer_last_name}`.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
-      refund.id.toLowerCase().includes(debouncedSearchQuery.toLowerCase())
-    const matchesStatus = statusFilter === 'all' || refund.status === statusFilter
-    return matchesSearch && matchesStatus
-  })
-
   return (
     <div className="mx-auto max-w-[1440px] px-4 pb-16 lg:px-8">
       <header className="flex items-center justify-between py-8">
@@ -294,8 +307,49 @@ const RefundPage: React.FC = () => {
         </select>
       </div>
 
-      {/* Refunds Table */}
-      <div className="overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-lg">
+      {/* Mobile Card Layout */}
+      <div className="grid grid-cols-2 gap-3 lg:hidden">
+        {isLoading ? (
+          <div className="col-span-2 flex justify-center py-12">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-rose-600" />
+          </div>
+        ) : paginatedRefunds.length === 0 ? (
+          <div className="col-span-2 py-12 text-center text-slate-400">No refunds found</div>
+        ) : (
+          paginatedRefunds.map((refund) => (
+            <div key={refund.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <div className="mb-3 flex items-start justify-between gap-2">
+                <p className="font-mono text-[10px] font-semibold text-slate-500 leading-tight break-all">{refund.id}</p>
+                <span className={clsx(
+                  'shrink-0 rounded-md border px-2 py-0.5 text-[9px] font-bold uppercase',
+                  refund.status === 'completed' && 'border-emerald-100 bg-emerald-50 text-emerald-600',
+                  refund.status === 'pending' && 'border-amber-100 bg-amber-50 text-amber-600',
+                  refund.status === 'cancelled' && 'border-slate-200 bg-slate-100 text-slate-500',
+                )}>{refund.status}</span>
+              </div>
+              <p className="text-sm font-bold text-slate-900 truncate">{refund.customer_first_name} {refund.customer_last_name}</p>
+              <p className="mt-1 text-[10px] text-slate-500">
+                {refund.order_id || '-'} &middot; {format(new Date(refund.created_at), 'MMM d, yyyy')}
+              </p>
+              <div className="mt-3 flex items-center justify-between">
+                <span className="font-black text-rose-600">₱{refund.amount.toLocaleString()}</span>
+                <div className="flex items-center gap-1">
+                  <button onClick={() => { setSelectedRefund(refund); setShowViewModal(true) }} className="rounded-lg p-1.5 hover:bg-slate-100"><Eye size={14} /></button>
+                  {refund.status === 'pending' && (
+                    <>
+                      <button onClick={() => handleUpdateStatus(refund.id, 'completed')} className="rounded-lg p-1.5 text-emerald-600 hover:bg-emerald-50"><Check size={14} /></button>
+                      <button onClick={() => handleUpdateStatus(refund.id, 'cancelled')} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100"><X size={14} /></button>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Desktop Table */}
+      <div className="hidden overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-lg lg:block">
         <table className="w-full">
           <thead className="bg-slate-50">
             <tr>
@@ -315,14 +369,14 @@ const RefundPage: React.FC = () => {
                   <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-rose-600" />
                 </td>
               </tr>
-            ) : filteredRefunds.length === 0 ? (
+            ) : paginatedRefunds.length === 0 ? (
               <tr>
                 <td colSpan={7} className="px-6 py-12 text-center text-slate-400">
                   No refunds found
                 </td>
               </tr>
             ) : (
-              filteredRefunds.map((refund) => (
+              paginatedRefunds.map((refund) => (
                 <tr key={refund.id} className="border-t border-slate-100 hover:bg-slate-50">
                   <td className="px-6 py-4 font-mono text-xs font-semibold text-slate-500">
                     {refund.id}
@@ -389,6 +443,39 @@ const RefundPage: React.FC = () => {
           </tbody>
         </table>
       </div>
+
+      {/* Shared Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-1.5 py-6">
+          <button
+            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+            disabled={currentPage <= 1}
+            className="rounded-xl border border-slate-200 bg-white p-2.5 text-slate-500 transition-all hover:bg-slate-50 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-30"
+          >
+            <ChevronLeft size={14} />
+          </button>
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+            <button
+              key={page}
+              onClick={() => setCurrentPage(page)}
+              className={`min-w-[36px] rounded-xl px-3 py-2 text-[10px] font-black tracking-wider uppercase transition-all ${
+                currentPage === page
+                  ? 'bg-slate-900 text-white shadow-md'
+                  : 'border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-900'
+              }`}
+            >
+              {page}
+            </button>
+          ))}
+          <button
+            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+            disabled={currentPage >= totalPages}
+            className="rounded-xl border border-slate-200 bg-white p-2.5 text-slate-500 transition-all hover:bg-slate-50 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-30"
+          >
+            <ChevronRight size={14} />
+          </button>
+        </div>
+      )}
 
       {/* Create Modal */}
       <AnimatePresence>

@@ -366,7 +366,7 @@ class AdminAccountController extends Controller
                     $q->where('category', $category);
                 });
             } else {
-                if (!empty($allowedCategories)) {
+                if (! empty($allowedCategories)) {
                     $query->whereHas('items.product', function ($q) use ($allowedCategories) {
                         $q->whereIn('category', $allowedCategories);
                     });
@@ -424,7 +424,7 @@ class AdminAccountController extends Controller
         $productionLogMap = DB::table('production_logs')
             ->get()->keyBy('order_id');
 
-        $pendingOrders    = [];
+        $pendingOrders = [];
         $productionOrders = [];
 
         foreach ($allPendingOrders as $o) {
@@ -438,36 +438,36 @@ class AdminAccountController extends Controller
             }
 
             $formattedOrder = [
-                'order_id'     => $orderId,
-                'user_id'      => $o->customer ? "{$o->customer->first_name} {$o->customer->last_name}" : (string) $o->customer_id,
+                'order_id' => $orderId,
+                'user_id' => $o->customer ? "{$o->customer->first_name} {$o->customer->last_name}" : (string) $o->customer_id,
                 'company_name' => $o->customer ? $o->customer->company_name : null,
-                'customer_id'  => (string) $o->customer_id,
+                'customer_id' => (string) $o->customer_id,
                 'total_amount' => (float) $o->total_amount,
-                'status'       => $o->status,
-                'created_at'   => $o->created_at->toIso8601String(),
-                'products'     => $o->items->map(fn ($item) => [
-                    'id'               => $item->id,
-                    'order_id'         => $item->order_id,
-                    'customer_id'      => $item->customer_id,
-                    'productId'        => $item->product_id,
-                    'productName'      => $item->product?->name ?? 'Deleted Product',
-                    'productImage'     => $item->product && $item->product->main_image
+                'status' => $o->status,
+                'created_at' => $o->created_at->toIso8601String(),
+                'products' => $o->items->map(fn ($item) => [
+                    'id' => $item->id,
+                    'order_id' => $item->order_id,
+                    'customer_id' => $item->customer_id,
+                    'productId' => $item->product_id,
+                    'productName' => $item->product?->name ?? 'Deleted Product',
+                    'productImage' => $item->product && $item->product->main_image
                         ? '/images/products/'.$item->product->main_image : '',
-                    'category'         => $item->product?->category?->label ?? 'General',
-                    'quantity'         => $item->quantity,
-                    'variant'          => [
-                        'id'        => $item->variant_id,
-                        'size'      => $item->variant?->size ?? 'N/A',
+                    'category' => $item->product?->category?->label ?? 'General',
+                    'quantity' => $item->quantity,
+                    'variant' => [
+                        'id' => $item->variant_id,
+                        'size' => $item->variant?->size ?? 'N/A',
                         'unitPrice' => (float) $item->unit_price,
                     ],
-                    'colors'           => $item->colors->map(fn ($c) => [
+                    'colors' => $item->colors->map(fn ($c) => [
                         'name' => $c->colorDetails?->name ?? 'Unknown',
-                        'hex'  => $c->colorDetails?->hex ?? '#000000',
+                        'hex' => $c->colorDetails?->hex ?? '#000000',
                     ]),
-                    'plate'            => $item->screenplate ? [
-                        'id'                => $item->screenplate->id,
-                        'name'              => $item->screenplate->name,
-                        'setupFee'          => (float) $item->screenplate->setup_fee,
+                    'plate' => $item->screenplate ? [
+                        'id' => $item->screenplate->id,
+                        'name' => $item->screenplate->name,
+                        'setupFee' => (float) $item->screenplate->setup_fee,
                         'printPricePerUnit' => (float) $item->plate_price,
                     ] : null,
                     'customRequirements' => $o->production_notes,
@@ -476,7 +476,7 @@ class AdminAccountController extends Controller
 
             if ($productionLogMap->has($o->id)) {
                 $log = $productionLogMap->get($o->id);
-                $formattedOrder['task_status']  = $log->task_status;
+                $formattedOrder['task_status'] = $log->task_status;
                 $formattedOrder['requested_at'] = $log->requested_at;
                 $productionOrders[] = $formattedOrder;
             } else {
@@ -485,7 +485,7 @@ class AdminAccountController extends Controller
         }
 
         return response()->json([
-            'pending_orders'    => $pendingOrders,
+            'pending_orders' => $pendingOrders,
             'production_orders' => $productionOrders,
         ]);
     }

@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('refunds', function (Blueprint $table) {
-            if (!Schema::hasColumn('refunds', 'payment_code_id')) {
+            if (! Schema::hasColumn('refunds', 'payment_code_id')) {
                 $table->string('payment_code_id', 30)->nullable()->after('payment_id');
             }
         });
@@ -25,7 +25,7 @@ return new class extends Migration
                     ->onDelete('restrict')
                     ->onUpdate('restrict');
             });
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             // Silently ignore if constraint already exists
         }
     }
@@ -38,7 +38,7 @@ return new class extends Migration
         Schema::table('refunds', function (Blueprint $table) {
             try {
                 $table->dropForeign(['payment_code_id']);
-            } catch (\Throwable $e) {
+            } catch (Throwable $e) {
             }
 
             if (Schema::hasColumn('refunds', 'payment_code_id')) {

@@ -196,16 +196,16 @@ class AdminAuditLogController extends Controller
     public function update(Request $request, $id)
     {
         $log = AuditLog::findOrFail($id);
-        
+
         if ($request->has('details')) {
             $log->details = is_string($request->details) ? $request->details : json_encode($request->details);
         }
-        
+
         $log->save();
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Audit log updated successfully'
+            'message' => 'Audit log updated successfully',
         ]);
     }
 
@@ -216,7 +216,7 @@ class AdminAuditLogController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Audit log deleted successfully'
+            'message' => 'Audit log deleted successfully',
         ]);
     }
 
@@ -231,7 +231,7 @@ class AdminAuditLogController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Audit logs deleted successfully'
+            'message' => 'Audit logs deleted successfully',
         ]);
     }
 }

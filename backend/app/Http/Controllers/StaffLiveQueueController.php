@@ -20,8 +20,8 @@ class StaffLiveQueueController extends Controller
 
         $assignments = [
             'allowed_categories' => $user->allowed_categories ?? [],
-            'allowed_products'   => $user->allowed_products ?? [],
-            'is_admin'           => $user->role === 'admin',
+            'allowed_products' => $user->allowed_products ?? [],
+            'is_admin' => $user->role === 'admin',
         ];
 
         // Fetch all orders with status PENDING
@@ -32,14 +32,14 @@ class StaffLiveQueueController extends Controller
 
         // Fetch all queue assignments: order_id => [employee_id, ...]
         $queueRows = DB::table('order_employee_queue')->get(['order_id', 'employee_id']);
-        $queueMap  = [];
+        $queueMap = [];
         foreach ($queueRows as $row) {
             $queueMap[(string) $row->order_id][] = (string) $row->employee_id;
         }
 
         $productionLogMap = DB::table('production_logs')->get()->keyBy('order_id');
 
-        $pendingOrders    = [];
+        $pendingOrders = [];
         $productionOrders = [];
 
         foreach ($allPendingOrders as $o) {
@@ -53,38 +53,38 @@ class StaffLiveQueueController extends Controller
             }
 
             $formattedOrder = [
-                'order_id'     => $orderId,
-                'user_id'      => $o->customer ? "{$o->customer->first_name} {$o->customer->last_name}" : (string) $o->customer_id,
+                'order_id' => $orderId,
+                'user_id' => $o->customer ? "{$o->customer->first_name} {$o->customer->last_name}" : (string) $o->customer_id,
                 'company_name' => $o->customer ? $o->customer->company_name : null,
-                'customer_id'  => (string) $o->customer_id,
+                'customer_id' => (string) $o->customer_id,
                 'total_amount' => (float) $o->total_amount,
-                'status'       => $o->status,
-                'created_at'   => $o->created_at->toIso8601String(),
-                'products'     => $o->items->map(fn ($item) => [
-                    'id'               => $item->id,
-                    'order_id'         => $item->order_id,
-                    'customer_id'      => $item->customer_id,
-                    'productId'        => $item->product_id,
-                    'productName'      => $item->product?->name ?? 'Deleted Product',
-                    'productImage'     => $item->product && $item->product->main_image
+                'status' => $o->status,
+                'created_at' => $o->created_at->toIso8601String(),
+                'products' => $o->items->map(fn ($item) => [
+                    'id' => $item->id,
+                    'order_id' => $item->order_id,
+                    'customer_id' => $item->customer_id,
+                    'productId' => $item->product_id,
+                    'productName' => $item->product?->name ?? 'Deleted Product',
+                    'productImage' => $item->product && $item->product->main_image
                         ? '/images/products/'.$item->product->main_image
                         : '',
-                    'category'         => $item->product?->category?->label ?? 'General',
-                    'quantity'         => $item->quantity,
-                    'variant'          => [
-                        'id'        => $item->variant_id,
-                        'size'      => $item->variant?->size ?? 'N/A',
+                    'category' => $item->product?->category?->label ?? 'General',
+                    'quantity' => $item->quantity,
+                    'variant' => [
+                        'id' => $item->variant_id,
+                        'size' => $item->variant?->size ?? 'N/A',
                         'unitPrice' => (float) $item->unit_price,
                     ],
-                    'colors'           => $item->colors->map(fn ($c) => [
+                    'colors' => $item->colors->map(fn ($c) => [
                         'name' => $c->colorDetails?->name ?? 'Unknown',
-                        'hex'  => $c->colorDetails?->hex ?? '#000000',
+                        'hex' => $c->colorDetails?->hex ?? '#000000',
                     ]),
-                    'plate'            => $item->screenplate ? [
-                        'id'               => $item->screenplate->id,
-                        'name'             => $item->screenplate->name,
-                        'setupFee'         => (float) $item->screenplate->setup_fee,
-                        'printPricePerUnit'=> (float) $item->plate_price,
+                    'plate' => $item->screenplate ? [
+                        'id' => $item->screenplate->id,
+                        'name' => $item->screenplate->name,
+                        'setupFee' => (float) $item->screenplate->setup_fee,
+                        'printPricePerUnit' => (float) $item->plate_price,
                     ] : null,
                     'customRequirements' => $o->production_notes,
                 ])->toArray(),
@@ -92,8 +92,8 @@ class StaffLiveQueueController extends Controller
 
             if ($productionLogMap->has($o->id)) {
                 $log = $productionLogMap->get($o->id);
-                $formattedOrder['task_status']   = $log->task_status;
-                $formattedOrder['requested_at']  = $log->requested_at;
+                $formattedOrder['task_status'] = $log->task_status;
+                $formattedOrder['requested_at'] = $log->requested_at;
                 $productionOrders[] = $formattedOrder;
             } else {
                 $pendingOrders[] = $formattedOrder;
@@ -101,9 +101,9 @@ class StaffLiveQueueController extends Controller
         }
 
         return response()->json([
-            'pending_orders'    => $pendingOrders,
+            'pending_orders' => $pendingOrders,
             'production_orders' => $productionOrders,
-            'assignments'       => $assignments,
+            'assignments' => $assignments,
         ]);
     }
 

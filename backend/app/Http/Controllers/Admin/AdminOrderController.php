@@ -12,6 +12,8 @@ use App\Services\AuditService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 
 class AdminOrderController extends Controller
@@ -314,31 +316,33 @@ class AdminOrderController extends Controller
     public function destroy(Request $request, string $id): JsonResponse
     {
         $user = $request->user();
-        $key = 'delete-order-attempts:' . $user->id;
+        $key = 'delete-order-attempts:'.$user->id;
 
-        if (\Illuminate\Support\Facades\RateLimiter::tooManyAttempts($key, 3)) {
-            $seconds = \Illuminate\Support\Facades\RateLimiter::availableIn($key);
+        if (RateLimiter::tooManyAttempts($key, 3)) {
+            $seconds = RateLimiter::availableIn($key);
             $minutes = ceil($seconds / 60);
+
             return response()->json([
-                'message' => "Too many incorrect password attempts. Please try again after {$minutes} minutes."
+                'message' => "Too many incorrect password attempts. Please try again after {$minutes} minutes.",
             ], 429);
         }
 
         $password = $request->input('password');
-        if (!$password) {
+        if (! $password) {
             return response()->json(['message' => 'Password is required to delete an order.'], 400);
         }
 
-        if (!\Illuminate\Support\Facades\Hash::check($password, $user->password)) {
-            \Illuminate\Support\Facades\RateLimiter::hit($key, 600); // 10 minutes lock
-            $remaining = 3 - \Illuminate\Support\Facades\RateLimiter::attempts($key);
+        if (! Hash::check($password, $user->password)) {
+            RateLimiter::hit($key, 600); // 10 minutes lock
+            $remaining = 3 - RateLimiter::attempts($key);
             $remaining = max(0, $remaining);
+
             return response()->json([
-                'message' => 'Invalid password. ' . ($remaining > 0 ? "You have {$remaining} attempts remaining." : 'Too many incorrect attempts. Locked for 10 minutes.')
+                'message' => 'Invalid password. '.($remaining > 0 ? "You have {$remaining} attempts remaining." : 'Too many incorrect attempts. Locked for 10 minutes.'),
             ], 403);
         }
 
-        \Illuminate\Support\Facades\RateLimiter::clear($key);
+        RateLimiter::clear($key);
 
         try {
             $order = Order::with('items')->find($id);
@@ -402,7 +406,10 @@ class AdminOrderController extends Controller
                 // 4. Delete associated order items
                 OrderItem::where('order_id', $order->id)->delete();
 
-                // 5. Save payment code ID and delete the order record first (to avoid foreign key constraint failure)
+                // 5. Delete production logs referencing this order to avoid FK constraint failure
+                DB::table('production_logs')->where('order_id', $order->id)->delete();
+
+                // 6. Save payment code ID and delete the order record first (to avoid foreign key constraint failure)
                 $paymentCodeId = $order->payment_code_id;
                 $order->delete();
 
@@ -435,21 +442,21 @@ class AdminOrderController extends Controller
     public function assignQueue(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'order_ids'   => 'required|array|min:1',
+            'order_ids' => 'required|array|min:1',
             'order_ids.*' => 'required|string',
-            'employee_ids'   => 'required|array|min:1',
+            'employee_ids' => 'required|array|min:1',
             'employee_ids.*' => 'required|string',
         ]);
 
         $rows = [];
-        $now  = now();
+        $now = now();
         foreach ($validated['order_ids'] as $orderId) {
             foreach ($validated['employee_ids'] as $empId) {
                 $rows[] = [
-                    'order_id'    => $orderId,
+                    'order_id' => $orderId,
                     'employee_id' => $empId,
-                    'created_at'  => $now,
-                    'updated_at'  => $now,
+                    'created_at' => $now,
+                    'updated_at' => $now,
                 ];
             }
         }
@@ -487,6 +494,7 @@ class AdminOrderController extends Controller
     public function clearOrderQueue(string $id): JsonResponse
     {
         DB::table('order_employee_queue')->where('order_id', $id)->delete();
+
         return response()->json(['message' => 'Queue assignments cleared']);
     }
 
@@ -500,6 +508,7 @@ class AdminOrderController extends Controller
             ->where('order_id', $id)
             ->where('employee_id', $employeeId)
             ->delete();
+
         return response()->json(['message' => 'Employee removed from queue']);
     }
 }
