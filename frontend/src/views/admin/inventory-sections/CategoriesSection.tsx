@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Plus, Edit, Trash2, ChevronRight, LayoutGrid, Upload, Camera, X, CheckCircle } from 'lucide-react'
 import { m, AnimatePresence } from 'framer-motion'
 import Cropper, { type Area } from 'react-easy-crop'
@@ -36,6 +36,21 @@ export const CategoriesSection: React.FC<CategoriesSectionProps> = ({
   const [categoryToDelete, setCategoryToDelete] = useState<ICategory | null>(
     null,
   )
+
+  const [categoryPage, setCategoryPage] = useState(1)
+  const categoryItemsPerPage = 12
+
+  const totalCategoryPages = Math.max(1, Math.ceil(categories.length / categoryItemsPerPage))
+  const paginatedCategories = categories.slice(
+    (categoryPage - 1) * categoryItemsPerPage,
+    categoryPage * categoryItemsPerPage
+  )
+
+  useEffect(() => {
+    if (categoryPage > totalCategoryPages) {
+      setCategoryPage(totalCategoryPages)
+    }
+  }, [categories.length, totalCategoryPages, categoryPage])
 
   // Cropping states
   const [tempImage, setTempImage] = useState<string | null>(null)
@@ -160,7 +175,7 @@ export const CategoriesSection: React.FC<CategoriesSectionProps> = ({
       </div>
 
       <div className="custom-scrollbar flex-1 space-y-3 overflow-y-auto pr-2 pb-6">
-        {categories.map((cat) => (
+        {paginatedCategories.map((cat) => (
           <div
             key={cat.id}
             className="group flex items-center gap-4 rounded-[20px] border border-slate-100 bg-slate-50/50 p-4 transition-all duration-300 hover:border-blue-200 hover:bg-white hover:shadow-xl"
@@ -201,6 +216,28 @@ export const CategoriesSection: React.FC<CategoriesSectionProps> = ({
           </div>
         ))}
       </div>
+
+      {categories.length > categoryItemsPerPage && (
+        <div className="flex items-center justify-between pt-4 border-t border-slate-100 mt-2">
+          <button
+            onClick={() => setCategoryPage((p) => p - 1)}
+            disabled={categoryPage === 1}
+            className="px-3 py-1 rounded-lg border border-slate-200 text-xs font-bold disabled:opacity-50 hover:bg-slate-50 transition-all text-slate-700"
+          >
+            Prev
+          </button>
+          <span className="text-xs font-bold text-slate-400">
+            {categoryPage} / {totalCategoryPages}
+          </span>
+          <button
+            onClick={() => setCategoryPage((p) => p + 1)}
+            disabled={categoryPage === totalCategoryPages}
+            className="px-3 py-1 rounded-lg border border-slate-200 text-xs font-bold disabled:opacity-50 hover:bg-slate-50 transition-all text-slate-700"
+          >
+            Next
+          </button>
+        </div>
+      )}
 
       <AnimatePresence>
         {editingCategory && (

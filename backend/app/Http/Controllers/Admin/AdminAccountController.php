@@ -8,6 +8,7 @@ use App\Models\CustomerAddress;
 use App\Models\DeletedAccount;
 use App\Models\Employee;
 use App\Models\EmployeeAddress;
+use App\Models\Order;
 use App\Services\AuditService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -333,6 +334,159 @@ class AdminAccountController extends Controller
                 'allowed_categories' => $employee->allowed_categories,
                 'allowed_products' => $employee->allowed_products,
             ],
+        ]);
+    }
+
+    public function getPendingOrders(Request $request): JsonResponse
+    {
+        $employeeIds = $request->input('employee_ids', []);
+        $category = $request->input('category');
+        $orderId = $request->input('order_id');
+
+        $employees = Employee::whereIn('id', $employeeIds)->get();
+        $allowedCategories = [];
+        foreach ($employees as $employee) {
+            $cats = $employee->allowed_categories ?? [];
+            $allowedCategories = array_merge($allowedCategories, $cats);
+        }
+        $allowedCategories = array_unique($allowedCategories);
+
+        $query = Order::query();
+
+        // Show only orders with status == "PENDING"
+        $query->where(function ($q) {
+            $q->where('status', 'PENDING')->orWhere('status', 'pending');
+        });
+
+        if ($orderId) {
+            $query->where('id', $orderId);
+        } else {
+            if ($category && $category !== 'all') {
+                $query->whereHas('items.product', function ($q) use ($category) {
+                    $q->where('category', $category);
+                });
+            } else {
+                if (!empty($allowedCategories)) {
+                    $query->whereHas('items.product', function ($q) use ($allowedCategories) {
+                        $q->whereIn('category', $allowedCategories);
+                    });
+                }
+            }
+        }
+
+        $orders = $query->with(['items.product'])
+            ->latest()
+            ->get()
+            ->map(fn ($o) => [
+                'order_id' => (string) $o->id,
+                'user_id' => (string) $o->customer_id,
+                'created_at' => $o->created_at->toIso8601String(),
+                'total_amount' => (float) $o->total_amount,
+                'products' => $o->items->map(fn ($item) => [
+                    'productName' => $item->product?->name ?? 'Deleted Product',
+                    'category' => $item->product?->category ?? 'General',
+                    'quantity' => $item->quantity,
+                ])->values(),
+            ]);
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $orders,
+        ]);
+    }
+
+    /**
+     * Admin preview: return what a specific employee would see in their LiveQueue.
+     * GET /api/admin/employees/{id}/live-queue-preview
+     */
+    public function previewEmployeeLiveQueue(string $id): JsonResponse
+    {
+        $employee = Employee::find($id);
+        if (! $employee) {
+            return response()->json(['message' => 'Employee not found'], 404);
+        }
+
+        $employeeIdStr = (string) $employee->id;
+
+        // Load all PENDING orders
+        $allPendingOrders = Order::with([
+            'customer', 'items.product', 'items.variant', 'items.colors.colorDetails',
+        ])->where('status', 'PENDING')->latest()->get();
+
+        // Load queue assignments
+        $queueRows = DB::table('order_employee_queue')
+            ->get(['order_id', 'employee_id']);
+        $queueMap = [];
+        foreach ($queueRows as $row) {
+            $queueMap[(string) $row->order_id][] = (string) $row->employee_id;
+        }
+
+        $productionLogMap = DB::table('production_logs')
+            ->get()->keyBy('order_id');
+
+        $pendingOrders    = [];
+        $productionOrders = [];
+
+        foreach ($allPendingOrders as $o) {
+            $orderId = (string) $o->id;
+
+            // Admin preview logic: unless the employee is an admin, they MUST be explicitly assigned
+            if ($employee->role !== 'admin') {
+                if (! isset($queueMap[$orderId]) || ! in_array($employeeIdStr, $queueMap[$orderId], true)) {
+                    continue;
+                }
+            }
+
+            $formattedOrder = [
+                'order_id'     => $orderId,
+                'user_id'      => $o->customer ? "{$o->customer->first_name} {$o->customer->last_name}" : (string) $o->customer_id,
+                'company_name' => $o->customer ? $o->customer->company_name : null,
+                'customer_id'  => (string) $o->customer_id,
+                'total_amount' => (float) $o->total_amount,
+                'status'       => $o->status,
+                'created_at'   => $o->created_at->toIso8601String(),
+                'products'     => $o->items->map(fn ($item) => [
+                    'id'               => $item->id,
+                    'order_id'         => $item->order_id,
+                    'customer_id'      => $item->customer_id,
+                    'productId'        => $item->product_id,
+                    'productName'      => $item->product?->name ?? 'Deleted Product',
+                    'productImage'     => $item->product && $item->product->main_image
+                        ? '/images/products/'.$item->product->main_image : '',
+                    'category'         => $item->product?->category?->label ?? 'General',
+                    'quantity'         => $item->quantity,
+                    'variant'          => [
+                        'id'        => $item->variant_id,
+                        'size'      => $item->variant?->size ?? 'N/A',
+                        'unitPrice' => (float) $item->unit_price,
+                    ],
+                    'colors'           => $item->colors->map(fn ($c) => [
+                        'name' => $c->colorDetails?->name ?? 'Unknown',
+                        'hex'  => $c->colorDetails?->hex ?? '#000000',
+                    ]),
+                    'plate'            => $item->screenplate ? [
+                        'id'                => $item->screenplate->id,
+                        'name'              => $item->screenplate->name,
+                        'setupFee'          => (float) $item->screenplate->setup_fee,
+                        'printPricePerUnit' => (float) $item->plate_price,
+                    ] : null,
+                    'customRequirements' => $o->production_notes,
+                ])->toArray(),
+            ];
+
+            if ($productionLogMap->has($o->id)) {
+                $log = $productionLogMap->get($o->id);
+                $formattedOrder['task_status']  = $log->task_status;
+                $formattedOrder['requested_at'] = $log->requested_at;
+                $productionOrders[] = $formattedOrder;
+            } else {
+                $pendingOrders[] = $formattedOrder;
+            }
+        }
+
+        return response()->json([
+            'pending_orders'    => $pendingOrders,
+            'production_orders' => $productionOrders,
         ]);
     }
 }

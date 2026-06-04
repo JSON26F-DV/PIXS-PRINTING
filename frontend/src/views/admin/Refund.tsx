@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { m, AnimatePresence } from 'framer-motion'
 import {
   Plus, Search, Eye, X, Check, 
   CreditCard,
   ChevronDown, Copy, User as UserIcon,
-  CheckCircle2, Landmark, Wallet
+  CheckCircle2, Landmark, Wallet, Ticket
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { format } from 'date-fns'
@@ -25,6 +26,8 @@ interface Refund {
   customer_id: string
   order_id: string | null
   payment_id: string | null
+  payment_code_id?: string | null
+  payment_code?: string | null
   amount: number
   message: string | null
   status: 'pending' | 'completed' | 'cancelled'
@@ -64,6 +67,7 @@ interface IOrder {
 }
 
 const RefundPage: React.FC = () => {
+  const [searchParams] = useSearchParams()
   const [refunds, setRefunds] = useState<Refund[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const debouncedSearchQuery = useDebounce(searchQuery, 300)
@@ -80,6 +84,7 @@ const RefundPage: React.FC = () => {
     amount: '',
     message: '',
     payment_id: '',
+    generate_payment_code: false,
   })
   const [customerPaymentMethods, setCustomerPaymentMethods] = useState<PaymentMethod[]>([])
   const [customerPaycodes, setCustomerPaycodes] = useState<PaymentCode[]>([])
@@ -114,9 +119,12 @@ const RefundPage: React.FC = () => {
   const fetchCustomers = async () => {
     try {
       const res = await axiosInstance.get('/api/admin/customers')
-      setAllCustomers(res.data.data || res.data || [])
+      const list = res.data.data || res.data || []
+      setAllCustomers(list)
+      return list
     } catch (error) {
       console.error('Failed to fetch customers', error)
+      return []
     }
   }
 
@@ -125,6 +133,38 @@ const RefundPage: React.FC = () => {
       fetchCustomers()
     }
   }, [showCreateModal])
+
+  useEffect(() => {
+    const handleQueryParams = async () => {
+      const customerId = searchParams.get('customer_id')
+      const orderId = searchParams.get('order_id')
+
+      if (customerId) {
+        // Fetch customers list to find the customer's name
+        const customersList = await fetchCustomers()
+        const customer = customersList.find((c: ICustomer) => c.id === customerId)
+        
+        if (customer) {
+          setFormData(prev => ({
+            ...prev,
+            customer_id: customerId,
+            order_id: orderId || '',
+            generate_payment_code: false,
+            payment_id: ''
+          }))
+          setCustomerSearch(`${customer.first_name} ${customer.last_name}`)
+          
+          if (orderId) {
+            setOrderSearchQuery(orderId)
+          }
+          
+          setShowCreateModal(true)
+        }
+      }
+    }
+    
+    handleQueryParams()
+  }, [searchParams])
 
   const fetchRefunds = async () => {
     try {
@@ -162,18 +202,24 @@ const RefundPage: React.FC = () => {
       return
     }
 
+    if (!formData.payment_id && !formData.generate_payment_code) {
+      toast.error('Please select a payment method or select Payment Code')
+      return
+    }
+
     try {
       await axiosInstance.post('/api/admin/refunds', {
         customer_id: formData.customer_id,
         order_id: formData.order_id || null,
         payment_id: formData.payment_id || null,
+        generate_payment_code: formData.generate_payment_code,
         amount: parseFloat(formData.amount),
         message: formData.message || null,
       })
       
       toast.success('Refund created successfully')
       setShowCreateModal(false)
-      setFormData({ customer_id: '', order_id: '', amount: '', message: '', payment_id: '' })
+      setFormData({ customer_id: '', order_id: '', amount: '', message: '', payment_id: '', generate_payment_code: false })
       setOrderSearchQuery('')
       fetchRefunds()
     } catch (error) {
@@ -382,7 +428,7 @@ const RefundPage: React.FC = () => {
                         setCustomerSearch(e.target.value)
                         setIsCustomerDropdownOpen(true)
                         if (!e.target.value) {
-                          setFormData({ ...formData, customer_id: '', payment_id: '', order_id: '' })
+                          setFormData({ ...formData, customer_id: '', payment_id: '', order_id: '', generate_payment_code: false })
                           setCustomerPaymentMethods([])
                           setCustomerPaycodes([])
                           setCustomerOrders([])
@@ -405,7 +451,7 @@ const RefundPage: React.FC = () => {
                         <div
                           key={c.id}
                           onClick={() => {
-                            setFormData({ ...formData, customer_id: c.id, payment_id: '', order_id: '' })
+                            setFormData({ ...formData, customer_id: c.id, payment_id: '', order_id: '', generate_payment_code: false })
                             setCustomerSearch(`${c.first_name} ${c.last_name}`)
                             setOrderSearchQuery('')
                             setIsCustomerDropdownOpen(false)
@@ -455,71 +501,107 @@ const RefundPage: React.FC = () => {
                       </button>
                     </div>
 
-                    {customerPaymentMethods.length === 0 ? (
-                      <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-xs font-bold text-amber-800">
-                        ⚠️ No payment methods registered for this customer. A payment method must be added to their account first.
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        <p className="text-[10px] font-black tracking-widest text-slate-400 uppercase italic">
-                          Select Refund Payment Method *
-                        </p>
-                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                          {customerPaymentMethods.map((pay) => {
-                            const isSelected = formData.payment_id === pay.id
-                            return (
-                              <div
-                                key={pay.id}
-                                onClick={() => setFormData({ ...formData, payment_id: pay.id })}
-                                className={`PaymentCard group relative cursor-pointer rounded-2xl border p-4 transition-all active:scale-[0.98] ${
-                                  isSelected
-                                    ? 'border-[#75EEA5] bg-white shadow-lg'
-                                    : 'border-slate-100 bg-slate-50/50 hover:border-slate-200'
-                                }`}
-                              >
-                                <div className="flex items-center gap-4">
-                                  <div
-                                    className={`PaymentRadio flex h-6 w-6 items-center justify-center rounded-full border-2 transition-colors ${
-                                      isSelected
-                                        ? 'border-[#75EEA5]'
-                                        : 'border-slate-200'
-                                    }`}
-                                  >
-                                    {isSelected && (
-                                      <CheckCircle2 size={16} className="text-[#75EEA5]" />
-                                    )}
-                                  </div>
-
-                                  <div className="flex-1">
-                                    <div className="flex items-center gap-2">
-                                      {pay.type === 'bank' ? (
-                                        <Landmark size={20} className="text-[#75EEA5]" />
-                                      ) : pay.type === 'ewallet' ? (
-                                        <Wallet size={20} className="text-[#75EEA5]" />
-                                      ) : (
-                                        <CreditCard size={20} className="text-[#75EEA5]" />
-                                      )}
-                                      <span className="text-sm font-black tracking-tight text-slate-900 uppercase italic">
-                                        {pay.bank_name || pay.provider}
-                                      </span>
-                                    </div>
-                                    <p className="mt-1 text-[10px] font-black tracking-[2.5px] text-slate-400 uppercase italic">
-                                      {pay.masked_number}
-                                    </p>
-                                  </div>
+                    <div className="space-y-3">
+                      <p className="text-[10px] font-black tracking-widest text-slate-400 uppercase italic">
+                        Select Refund Method *
+                      </p>
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        {customerPaymentMethods.map((pay) => {
+                          const isSelected = formData.payment_id === pay.id && !formData.generate_payment_code
+                          return (
+                            <div
+                              key={pay.id}
+                              onClick={() => setFormData({ ...formData, payment_id: pay.id, generate_payment_code: false })}
+                              className={`PaymentCard group relative cursor-pointer rounded-2xl border p-4 transition-all active:scale-[0.98] ${
+                                isSelected
+                                  ? 'border-[#75EEA5] bg-white shadow-lg'
+                                  : 'border-slate-100 bg-slate-50/50 hover:border-slate-200'
+                              }`}
+                            >
+                              <div className="flex items-center gap-4">
+                                <div
+                                  className={`PaymentRadio flex h-6 w-6 items-center justify-center rounded-full border-2 transition-colors ${
+                                    isSelected
+                                      ? 'border-[#75EEA5]'
+                                      : 'border-slate-200'
+                                  }`}
+                                >
+                                  {isSelected && (
+                                    <CheckCircle2 size={16} className="text-[#75EEA5]" />
+                                  )}
                                 </div>
 
-                                {pay.is_default && (
-                                  <span className="text-[#75EEA5] absolute top-4 right-4 rounded-full bg-slate-900 px-1.5 py-0.5 text-[7px] font-black tracking-widest uppercase">
-                                    Primary
-                                  </span>
-                                )}
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2">
+                                    {pay.type === 'bank' ? (
+                                      <Landmark size={20} className="text-[#75EEA5]" />
+                                    ) : pay.type === 'ewallet' ? (
+                                      <Wallet size={20} className="text-[#75EEA5]" />
+                                    ) : (
+                                      <CreditCard size={20} className="text-[#75EEA5]" />
+                                    )}
+                                    <span className="text-sm font-black tracking-tight text-slate-900 uppercase italic">
+                                      {pay.bank_name || pay.provider}
+                                    </span>
+                                  </div>
+                                  <p className="mt-1 text-[10px] font-black tracking-[2.5px] text-slate-400 uppercase italic">
+                                    {pay.masked_number}
+                                  </p>
+                                </div>
                               </div>
-                            )
-                          })}
+
+                              {pay.is_default && (
+                                <span className="text-[#75EEA5] absolute top-4 right-4 rounded-full bg-slate-900 px-1.5 py-0.5 text-[7px] font-black tracking-widest uppercase">
+                                  Primary
+                                </span>
+                              )}
+                            </div>
+                          )
+                        })}
+
+                        {/* Payment Code Option Card */}
+                        <div
+                          onClick={() => setFormData({ ...formData, payment_id: '', generate_payment_code: true })}
+                          className={`PaymentCard group relative cursor-pointer rounded-2xl border p-4 transition-all active:scale-[0.98] ${
+                            formData.generate_payment_code
+                              ? 'border-[#75EEA5] bg-white shadow-lg'
+                              : 'border-slate-100 bg-slate-50/50 hover:border-slate-200'
+                          }`}
+                        >
+                          <div className="flex items-center gap-4">
+                            <div
+                              className={`PaymentRadio flex h-6 w-6 items-center justify-center rounded-full border-2 transition-colors ${
+                                formData.generate_payment_code
+                                  ? 'border-[#75EEA5]'
+                                  : 'border-slate-200'
+                              }`}
+                            >
+                              {formData.generate_payment_code && (
+                                <CheckCircle2 size={16} className="text-[#75EEA5]" />
+                              )}
+                            </div>
+
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <Ticket size={20} className="text-[#75EEA5]" />
+                                <span className="text-sm font-black tracking-tight text-slate-900 uppercase italic">
+                                  Payment Code
+                                </span>
+                              </div>
+                              <p className="mt-1 text-[10px] font-black tracking-[2.5px] text-slate-400 uppercase italic">
+                                Auto-generate code
+                              </p>
+                            </div>
+                          </div>
                         </div>
                       </div>
-                    )}
+
+                      {customerPaymentMethods.length === 0 && (
+                        <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-4 text-xs font-bold text-amber-800">
+                          ⚠️ This customer has no registered payment methods. You can select "Payment Code" to generate a refund code.
+                        </div>
+                      )}
+                    </div>
 
                     {showPaycodes && customerPaycodes.length > 0 && (
                       <div>
@@ -720,6 +802,26 @@ const RefundPage: React.FC = () => {
                       {selectedRefund.payment_method_bank_name ? `(${selectedRefund.payment_method_bank_name})` : selectedRefund.payment_method_provider ? `(${selectedRefund.payment_method_provider})` : ''}
                       {' — '}{selectedRefund.payment_method_masked_number}
                     </span>
+                  </div>
+                )}
+                {selectedRefund.payment_code && (
+                  <div className="flex flex-col gap-1 rounded-xl bg-slate-50 p-4">
+                    <span className="text-xs text-slate-500 font-bold">Generated Payment Code</span>
+                    <div className="flex items-center justify-between mt-1">
+                      <span className="font-mono text-sm font-bold text-slate-900">
+                        {selectedRefund.payment_code}
+                      </span>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(selectedRefund.payment_code || '')
+                          toast.success('Code copied!')
+                        }}
+                        className="rounded-lg p-2 hover:bg-slate-200"
+                        title="Copy Code"
+                      >
+                        <Copy size={14} />
+                      </button>
+                    </div>
                   </div>
                 )}
                 {selectedRefund.message && (

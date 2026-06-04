@@ -112,6 +112,8 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->prefix('admin')->group(func
     Route::delete('/accounts/delete/{id}', [AdminAccountController::class, 'deleteAccount'])->middleware('role:admin');
     Route::post('/accounts/upload-profile-picture', [AdminAccountController::class, 'uploadProfilePicture'])->middleware('role:admin');
     Route::post('/accounts/employee/{id}/assignments', [AdminAccountController::class, 'updateAssignments'])->middleware('role:admin');
+    Route::post('/employees/pending-orders', [AdminAccountController::class, 'getPendingOrders'])->middleware('role:admin');
+    Route::get('/employees/{id}/live-queue-preview', [AdminAccountController::class, 'previewEmployeeLiveQueue'])->middleware('role:admin');
 
     // Customers
     Route::get('/customers', [AdminCustomerController::class, 'index'])->middleware('role:admin');
@@ -158,6 +160,12 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->prefix('admin')->group(func
     Route::post('/orders/direct', [AdminOrderController::class, 'storeDirect'])->middleware('role:admin');
     Route::patch('/orders/{id}/status', [AdminDashboardController::class, 'updateOrderStatus'])->middleware('role:admin');
     Route::delete('/orders/{id}', [AdminOrderController::class, 'destroy'])->middleware('role:admin');
+    // Queue Assignments
+    Route::post('/orders/assign-queue', [AdminOrderController::class, 'assignQueue'])->middleware('role:admin');
+    Route::get('/orders/queue-assignments', [AdminOrderController::class, 'getQueueAssignments'])->middleware('role:admin');
+    Route::delete('/orders/{id}/queue-assignments', [AdminOrderController::class, 'clearOrderQueue'])->middleware('role:admin');
+    Route::delete('/orders/{id}/queue-assignments/{employee_id}', [AdminOrderController::class, 'removeEmployeeFromQueue'])->middleware('role:admin');
+    Route::get('/orders/user/{userId}', [AdminOrderController::class, 'getOrdersByUser'])->middleware('role:admin');
 
     // Product Management
     Route::get('/products', [ProductController::class, 'adminIndex'])->middleware('role:admin,staff,technician,inventory');

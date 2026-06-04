@@ -311,8 +311,35 @@ class AdminOrderController extends Controller
     /**
      * Delete an order and revert all associated inventory and customer statistics.
      */
-    public function destroy(string $id): JsonResponse
+    public function destroy(Request $request, string $id): JsonResponse
     {
+        $user = $request->user();
+        $key = 'delete-order-attempts:' . $user->id;
+
+        if (\Illuminate\Support\Facades\RateLimiter::tooManyAttempts($key, 3)) {
+            $seconds = \Illuminate\Support\Facades\RateLimiter::availableIn($key);
+            $minutes = ceil($seconds / 60);
+            return response()->json([
+                'message' => "Too many incorrect password attempts. Please try again after {$minutes} minutes."
+            ], 429);
+        }
+
+        $password = $request->input('password');
+        if (!$password) {
+            return response()->json(['message' => 'Password is required to delete an order.'], 400);
+        }
+
+        if (!\Illuminate\Support\Facades\Hash::check($password, $user->password)) {
+            \Illuminate\Support\Facades\RateLimiter::hit($key, 600); // 10 minutes lock
+            $remaining = 3 - \Illuminate\Support\Facades\RateLimiter::attempts($key);
+            $remaining = max(0, $remaining);
+            return response()->json([
+                'message' => 'Invalid password. ' . ($remaining > 0 ? "You have {$remaining} attempts remaining." : 'Too many incorrect attempts. Locked for 10 minutes.')
+            ], 403);
+        }
+
+        \Illuminate\Support\Facades\RateLimiter::clear($key);
+
         try {
             $order = Order::with('items')->find($id);
             if (! $order) {
@@ -398,5 +425,81 @@ class AdminOrderController extends Controller
                 'message' => 'Failed to delete order: '.$e->getMessage(),
             ], 500);
         }
+    }
+
+    /**
+     * Assign pending orders to specific employee(s) in the queue.
+     * POST /api/admin/orders/assign-queue
+     * Body: { order_ids: string[], employee_ids: string[] }
+     */
+    public function assignQueue(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'order_ids'   => 'required|array|min:1',
+            'order_ids.*' => 'required|string',
+            'employee_ids'   => 'required|array|min:1',
+            'employee_ids.*' => 'required|string',
+        ]);
+
+        $rows = [];
+        $now  = now();
+        foreach ($validated['order_ids'] as $orderId) {
+            foreach ($validated['employee_ids'] as $empId) {
+                $rows[] = [
+                    'order_id'    => $orderId,
+                    'employee_id' => $empId,
+                    'created_at'  => $now,
+                    'updated_at'  => $now,
+                ];
+            }
+        }
+
+        DB::table('order_employee_queue')->upsert(
+            $rows,
+            ['order_id', 'employee_id'],
+            ['updated_at']
+        );
+
+        return response()->json(['message' => 'Queue assignments saved']);
+    }
+
+    /**
+     * Get all queue assignments grouped by order_id.
+     * GET /api/admin/orders/queue-assignments
+     * Returns: { [order_id]: string[] } — list of employee IDs per order
+     */
+    public function getQueueAssignments(): JsonResponse
+    {
+        $rows = DB::table('order_employee_queue')->get(['order_id', 'employee_id']);
+
+        $grouped = [];
+        foreach ($rows as $row) {
+            $grouped[$row->order_id][] = (string) $row->employee_id;
+        }
+
+        return response()->json($grouped);
+    }
+
+    /**
+     * Remove all queue assignments for a given order.
+     * DELETE /api/admin/orders/{id}/queue-assignments
+     */
+    public function clearOrderQueue(string $id): JsonResponse
+    {
+        DB::table('order_employee_queue')->where('order_id', $id)->delete();
+        return response()->json(['message' => 'Queue assignments cleared']);
+    }
+
+    /**
+     * Remove a specific employee from an order's queue.
+     * DELETE /api/admin/orders/{id}/queue-assignments/{employee_id}
+     */
+    public function removeEmployeeFromQueue(string $id, string $employeeId): JsonResponse
+    {
+        DB::table('order_employee_queue')
+            ->where('order_id', $id)
+            ->where('employee_id', $employeeId)
+            ->delete();
+        return response()->json(['message' => 'Employee removed from queue']);
     }
 }

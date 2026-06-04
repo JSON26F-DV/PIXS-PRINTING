@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Search, Plus, Edit, Trash2, X, Package2, AlertTriangle } from 'lucide-react'
 import { m, AnimatePresence } from 'framer-motion'
@@ -77,11 +77,16 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
   setCategories,
 }) => {
   const [search, setSearch] = useState('')
+  const [localSearch, setLocalSearch] = useState('')
   const [editingProduct, setEditingProduct] = useState<IProduct | null>(null)
   const [isAddingProduct, setIsAddingProduct] = useState(false)
   const [productToDelete, setProductToDelete] = useState<IProduct | null>(null)
   const [selectedMobileProduct, setSelectedMobileProduct] = useState<IProduct | null>(null)
   const navigate = useNavigate()
+
+  const [currentPage, setCurrentPage] = useState(1)
+  const [selectedCategory, setSelectedCategory] = useState<string>('all')
+  const itemsPerPage = 10
 
   // Debounced search
   const debouncedSearch = useMemo(
@@ -89,24 +94,64 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
     [],
   )
 
-  const filteredProducts = products.filter(
-    (p) =>
-      p.name.toLowerCase().includes(search.toLowerCase()) ||
-      p.id.toLowerCase().includes(search.toLowerCase()) ||
-      p.category.toLowerCase().includes(search.toLowerCase()),
+  const handleSearchChange = (val: string) => {
+    setLocalSearch(val)
+    debouncedSearch(val)
+  }
+
+  const filteredProducts = useMemo(() => {
+    let result = products
+    
+    // Category filter
+    if (selectedCategory !== 'all') {
+      result = result.filter((p) => {
+        const cat = p.category_label || p.category || ''
+        return cat.toLowerCase().trim() === selectedCategory.toLowerCase().trim()
+      })
+    }
+    
+    // Search filter
+    if (search) {
+      result = result.filter((p) => {
+        const cat = p.category_label || p.category || ''
+        return (
+          p.name.toLowerCase().includes(search.toLowerCase()) ||
+          p.id.toLowerCase().includes(search.toLowerCase()) ||
+          cat.toLowerCase().includes(search.toLowerCase())
+        )
+      })
+    }
+    
+    return result
+  }, [products, search, selectedCategory])
+
+  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / itemsPerPage))
+  const paginatedProducts = filteredProducts.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
   )
 
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [selectedCategory, search])
+
   const handleSaveProduct = (data: ProductFormData) => {
+    const formattedData = {
+      ...data,
+      category_label: data.category,
+    } as IProduct
+
     if (isAddingProduct) {
       if (products.some((p) => p.id === data.id)) {
         toast.error('An asset with this ID already exists.')
         return
       }
-      setProducts((prev) => [...prev, data as IProduct])
+      setProducts((prev) => [...prev, formattedData])
       toast.success('Product added to catalog.')
     } else {
       setProducts((prev) =>
-        prev.map((p) => (p.id === data.id ? (data as IProduct) : p)),
+        prev.map((p) => (p.id === data.id ? formattedData : p)),
       )
       toast.success('Product details updated.')
     }
@@ -159,6 +204,21 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
         <div className="flex flex-col gap-6 lg:col-span-8">
           <div className="flex flex-col gap-4 rounded-[32px] border border-slate-100 bg-white p-6 shadow-lg shadow-slate-200/50 md:flex-row">
+            <select
+              value={selectedCategory}
+              onChange={(e) => {
+                setSelectedCategory(e.target.value)
+                setCurrentPage(1)
+              }}
+              className="rounded-2xl border border-slate-200 bg-white px-5 py-3.5 text-xs font-bold text-slate-700 transition-all outline-none focus:ring-2 focus:ring-slate-100 focus:border-blue-300 cursor-pointer"
+            >
+              <option value="all">All Categories</option>
+              {categories.map((cat) => (
+                <option key={cat.id} value={cat.label}>
+                  {cat.label}
+                </option>
+              ))}
+            </select>
             <div className="relative flex-1">
               <Search
                 className="absolute top-1/2 left-5 -translate-y-1/2 text-slate-300"
@@ -167,7 +227,8 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
               <input
                 type="text"
                 placeholder="Search products by identity prefix or name..."
-                onChange={(e) => debouncedSearch(e.target.value)}
+                value={localSearch}
+                onChange={(e) => handleSearchChange(e.target.value)}
                 className="w-full rounded-2xl border border-slate-100 bg-slate-50/50 py-3.5 pr-6 pl-12 text-xs font-bold tracking-tight text-slate-900 uppercase transition-all outline-none placeholder:text-slate-300 focus:border-blue-300"
               />
             </div>
@@ -190,7 +251,7 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredProducts.map((p) => (
+                  {paginatedProducts.map((p) => (
                     <tr
                       key={p.id}
                       className="group border-b border-slate-50 transition-all hover:bg-slate-50/50"
@@ -209,7 +270,7 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
                               {p.name}
                             </p>
                             <p className="mt-0.5 text-[10px] font-black tracking-widest text-slate-400 uppercase">
-                              {p.id} • {p.category}
+                              {p.id} • {p.category_label || p.category}
                             </p>
                           </div>
                         </div>
@@ -240,7 +301,7 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
 
               {/* Mobile View: Cards Layout */}
               <div className="grid grid-cols-1 gap-4 p-6 md:hidden">
-                {filteredProducts.map((p) => (
+                {paginatedProducts.map((p) => (
                   <div
                     key={p.id}
                     onClick={() => setSelectedMobileProduct(p)}
@@ -259,7 +320,7 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
                           {p.name}
                         </h4>
                         <p className="mt-0.5 text-[9px] font-black tracking-widest text-slate-400 uppercase truncate">
-                          {p.id} • {p.category}
+                          {p.id} • {p.category_label || p.category}
                         </p>
                       </div>
                     </div>
@@ -282,6 +343,44 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
                   </p>
                 </div>
               )}
+            </div>
+            {/* Pagination Controls */}
+            <div className="flex items-center justify-between px-8 py-4 border-t border-slate-100 bg-white">
+              <span className="text-xs text-slate-400">
+                Showing {filteredProducts.length === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1} - {Math.min(currentPage * itemsPerPage, filteredProducts.length)} of {filteredProducts.length}
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage((p) => p - 1)}
+                  className="px-3 py-1 rounded-lg border border-slate-200 text-xs font-bold disabled:opacity-50 hover:bg-slate-50 transition-all"
+                >
+                  Prev
+                </button>
+                
+                {/* Page numbers */}
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                  <button
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                      page === currentPage 
+                        ? 'bg-slate-950 text-white shadow-sm' 
+                        : 'border border-slate-200 hover:bg-slate-50 text-slate-700'
+                    }`}
+                  >
+                    {page}
+                  </button>
+                ))}
+                
+                <button
+                  disabled={currentPage === totalPages}
+                  onClick={() => setCurrentPage((p) => p + 1)}
+                  className="px-3 py-1 rounded-lg border border-slate-200 text-xs font-bold disabled:opacity-50 hover:bg-slate-50 transition-all"
+                >
+                  Next
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -20,6 +20,10 @@ import { useCustomerScreenplates } from '../../hooks/useCustomerScreenplates'
 // import { useDiscovery } from '../../context/DiscoveryContext'
 import { useDebounce } from '../../hooks/useDebounce'
 
+import hero1 from '../../assets/hero/hero-1.jpg'
+import hero2 from '../../assets/hero/hero-2.jpg'
+import hero3 from '../../assets/hero/hero-3.jpg'
+
 // Components
 import HeroCarousel from '../../components/HeroCarousel/HeroCarousel'
 import QuickCategoryRow from '../../components/QuickCategoryRow/QuickCategoryRow'
@@ -28,10 +32,7 @@ import Pagination from '../../components/Pagination/Pagination'
 import Footer from '../../components/Footer/Footer'
 import FilterDropdown from '../../components/FilterDropdown/FilterDropdown'
 
-// Assets
-import hero1 from '../../assets/hero/hero-1.jpg'
-import hero2 from '../../assets/hero/hero-2.jpg'
-import hero3 from '../../assets/hero/hero-3.jpg'
+
 
 // Types
 import type {

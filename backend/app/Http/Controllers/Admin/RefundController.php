@@ -23,10 +23,12 @@ class RefundController extends Controller
                 'customer_payment_methods.type as payment_method_type',
                 'customer_payment_methods.masked_number as payment_method_masked_number',
                 'customer_payment_methods.bank_name as payment_method_bank_name',
-                'customer_payment_methods.provider as payment_method_provider'
+                'customer_payment_methods.provider as payment_method_provider',
+                'payment_codes.code as payment_code'
             )
             ->leftJoin('customers', 'refunds.customer_id', '=', 'customers.id')
             ->leftJoin('customer_payment_methods', 'refunds.payment_id', '=', 'customer_payment_methods.id')
+            ->leftJoin('payment_codes', 'refunds.payment_code_id', '=', 'payment_codes.id')
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);
 
@@ -41,7 +43,31 @@ class RefundController extends Controller
             'payment_id' => 'nullable|string|max:30',
             'amount' => 'required|numeric|min:0',
             'message' => 'nullable|string|max:5000',
+            'generate_payment_code' => 'nullable|boolean',
         ]);
+
+        $paymentCodeId = null;
+        if ($validated['generate_payment_code'] ?? false) {
+            $attempts = 0;
+            do {
+                $codeStr = 'PIXS-'.strtoupper(Str::random(10));
+                $exists = DB::table('payment_codes')->where('code', $codeStr)->exists();
+                $attempts++;
+            } while ($exists && $attempts < 100);
+
+            if ($attempts >= 100) {
+                return response()->json(['message' => 'Failed to generate a unique payment code.'], 500);
+            }
+
+            $paymentCodeId = 'pc_'.Str::random(10);
+            DB::table('payment_codes')->insert([
+                'id' => $paymentCodeId,
+                'code' => $codeStr,
+                'is_used' => 0,
+                'used_at' => null,
+                'created_at' => now(),
+            ]);
+        }
 
         $refundId = 'ref_'.Str::random(10);
 
@@ -50,6 +76,7 @@ class RefundController extends Controller
             'customer_id' => $validated['customer_id'],
             'order_id' => $validated['order_id'] ?? null,
             'payment_id' => $validated['payment_id'] ?? null,
+            'payment_code_id' => $paymentCodeId,
             'amount' => $validated['amount'],
             'message' => $validated['message'] ?? null,
             'status' => 'pending',
@@ -93,10 +120,12 @@ class RefundController extends Controller
                 'customer_payment_methods.type as payment_method_type',
                 'customer_payment_methods.masked_number as payment_method_masked_number',
                 'customer_payment_methods.bank_name as payment_method_bank_name',
-                'customer_payment_methods.provider as payment_method_provider'
+                'customer_payment_methods.provider as payment_method_provider',
+                'payment_codes.code as payment_code'
             )
             ->leftJoin('customers', 'refunds.customer_id', '=', 'customers.id')
             ->leftJoin('customer_payment_methods', 'refunds.payment_id', '=', 'customer_payment_methods.id')
+            ->leftJoin('payment_codes', 'refunds.payment_code_id', '=', 'payment_codes.id')
             ->where('refunds.id', $id)
             ->first();
 
