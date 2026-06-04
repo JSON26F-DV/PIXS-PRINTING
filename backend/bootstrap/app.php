@@ -16,7 +16,7 @@ use Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\Exception\ThrottleRequestsException;
 
-return Application::configure(basePath: dirname(__DIR__))
+$app = Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
         api: __DIR__.'/../routes/api.php',
@@ -27,7 +27,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role' => CheckRole::class,
             'ownership' => CheckOwnership::class,
+            'error.log' => \App\Http\Middleware\ErrorLoggingMiddleware::class,
         ]);
+        $middleware->append(\App\Http\Middleware\ErrorLoggingMiddleware::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->render(function (Throwable $e, Request $request) {
@@ -110,3 +112,10 @@ return Application::configure(basePath: dirname(__DIR__))
             ], 500);
         });
     })->create();
+
+$app->singleton(
+    \Illuminate\Contracts\Debug\ExceptionHandler::class,
+    \App\Exceptions\Handler::class
+);
+
+return $app;

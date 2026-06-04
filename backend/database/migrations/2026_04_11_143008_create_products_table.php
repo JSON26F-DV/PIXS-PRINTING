@@ -4,8 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
     /**
      * Run the migrations.
      */
@@ -25,6 +24,7 @@ return new class extends Migration
             $table->unsignedInteger('min_order')->default(1);
             $table->string('main_image', 500)->nullable();
             $table->string('print_method', 100)->nullable();
+            $table->boolean('is_in_stock')->default(false);
             $table->boolean('is_need_screenplate')->default(false);
             $table->boolean('is_need_color')->default(false);
             $table->unsignedTinyInteger('ratings')->default(5);

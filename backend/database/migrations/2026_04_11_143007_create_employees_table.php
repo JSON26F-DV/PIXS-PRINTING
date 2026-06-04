@@ -4,8 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
     /**
      * Run the migrations.
      */
@@ -17,7 +16,7 @@ return new class extends Migration
             $table->string('last_name', 100);
             $table->string('profile_picture', 500)->nullable();
             $table->string('email')->unique('email');
-            $table->enum('role', ['admin', 'staff', 'technician', 'welder']);
+            $table->enum('role', ['admin', 'staff', 'technician', 'inventory']);
             $table->enum('status', ['active', 'inactive'])->default('active');
             $table->unsignedTinyInteger('age')->nullable();
             $table->enum('gender', ['male', 'female', 'other'])->nullable();

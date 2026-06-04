@@ -48,6 +48,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (config('database.default') === 'sqlite') {
+            return;
+        }
+
         $database = config('database.connections.'.config('database.default').'.database');
 
         // ─── Step 1: Convert the DATABASE default charset ───
@@ -107,6 +111,10 @@ return new class extends Migration
      */
     public function down(): void
     {
+        if (config('database.default') === 'sqlite') {
+            return;
+        }
+
         $database = config('database.connections.'.config('database.default').'.database');
 
         $foreignKeys = $this->getAllForeignKeys($database);
