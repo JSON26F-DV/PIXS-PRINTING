@@ -150,7 +150,9 @@ class RefundController extends Controller
             ->get();
 
         $paymentCodes = DB::table('payment_codes')
-            ->where('customer_id', $customerId)
+            ->join('orders', 'payment_codes.id', '=', 'orders.payment_code_id')
+            ->where('orders.customer_id', $customerId)
+            ->select('payment_codes.id', 'payment_codes.code', 'orders.total_amount as amount', 'payment_codes.created_at')
             ->get();
 
         return response()->json([
@@ -163,14 +165,20 @@ class RefundController extends Controller
 
     public function customerOrders(string $customerId): JsonResponse
     {
-        $orders = DB::table('orders')
-            ->select('id', 'total_amount', 'status', 'created_at')
+        $orders = \App\Models\Order::with('items.product')
             ->where('customer_id', $customerId)
+            ->where('status', 'DELIVERED')
             ->orderBy('created_at', 'desc')
             ->get();
 
         return response()->json([
-            'data' => $orders,
+            'data' => $orders->map(fn($o) => [
+                'id' => $o->id,
+                'total_amount' => (float) $o->total_amount,
+                'status' => $o->status,
+                'created_at' => $o->created_at->toIso8601String(),
+                'product_names' => $o->items->map(fn($item) => $item->product?->name ?? 'Unknown Product')->toArray(),
+            ]),
         ]);
     }
 }

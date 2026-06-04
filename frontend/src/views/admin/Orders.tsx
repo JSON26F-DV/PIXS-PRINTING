@@ -32,6 +32,7 @@ import { toast } from 'react-hot-toast'
 import { useAuth } from '../../context/AuthContext'
 import { useAdminOrders, type Order, type OrderItem } from '../../hooks/useAdminOrders'
 import axiosInstance from '../../lib/axiosInstance'
+import { useDebounce } from '../../hooks/useDebounce'
 
 
 
@@ -117,6 +118,9 @@ const Orders: React.FC = () => {
     setPrevSearchOrderId(searchOrderId)
   }
 
+  const debouncedCustomerSearch = useDebounce(customerSearch, 300)
+  const debouncedOrderSearch = useDebounce(orderSearch, 300)
+
   const itemsPerPage = 10
   const customersPerPage = 5
 
@@ -124,10 +128,10 @@ const Orders: React.FC = () => {
   // --- DERIVED STATE / MEMOIZED LOGIC ---
   const filteredCustomers = useMemo(() => {
     return customers.filter(c => 
-      c.name.toLowerCase().includes(customerSearch.toLowerCase()) ||
-      c.email.toLowerCase().includes(customerSearch.toLowerCase())
+      c.name.toLowerCase().includes(debouncedCustomerSearch.toLowerCase()) ||
+      c.email.toLowerCase().includes(debouncedCustomerSearch.toLowerCase())
     )
-  }, [customers, customerSearch])
+  }, [customers, debouncedCustomerSearch])
 
   const paginatedCustomers = useMemo(() => {
     const start = (customerCurrentPage - 1) * customersPerPage
@@ -152,8 +156,8 @@ const Orders: React.FC = () => {
     }
 
     // Order Search ID/Items/Company/Customer Filter
-    if (orderSearch.trim()) {
-      const q = orderSearch.toLowerCase().trim()
+    if (debouncedOrderSearch.trim()) {
+      const q = debouncedOrderSearch.toLowerCase().trim()
       result = result.filter((o) => {
         const customer = customers.find((c) => c.id === o.user_id)
         
@@ -208,7 +212,7 @@ const Orders: React.FC = () => {
     statusHeaderFilter,
     sortOption,
     customers,
-    orderSearch,
+    debouncedOrderSearch,
   ])
 
   const paginatedOrders = useMemo(() => {
