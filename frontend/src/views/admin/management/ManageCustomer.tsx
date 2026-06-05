@@ -98,6 +98,103 @@ const resolveAddressCodes = (addr: {
   }
 }
 
+const getChangesList = (initial: any, current: any, isEmployee: boolean) => {
+  const changes: string[] = []
+  if (!initial) return changes
+
+  if (initial.first_name !== current.first_name) {
+    changes.push(`First Name: "${initial.first_name}" → "${current.first_name}"`)
+  }
+  if (initial.last_name !== current.last_name) {
+    changes.push(`Last Name: "${initial.last_name}" → "${current.last_name}"`)
+  }
+  if (initial.email !== current.email) {
+    changes.push(`Email: "${initial.email}" → "${current.email}"`)
+  }
+  if (initial.role !== current.role) {
+    changes.push(`Role: "${initial.role}" → "${current.role}"`)
+  }
+  if (initial.status !== current.status) {
+    changes.push(`Status: "${initial.status}" → "${current.status}"`)
+  }
+  if (current.password) {
+    changes.push(`Password: (Password will be updated)`)
+  }
+
+  if (isEmployee) {
+    if (Number(initial.daily_rate) !== Number(current.daily_rate)) {
+      changes.push(`Daily Rate: ₱${initial.daily_rate} → ₱${current.daily_rate}`)
+    }
+    if (Number(initial.ot_rate) !== Number(current.ot_rate)) {
+      changes.push(`OT Rate: ₱${initial.ot_rate} → ₱${current.ot_rate}`)
+    }
+  } else {
+    if (initial.company_name !== current.company_name) {
+      changes.push(`Company: "${initial.company_name || 'N/A'}" → "${current.company_name || 'N/A'}"`)
+    }
+    if (initial.age !== current.age) {
+      changes.push(`Age: "${initial.age || 'N/A'}" → "${current.age || 'N/A'}"`)
+    }
+    if (initial.gender !== current.gender) {
+      changes.push(`Gender: "${initial.gender || 'N/A'}" → "${current.gender || 'N/A'}"`)
+    }
+  }
+
+  // Simple length/change checks for lists
+  const initialContacts = initial.contacts || []
+  const currentContacts = current.contacts || []
+  if (initialContacts.length !== currentContacts.length) {
+    changes.push(`Contacts Count: ${initialContacts.length} → ${currentContacts.length}`)
+  } else {
+    let numChanged = false
+    currentContacts.forEach((c: any, i: number) => {
+      if (initialContacts[i] && (initialContacts[i].number !== c.number || initialContacts[i].is_default !== c.is_default)) {
+        numChanged = true
+      }
+    })
+    if (numChanged) changes.push(`Contact details or defaults updated`)
+  }
+
+  const initialAddresses = initial.addresses || []
+  const currentAddresses = current.addresses || []
+  if (initialAddresses.length !== currentAddresses.length) {
+    changes.push(`Addresses Count: ${initialAddresses.length} → ${currentAddresses.length}`)
+  } else {
+    let addrChanged = false
+    currentAddresses.forEach((a: any, i: number) => {
+      if (initialAddresses[i] && (
+        initialAddresses[i].street !== a.street ||
+        initialAddresses[i].barangay !== a.barangay ||
+        initialAddresses[i].city !== a.city ||
+        initialAddresses[i].is_default !== a.is_default
+      )) {
+        addrChanged = true
+      }
+    })
+    if (addrChanged) changes.push(`Address details or defaults updated`)
+  }
+
+  const initialPMs = initial.paymentMethods || initial.payment_methods || []
+  const currentPMs = current.paymentMethods || []
+  if (initialPMs.length !== currentPMs.length) {
+    changes.push(`Payment Methods Count: ${initialPMs.length} → ${currentPMs.length}`)
+  } else {
+    let pmChanged = false
+    currentPMs.forEach((p: any, i: number) => {
+      if (initialPMs[i] && (
+        initialPMs[i].type !== p.type ||
+        initialPMs[i].masked_number !== p.masked_number ||
+        initialPMs[i].is_default !== p.is_default
+      )) {
+        pmChanged = true
+      }
+    })
+    if (pmChanged) changes.push(`Payment method details or defaults updated`)
+  }
+
+  return changes
+}
+
 const ManageCustomer = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
@@ -114,6 +211,11 @@ const ManageCustomer = () => {
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null)
   const [isUploading, setIsUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Initial and confirmation modal states
+  const [initialData, setInitialData] = useState<CustomerForm | null>(null)
+  const [showConfirmModal, setShowConfirmModal] = useState(false)
+  const [formDataToSubmit, setFormDataToSubmit] = useState<CustomerForm | null>(null)
 
   // Local state for address dropdown codes, keyed by index
   const [addressCodes, setAddressCodes] = useState<
@@ -191,6 +293,8 @@ const ManageCustomer = () => {
           delete customerData.payment_methods
         }
 
+        // Save clone of original API data for comparison diff
+        setInitialData(JSON.parse(JSON.stringify(customerData)))
         reset(customerData)
 
         if (customerData.profile_picture) {
@@ -221,7 +325,7 @@ const ManageCustomer = () => {
     }
   }
 
-  const onSubmit = async (data: CustomerForm) => {
+  const executeSubmit = async (data: CustomerForm) => {
     try {
       const url = isEditing
         ? `/api/admin/accounts/customer/${id}`
@@ -240,6 +344,11 @@ const ManageCustomer = () => {
         toast.error('Error saving customer data')
       }
     }
+  }
+
+  const onSubmit = (data: CustomerForm) => {
+    setFormDataToSubmit(data)
+    setShowConfirmModal(true)
   }
 
   // Profile Picture Crop & Upload handlers
@@ -837,6 +946,87 @@ const ManageCustomer = () => {
                     Apply & Save
                   </button>
                 </div>
+              </div>
+            </m.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showConfirmModal && formDataToSubmit && (
+          <div className="fixed inset-0 z-[600] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
+            <m.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="w-full max-w-lg rounded-[28px] bg-white p-8 shadow-2xl overflow-hidden"
+            >
+              <h3 className="mb-4 text-xl font-black text-slate-900 uppercase italic">
+                Confirm Account Action
+              </h3>
+              
+              <div className="mb-6 rounded-2xl bg-slate-50 p-6 max-h-[300px] overflow-y-auto">
+                {isEditing ? (
+                  <div>
+                    <p className="mb-3 font-mono text-[10px] font-black tracking-widest text-slate-400 uppercase">
+                      Modified Properties
+                    </p>
+                    {getChangesList(initialData, formDataToSubmit, false).length > 0 ? (
+                      <ul className="space-y-2 text-xs font-bold text-slate-700">
+                        {getChangesList(initialData, formDataToSubmit, false).map((change, idx) => (
+                          <li key={idx} className="flex items-start gap-2">
+                            <span className="text-blue-500">•</span>
+                            <span>{change}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-xs font-bold text-slate-500 italic">No changes detected in fields.</p>
+                    )}
+                  </div>
+                ) : (
+                  <div>
+                    <p className="mb-3 font-mono text-[10px] font-black tracking-widest text-slate-400 uppercase">
+                      Account Registration Details
+                    </p>
+                    <ul className="space-y-2 text-xs font-bold text-slate-700">
+                      <li>Name: {formDataToSubmit.first_name} {formDataToSubmit.last_name}</li>
+                      <li>Email: {formDataToSubmit.email}</li>
+                      <li>Role: {formDataToSubmit.role}</li>
+                      <li>Status: {formDataToSubmit.status}</li>
+                      <li>Company: {formDataToSubmit.company_name || 'N/A'}</li>
+                      <li>Age: {formDataToSubmit.age || 'N/A'}</li>
+                      <li>Gender: {formDataToSubmit.gender || 'N/A'}</li>
+                      <li>Contacts: {formDataToSubmit.contacts?.length || 0} registered</li>
+                      <li>Addresses: {formDataToSubmit.addresses?.length || 0} registered</li>
+                      <li>Payment Methods: {formDataToSubmit.paymentMethods?.length || 0} registered</li>
+                    </ul>
+                  </div>
+                )}
+              </div>
+
+              <p className="mb-6 text-sm font-bold text-slate-600">
+                Are you sure you want to {isEditing ? 'update' : 'create'} this customer account?
+              </p>
+
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmModal(false)}
+                  className="flex-1 rounded-xl bg-slate-100 py-3 text-xs font-black tracking-widest text-slate-600 uppercase hover:bg-slate-200 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setShowConfirmModal(false)
+                    await executeSubmit(formDataToSubmit)
+                  }}
+                  className="flex-1 rounded-xl bg-slate-900 py-3 text-xs font-black tracking-widest text-[#75EEA5] uppercase hover:bg-slate-800 transition-colors"
+                >
+                  Yes, Confirm
+                </button>
               </div>
             </m.div>
           </div>

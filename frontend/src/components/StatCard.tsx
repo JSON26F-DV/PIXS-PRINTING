@@ -58,7 +58,7 @@ const StatCard: React.FC<StatCardProps> = ({
   return (
     <div
       className={cn(
-        'group relative h-full min-h-[160px] overflow-hidden rounded-[24px] p-6 transition-all hover:-translate-y-1',
+        'group relative h-full min-h-[120px] sm:min-h-[160px] overflow-hidden rounded-2xl sm:rounded-[24px] p-4 sm:p-6 transition-all hover:-translate-y-1',
         bgClass,
         className,
       )}
@@ -75,7 +75,7 @@ const StatCard: React.FC<StatCardProps> = ({
       </div>
       <p
         className={cn(
-          'relative z-10 mb-3 text-xs font-bold tracking-widest uppercase',
+          'relative z-10 mb-2 sm:mb-3 text-[10px] sm:text-xs font-bold tracking-widest uppercase',
           textMuted,
         )}
       >
@@ -83,7 +83,7 @@ const StatCard: React.FC<StatCardProps> = ({
       </p>
       <div className="relative z-10 flex items-baseline gap-1">
         {typeof value === 'number' && (
-          <span className={cn('text-2xl font-bold', prefixColor)}>
+          <span className={cn('text-lg sm:text-2xl font-bold', prefixColor)}>
             {prefix}
           </span>
         )}
@@ -91,22 +91,22 @@ const StatCard: React.FC<StatCardProps> = ({
         {typeof value === 'number' ? (
           <AnimatedNumber
             value={value}
-            className="text-4xl font-black tracking-tighter"
+            className="text-2xl sm:text-4xl font-black tracking-tighter"
           />
         ) : (
-          <span className="line-clamp-1 text-2xl font-black tracking-tight">
+          <span className="line-clamp-1 text-xl sm:text-2xl font-black tracking-tight">
             {value}
           </span>
         )}
 
         {typeof value === 'number' && (
-          <span className={cn('text-sm font-bold', prefixColor)}>{suffix}</span>
+          <span className={cn('text-xs sm:text-sm font-bold', prefixColor)}>{suffix}</span>
         )}
       </div>
       {trend !== undefined && (
         <div
           className={cn(
-            'relative z-10 mt-5 flex w-fit items-center gap-1 rounded-full px-3 py-1.5 text-[11px] font-bold backdrop-blur-md',
+            'relative z-10 mt-3 sm:mt-5 flex w-fit items-center gap-1 rounded-full px-2 py-1 sm:px-3 sm:py-1.5 text-[9px] sm:text-[11px] font-bold backdrop-blur-md',
             trendBg,
           )}
         >

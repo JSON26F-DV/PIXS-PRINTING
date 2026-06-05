@@ -72,7 +72,7 @@ export default function StockAnalytics() {
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-4">
+        <div className="grid grid-cols-2 gap-3 md:flex md:flex-wrap md:items-center md:gap-4">
           {isLoading ? (
             <div className="flex gap-4">
               <Skeleton width={140} height={80} borderRadius={24} />

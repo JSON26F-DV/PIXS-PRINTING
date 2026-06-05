@@ -444,28 +444,32 @@ class AdminOrderController extends Controller
         $validated = $request->validate([
             'order_ids' => 'required|array|min:1',
             'order_ids.*' => 'required|string',
-            'employee_ids' => 'required|array|min:1',
+            'employee_ids' => 'present|array',
             'employee_ids.*' => 'required|string',
         ]);
 
-        $rows = [];
-        $now = now();
-        foreach ($validated['order_ids'] as $orderId) {
-            foreach ($validated['employee_ids'] as $empId) {
-                $rows[] = [
-                    'order_id' => $orderId,
-                    'employee_id' => $empId,
-                    'created_at' => $now,
-                    'updated_at' => $now,
-                ];
-            }
-        }
+        DB::transaction(function () use ($validated) {
+            // Delete any existing assignments for these orders
+            DB::table('order_employee_queue')
+                ->whereIn('order_id', $validated['order_ids'])
+                ->delete();
 
-        DB::table('order_employee_queue')->upsert(
-            $rows,
-            ['order_id', 'employee_id'],
-            ['updated_at']
-        );
+            if (!empty($validated['employee_ids'])) {
+                $rows = [];
+                $now = now();
+                foreach ($validated['order_ids'] as $orderId) {
+                    foreach ($validated['employee_ids'] as $empId) {
+                        $rows[] = [
+                            'order_id' => $orderId,
+                            'employee_id' => $empId,
+                            'created_at' => $now,
+                            'updated_at' => $now,
+                        ];
+                    }
+                }
+                DB::table('order_employee_queue')->insert($rows);
+            }
+        });
 
         return response()->json(['message' => 'Queue assignments saved']);
     }

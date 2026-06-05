@@ -20,6 +20,8 @@ import {
   UserCheck,
   X,
   ShieldAlert,
+  Filter,
+  ArrowUpDown,
 } from 'lucide-react'
 import {
   ResponsiveContainer,
@@ -130,6 +132,10 @@ const Orders: React.FC = () => {
     concernText: string
   }>({ isOpen: false, orderId: '', concernText: '' })
   const [mobileDetailOrder, setMobileDetailOrder] = useState<Order | null>(null)
+  const [isMobileCustomerDrawerOpen, setIsMobileCustomerDrawerOpen] = useState(false)
+  const [isMobileEmployeeDrawerOpen, setIsMobileEmployeeDrawerOpen] = useState(false)
+  const [mobilePendingOrderModal, setMobilePendingOrderModal] = useState<QueuePreviewOrder | null>(null)
+  const [mobileProductionOrderModal, setMobileProductionOrderModal] = useState<QueuePreviewOrder | null>(null)
 
   // Long-press detection for mobile card selection
   const longPressTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -277,6 +283,24 @@ const Orders: React.FC = () => {
   useEffect(() => {
     fetchEmployeesAndQueue()
   }, [fetchEmployeesAndQueue])
+
+  // Synchronize modal employee selections when queueModal opens/closes
+  useEffect(() => {
+    if (queueModal) {
+      setModalEmployeePage(1)
+      setModalEmployeeSearch('')
+      
+      const initialEmployeeIds = new Set<string>()
+      // Pre-populate with currently assigned employees for the selected order(s)
+      selectedOrderIds.forEach(orderId => {
+        const assigned = queueAssignments[orderId] || []
+        assigned.forEach(empId => initialEmployeeIds.add(empId))
+      })
+      setQueueEmployeeIds(initialEmployeeIds)
+    } else {
+      setQueueEmployeeIds(new Set())
+    }
+  }, [queueModal, selectedOrderIds, queueAssignments])
 
   if (searchOrderId !== prevSearchOrderId) {
     setOrderSearch(searchOrderId)
@@ -668,7 +692,7 @@ const Orders: React.FC = () => {
         </div>
         <div className="orders-stats-card group relative overflow-hidden rounded-[24px] border border-slate-100 bg-white p-4 sm:p-6 shadow-sm">
           <div className="h-[60px] w-full">
-            <ResponsiveContainer width="100%" height={60}>
+            <ResponsiveContainer width="100%" height={60} minWidth={0}>
               <BarChart data={chartData.customerBar}>
                 <Bar dataKey="orders" fill="#f1f5f9" radius={[4, 4, 0, 0]} />
               </BarChart>
@@ -681,16 +705,55 @@ const Orders: React.FC = () => {
       </section>
 
       {/* 🛠️ HEADER CONTROLS - Removed main search/filters as requested */}
-      <section className="orders-header flex flex-col items-center justify-between gap-6 rounded-2xl border border-slate-100 bg-white p-6 shadow-2xl shadow-slate-200/40 lg:flex-row">
-        <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
-          <div className="flex items-center gap-4">
-             <ShoppingBag className="text-slate-900 shrink-0" size={24} />
-             <h2 className="text-lg md:text-xl font-black tracking-tight text-slate-900 uppercase italic leading-tight">Order Management System</h2>
+      <section className="orders-header flex flex-row items-center justify-between gap-4 rounded-2xl border border-slate-100 bg-white p-4 shadow-xl shadow-slate-200/40 md:p-6">
+        <div className="flex items-center gap-3">
+          <ShoppingBag className="text-slate-900 shrink-0 w-5 h-5 md:w-6 md:h-6" size={24} />
+          <h2 className="text-sm md:text-xl font-black tracking-tight text-slate-900 uppercase italic leading-tight">
+            <span className="hidden sm:inline">Order Management System</span>
+            <span className="sm:hidden">Orders</span>
+          </h2>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {/* Mobile Actions Controls (Shown on mobile & tablets, hidden on desktop >= lg) */}
+          <div className="flex items-center gap-2 lg:hidden">
+            {/* Customer List Drawer Button */}
+            <button
+              onClick={() => setIsMobileCustomerDrawerOpen(true)}
+              className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition-colors hover:bg-slate-50 shadow-sm"
+              title="Customer List"
+            >
+              <Users size={16} />
+            </button>
+
+            {/* Employee List Drawer Button (Admin Only) */}
+            {user?.role === 'admin' && (
+              <button
+                onClick={() => setIsMobileEmployeeDrawerOpen(true)}
+                className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition-colors hover:bg-slate-50 shadow-sm"
+                title="Employee List"
+              >
+                <UserCheck size={16} />
+              </button>
+            )}
+
+            {/* Add Order Button (Admin Only) */}
+            {user?.role === 'admin' && (
+              <button
+                onClick={() => navigate(selectedCustomerId ? `/admin/orders/manage/${selectedCustomerId}` : '/admin/orders/manage')}
+                className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-900 transition-colors shadow-lg shadow-emerald-500/20"
+                title="Add Order"
+              >
+                <Plus size={16} />
+              </button>
+            )}
           </div>
-          {user?.role !== 'inventory' && (
+
+          {/* Desktop Add Order Button (Admin Only, shown only on desktop >= lg) */}
+          {user?.role === 'admin' && (
             <button 
               onClick={() => navigate(selectedCustomerId ? `/admin/orders/manage/${selectedCustomerId}` : '/admin/orders/manage')}
-              className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-slate-900 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest italic transition-colors shadow-lg shadow-emerald-500/20"
+              className="hidden lg:flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-slate-900 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest italic transition-colors shadow-lg shadow-emerald-500/20"
             >
               <Plus size={16} />
               <span>Add Order</span>
@@ -698,9 +761,10 @@ const Orders: React.FC = () => {
           )}
         </div>
 
-        <div className="grid w-full grid-cols-2 gap-3 lg:flex lg:w-auto lg:items-center">
+        {/* Desktop-only dropdown filters (hidden on mobile < lg) */}
+        <div className="hidden lg:flex lg:items-center gap-3">
           <select
-            className="orders-filter-dropdown w-full cursor-pointer appearance-none rounded-[20px] border border-transparent bg-slate-100 px-4 py-3 md:px-6 md:py-4 pr-10 text-[10px] font-black tracking-widest text-slate-600 uppercase italic transition-colors hover:bg-slate-200 focus:outline-none"
+            className="orders-filter-dropdown cursor-pointer appearance-none rounded-[20px] border border-transparent bg-slate-100 px-6 py-4 pr-10 text-[10px] font-black tracking-widest text-slate-600 uppercase italic transition-colors hover:bg-slate-200 focus:outline-none"
             value={statusHeaderFilter}
             onChange={(e) => setStatusHeaderFilter(e.target.value)}
           >
@@ -715,11 +779,10 @@ const Orders: React.FC = () => {
           </select>
 
           <select
-            className="orders-sort-control w-full cursor-pointer appearance-none rounded-[20px] border border-transparent bg-slate-100 px-4 py-3 md:px-6 md:py-4 pr-10 text-[10px] font-black tracking-widest text-slate-600 uppercase italic transition-colors hover:bg-slate-200 focus:outline-none"
+            className="orders-sort-control cursor-pointer appearance-none rounded-[20px] border border-transparent bg-slate-100 px-6 py-4 pr-10 text-[10px] font-black tracking-widest text-slate-600 uppercase italic transition-colors hover:bg-slate-200 focus:outline-none"
             value={sortOption}
             onChange={(e) => setSortOption(e.target.value)}
           >
-
             <option value="date-desc">Newest First</option>
             <option value="date-asc">Oldest First</option>
             <option value="amount-desc">Top Magnitude</option>
@@ -731,12 +794,12 @@ const Orders: React.FC = () => {
 
 
       <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-12">
-        {/* 👤 Stacked Sidebar Column */}
-        <div className="lg:col-span-3 flex flex-col gap-8 w-full">
+        {/* 👤 Stacked Sidebar Column (Desktop Only - hidden on mobile/tablet) */}
+        <div className="hidden lg:flex lg:col-span-3 flex-col gap-8 w-full">
           {/* 👤 2️⃣ LEFT PANEL — CUSTOMER LIST */}
           <aside className="orders-customer-sidebar flex h-[800px] flex-col overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-xl shadow-slate-200/30 w-full">
             <div className="border-b border-slate-50 bg-slate-50/50 p-6">
-              <h3 className="text-lg font-black text-slate-900 uppercase italic">
+              <h3 className="text-sm font-black text-slate-900 uppercase italic">
                 Customer List
               </h3>
               <div className="relative mt-4">
@@ -930,13 +993,13 @@ const Orders: React.FC = () => {
 
           </aside>
 
-          {/* 👷 EMPLOYEE LIST PANEL — below customer sidebar */}
-          {user?.role === 'admin' ? (
+          {/* 👷 EMPLOYEE LIST PANEL — below customer sidebar (Admin Only) */}
+          {user?.role === 'admin' && (
             <aside className="rounded-2xl border border-slate-100 bg-white shadow-xl shadow-slate-200/30 overflow-hidden w-full">
               <div className="border-b border-slate-50 bg-slate-50/50 p-6">
                 <div className="flex items-center gap-3">
                   <UserCheck size={18} className="text-violet-600 shrink-0" />
-                  <h3 className="text-base font-black text-slate-900 uppercase italic">Employee List</h3>
+                  <h3 className="text-sm font-black text-slate-900 uppercase italic">Employee List</h3>
                 </div>
                 <p className="mt-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Select to view their live queue</p>
               </div>
@@ -997,16 +1060,6 @@ const Orders: React.FC = () => {
                 )}
               </div>
             </aside>
-          ) : (
-            <aside className="rounded-2xl border border-slate-100 bg-white p-6 shadow-xl shadow-slate-200/30 overflow-hidden w-full">
-              <div className="flex flex-col items-center gap-2 py-6 text-center">
-                <ShieldAlert size={32} className="text-rose-500 animate-pulse" />
-                <h4 className="text-xs font-black text-rose-500 uppercase italic">Unauthorized</h4>
-                <p className="text-[9px] font-bold text-slate-400 uppercase leading-relaxed max-w-[200px]">
-                  Only administrators can access employee queue metrics.
-                </p>
-              </div>
-            </aside>
           )}
         </div>
 
@@ -1052,15 +1105,55 @@ const Orders: React.FC = () => {
 
               {/* Search bar and desktop-only actions */}
               <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
-                <div className="relative w-full sm:w-60">
-                  <input
-                    type="text"
-                    placeholder="Search order ID, items..."
-                    value={orderSearch}
-                    onChange={(e) => setOrderSearch(e.target.value)}
-                    className="w-full rounded-xl border border-slate-100 bg-slate-50 px-4 py-2 pl-9 text-[10px] font-black tracking-widest uppercase shadow-sm outline-none focus:border-amber-400 focus:bg-white transition-colors"
-                  />
-                  <Search className="absolute top-1/2 left-3 -translate-y-1/2 text-slate-400" size={12} />
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <div className="relative flex-1 sm:w-60">
+                    <input
+                      type="text"
+                      placeholder="Search order ID, items..."
+                      value={orderSearch}
+                      onChange={(e) => setOrderSearch(e.target.value)}
+                      className="w-full rounded-xl border border-slate-100 bg-slate-50 px-4 py-2 pl-9 text-[10px] font-black tracking-widest uppercase shadow-sm outline-none focus:border-amber-400 focus:bg-white transition-colors"
+                    />
+                    <Search className="absolute top-1/2 left-3 -translate-y-1/2 text-slate-400" size={12} />
+                  </div>
+
+                  {/* Mobile Filters and Sort (Icon-based, shown only on screen < lg) */}
+                  <div className="flex items-center gap-2 lg:hidden">
+                    {/* Status Filter Icon Button */}
+                    <div className="relative flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white hover:bg-slate-50 transition-colors shadow-sm" title="Filter by Status">
+                      <Filter size={14} className="text-slate-600" />
+                      <select
+                        className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+                        value={statusHeaderFilter}
+                        onChange={(e) => setStatusHeaderFilter(e.target.value)}
+                      >
+                        <option value="all">Filter: All Statuses</option>
+                        <option value="UNPAID">Unpaid</option>
+                        <option value="PENDING">Pending</option>
+                        <option value="PROCESSING">Processing</option>
+                        <option value="SHIPPED">Shipped</option>
+                        <option value="DELIVERED">Delivered</option>
+                        <option value="CANCELLED">Cancelled</option>
+                        <option value="REFUND">Refund</option>
+                      </select>
+                    </div>
+
+                    {/* Sort Filter Icon Button */}
+                    <div className="relative flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white hover:bg-slate-50 transition-colors shadow-sm" title="Sort Orders">
+                      <ArrowUpDown size={14} className="text-slate-600" />
+                      <select
+                        className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+                        value={sortOption}
+                        onChange={(e) => setSortOption(e.target.value)}
+                      >
+                        <option value="date-desc">Newest First</option>
+                        <option value="date-asc">Oldest First</option>
+                        <option value="amount-desc">Top Magnitude</option>
+                        <option value="amount-asc">Low Magnitude</option>
+                        <option value="name-asc">Customer A-Z</option>
+                      </select>
+                    </div>
+                  </div>
                 </div>
                 
                 {/* Desktop-only info and queue button */}
@@ -1694,7 +1787,7 @@ const Orders: React.FC = () => {
                 Order Status Distribution
               </h4>
               <div className="h-[260px] w-full">
-                <ResponsiveContainer width="100%" height={260}>
+                <ResponsiveContainer width="100%" height={260} minWidth={0}>
                   <PieChart>
                     <Pie
                       data={chartData.statusPie}
@@ -1832,65 +1925,97 @@ const Orders: React.FC = () => {
                       {employeeQueuePreview.pending_orders.length === 0 ? (
                         <p className="text-[10px] text-slate-400 italic font-bold py-4 text-center">No pending orders assigned.</p>
                       ) : (
-                        <div className="custom-scrollbar overflow-x-auto rounded-xl border border-violet-100 bg-white">
-                          <table className="w-full border-collapse text-left">
-                            <thead>
-                              <tr className="border-b border-violet-50 bg-violet-50/30">
-                                <th className="px-6 py-3 text-[9px] font-black tracking-widest text-slate-400 uppercase">Order ID</th>
-                                <th className="px-6 py-3 text-[9px] font-black tracking-widest text-slate-400 uppercase">Customer</th>
-                                <th className="px-6 py-3 text-[9px] font-black tracking-widest text-slate-400 uppercase">Products</th>
-                                <th className="px-6 py-3 text-[9px] font-black tracking-widest text-slate-400 uppercase">Amount</th>
-                                <th className="px-6 py-3 text-[9px] font-black tracking-widest text-slate-400 uppercase">Date</th>
-                                <th className="px-6 py-3 text-[9px] font-black tracking-widest text-slate-400 uppercase">Clear</th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-violet-50/50">
-                              {employeeQueuePreview.pending_orders.map(order => {
-                                const cust = customers.find(c => c.id === order.user_id || c.id === order.customer_id)
-                                return (
-                                  <tr key={order.order_id} className="hover:bg-violet-50/20 transition-colors">
-                                    <td className="px-6 py-3 font-mono text-[10px] font-bold text-slate-500">{order.order_id}</td>
-                                    <td className="px-6 py-3">
-                                      <p className="text-[10px] font-black text-slate-900 uppercase italic">{cust?.name ?? order.user_id}</p>
-                                    </td>
-                                    <td className="px-6 py-3">
-                                      <div className="flex flex-col gap-0.5">
-                                        {order.products.slice(0, 2).map((p, i: number) => (
-                                          <span key={i} className="text-[9px] font-bold text-slate-500 uppercase">{p.productName}</span>
-                                        ))}
-                                        {order.products.length > 2 && <span className="text-[8px] text-slate-400">+{order.products.length - 2} more</span>}
-                                      </div>
-                                    </td>
-                                    <td className="px-6 py-3">
-                                      <span className="text-xs font-black text-emerald-600 italic">₱{order.total_amount.toLocaleString()}</span>
-                                    </td>
-                                    <td className="px-6 py-3">
-                                      <span className="text-[9px] font-bold text-slate-400">{format(parseISO(order.created_at), 'MMM dd, yyyy')}</span>
-                                    </td>
-                                    <td className="px-6 py-3">
-                                      <button
-                                        onClick={async () => {
-                                          try {
-                                            await axiosInstance.delete(`/api/admin/orders/${order.order_id}/queue-assignments/${selectedEmployeeId}`)
-                                            if (selectedEmployeeId) fetchEmployeeQueue(selectedEmployeeId)
-                                            fetchEmployeesAndQueue()
-                                            toast.success('Removed from queue')
-                                          } catch {
-                                            toast.error('Failed to remove from queue')
-                                          }
-                                        }}
-                                        className="rounded-lg p-1.5 text-rose-400 hover:bg-rose-50 transition-colors"
-                                        title="Remove from queue"
-                                      >
-                                        <X size={14} />
-                                      </button>
-                                    </td>
-                                  </tr>
-                                )
-                              })}
-                            </tbody>
-                          </table>
-                        </div>
+                        <>
+                          {/* Desktop Layout - Table */}
+                          <div className="hidden lg:block custom-scrollbar overflow-x-auto rounded-xl border border-violet-100 bg-white">
+                            <table className="w-full border-collapse text-left">
+                              <thead>
+                                <tr className="border-b border-violet-50 bg-violet-50/30">
+                                  <th className="px-6 py-3 text-[9px] font-black tracking-widest text-slate-400 uppercase">Order ID</th>
+                                  <th className="px-6 py-3 text-[9px] font-black tracking-widest text-slate-400 uppercase">Customer</th>
+                                  <th className="px-6 py-3 text-[9px] font-black tracking-widest text-slate-400 uppercase">Products</th>
+                                  <th className="px-6 py-3 text-[9px] font-black tracking-widest text-slate-400 uppercase">Amount</th>
+                                  <th className="px-6 py-3 text-[9px] font-black tracking-widest text-slate-400 uppercase">Date</th>
+                                  <th className="px-6 py-3 text-[9px] font-black tracking-widest text-slate-400 uppercase">Clear</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-violet-50/50">
+                                {employeeQueuePreview.pending_orders.map(order => {
+                                  const cust = customers.find(c => c.id === order.user_id || c.id === order.customer_id)
+                                  return (
+                                    <tr key={order.order_id} className="hover:bg-violet-50/20 transition-colors">
+                                      <td className="px-6 py-3 font-mono text-[10px] font-bold text-slate-500">{order.order_id}</td>
+                                      <td className="px-6 py-3">
+                                        <p className="text-[10px] font-black text-slate-900 uppercase italic">{cust?.name ?? order.user_id}</p>
+                                      </td>
+                                      <td className="px-6 py-3">
+                                        <div className="flex flex-col gap-0.5">
+                                          {order.products.slice(0, 2).map((p, i: number) => (
+                                            <span key={i} className="text-[9px] font-bold text-slate-500 uppercase">{p.productName}</span>
+                                          ))}
+                                          {order.products.length > 2 && <span className="text-[8px] text-slate-400">+{order.products.length - 2} more</span>}
+                                        </div>
+                                      </td>
+                                      <td className="px-6 py-3">
+                                        <span className="text-xs font-black text-emerald-600 italic">₱{order.total_amount.toLocaleString()}</span>
+                                      </td>
+                                      <td className="px-6 py-3">
+                                        <span className="text-[9px] font-bold text-slate-400">{format(parseISO(order.created_at), 'MMM dd, yyyy')}</span>
+                                      </td>
+                                      <td className="px-6 py-3">
+                                        <button
+                                          onClick={async (e) => {
+                                            e.stopPropagation()
+                                            try {
+                                              await axiosInstance.delete(`/api/admin/orders/${order.order_id}/queue-assignments/${selectedEmployeeId}`)
+                                              if (selectedEmployeeId) fetchEmployeeQueue(selectedEmployeeId)
+                                              fetchEmployeesAndQueue()
+                                              toast.success('Removed from queue')
+                                            } catch {
+                                              toast.error('Failed to remove from queue')
+                                            }
+                                          }}
+                                          className="rounded-lg p-1.5 text-rose-400 hover:bg-rose-50 transition-colors"
+                                          title="Remove from queue"
+                                        >
+                                          <X size={14} />
+                                        </button>
+                                      </td>
+                                    </tr>
+                                  )
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
+
+                          {/* Mobile Layout - Cards */}
+                          <div className="lg:hidden grid grid-cols-1 gap-3">
+                            {employeeQueuePreview.pending_orders.map(order => {
+                              const cust = customers.find(c => c.id === order.user_id || c.id === order.customer_id)
+                              return (
+                                <div 
+                                  key={order.order_id}
+                                  onClick={() => setMobilePendingOrderModal(order)}
+                                  className="rounded-xl border border-violet-100 bg-white p-4 shadow-sm hover:shadow-md cursor-pointer flex flex-col gap-2 transition-all active:scale-[0.98]"
+                                >
+                                  <div className="flex items-start justify-between">
+                                    <div>
+                                      <span className="text-[8px] font-bold text-slate-400 font-mono">#{order.order_id.slice(-6)}</span>
+                                      <h4 className="text-xs font-black text-slate-900 uppercase italic truncate max-w-[150px]">
+                                        {cust?.name ?? 'Unknown'}
+                                      </h4>
+                                    </div>
+                                    <span className="text-xs font-black text-emerald-600">₱{order.total_amount.toLocaleString()}</span>
+                                  </div>
+                                  <div className="flex items-center justify-between text-[9px] text-slate-400 font-bold border-t border-slate-50 pt-2">
+                                    <span>{format(parseISO(order.created_at), 'MMM dd')}</span>
+                                    <span className="text-violet-600 uppercase">View details</span>
+                                  </div>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        </>
                       )}
                     </div>
 
@@ -1902,37 +2027,66 @@ const Orders: React.FC = () => {
                       {employeeQueuePreview.production_orders.length === 0 ? (
                         <p className="text-[10px] text-slate-400 italic font-bold py-4 text-center">No production logs.</p>
                       ) : (
-                        <div className="custom-scrollbar overflow-x-auto rounded-xl border border-slate-100 bg-white">
-                          <table className="w-full border-collapse text-left">
-                            <thead>
-                              <tr className="border-b border-slate-50 bg-slate-50/50">
-                                <th className="px-6 py-3 text-[9px] font-black tracking-widest text-slate-400 uppercase">Order ID</th>
-                                <th className="px-6 py-3 text-[9px] font-black tracking-widest text-slate-400 uppercase">Status</th>
-                                <th className="px-6 py-3 text-[9px] font-black tracking-widest text-slate-400 uppercase">Requested</th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-50">
-                              {employeeQueuePreview.production_orders.map(order => (
-                                <tr key={order.order_id} className="hover:bg-slate-50 transition-colors">
-                                  <td className="px-6 py-3 font-mono text-[10px] font-bold text-slate-500">{order.order_id}</td>
-                                  <td className="px-6 py-3">
-                                    <span className={cn(
-                                      "rounded-full px-2 py-0.5 text-[8px] font-black tracking-widest uppercase",
-                                      order.task_status === 'COMPLETED' ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"
-                                    )}>
-                                      {order.task_status}
-                                    </span>
-                                  </td>
-                                  <td className="px-6 py-3">
-                                    <span className="text-[9px] font-bold text-slate-400">
-                                      {order.requested_at ? format(parseISO(order.requested_at), 'MMM dd, yyyy h:mm a') : '—'}
-                                    </span>
-                                  </td>
+                        <>
+                          {/* Desktop Layout - Table */}
+                          <div className="hidden lg:block custom-scrollbar overflow-x-auto rounded-xl border border-slate-100 bg-white">
+                            <table className="w-full border-collapse text-left">
+                              <thead>
+                                <tr className="border-b border-slate-50 bg-slate-50/50">
+                                  <th className="px-6 py-3 text-[9px] font-black tracking-widest text-slate-400 uppercase">Order ID</th>
+                                  <th className="px-6 py-3 text-[9px] font-black tracking-widest text-slate-400 uppercase">Status</th>
+                                  <th className="px-6 py-3 text-[9px] font-black tracking-widest text-slate-400 uppercase">Requested</th>
                                 </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
+                              </thead>
+                              <tbody className="divide-y divide-slate-50">
+                                {employeeQueuePreview.production_orders.map(order => (
+                                  <tr key={order.order_id} className="hover:bg-slate-50 transition-colors">
+                                    <td className="px-6 py-3 font-mono text-[10px] font-bold text-slate-500">{order.order_id}</td>
+                                    <td className="px-6 py-3">
+                                      <span className={cn(
+                                        "rounded-full px-2 py-0.5 text-[8px] font-black tracking-widest uppercase",
+                                        order.task_status === 'COMPLETED' ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"
+                                      )}>
+                                        {order.task_status}
+                                      </span>
+                                    </td>
+                                    <td className="px-6 py-3">
+                                      <span className="text-[9px] font-bold text-slate-400">
+                                        {order.requested_at ? format(parseISO(order.requested_at), 'MMM dd, yyyy h:mm a') : '—'}
+                                      </span>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+
+                          {/* Mobile Layout - Cards */}
+                          <div className="lg:hidden grid grid-cols-1 gap-3">
+                            {employeeQueuePreview.production_orders.map(order => (
+                              <div
+                                key={order.order_id}
+                                onClick={() => setMobileProductionOrderModal(order)}
+                                className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm hover:shadow-md cursor-pointer flex flex-col gap-2 transition-all active:scale-[0.98]"
+                              >
+                                <div className="flex items-start justify-between">
+                                  <div>
+                                    <span className="text-[8px] font-bold text-slate-400 font-mono">#{order.order_id.slice(-6)}</span>
+                                    <p className="text-[9px] font-bold text-slate-400">
+                                      {order.requested_at ? format(parseISO(order.requested_at), 'MMM dd, h:mm a') : '—'}
+                                    </p>
+                                  </div>
+                                  <span className={cn(
+                                    "rounded-full px-2 py-0.5 text-[8px] font-black tracking-widest uppercase",
+                                    order.task_status === 'COMPLETED' ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"
+                                  )}>
+                                    {order.task_status}
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </>
                       )}
                     </div>
                   </div>
@@ -1966,7 +2120,7 @@ const Orders: React.FC = () => {
                     Queue Assignment
                   </span>
                 </div>
-                <h2 className="text-3xl font-black tracking-tighter text-slate-900 uppercase italic">
+                <h2 className="text-xl sm:text-3xl font-black tracking-tighter text-slate-900 uppercase italic">
                   Add to Queue
                 </h2>
                 <p className="mt-2 text-xs font-bold leading-relaxed text-slate-400 uppercase italic">
@@ -2069,6 +2223,7 @@ const Orders: React.FC = () => {
                         {totalPages > 1 && (
                           <div className="flex items-center justify-between pt-2">
                             <button
+                              type="button"
                               onClick={() => setModalEmployeePage(p => Math.max(1, p - 1))}
                               disabled={modalEmployeePage === 1}
                               className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 disabled:opacity-30 transition-colors"
@@ -2079,6 +2234,7 @@ const Orders: React.FC = () => {
                               Page {modalEmployeePage} of {totalPages}
                             </span>
                             <button
+                              type="button"
                               onClick={() => setModalEmployeePage(p => Math.min(totalPages, p + 1))}
                               disabled={modalEmployeePage === totalPages}
                               className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 disabled:opacity-30 transition-colors"
@@ -2095,6 +2251,7 @@ const Orders: React.FC = () => {
 
               <div className="flex gap-4">
                 <button
+                  type="button"
                   onClick={() => { setQueueModal(false); setQueueEmployeeIds(new Set()) }}
                   disabled={isSubmittingQueue}
                   className="flex-1 rounded-3xl border border-slate-100 py-5 text-[10px] font-black tracking-widest text-slate-400 uppercase italic transition-all hover:bg-slate-50 disabled:opacity-50"
@@ -2102,11 +2259,12 @@ const Orders: React.FC = () => {
                   Cancel
                 </button>
                 <button
+                  type="button"
                   onClick={handleAssignQueue}
-                  disabled={isSubmittingQueue || queueEmployeeIds.size === 0}
+                  disabled={isSubmittingQueue}
                   className="flex-1 rounded-3xl bg-violet-600 py-5 text-[10px] font-black tracking-widest text-white uppercase italic shadow-xl shadow-violet-900/20 transition-all hover:bg-violet-700 hover:scale-105 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100"
                 >
-                  {isSubmittingQueue ? 'Assigning...' : `Assign to ${queueEmployeeIds.size} Employee(s)`}
+                  {isSubmittingQueue ? 'Assigning...' : queueEmployeeIds.size === 0 ? 'Clear Assignments' : `Assign to ${queueEmployeeIds.size} Employee(s)`}
                 </button>
               </div>
             </m.div>
@@ -2139,7 +2297,7 @@ const Orders: React.FC = () => {
                     Status Synchronization
                   </span>
                 </div>
-                <h2 className="text-3xl font-black tracking-tighter text-slate-900 uppercase italic">
+                <h2 className="text-xl sm:text-3xl font-black tracking-tighter text-slate-900 uppercase italic">
                   Apply <span className="text-emerald-500">{statusModal.newStatus}</span> Status?
                 </h2>
                 <p className="mt-2 text-xs font-bold leading-relaxed text-slate-405 uppercase italic">
@@ -2237,7 +2395,7 @@ const Orders: React.FC = () => {
                     Critical Operation
                   </span>
                 </div>
-                <h2 className="text-3xl font-black tracking-tighter text-slate-900 uppercase italic">
+                <h2 className="text-xl sm:text-3xl font-black tracking-tighter text-slate-900 uppercase italic">
                   Delete Order?
                 </h2>
                 <p className="mt-2 text-xs font-bold leading-relaxed text-slate-405 uppercase italic">
@@ -2289,46 +2447,50 @@ const Orders: React.FC = () => {
                 ) : null
               })()}
 
-              {/* Password check input */}
-              <div className="mb-8 text-left">
-                <label className="mb-2 block text-[9px] font-black tracking-[3px] text-slate-400 uppercase">
-                  Verify Admin Password
-                </label>
-                <input
-                  type="password"
-                  placeholder="Enter your password to confirm..."
-                  value={deletePassword}
-                  onChange={(e) => {
-                    setDeletePassword(e.target.value)
-                    setDeleteError(null)
-                  }}
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-sm font-semibold outline-none focus:border-rose-500 focus:bg-white transition-colors"
-                />
-                {deleteError && (
-                  <p className="mt-2 text-xs font-black text-rose-500 uppercase">
-                    ⚠️ {deleteError}
-                  </p>
-                )}
-              </div>
+              <form onSubmit={(e) => { e.preventDefault(); handleDeleteOrder(); }}>
+                {/* Password check input */}
+                <div className="mb-8 text-left">
+                  <label className="mb-2 block text-[9px] font-black tracking-[3px] text-slate-400 uppercase">
+                    Verify Admin Password
+                  </label>
+                  <input
+                    type="password"
+                    placeholder="Enter your password to confirm..."
+                    value={deletePassword}
+                    autoComplete="current-password"
+                    onChange={(e) => {
+                      setDeletePassword(e.target.value)
+                      setDeleteError(null)
+                    }}
+                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-sm font-semibold outline-none focus:border-rose-500 focus:bg-white transition-colors"
+                  />
+                  {deleteError && (
+                    <p className="mt-2 text-xs font-black text-rose-500 uppercase">
+                      ⚠️ {deleteError}
+                    </p>
+                  )}
+                </div>
 
-              <div className="flex gap-4">
-                <button
-                  onClick={() => {
-                    setDeleteModal({ ...deleteModal, isOpen: false })
-                    setDeletePassword('')
-                    setDeleteError(null)
-                  }}
-                  className="flex-1 rounded-3xl border border-slate-100 py-5 text-[10px] font-black tracking-widest text-slate-400 uppercase italic transition-all hover:bg-slate-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleDeleteOrder}
-                  className="flex-1 rounded-3xl bg-rose-600 py-5 text-[10px] font-black tracking-widest text-white uppercase italic shadow-xl shadow-rose-900/20 transition-all hover:bg-rose-700 hover:scale-105 active:scale-95"
-                >
-                  Confirm Delete
-                </button>
-              </div>
+                <div className="flex gap-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDeleteModal({ ...deleteModal, isOpen: false })
+                      setDeletePassword('')
+                      setDeleteError(null)
+                    }}
+                    className="flex-1 rounded-3xl border border-slate-100 py-5 text-[10px] font-black tracking-widest text-slate-400 uppercase italic transition-all hover:bg-slate-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 rounded-3xl bg-rose-600 py-5 text-[10px] font-black tracking-widest text-white uppercase italic shadow-xl shadow-rose-900/20 transition-all hover:bg-rose-700 hover:scale-105 active:scale-95"
+                  >
+                    Confirm Delete
+                  </button>
+                </div>
+              </form>
             </m.div>
           </div>
         )}
@@ -2457,7 +2619,7 @@ const Orders: React.FC = () => {
                     Product Concern
                   </span>
                 </div>
-                <h2 className="text-3xl font-black tracking-tighter text-slate-900 uppercase italic">
+                <h2 className="text-xl sm:text-3xl font-black tracking-tighter text-slate-900 uppercase italic">
                   Create Concern Message?
                 </h2>
                 <p className="mt-4 text-xs font-bold leading-relaxed text-slate-400 uppercase italic">
@@ -2723,7 +2885,7 @@ const Orders: React.FC = () => {
                     Contact Admin
                   </span>
                 </div>
-                <h2 className="text-3xl font-black tracking-tighter text-slate-900 uppercase italic">
+                <h2 className="text-xl sm:text-3xl font-black tracking-tighter text-slate-900 uppercase italic">
                   Send Message
                 </h2>
                 <p className="mt-4 text-xs font-bold leading-relaxed text-slate-400 uppercase italic">
@@ -2756,6 +2918,433 @@ const Orders: React.FC = () => {
                   className="flex-1 rounded-xl bg-blue-600 py-5 text-[10px] font-black tracking-widest text-white uppercase italic shadow-xl shadow-blue-900/20 transition-all hover:bg-blue-700 hover:scale-105 active:scale-95 disabled:opacity-50"
                 >
                   {messageModal.isSubmitting ? 'Sending...' : 'Send Message'}
+                </button>
+              </div>
+            </m.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Mobile Customer Drawer */}
+      <AnimatePresence>
+        {isMobileCustomerDrawerOpen && (
+          <div className="fixed inset-0 z-[140] flex justify-end">
+            <m.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsMobileCustomerDrawerOpen(false)}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+            />
+            <m.div 
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="relative z-10 flex h-full w-full max-w-sm flex-col bg-white shadow-2xl"
+            >
+              <div className="border-b border-slate-100 bg-slate-50/50 p-6 flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-black text-slate-900 uppercase italic">
+                    Customer List
+                  </h3>
+                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Select a customer to filter orders</p>
+                </div>
+                <button
+                  onClick={() => setIsMobileCustomerDrawerOpen(false)}
+                  className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 transition-colors"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="p-4 border-b border-slate-100">
+                <div className="relative">
+                  <Search className="absolute top-1/2 left-3 -translate-y-1/2 text-slate-400" size={14} />
+                  <input 
+                    type="text" 
+                    placeholder="Search customers..." 
+                    className="w-full rounded-xl border border-slate-200 bg-white py-2 pr-4 pl-9 text-[10px] font-bold focus:border-emerald-500 focus:outline-none"
+                    value={customerSearch}
+                    onChange={(e) => {
+                      setCustomerSearch(e.target.value)
+                      setCustomerCurrentPage(1)
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div className="custom-scrollbar flex-1 space-y-3 overflow-y-auto p-4">
+                <div
+                  className={cn(
+                    'orders-customer-card group cursor-pointer rounded-xl border p-3 transition-all',
+                    !selectedCustomerId
+                      ? 'orders-customer-active border-slate-900 bg-slate-900 shadow-md'
+                      : 'border-transparent bg-white hover:bg-slate-50',
+                  )}
+                  onClick={() => {
+                    setSelectedCustomerId(null)
+                    setIsMobileCustomerDrawerOpen(false)
+                  }}
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={cn(
+                        'flex h-9 w-9 items-center justify-center rounded-xl transition-colors',
+                        !selectedCustomerId
+                          ? 'bg-white/10 text-[#75EEA5]'
+                          : 'bg-slate-100 text-slate-400',
+                      )}
+                    >
+                      <Users size={16} />
+                    </div>
+                    <div>
+                      <p
+                        className={cn(
+                          'text-xs font-black tracking-widest uppercase',
+                          !selectedCustomerId ? 'text-white' : 'text-slate-900',
+                        )}
+                      >
+                        All Customers
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {paginatedCustomers.map((customer) => (
+                  <div
+                    key={customer.id}
+                    className={cn(
+                      'orders-customer-card group cursor-pointer rounded-xl border p-4 transition-all',
+                      selectedCustomerId === customer.id
+                        ? 'orders-customer-active border-slate-900 bg-slate-900 shadow-md'
+                        : 'border-slate-100 bg-white hover:border-emerald-200 hover:bg-emerald-50/30',
+                    )}
+                    onClick={() => {
+                      setSelectedCustomerId(customer.id)
+                      setIsMobileCustomerDrawerOpen(false)
+                    }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={cn(
+                          'flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl shadow-inner font-black text-xs shrink-0',
+                          selectedCustomerId === customer.id
+                            ? 'bg-white text-slate-900'
+                            : 'bg-slate-100 text-slate-300',
+                        )}
+                      >
+                        {customer.profile_picture ? (
+                          <img 
+                            src={`/src/assets/profile/${customer.profile_picture}`} 
+                            alt="" 
+                            className="h-full w-full object-cover"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display = 'none'
+                            }}
+                          />
+                        ) : (
+                          <span>{customer.name.charAt(0)}</span>
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p
+                          className={cn(
+                            'truncate text-xs font-black tracking-tighter uppercase italic',
+                            selectedCustomerId === customer.id ? 'text-white' : 'text-slate-900',
+                          )}
+                        >
+                          {customer.name}
+                        </p>
+                        <p
+                          className={cn(
+                            'truncate text-[8px] font-bold',
+                            selectedCustomerId === customer.id ? 'text-white/40' : 'text-slate-400',
+                          )}
+                        >
+                          {customer.orderCount} Orders · ₱{customer.totalSpent.toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Drawer Pagination */}
+              <div className="flex items-center justify-center gap-2 border-t border-slate-100 bg-slate-50/50 p-4">
+                <button
+                  onClick={() => setCustomerCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={customerCurrentPage === 1}
+                  className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 disabled:opacity-30"
+                >
+                  <ChevronLeft size={16} />
+                </button>
+                <span className="text-[10px] font-black text-slate-500 uppercase">
+                  {customerCurrentPage} / {customerTotalPages || 1}
+                </span>
+                <button
+                  onClick={() => setCustomerCurrentPage(p => Math.min(customerTotalPages, p + 1))}
+                  disabled={customerCurrentPage === customerTotalPages}
+                  className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 disabled:opacity-30"
+                >
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+            </m.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Mobile Employee Drawer (Admin Only) */}
+      <AnimatePresence>
+        {isMobileEmployeeDrawerOpen && isAdmin && (
+          <div className="fixed inset-0 z-[140] flex justify-end">
+            <m.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsMobileEmployeeDrawerOpen(false)}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+            />
+            <m.div 
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="relative z-10 flex h-full w-full max-w-sm flex-col bg-white shadow-2xl"
+            >
+              <div className="border-b border-slate-100 bg-slate-50/50 p-6 flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-black text-slate-900 uppercase italic">
+                    Employee List
+                  </h3>
+                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Select to view their live queue</p>
+                </div>
+                <button
+                  onClick={() => setIsMobileEmployeeDrawerOpen(false)}
+                  className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 transition-colors"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="custom-scrollbar flex-1 space-y-2 overflow-y-auto p-4">
+                {employees.length === 0 ? (
+                  <div className="flex flex-col items-center gap-2 py-10 text-center opacity-40">
+                    <Users size={28} className="text-slate-400" />
+                    <p className="text-[10px] font-black text-slate-400 uppercase">No employees found</p>
+                  </div>
+                ) : (
+                  employees.map(emp => {
+                    const isSelectedEmp = selectedEmployeeId === emp.id
+                    const empQueueCount = Object.entries(queueAssignments).filter(([orderId, ids]) => {
+                      if (!ids.includes(emp.id)) return false
+                      const order = orders.find(o => o.order_id === orderId)
+                      return order?.status?.toUpperCase() === 'PENDING'
+                    }).length
+                    return (
+                      <div
+                        key={emp.id}
+                        onClick={() => {
+                          setSelectedEmployeeId(isSelectedEmp ? null : emp.id)
+                          setIsMobileEmployeeDrawerOpen(false)
+                        }}
+                        className={cn(
+                          'cursor-pointer rounded-xl border p-4 transition-all',
+                          isSelectedEmp
+                            ? 'border-violet-300 bg-violet-600 shadow-md'
+                            : 'border-slate-100 bg-white hover:border-violet-200 hover:bg-violet-50/30'
+                        )}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={cn(
+                            'flex h-9 w-9 items-center justify-center rounded-xl font-black text-xs shrink-0',
+                            isSelectedEmp ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'
+                          )}>
+                            {emp.name.charAt(0)}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className={cn(
+                              'truncate text-xs font-black uppercase italic',
+                              isSelectedEmp ? 'text-white' : 'text-slate-900'
+                            )}>{emp.name}</p>
+                            <p className={cn(
+                              'text-[8px] font-bold uppercase tracking-wider',
+                              isSelectedEmp ? 'text-white/60' : 'text-slate-400'
+                            )}>{emp.role}</p>
+                          </div>
+                          {empQueueCount > 0 && (
+                            <span className={cn(
+                              'flex h-5 w-5 items-center justify-center rounded-full text-[8px] font-black',
+                              isSelectedEmp ? 'bg-white/20 text-white' : 'bg-violet-100 text-violet-700'
+                            )}>
+                              {empQueueCount}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })
+                )}
+              </div>
+            </m.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Mobile Pending Queue Order Details Modal */}
+      <AnimatePresence>
+        {mobilePendingOrderModal && (
+          <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
+            <m.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-md"
+              onClick={() => setMobilePendingOrderModal(null)}
+            />
+            <m.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative w-full max-w-md overflow-hidden rounded-[30px] bg-white p-6 shadow-2xl md:p-8"
+            >
+              <div className="mb-6">
+                <div className="mb-3 flex items-center gap-3">
+                  <div className="h-0.5 w-6 bg-violet-500" />
+                  <span className="text-[9px] font-black tracking-[3px] text-violet-500 uppercase italic">
+                    Queue Order Details
+                  </span>
+                </div>
+                <h2 className="text-xl font-black tracking-tighter text-slate-900 uppercase italic">
+                  Order Details
+                </h2>
+                <p className="mt-1 text-xs font-bold text-slate-450 uppercase font-mono">
+                  ID: {mobilePendingOrderModal.order_id}
+                </p>
+              </div>
+
+              <div className="space-y-4 mb-6 border-t border-slate-100 pt-4">
+                <div>
+                  <span className="text-[8px] font-black text-slate-400 uppercase tracking-wider block">Customer</span>
+                  <span className="text-xs font-black text-slate-900 uppercase italic">
+                    {(() => {
+                      const cust = customers.find(c => c.id === mobilePendingOrderModal.user_id || c.id === mobilePendingOrderModal.customer_id)
+                      return cust?.name ?? 'Unknown'
+                    })()}
+                  </span>
+                </div>
+
+                <div>
+                  <span className="text-[8px] font-black text-slate-400 uppercase tracking-wider block">Products</span>
+                  <div className="space-y-1 mt-1">
+                    {mobilePendingOrderModal.products.map((p, i) => (
+                      <div key={i} className="flex justify-between items-center bg-slate-50 p-2 rounded-lg text-xs font-bold text-slate-700">
+                        <span className="uppercase">{p.productName}</span>
+                        <span className="text-slate-500 font-mono">Qty: {p.quantity}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-wider block">Total Amount</span>
+                    <span className="text-sm font-black text-emerald-600 italic">₱{mobilePendingOrderModal.total_amount.toLocaleString()}</span>
+                  </div>
+                  <div>
+                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-wider block">Date Placed</span>
+                    <span className="text-xs font-bold text-slate-500">{format(parseISO(mobilePendingOrderModal.created_at), 'MMM dd, yyyy h:mm a')}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setMobilePendingOrderModal(null)}
+                  className="flex-1 rounded-xl border border-slate-150 py-3.5 text-[9px] font-black tracking-widest text-slate-500 uppercase italic transition-all hover:bg-slate-50"
+                >
+                  Dismiss
+                </button>
+                <button
+                  onClick={async () => {
+                    try {
+                      await axiosInstance.delete(`/api/admin/orders/${mobilePendingOrderModal.order_id}/queue-assignments/${selectedEmployeeId}`)
+                      if (selectedEmployeeId) fetchEmployeeQueue(selectedEmployeeId)
+                      fetchEmployeesAndQueue()
+                      setMobilePendingOrderModal(null)
+                      toast.success('Removed from queue')
+                    } catch {
+                      toast.error('Failed to remove from queue')
+                    }
+                  }}
+                  className="flex-1 rounded-xl bg-rose-600 py-3.5 text-[9px] font-black tracking-widest text-white uppercase italic transition-all hover:bg-rose-700 shadow-lg shadow-rose-600/20"
+                >
+                  Remove from Queue
+                </button>
+              </div>
+            </m.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Mobile Production Registry Order Details Modal */}
+      <AnimatePresence>
+        {mobileProductionOrderModal && (
+          <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
+            <m.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-md"
+              onClick={() => setMobileProductionOrderModal(null)}
+            />
+            <m.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative w-full max-w-md overflow-hidden rounded-[30px] bg-white p-6 shadow-2xl md:p-8"
+            >
+              <div className="mb-6">
+                <div className="mb-3 flex items-center gap-3">
+                  <div className="h-0.5 w-6 bg-slate-400" />
+                  <span className="text-[9px] font-black tracking-[3px] text-slate-400 uppercase italic">
+                    Production Log Details
+                  </span>
+                </div>
+                <h2 className="text-xl font-black tracking-tighter text-slate-900 uppercase italic">
+                  Production Log
+                </h2>
+                <p className="mt-1 text-xs font-bold text-slate-400 uppercase font-mono">
+                  ID: {mobileProductionOrderModal.order_id}
+                </p>
+              </div>
+
+              <div className="space-y-4 mb-6 border-t border-slate-100 pt-4">
+                <div>
+                  <span className="text-[8px] font-black text-slate-400 uppercase tracking-wider block">Registry Status</span>
+                  <span className={cn(
+                    "inline-block rounded-full px-2 py-0.5 text-[8px] font-black tracking-widest uppercase mt-1",
+                    mobileProductionOrderModal.task_status === 'COMPLETED' ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"
+                  )}>
+                    {mobileProductionOrderModal.task_status}
+                  </span>
+                </div>
+
+                <div>
+                  <span className="text-[8px] font-black text-slate-400 uppercase tracking-wider block">Requested Timestamp</span>
+                  <span className="text-xs font-bold text-slate-500 block mt-1">
+                    {mobileProductionOrderModal.requested_at ? format(parseISO(mobileProductionOrderModal.requested_at), 'MMM dd, yyyy h:mm a') : '—'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setMobileProductionOrderModal(null)}
+                  className="flex-1 rounded-xl bg-slate-900 py-3.5 text-[9px] font-black tracking-widest text-white uppercase italic transition-all hover:bg-slate-800"
+                >
+                  Dismiss
                 </button>
               </div>
             </m.div>

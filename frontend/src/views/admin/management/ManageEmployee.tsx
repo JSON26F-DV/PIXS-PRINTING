@@ -12,7 +12,8 @@ import {
   Camera,
   X,
   RefreshCw,
-  Check
+  Check,
+  CreditCard
 } from 'lucide-react'
 import { m, AnimatePresence } from 'framer-motion'
 import Cropper, { type Area } from 'react-easy-crop'
@@ -57,6 +58,14 @@ interface EmployeeForm {
     number: string
     is_default: boolean
   }[]
+  paymentMethods: {
+    id?: string
+    type: string
+    bank_name: string
+    provider: string
+    masked_number: string
+    is_default: boolean
+  }[]
 }
 
 const resolveAddressCodes = (addr: {
@@ -89,6 +98,103 @@ const resolveAddressCodes = (addr: {
   }
 }
 
+const getChangesList = (initial: any, current: any, isEmployee: boolean) => {
+  const changes: string[] = []
+  if (!initial) return changes
+
+  if (initial.first_name !== current.first_name) {
+    changes.push(`First Name: "${initial.first_name}" → "${current.first_name}"`)
+  }
+  if (initial.last_name !== current.last_name) {
+    changes.push(`Last Name: "${initial.last_name}" → "${current.last_name}"`)
+  }
+  if (initial.email !== current.email) {
+    changes.push(`Email: "${initial.email}" → "${current.email}"`)
+  }
+  if (initial.role !== current.role) {
+    changes.push(`Role: "${initial.role}" → "${current.role}"`)
+  }
+  if (initial.status !== current.status) {
+    changes.push(`Status: "${initial.status}" → "${current.status}"`)
+  }
+  if (current.password) {
+    changes.push(`Password: (Password will be updated)`)
+  }
+
+  if (isEmployee) {
+    if (Number(initial.daily_rate) !== Number(current.daily_rate)) {
+      changes.push(`Daily Rate: ₱${initial.daily_rate} → ₱${current.daily_rate}`)
+    }
+    if (Number(initial.ot_rate) !== Number(current.ot_rate)) {
+      changes.push(`OT Rate: ₱${initial.ot_rate} → ₱${current.ot_rate}`)
+    }
+  } else {
+    if (initial.company_name !== current.company_name) {
+      changes.push(`Company: "${initial.company_name || 'N/A'}" → "${current.company_name || 'N/A'}"`)
+    }
+    if (initial.age !== current.age) {
+      changes.push(`Age: "${initial.age || 'N/A'}" → "${current.age || 'N/A'}"`)
+    }
+    if (initial.gender !== current.gender) {
+      changes.push(`Gender: "${initial.gender || 'N/A'}" → "${current.gender || 'N/A'}"`)
+    }
+  }
+
+  // Simple length/change checks for lists
+  const initialContacts = initial.contacts || []
+  const currentContacts = current.contacts || []
+  if (initialContacts.length !== currentContacts.length) {
+    changes.push(`Contacts Count: ${initialContacts.length} → ${currentContacts.length}`)
+  } else {
+    let numChanged = false
+    currentContacts.forEach((c: any, i: number) => {
+      if (initialContacts[i] && (initialContacts[i].number !== c.number || initialContacts[i].is_default !== c.is_default)) {
+        numChanged = true
+      }
+    })
+    if (numChanged) changes.push(`Contact details or defaults updated`)
+  }
+
+  const initialAddresses = initial.addresses || []
+  const currentAddresses = current.addresses || []
+  if (initialAddresses.length !== currentAddresses.length) {
+    changes.push(`Addresses Count: ${initialAddresses.length} → ${currentAddresses.length}`)
+  } else {
+    let addrChanged = false
+    currentAddresses.forEach((a: any, i: number) => {
+      if (initialAddresses[i] && (
+        initialAddresses[i].street !== a.street ||
+        initialAddresses[i].barangay !== a.barangay ||
+        initialAddresses[i].city !== a.city ||
+        initialAddresses[i].is_default !== a.is_default
+      )) {
+        addrChanged = true
+      }
+    })
+    if (addrChanged) changes.push(`Address details or defaults updated`)
+  }
+
+  const initialPMs = initial.paymentMethods || initial.payment_methods || []
+  const currentPMs = current.paymentMethods || []
+  if (initialPMs.length !== currentPMs.length) {
+    changes.push(`Payment Methods Count: ${initialPMs.length} → ${currentPMs.length}`)
+  } else {
+    let pmChanged = false
+    currentPMs.forEach((p: any, i: number) => {
+      if (initialPMs[i] && (
+        initialPMs[i].type !== p.type ||
+        initialPMs[i].masked_number !== p.masked_number ||
+        initialPMs[i].is_default !== p.is_default
+      )) {
+        pmChanged = true
+      }
+    })
+    if (pmChanged) changes.push(`Payment method details or defaults updated`)
+  }
+
+  return changes
+}
+
 const ManageEmployee = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
@@ -105,6 +211,11 @@ const ManageEmployee = () => {
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null)
   const [isUploading, setIsUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Initial and confirmation modal states
+  const [initialData, setInitialData] = useState<EmployeeForm | null>(null)
+  const [showConfirmModal, setShowConfirmModal] = useState(false)
+  const [formDataToSubmit, setFormDataToSubmit] = useState<EmployeeForm | null>(null)
 
   // Local state for address dropdown codes, keyed by index
   const [addressCodes, setAddressCodes] = useState<
@@ -130,13 +241,15 @@ const ManageEmployee = () => {
       ot_rate: 0,
       profile_picture: '',
       addresses: [],
-      contacts: []
+      contacts: [],
+      paymentMethods: []
     }
   })
 
   // Watch fields to reactively render single defaults
   const watchContacts = watch('contacts') || []
   const watchAddresses = watch('addresses') || []
+  const watchPaymentMethods = watch('paymentMethods') || []
 
   const { fields: addressFields, append: appendAddress, remove: removeAddress } = useFieldArray({
     control,
@@ -146,6 +259,11 @@ const ManageEmployee = () => {
   const { fields: contactFields, append: appendContact, remove: removeContact } = useFieldArray({
     control,
     name: 'contacts'
+  })
+
+  const { fields: pmFields, append: appendPM, remove: removePM } = useFieldArray({
+    control,
+    name: 'paymentMethods'
   })
 
   // Region options are static and memoized
@@ -167,6 +285,15 @@ const ManageEmployee = () => {
       const { data } = await axiosInstance.get(`/api/admin/accounts/employee/${id}`)
       if (data.status === 'success') {
         const employeeData = data.data
+
+        // Fix payment methods naming mismatch
+        if (employeeData.payment_methods) {
+          employeeData.paymentMethods = employeeData.payment_methods
+          delete employeeData.payment_methods
+        }
+
+        // Save clone of original API data for comparison diff
+        setInitialData(JSON.parse(JSON.stringify(employeeData)))
         reset(employeeData)
 
         if (employeeData.profile_picture) {
@@ -197,7 +324,7 @@ const ManageEmployee = () => {
     }
   }
 
-  const onSubmit = async (data: EmployeeForm) => {
+  const executeSubmit = async (data: EmployeeForm) => {
     try {
       const url = isEditing
         ? `/api/admin/accounts/employee/${id}`
@@ -216,6 +343,11 @@ const ManageEmployee = () => {
         toast.error('Error saving employee data')
       }
     }
+  }
+
+  const onSubmit = (data: EmployeeForm) => {
+    setFormDataToSubmit(data)
+    setShowConfirmModal(true)
   }
 
   // Profile Picture Crop & Upload handlers
@@ -475,6 +607,71 @@ const ManageEmployee = () => {
                 >
                   <Trash2 size={18} />
                 </button>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Payment Methods */}
+        <section className="rounded-[32px] border border-slate-100 bg-white p-8 shadow-2xl shadow-slate-200/40">
+          <div className="mb-6 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="rounded-xl bg-amber-50 p-2 text-amber-600">
+                <CreditCard size={20} />
+              </div>
+              <h2 className="text-lg font-black tracking-tight text-slate-900 uppercase italic">Payment Methods</h2>
+            </div>
+            <button
+              type="button"
+              onClick={() => appendPM({ type: '', bank_name: '', provider: '', masked_number: '', is_default: false })}
+              className="flex items-center gap-2 rounded-xl bg-slate-100 px-4 py-2 text-xs font-bold text-slate-600 transition-colors hover:bg-slate-200"
+            >
+              <Plus size={16} /> Add Payment Method
+            </button>
+          </div>
+
+          <div className="space-y-4">
+            {pmFields.map((field, index) => (
+              <div key={field.id} className="grid gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-6 md:grid-cols-2 relative">
+                <button type="button" onClick={() => removePM(index)} className="absolute right-4 top-4 rounded-lg p-2 text-rose-500 hover:bg-rose-50">
+                  <Trash2 size={18} />
+                </button>
+                <div className="md:col-span-2 flex items-center gap-2 mb-2">
+                  <input
+                    type="radio"
+                    name="payment_methods_default_radio"
+                    checked={watchPaymentMethods[index]?.is_default === true}
+                    onChange={() => {
+                      pmFields.forEach((_, idx) => {
+                        setValue(`paymentMethods.${idx}.is_default`, idx === index)
+                      })
+                    }}
+                    className="h-5 w-5 border-slate-300 accent-slate-900 cursor-pointer"
+                  />
+                  <span className="text-xs font-bold text-slate-500">Set as Default Payment</span>
+                </div>
+                <div>
+                  <label className="mb-1 block text-[10px] font-black tracking-[1px] text-slate-400 uppercase">Type</label>
+                  <select {...register(`paymentMethods.${index}.type`)} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-900 focus:outline-none">
+                    <option value="">Select Type</option>
+                    <option value="bank">Bank Transfer</option>
+                    <option value="ewallet">E-Wallet</option>
+                    <option value="credit_card">Credit Card</option>
+                    <option value="cod">Cash on Delivery (COD)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1 block text-[10px] font-black tracking-[1px] text-slate-400 uppercase">Provider (e.g., Visa)</label>
+                  <input {...register(`paymentMethods.${index}.provider`)} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-900 focus:outline-none" />
+                </div>
+                <div>
+                  <label className="mb-1 block text-[10px] font-black tracking-[1px] text-slate-400 uppercase">Bank Name</label>
+                  <input {...register(`paymentMethods.${index}.bank_name`)} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-900 focus:outline-none" />
+                </div>
+                <div>
+                  <label className="mb-1 block text-[10px] font-black tracking-[1px] text-slate-400 uppercase">Masked Number (e.g., **** 1234)</label>
+                  <input {...register(`paymentMethods.${index}.masked_number`)} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-900 focus:outline-none" />
+                </div>
               </div>
             ))}
           </div>
@@ -744,6 +941,86 @@ const ManageEmployee = () => {
                     Apply & Save
                   </button>
                 </div>
+              </div>
+            </m.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showConfirmModal && formDataToSubmit && (
+          <div className="fixed inset-0 z-[600] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
+            <m.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="w-full max-w-lg rounded-[28px] bg-white p-8 shadow-2xl overflow-hidden"
+            >
+              <h3 className="mb-4 text-xl font-black text-slate-900 uppercase italic">
+                Confirm Account Action
+              </h3>
+              
+              <div className="mb-6 rounded-2xl bg-slate-50 p-6 max-h-[300px] overflow-y-auto">
+                {isEditing ? (
+                  <div>
+                    <p className="mb-3 font-mono text-[10px] font-black tracking-widest text-slate-400 uppercase">
+                      Modified Properties
+                    </p>
+                    {getChangesList(initialData, formDataToSubmit, true).length > 0 ? (
+                      <ul className="space-y-2 text-xs font-bold text-slate-700">
+                        {getChangesList(initialData, formDataToSubmit, true).map((change, idx) => (
+                          <li key={idx} className="flex items-start gap-2">
+                            <span className="text-blue-500">•</span>
+                            <span>{change}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-xs font-bold text-slate-500 italic">No changes detected in fields.</p>
+                    )}
+                  </div>
+                ) : (
+                  <div>
+                    <p className="mb-3 font-mono text-[10px] font-black tracking-widest text-slate-400 uppercase">
+                      Account Registration Details
+                    </p>
+                    <ul className="space-y-2 text-xs font-bold text-slate-700">
+                      <li>Name: {formDataToSubmit.first_name} {formDataToSubmit.last_name}</li>
+                      <li>Email: {formDataToSubmit.email}</li>
+                      <li>Role: {formDataToSubmit.role}</li>
+                      <li>Status: {formDataToSubmit.status}</li>
+                      <li>Daily Rate: ₱{formDataToSubmit.daily_rate}</li>
+                      <li>OT Rate: ₱{formDataToSubmit.ot_rate}</li>
+                      <li>Contacts: {formDataToSubmit.contacts?.length || 0} registered</li>
+                      <li>Addresses: {formDataToSubmit.addresses?.length || 0} registered</li>
+                      <li>Payment Methods: {formDataToSubmit.paymentMethods?.length || 0} registered</li>
+                    </ul>
+                  </div>
+                )}
+              </div>
+
+              <p className="mb-6 text-sm font-bold text-slate-600">
+                Are you sure you want to {isEditing ? 'update' : 'create'} this employee account?
+              </p>
+
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmModal(false)}
+                  className="flex-1 rounded-xl bg-slate-100 py-3 text-xs font-black tracking-widest text-slate-600 uppercase hover:bg-slate-200 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setShowConfirmModal(false)
+                    await executeSubmit(formDataToSubmit)
+                  }}
+                  className="flex-1 rounded-xl bg-slate-900 py-3 text-xs font-black tracking-widest text-[#75EEA5] uppercase hover:bg-slate-800 transition-colors"
+                >
+                  Yes, Confirm
+                </button>
               </div>
             </m.div>
           </div>

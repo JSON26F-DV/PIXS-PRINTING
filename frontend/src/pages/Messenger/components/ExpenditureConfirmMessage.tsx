@@ -1,5 +1,5 @@
 import React from 'react'
-import { FileText } from 'lucide-react'
+import { FileText, XCircle } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../../context/AuthContext'
 import { clsx } from 'clsx'
@@ -63,7 +63,41 @@ const ExpenditureConfirmMessage: React.FC<ExpenditureConfirmMessageProps> = ({ e
     )
   }
 
-  if (!expenditure) return <div className="p-4 text-[10px] uppercase font-black text-rose-500">Expenditure Data Corrupted or Deleted</div>
+  if (!expenditure) {
+    return (
+      <div className={clsx(
+        "w-full max-w-sm rounded-[32px] overflow-hidden shadow-2xl border transition-all",
+        isCustomer ? "bg-slate-900 border-white/10 text-white" : "bg-white border-slate-100 text-slate-900"
+      )}>
+        <div className="p-6 border-b border-white/10 flex justify-between items-center">
+          <div>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="h-0.5 w-8 bg-rose-500 animate-pulse" />
+              <span className="text-[10px] font-black tracking-[4px] text-rose-500 uppercase italic">Operational Log</span>
+            </div>
+            <h3 className="text-xl font-black italic uppercase leading-none">Expenditure Removed</h3>
+          </div>
+          <div className="size-10 rounded-2xl bg-rose-500/10 flex items-center justify-center border border-rose-500/20">
+            <XCircle size={18} className="text-rose-500" />
+          </div>
+        </div>
+        <div className="p-6 space-y-4">
+          <div className="p-4 rounded-2xl bg-rose-500/5 border border-rose-500/10 italic">
+            <p className="text-[10px] font-bold text-rose-400 leading-relaxed uppercase tracking-wider">
+              Expenditure "{expenditureId}" is no longer available or has been removed.
+            </p>
+          </div>
+          <p className="text-[9px] font-medium opacity-50 uppercase tracking-widest leading-relaxed">
+            The expenditure record was deleted from the system. Please verify the log ID.
+          </p>
+        </div>
+        <div className="px-6 py-4 bg-slate-900/20 border-t border-white/10 flex justify-between items-center text-[8px] font-black uppercase text-slate-400 tracking-wider">
+          <span>Status: DELETED</span>
+          <span className="opacity-30">ID: {expenditureId}</span>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div 

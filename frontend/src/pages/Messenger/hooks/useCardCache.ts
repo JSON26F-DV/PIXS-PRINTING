@@ -5,6 +5,9 @@
  * EXACTLY ONCE per page session, regardless of how many times Virtuoso
  * mounts/unmounts the component.
  *
+ * Failed fetches (404, 429, etc.) are cached as null so they are
+ * NEVER retried — preventing infinite request loops that crash the server.
+ *
  * This fixes the 429 Too Many Requests errors caused by Virtuoso's
  * virtualisation recycling card components on scroll.
  */
@@ -83,7 +86,8 @@ export function useCardCache<T>(
           return result
         })
         .catch((err) => {
-          // Don't cache errors — allow retry on next mount
+          // Cache null on error so we never retry a failed fetch
+          cache.set(k, null)
           console.error(`[useCardCache:${namespace}] fetch error for "${k}":`, err)
           return null
         })

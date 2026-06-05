@@ -96,7 +96,7 @@ class Customer extends Authenticatable
 
     public function discounts(): HasMany
     {
-        return $this->hasMany(CustomerDiscount::class);
+        return $this->hasMany(Discount::class, 'customer_id');
     }
 
     public function paymentMethods(): HasMany

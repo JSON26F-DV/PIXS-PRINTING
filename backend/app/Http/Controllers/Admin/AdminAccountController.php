@@ -65,7 +65,7 @@ class AdminAccountController extends Controller
 
     public function showEmployee($id): JsonResponse
     {
-        $employee = Employee::with(['addresses', 'contacts'])->find($id);
+        $employee = Employee::with(['addresses', 'contacts', 'paymentMethods'])->find($id);
 
         if (! $employee) {
             return response()->json(['message' => 'Employee not found'], 404);
@@ -100,6 +100,7 @@ class AdminAccountController extends Controller
             'profile_picture' => 'nullable|string',
             'addresses' => 'array',
             'contacts' => 'array',
+            'paymentMethods' => 'array',
         ]);
 
         DB::beginTransaction();
@@ -127,11 +128,21 @@ class AdminAccountController extends Controller
                 }
             }
 
+            if (isset($validated['paymentMethods'])) {
+                $employee->paymentMethods()->delete();
+                foreach ($validated['paymentMethods'] as $pm) {
+                    if (!isset($pm['id']) || empty($pm['id']) || str_starts_with($pm['id'], 'temp_')) {
+                        $pm['id'] = 'PAY-' . mt_rand(10000, 99999);
+                    }
+                    $employee->paymentMethods()->create($pm);
+                }
+            }
+
             DB::commit();
 
             AuditService::log($isNew ? 'create' : 'update', 'employee', $id);
 
-            return response()->json(['status' => 'success', 'data' => $employee->load(['addresses', 'contacts'])]);
+            return response()->json(['status' => 'success', 'data' => $employee->load(['addresses', 'contacts', 'paymentMethods'])]);
         } catch (\Exception $e) {
             DB::rollBack();
 
@@ -262,12 +273,36 @@ class AdminAccountController extends Controller
             if ($request->type === 'employee') {
                 $target->addresses()->delete();
                 $target->contacts()->delete();
-                // other relationships
+                $target->paymentMethods()->delete();
+                
+                DB::table('employee_attendance')->where('employee_id', $id)->delete();
+                DB::table('order_employee_queue')->where('employee_id', $id)->delete();
+                DB::table('inventory_logs')->where('employee_id', $id)->delete();
+                DB::table('production_logs')->where('employee_id', $id)->delete();
+                DB::table('refunds')->where('employee_id', $id)->update(['employee_id' => null]);
             } else {
                 $target->addresses()->delete();
                 $target->contacts()->delete();
                 $target->paymentMethods()->delete();
                 $target->discounts()->delete();
+                
+                // Get order IDs to clean up related data in other tables
+                $orderIds = DB::table('orders')->where('customer_id', $id)->pluck('id')->toArray();
+                
+                if (!empty($orderIds)) {
+                    DB::table('order_employee_queue')->whereIn('order_id', $orderIds)->delete();
+                    DB::table('production_logs')->whereIn('order_id', $orderIds)->delete();
+                    DB::table('refunds')->whereIn('order_id', $orderIds)->delete();
+                    DB::table('order_items')->whereIn('order_id', $orderIds)->delete();
+                    DB::table('orders')->whereIn('id', $orderIds)->delete();
+                }
+                
+                // Clean up any remaining direct references
+                DB::table('cart_items')->where('customer_id', $id)->delete();
+                DB::table('product_reviews')->where('customer_id', $id)->delete();
+                DB::table('notifications')->where('customer_id', $id)->delete();
+                DB::table('screenplate_requests')->where('customer_id', $id)->delete();
+                DB::table('refunds')->where('customer_id', $id)->delete();
             }
 
             $target->delete();
@@ -430,11 +465,9 @@ class AdminAccountController extends Controller
         foreach ($allPendingOrders as $o) {
             $orderId = (string) $o->id;
 
-            // Admin preview logic: unless the employee is an admin, they MUST be explicitly assigned
-            if ($employee->role !== 'admin') {
-                if (! isset($queueMap[$orderId]) || ! in_array($employeeIdStr, $queueMap[$orderId], true)) {
-                    continue;
-                }
+            // Employee MUST be explicitly assigned to see the order in their live queue.
+            if (! isset($queueMap[$orderId]) || ! in_array($employeeIdStr, $queueMap[$orderId], true)) {
+                continue;
             }
 
             $formattedOrder = [

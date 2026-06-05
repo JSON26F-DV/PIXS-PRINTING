@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react'
+import React, { useState, useMemo, useEffect, useRef } from 'react'
 import {
   TrendingUp,
   Briefcase,
@@ -11,7 +11,10 @@ import {
   Edit2,
   RotateCcw,
   User,
-  MessageSquare
+  MessageSquare,
+  ArrowUpDown,
+  ListFilter,
+  ChevronDown
 } from 'lucide-react'
 import {
   BarChart,
@@ -123,6 +126,67 @@ const renderPagination = (
   )
 }
 
+const FilterDropdown: React.FC<{
+  icon: React.ReactNode
+  value: string
+  options: { value: string; label: string }[]
+  onChange: (val: string) => void
+  dark?: boolean
+  align?: 'left' | 'right'
+}> = ({ icon, value, options, onChange, dark = false, align = 'left' }) => {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className={`flex items-center gap-1 rounded-xl border px-2.5 py-2 transition-colors ${
+          dark
+            ? 'border-slate-800 bg-slate-900 text-slate-400 hover:border-emerald-400/50 hover:text-emerald-400'
+            : 'border-slate-100 bg-slate-50 text-slate-500 hover:border-slate-300 hover:text-slate-700'
+        }`}
+      >
+        {icon}
+      </button>
+      {open && (
+        <div className={`absolute top-full mt-1 z-999 min-w-[160px] max-sm:min-w-[140px] max-sm:max-w-[90vw] overflow-y-auto max-h-[300px] rounded-xl border py-1 shadow-2xl ${
+          dark
+            ? 'border-slate-800 bg-slate-900'
+            : 'border-slate-100 bg-white shadow-slate-200/50'
+        } ${align === 'right' ? 'right-0' : 'left-0 max-sm:right-0'}`}>
+          {options.map(opt => (
+            <button
+              key={opt.value}
+              onClick={() => { onChange(opt.value); setOpen(false) }}
+              className={`w-full px-3 py-2 text-left text-[9px] font-black tracking-wider uppercase transition-colors ${
+                value === opt.value
+                  ? dark
+                    ? 'text-emerald-400 bg-emerald-500/10'
+                    : 'text-blue-600 bg-blue-50'
+                  : dark
+                    ? 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'
+                    : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export const InventoryAnalyticsSection: React.FC<InventoryAnalyticsSectionProps> = ({ 
   products, 
   expenditures, 
@@ -175,6 +239,17 @@ export const InventoryAnalyticsSection: React.FC<InventoryAnalyticsSectionProps>
   const [auditTrailPage, setAuditTrailPage] = useState(1)
   const ITEMS_PER_PAGE = 10
 
+  const [allCategories, setAllCategories] = useState<{ id: string; label: string }[]>([])
+
+  useEffect(() => {
+    axiosInstance.get('/api/categories')
+      .then(res => {
+        const data = res.data.data || res.data || []
+        setAllCategories(data.map((c: { id: string; label: string }) => ({ id: c.id, label: c.label })))
+      })
+      .catch(() => {})
+  }, [])
+
   useEffect(() => {
     if (initialLogSearch && initialLogSearch !== logSearch) {
       const timer = setTimeout(() => {
@@ -221,17 +296,6 @@ export const InventoryAnalyticsSection: React.FC<InventoryAnalyticsSectionProps>
       toast.error('Failed to create message')
     }
   }
-
-  // Generate unique categories for chart filtering (maps category_id to category_label)
-  const uniqueProductCategories = useMemo(() => {
-    const map = new Map<string, string>()
-    products.forEach(p => {
-      if (p.category_id && p.category_label) {
-        map.set(p.category_id, p.category_label)
-      }
-    })
-    return Array.from(map.entries()).map(([id, label]) => ({ id, label }))
-  }, [products])
 
   const filteredProducts = useMemo(() => {
     let result = products.map(p => {
@@ -386,7 +450,7 @@ export const InventoryAnalyticsSection: React.FC<InventoryAnalyticsSectionProps>
           <div className="grid min-h-[400px] flex-1 grid-cols-1 md:grid-rows-2 gap-6">
             
             {/* STOCK CHART */}
-            <div className="inventory-stock-chart group relative min-h-[300px] overflow-hidden rounded-[32px] border border-slate-800 bg-slate-950 p-8 shadow-2xl">
+            <div className="inventory-stock-chart group relative min-h-[300px] overflow-hidden rounded-[32px] border border-slate-800 bg-slate-950 p-5 shadow-2xl md:p-8">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-900 pb-4 mb-4">
                 <div className="flex items-center gap-2 opacity-80">
                   <Package className="text-emerald-400" size={14} />
@@ -397,31 +461,33 @@ export const InventoryAnalyticsSection: React.FC<InventoryAnalyticsSectionProps>
                 
                 {/* SORT & CATEGORY FILTERS */}
                 <div className="flex flex-wrap items-center gap-3">
-                  <select
+                  <FilterDropdown
+                    icon={<><ArrowUpDown size={14} /><ChevronDown size={10} /></>}
                     value={chartSortOrder}
-                    onChange={(e) => setChartSortOrder(e.target.value as 'default' | 'highest' | 'lowest')}
-                    className="bg-slate-900 border border-slate-800 rounded-xl px-3 py-1.5 text-[9px] font-black tracking-wider text-slate-300 uppercase outline-none focus:border-emerald-400 transition-colors cursor-pointer"
-                  >
-                    <option value="default">Default Sort</option>
-                    <option value="highest">High to Low</option>
-                    <option value="lowest">Low to High</option>
-                  </select>
-                  <select
+                    options={[
+                      { value: 'default', label: 'Default Sort' },
+                      { value: 'highest', label: 'High to Low' },
+                      { value: 'lowest', label: 'Low to High' },
+                    ]}
+                    onChange={(val) => setChartSortOrder(val as 'default' | 'highest' | 'lowest')}
+                    dark
+                  />
+                  <FilterDropdown
+                    icon={<><ListFilter size={14} /><ChevronDown size={10} /></>}
                     value={chartCategory}
-                    onChange={(e) => setChartCategory(e.target.value)}
-                    className="bg-slate-900 border border-slate-800 rounded-xl px-3 py-1.5 text-[9px] font-black tracking-wider text-slate-300 uppercase outline-none focus:border-emerald-400 transition-colors cursor-pointer"
-                  >
-                    <option value="ALL">All Categories</option>
-                    {uniqueProductCategories.map(cat => (
-                      <option key={cat.id} value={cat.id}>{cat.label}</option>
-                    ))}
-                  </select>
+                    options={[
+                      { value: 'ALL', label: 'All Categories' },
+                      ...allCategories.map(cat => ({ value: cat.id, label: cat.label })),
+                    ]}
+                    onChange={(val) => setChartCategory(val)}
+                    dark
+                  />
                 </div>
               </div>
 
-              <div className="h-[200px] w-full">
+              <div className="h-[250px] w-full min-w-0">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 20 }}>
+                  <BarChart data={chartData} margin={{ top: 10, right: 5, left: -15, bottom: 15 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ffffff05" />
                     <XAxis
                       dataKey="name"
@@ -456,15 +522,16 @@ export const InventoryAnalyticsSection: React.FC<InventoryAnalyticsSectionProps>
             </div>
 
             {/* EXPENDITURE CHART */}
-            <div className="expenditure-chart group relative min-h-[300px] overflow-hidden rounded-[32px] border border-slate-800 bg-slate-950 p-8 shadow-2xl">
-              <div className="absolute top-6 left-8 flex items-center gap-2 opacity-50">
+            <div className="expenditure-chart group relative min-h-[300px] overflow-hidden rounded-[32px] border border-slate-800 bg-slate-950 p-5 shadow-2xl md:p-8">
+              <div className="flex items-center gap-2 opacity-50 mb-3">
                 <TrendingUp className="text-blue-400" size={14} />
                 <h4 className="text-[9px] font-black tracking-widest text-blue-400 uppercase">
                   Weekly Expenditure Analytics (₱)
                 </h4>
               </div>
-              <ResponsiveContainer width="100%" height="100%" className="mt-4">
-                <BarChart data={weeklyExpenseData} margin={{ top: 20, right: 30, left: 10, bottom: 20 }}>
+              <div className="h-[250px] w-full min-w-0">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={weeklyExpenseData} margin={{ top: 10, right: 10, left: 5, bottom: 15 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ffffff0a" />
                   <XAxis dataKey="name" stroke="none" tick={{ fontSize: 10, fontWeight: 900, fill: '#475569' }} />
                   <YAxis stroke="none" tick={{ fontSize: 9, fontWeight: 700, fill: '#64748b' }} />
@@ -483,6 +550,7 @@ export const InventoryAnalyticsSection: React.FC<InventoryAnalyticsSectionProps>
                   <Bar dataKey="total" radius={[6, 6, 0, 0]} barSize={40} fill="#3b82f6" fillOpacity={0.8} />
                 </BarChart>
               </ResponsiveContainer>
+              </div>
             </div>
           </div>
         </div>
@@ -616,36 +684,39 @@ export const InventoryAnalyticsSection: React.FC<InventoryAnalyticsSectionProps>
             <PlusCircle className="text-blue-500" size={20} /> Extra Expenses
           </h3>
           <div className="space-y-4">
-            <div>
-              <label className="mb-1.5 block px-1 font-mono text-[10px] leading-none font-black tracking-widest text-slate-400 uppercase">
-                Category
-              </label>
-              <select
-                value={extraExpenseForm.category}
-                onChange={(e) => setExtraExpenseForm({ ...extraExpenseForm, category: e.target.value })}
-                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-900 outline-none focus:border-blue-500"
-              >
-                <option value="Others">Others</option>
-                <option value="Employee Salaries">Employee Salaries</option>
-                <option value="Raw Materials / Products">Raw Materials / Products</option>
-                <option value="Utilities">Utilities</option>
-                <option value="Office / Operational Expenses">Office / Operational</option>
-                <option value="Extra / Miscellaneous Expenses">Extra / Misc</option>
-                <option value="Refund">Refund</option>
-                <option value="Others">Others</option>
-              </select>
-            </div>
-            <div>
-              <label className="mb-1.5 block px-1 font-mono text-[10px] leading-none font-black tracking-widest text-slate-400 uppercase">
-                Entry Reason
-              </label>
-              <input
-                type="text"
-                placeholder="e.g. Utility - Maintenance"
-                value={extraExpenseForm.description}
-                onChange={(e) => setExtraExpenseForm({ ...extraExpenseForm, description: e.target.value })}
-                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-900 shadow-sm transition-all outline-none focus:border-blue-500"
-              />
+            <div className="flex items-end gap-3">
+              <div className="flex-1">
+                <label className="mb-1.5 block px-1 font-mono text-[10px] leading-none font-black tracking-widest text-slate-400 uppercase">
+                  Entry Reason
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Utility - Maintenance"
+                  value={extraExpenseForm.description}
+                  onChange={(e) => setExtraExpenseForm({ ...extraExpenseForm, description: e.target.value })}
+                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-900 shadow-sm transition-all outline-none focus:border-blue-500"
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block px-1 font-mono text-[10px] leading-none font-black tracking-widest text-slate-400 uppercase">
+                  Category
+                </label>
+                <FilterDropdown
+                  icon={<><ListFilter size={16} /><ChevronDown size={11} /></>}
+                  value={extraExpenseForm.category}
+                  options={[
+                    { value: 'Others', label: 'Others' },
+                    { value: 'Employee Salaries', label: 'Employee Salaries' },
+                    { value: 'Raw Materials / Products', label: 'Raw Materials / Products' },
+                    { value: 'Utilities', label: 'Utilities' },
+                    { value: 'Office / Operational Expenses', label: 'Office / Operational' },
+                    { value: 'Extra / Miscellaneous Expenses', label: 'Extra / Misc' },
+                    { value: 'Refund', label: 'Refund' },
+                  ]}
+                  onChange={(val) => setExtraExpenseForm({ ...extraExpenseForm, category: val })}
+                  align="right"
+                />
+              </div>
             </div>
             <div>
               <label className="mb-1.5 block px-1 font-mono text-[10px] leading-none font-black tracking-widest text-slate-400 uppercase">
@@ -675,8 +746,8 @@ export const InventoryAnalyticsSection: React.FC<InventoryAnalyticsSectionProps>
               <HistoryIcon className="text-violet-500" size={20} /> Operational Logs
             </h3>
 
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="relative">
+            <div className="flex flex-wrap items-center gap-3 max-sm:w-full max-sm:justify-between">
+              <div className="relative max-sm:order-1 max-sm:flex-1">
                 <input
                   type="text"
                   placeholder="Search Logs..."
@@ -687,20 +758,24 @@ export const InventoryAnalyticsSection: React.FC<InventoryAnalyticsSectionProps>
                 <Search size={12} className="absolute top-1/2 left-3 -translate-y-1/2 text-slate-300" />
               </div>
 
-              <select
-                value={logCategoryFilter}
-                onChange={(e) => { setLogCategoryFilter(e.target.value); setOperationalLogsPage(1); }}
-                className="w-full md:w-auto cursor-pointer rounded-xl border border-slate-100 bg-slate-50 px-4 py-2 text-[10px] font-black tracking-widest uppercase shadow-sm outline-none focus:border-violet-400"
-              >
-                <option value="ALL">All Categories</option>
-                <option value="Others">Others</option>
-                <option value="Employee Salaries">Employee Salaries</option>
-                <option value="Raw Materials / Products">Raw Materials / Products</option>
-                <option value="Utilities">Utilities</option>
-                <option value="Office / Operational Expenses">Office / Operational</option>
-                <option value="Extra / Miscellaneous Expenses">Extra / Misc</option>
-                <option value="Refund">Refund</option>
-              </select>
+              <div className="max-sm:order-2">
+                <FilterDropdown
+                  icon={<><ListFilter size={14} /><ChevronDown size={10} /></>}
+                  value={logCategoryFilter}
+                  options={[
+                    { value: 'ALL', label: 'All Categories' },
+                    { value: 'Others', label: 'Others' },
+                    { value: 'Employee Salaries', label: 'Employee Salaries' },
+                    { value: 'Raw Materials / Products', label: 'Raw Materials / Products' },
+                    { value: 'Utilities', label: 'Utilities' },
+                    { value: 'Office / Operational Expenses', label: 'Office / Operational' },
+                    { value: 'Extra / Miscellaneous Expenses', label: 'Extra / Misc' },
+                    { value: 'Refund', label: 'Refund' },
+                  ]}
+                  onChange={(val) => { setLogCategoryFilter(val); setOperationalLogsPage(1); }}
+                  align="right"
+                />
+              </div>
             </div>
           </div>
 
@@ -1061,8 +1136,8 @@ export const InventoryAnalyticsSection: React.FC<InventoryAnalyticsSectionProps>
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="relative">
+          <div className="flex flex-wrap items-center gap-3 max-sm:w-full max-sm:justify-between">
+            <div className="relative max-sm:order-1 max-sm:flex-1">
               <input
                 type="text"
                 placeholder="Search logs..."
@@ -1073,17 +1148,21 @@ export const InventoryAnalyticsSection: React.FC<InventoryAnalyticsSectionProps>
               <Search size={12} className="absolute top-1/2 left-3 -translate-y-1/2 text-slate-355" />
             </div>
 
-            <select
-              value={invLogTypeFilter}
-              onChange={(e) => { setInvLogTypeFilter(e.target.value); setAuditTrailPage(1); }}
-              className="w-full md:w-auto cursor-pointer rounded-xl border border-slate-100 bg-slate-50 px-4 py-2 text-[10px] font-black tracking-widest uppercase shadow-sm outline-none focus:border-emerald-400"
-            >
-              <option value="ALL">All Types</option>
-              <option value="RESTOCK">Restocks Only</option>
-              <option value="ADJUSTMENT">Adjustments Only</option>
-              <option value="DAMAGE">Damages Only</option>
-              <option value="MISC">Misc Logs</option>
-            </select>
+            <div className="max-sm:order-2">
+              <FilterDropdown
+                icon={<><ListFilter size={14} /><ChevronDown size={10} /></>}
+                value={invLogTypeFilter}
+                options={[
+                  { value: 'ALL', label: 'All Types' },
+                  { value: 'RESTOCK', label: 'Restocks Only' },
+                  { value: 'ADJUSTMENT', label: 'Adjustments Only' },
+                  { value: 'DAMAGE', label: 'Damages Only' },
+                  { value: 'MISC', label: 'Misc Logs' },
+                ]}
+                onChange={(val) => { setInvLogTypeFilter(val); setAuditTrailPage(1); }}
+                align="right"
+              />
+            </div>
           </div>
         </div>
 

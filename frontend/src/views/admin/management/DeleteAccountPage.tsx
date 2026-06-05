@@ -14,14 +14,22 @@ const DeleteAccountPage = () => {
   const [loading, setLoading] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
 
+  // Confirmation modal states
+  const [showConfirmModal, setShowConfirmModal] = useState(false)
+  const [confirmIdInput, setConfirmIdInput] = useState('')
+
   const accountType = id?.startsWith('EMP') ? 'employee' : 'customer'
 
-  const handleDelete = async (e: React.FormEvent) => {
+  const handlePreDelete = (e: React.FormEvent) => {
     e.preventDefault()
     if (!password) return toast.error('Administrator password is required')
     if (!reason) return toast.error('A reason for deletion must be provided for audit logs')
     if (!confirmDelete) return toast.error('Please confirm you understand this action is irreversible')
 
+    setShowConfirmModal(true)
+  }
+
+  const executeDelete = async () => {
     try {
       setLoading(true)
       await axiosInstance.delete(`/api/admin/accounts/delete/${id}`, {
@@ -78,7 +86,7 @@ const DeleteAccountPage = () => {
           </div>
         </div>
 
-        <form onSubmit={handleDelete} className="space-y-6">
+        <form onSubmit={handlePreDelete} className="space-y-6">
           <div>
             <label className="mb-2 block text-[10px] font-black tracking-[2px] text-slate-400 uppercase">
               Reason for Deletion
@@ -100,7 +108,7 @@ const DeleteAccountPage = () => {
             <div className="relative">
               <ShieldAlert className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
               <input 
-                type="password"
+                type="password" 
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -133,6 +141,80 @@ const DeleteAccountPage = () => {
           </button>
         </form>
       </div>
+
+      {/* Confirmation Modal */}
+      {showConfirmModal && (
+        <div className="fixed inset-0 z-[600] flex items-center justify-center bg-slate-900/80 p-4 backdrop-blur-md">
+          <div className="w-full max-w-md rounded-[28px] bg-white p-8 shadow-2xl overflow-hidden border border-rose-100">
+            <h3 className="mb-4 text-xl font-black text-rose-600 uppercase italic flex items-center gap-2">
+              <AlertTriangle className="text-rose-500" size={24} />
+              Critical Purge Action
+            </h3>
+            
+            <div className="mb-6 rounded-2xl bg-rose-50 p-6 text-xs font-bold text-rose-700 leading-relaxed">
+              <p className="mb-2">
+                This action is <strong>irreversible</strong>. By confirming, you will permanently purge the identity <strong>{id}</strong> and all associated database records:
+              </p>
+              <ul className="list-disc pl-4 space-y-1">
+                {accountType === 'employee' ? (
+                  <>
+                    <li>Core Employee Profile & Authentication Credentials</li>
+                    <li>Associated Contact Numbers & Addresses</li>
+                    <li>Registered Payment Methods</li>
+                    <li>All Attendance & Production Activity logs</li>
+                    <li>Order execution queues & inventory logs</li>
+                  </>
+                ) : (
+                  <>
+                    <li>Core Customer Profile & Credentials</li>
+                    <li>All Client Placed Orders & Purchases</li>
+                    <li>Associated Addresses & Contact Details</li>
+                    <li>Saved Payment Methods & Cart Items</li>
+                    <li>Product reviews & Screenplate Requests</li>
+                  </>
+                )}
+              </ul>
+            </div>
+
+            <div className="mb-6">
+              <label className="mb-2 block text-[10px] font-black tracking-[2px] text-slate-400 uppercase">
+                Type Account ID <span className="text-rose-600 font-mono">({id})</span> to Confirm:
+              </label>
+              <input 
+                type="text" 
+                value={confirmIdInput}
+                onChange={(e) => setConfirmIdInput(e.target.value)}
+                placeholder="Verify account ID..."
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 font-mono text-sm font-bold text-slate-900 focus:border-rose-500 focus:outline-none"
+              />
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowConfirmModal(false)
+                  setConfirmIdInput('')
+                }}
+                className="flex-1 rounded-xl bg-slate-100 py-3 text-xs font-black tracking-widest text-slate-600 uppercase hover:bg-slate-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={confirmIdInput !== id}
+                onClick={async () => {
+                  setShowConfirmModal(false)
+                  await executeDelete()
+                }}
+                className="flex-1 rounded-xl bg-rose-600 py-3 text-xs font-black tracking-widest text-white uppercase hover:bg-rose-700 transition-colors disabled:opacity-50 disabled:hover:bg-rose-600"
+              >
+                Confirm Purge
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

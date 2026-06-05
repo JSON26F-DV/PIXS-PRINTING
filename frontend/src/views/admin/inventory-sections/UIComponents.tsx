@@ -32,7 +32,7 @@ export const StatCard: React.FC<{
   return (
     <div
       className={cn(
-        'group relative w-full overflow-hidden rounded-[24px] border p-6 transition-all hover:-translate-y-1 md:w-[220px]',
+        'group relative w-full overflow-hidden rounded-[20px] border p-4 transition-all hover:-translate-y-1 md:w-[220px] md:rounded-[24px] md:p-6',
         bgClass,
       )}
     >
@@ -48,7 +48,7 @@ export const StatCard: React.FC<{
         {label}
       </p>
       <div className="relative z-10 flex items-baseline gap-1">
-        <span className="text-2xl font-black tracking-tighter">{value}</span>
+        <span className="text-lg font-black tracking-tighter md:text-2xl">{value}</span>
       </div>
       {isAlert && (
         <div className="relative z-10 mt-3 flex w-fit animate-pulse items-center gap-1 rounded-full bg-rose-500 px-2 py-1 text-[10px] font-black text-white">

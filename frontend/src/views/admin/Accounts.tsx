@@ -114,7 +114,7 @@ const StatCard = ({
   return (
     <div
       className={cn(
-        'group relative overflow-hidden rounded-[24px] p-6 shadow-2xl transition-all hover:-translate-y-1',
+        'group relative overflow-hidden rounded-[24px] p-4 sm:p-6 shadow-2xl transition-all hover:-translate-y-1',
         bgClass,
       )}
     >
@@ -123,20 +123,20 @@ const StatCard = ({
           'absolute -top-4 -right-4 p-4 opacity-10 transition-transform duration-500 group-hover:scale-110 group-hover:-rotate-12',
         )}
       >
-        <Icon className={cn('h-32 w-32')} />
+        <Icon className={cn('h-20 w-20 sm:h-32 sm:w-32')} />
       </div>
       <p
         className={cn(
-          'relative z-10 mb-3 text-xs font-black tracking-[2px] uppercase opacity-70',
+          'relative z-10 mb-1 sm:mb-3 text-[10px] sm:text-xs font-black tracking-[2px] uppercase opacity-70',
         )}
       >
         {title}
       </p>
       <div className="relative z-10 flex items-baseline gap-1">
-        <span className="text-xl font-bold opacity-60">{prefix}</span>
+        <span className="text-base sm:text-xl font-bold opacity-60">{prefix}</span>
         <AnimatedNumber
           value={value}
-          className="text-4xl font-black tracking-tighter"
+          className="text-2xl sm:text-4xl font-black tracking-tighter"
         />
       </div>
     </div>
@@ -155,6 +155,13 @@ const Accounts: React.FC = () => {
   const [roleFilter, setRoleFilter] = useState<string>('all')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null)
+
+  // Mobile layout custom dropdown filter visibility states
+  const [showRoleDrop, setShowRoleDrop] = useState(false)
+  const [showStatusDrop, setShowStatusDrop] = useState(false)
+
+  // Pagination states (10 items max per page, always shown)
+  const [currentPage, setCurrentPage] = useState(1)
 
   useEffect(() => {
     document.title = 'Account Infrastructure | PIXS ERP'
@@ -197,6 +204,18 @@ const Accounts: React.FC = () => {
     })
   }, [users, debouncedSearch, roleFilter, statusFilter])
 
+  // Reset pagination on filter change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [debouncedSearch, roleFilter, statusFilter])
+
+  // Sliced accounts for current page
+  const totalPages = Math.ceil(filteredUsers.length / 10) || 1
+  const paginatedUsers = useMemo(() => {
+    const start = (currentPage - 1) * 10
+    return filteredUsers.slice(start, start + 10)
+  }, [filteredUsers, currentPage])
+
   // --- STATS ---
   const stats = useMemo(() => {
     const admins = users.filter((u) => u.role === 'admin').length
@@ -229,17 +248,19 @@ const Accounts: React.FC = () => {
         <div className="flex flex-wrap items-center gap-3">
           <Link
             to="/admin/account/manage/employee"
-            className="flex items-center gap-2 rounded-3xl border border-blue-200 bg-blue-100 px-6 py-3 text-[11px] font-black tracking-[3px] text-blue-900 uppercase italic transition-all hover:-translate-y-1 hover:bg-blue-200"
+            className="flex items-center justify-center gap-2 rounded-3xl border border-blue-200 bg-blue-100 p-3 sm:px-6 sm:py-3 text-[11px] font-black tracking-[3px] text-blue-900 uppercase italic transition-all hover:-translate-y-1 hover:bg-blue-200"
+            title="Create Employee"
           >
             <UserPlus size={16} />
-            Create Employee
+            <span className="hidden sm:inline">Create Employee</span>
           </Link>
           <Link
             to="/admin/account/manage/customer"
-            className="flex items-center gap-2 rounded-3xl border border-[#5de291]/50 bg-[#75EEA5] px-6 py-3 text-[11px] font-black tracking-[3px] text-slate-900 uppercase italic shadow-xl shadow-[#75EEA5]/20 transition-all hover:-translate-y-1 hover:bg-[#5de291]"
+            className="flex items-center justify-center gap-2 rounded-3xl border border-[#5de291]/50 bg-[#75EEA5] p-3 sm:px-6 sm:py-3 text-[11px] font-black tracking-[3px] text-slate-900 uppercase italic shadow-xl shadow-[#75EEA5]/20 transition-all hover:-translate-y-1 hover:bg-[#5de291]"
+            title="Create Customer"
           >
             <UserPlus size={16} />
-            Create Customer
+            <span className="hidden sm:inline">Create Customer</span>
           </Link>
         </div>
       </header>
@@ -288,9 +309,10 @@ const Accounts: React.FC = () => {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <div className="flex w-full flex-wrap gap-3 md:w-auto">
+        <div className="flex w-full items-center justify-between gap-3 md:w-auto md:justify-start">
+          {/* Role Filter - Desktop SELECT */}
           <select
-            className="cursor-pointer appearance-none rounded-[20px] border border-slate-100 bg-slate-50 px-6 py-4 pr-10 text-[10px] font-black tracking-widest text-slate-600 uppercase italic transition-colors hover:bg-slate-100 focus:outline-none"
+            className="hidden sm:block cursor-pointer appearance-none rounded-[20px] border border-slate-100 bg-slate-50 px-6 py-4 pr-10 text-[10px] font-black tracking-widest text-slate-600 uppercase italic transition-colors hover:bg-slate-100 focus:outline-none"
             value={roleFilter}
             onChange={(e) => setRoleFilter(e.target.value)}
           >
@@ -299,8 +321,46 @@ const Accounts: React.FC = () => {
             <option value="staff">Role: Staff</option>
             <option value="customer">Role: Customer</option>
           </select>
+
+          {/* Role Filter - Mobile CUSTOM DROPDOWN */}
+          <div className="relative block sm:hidden flex-1">
+            <button
+              onClick={() => {
+                setShowRoleDrop(!showRoleDrop)
+                setShowStatusDrop(false)
+              }}
+              className="flex w-full items-center justify-between gap-2 rounded-[20px] border border-slate-100 bg-slate-50 p-4 text-[10px] font-black tracking-widest text-slate-600 uppercase italic hover:bg-slate-100"
+            >
+              <span className="truncate">Role: {roleFilter}</span>
+              <Briefcase size={12} className="shrink-0 text-slate-400" />
+            </button>
+            {showRoleDrop && (
+              <>
+                <div className="fixed inset-0 z-[998]" onClick={() => setShowRoleDrop(false)} />
+                <div className="absolute left-0 right-0 top-full mt-2 z-[999] rounded-2xl border border-slate-100 bg-white p-2 shadow-2xl animate-in fade-in slide-in-from-top-2 duration-200">
+                  {['all', 'admin', 'staff', 'customer'].map((r) => (
+                    <button
+                      key={r}
+                      onClick={() => {
+                        setRoleFilter(r)
+                        setShowRoleDrop(false)
+                      }}
+                      className={cn(
+                        "w-full rounded-xl px-4 py-3 text-left text-[10px] font-black tracking-widest uppercase italic transition-colors",
+                        roleFilter === r ? "bg-slate-900 text-[#75EEA5]" : "text-slate-600 hover:bg-slate-50"
+                      )}
+                    >
+                      {r === 'all' ? 'All Roles' : r}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Status Filter - Desktop SELECT */}
           <select
-            className="cursor-pointer appearance-none rounded-[20px] border border-slate-100 bg-slate-50 px-6 py-4 pr-10 text-[10px] font-black tracking-widest text-slate-600 uppercase italic transition-colors hover:bg-slate-100 focus:outline-none"
+            className="hidden sm:block cursor-pointer appearance-none rounded-[20px] border border-slate-100 bg-slate-50 px-6 py-4 pr-10 text-[10px] font-black tracking-widest text-slate-600 uppercase italic transition-colors hover:bg-slate-100 focus:outline-none"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
           >
@@ -309,13 +369,51 @@ const Accounts: React.FC = () => {
             <option value="suspended">Suspended</option>
             <option value="archived">Archived</option>
           </select>
+
+          {/* Status Filter - Mobile CUSTOM DROPDOWN */}
+          <div className="relative block sm:hidden flex-1">
+            <button
+              onClick={() => {
+                setShowStatusDrop(!showStatusDrop)
+                setShowRoleDrop(false)
+              }}
+              className="flex w-full items-center justify-between gap-2 rounded-[20px] border border-slate-100 bg-slate-50 p-4 text-[10px] font-black tracking-widest text-slate-600 uppercase italic hover:bg-slate-100"
+            >
+              <span className="truncate">Status: {statusFilter}</span>
+              <ShieldCheck size={12} className="shrink-0 text-slate-400" />
+            </button>
+            {showStatusDrop && (
+              <>
+                <div className="fixed inset-0 z-[998]" onClick={() => setShowStatusDrop(false)} />
+                <div className="absolute left-0 right-0 top-full mt-2 z-[999] rounded-2xl border border-slate-100 bg-white p-2 shadow-2xl animate-in fade-in slide-in-from-top-2 duration-200">
+                  {['all', 'active', 'suspended', 'archived'].map((s) => (
+                    <button
+                      key={s}
+                      onClick={() => {
+                        setStatusFilter(s)
+                        setShowStatusDrop(false)
+                      }}
+                      className={cn(
+                        "w-full rounded-xl px-4 py-3 text-left text-[10px] font-black tracking-widest uppercase italic transition-colors",
+                        statusFilter === s ? "bg-slate-900 text-[#75EEA5]" : "text-slate-600 hover:bg-slate-50"
+                      )}
+                    >
+                      {s === 'all' ? 'All Status' : s === 'active' ? 'Active Entry' : s}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+
           <button
             onClick={() => {
               setSearchTerm('')
               setRoleFilter('all')
               setStatusFilter('all')
             }}
-            className="group flex items-center gap-2 rounded-[20px] bg-slate-100 p-4 text-[10px] font-black text-slate-500 uppercase transition-all hover:bg-slate-900 hover:text-white"
+            className="group flex items-center justify-center rounded-[20px] bg-slate-100 p-4 text-[10px] font-black text-slate-500 uppercase transition-all hover:bg-slate-900 hover:text-white"
+            title="Reset Filters"
           >
             <RefreshCw
               size={14}
@@ -358,8 +456,8 @@ const Accounts: React.FC = () => {
                 <tr>
                   <td colSpan={6} className="py-20 text-center text-slate-400">Loading accounts...</td>
                 </tr>
-              ) : filteredUsers.length > 0 ? (
-                filteredUsers.map((user) => (
+              ) : paginatedUsers.length > 0 ? (
+                paginatedUsers.map((user) => (
                   <tr
                     key={user.id}
                     onClick={() => {
@@ -406,7 +504,7 @@ const Accounts: React.FC = () => {
                     <td className="hidden px-6 py-6 md:table-cell">
                       <div className="flex items-center gap-2">
                         <div
-                          className={cn(
+                           className={cn(
                             'rounded-[10px] border border-slate-100 bg-white p-2 shadow-sm',
                             user.role === 'admin'
                               ? 'text-slate-900'
@@ -496,6 +594,43 @@ const Accounts: React.FC = () => {
               )}
             </tbody>
           </table>
+        </div>
+      </div>
+
+      {/* Pagination Controls */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 rounded-[24px] border border-slate-100 bg-white p-6 shadow-xl shadow-slate-200/40">
+        <span className="font-mono text-[10px] font-black tracking-[2px] text-slate-400 uppercase text-center sm:text-left">
+          Showing {filteredUsers.length === 0 ? 0 : (currentPage - 1) * 10 + 1} - {Math.min(currentPage * 10, filteredUsers.length)} of {filteredUsers.length} entries
+        </span>
+        <div className="flex flex-wrap items-center justify-center gap-2">
+          <button
+            onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+            disabled={currentPage === 1}
+            className="rounded-xl bg-slate-50 px-4 py-2.5 text-[10px] font-black tracking-widest text-slate-600 uppercase hover:bg-slate-100 disabled:opacity-40 disabled:hover:bg-slate-50 transition-all focus:outline-none"
+          >
+            Prev
+          </button>
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+            <button
+              key={p}
+              onClick={() => setCurrentPage(p)}
+              className={cn(
+                "h-9 w-9 rounded-xl text-[10px] font-black transition-all focus:outline-none",
+                currentPage === p
+                  ? "bg-slate-900 text-[#75EEA5] shadow-lg shadow-slate-900/20"
+                  : "bg-slate-50 text-slate-600 hover:bg-slate-100"
+              )}
+            >
+              {p}
+            </button>
+          ))}
+          <button
+            onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+            disabled={currentPage === totalPages || totalPages === 0}
+            className="rounded-xl bg-slate-50 px-4 py-2.5 text-[10px] font-black tracking-widest text-slate-600 uppercase hover:bg-slate-100 disabled:opacity-40 disabled:hover:bg-slate-50 transition-all focus:outline-none"
+          >
+            Next
+          </button>
         </div>
       </div>
       {/* Floating Add Order Button */}

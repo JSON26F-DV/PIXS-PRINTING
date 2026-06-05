@@ -21,6 +21,7 @@ import {
   Users,
   CheckCircle2,
   XCircle,
+  X,
   AlertCircle,
   Search,
   Filter,
@@ -35,6 +36,7 @@ import { PermissionWrapper } from '../../components/guards/PermissionWrapper'
 import axiosInstance from '../../lib/axiosInstance'
 import axios from 'axios'
 import { toast } from 'react-hot-toast'
+import { m, AnimatePresence } from 'framer-motion'
 
 const cn = (...classes: (string | boolean | undefined)[]) =>
   classes.filter(Boolean).join(' ')
@@ -85,6 +87,11 @@ const GeneralDashboard: React.FC = () => {
   const [loyaltyFilter, setLoyaltyFilter] = useState<number>(10)
   const [pendingPage, setPendingPage] = useState(1)
   const [loyalistPage, setLoyalistPage] = useState(1)
+  const [mobileHistoricalModal, setMobileHistoricalModal] = useState<ItemBase | null>(null)
+  const [showRevenueDrop, setShowRevenueDrop] = useState(false)
+  const [showExpenditureDrop, setShowExpenditureDrop] = useState(false)
+  const [showLoyaltyDrop, setShowLoyaltyDrop] = useState(false)
+  const [showQueueSortDrop, setShowQueueSortDrop] = useState(false)
 
   const [data, setData] = useState<DashboardData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -297,18 +304,20 @@ const GeneralDashboard: React.FC = () => {
 
   return (
     <div className="animate-in fade-in mx-auto max-w-[1440px] space-y-8 px-4 pb-16 duration-500 lg:px-8">
-      <header className="flex flex-col pt-6">
-        <h1 className="text-3xl font-black tracking-tighter text-slate-900">
-          Operations Dashboard
+      <header className="flex flex-col pt-4 md:pt-6">
+        <h1 className="text-xl md:text-3xl font-black tracking-tighter text-slate-900 uppercase italic">
+          <span className="hidden md:inline">Operations Dashboard</span>
+          <span className="md:hidden">Dashboard</span>
         </h1>
-        <p className="mt-1 text-sm font-medium text-slate-500">
-          Real-time overview of business metrics and workflow.
+        <p className="mt-0.5 md:mt-1 text-xs md:text-sm font-medium text-slate-500 uppercase tracking-wider">
+          <span className="hidden md:inline">Real-time overview of business metrics and workflow.</span>
+          <span className="md:hidden">Ops Overview</span>
         </p>
       </header>
 
       <section className={cn(
-        "grid grid-cols-1 gap-6 md:grid-cols-2",
-        user?.role === 'admin' ? "lg:grid-cols-4" : "lg:grid-cols-2"
+        "grid grid-cols-2 gap-3 sm:gap-6",
+        user?.role === 'admin' ? "md:grid-cols-2 lg:grid-cols-4" : "md:grid-cols-2 lg:grid-cols-2"
       )}>
         {user?.role === 'admin' && (
           <>
@@ -350,17 +359,18 @@ const GeneralDashboard: React.FC = () => {
           {user?.role === 'admin' && (
             <>
               {/* Revenue Stream Section */}
-              <div className="flex flex-col rounded-[32px] border border-slate-100 bg-white p-8 shadow-lg shadow-slate-200/50">
-                <div className="mb-8 flex items-center justify-between">
+              <div className="flex flex-col min-w-0 rounded-2xl lg:rounded-[32px] border border-slate-100 bg-white p-4 sm:p-8 shadow-lg shadow-slate-200/50">
+                <div className="mb-6 sm:mb-8 flex items-center justify-between">
                   <div>
-                    <h3 className="text-lg font-bold text-slate-900">
+                    <h3 className="text-base sm:text-lg font-bold text-slate-900">
                       Revenue Stream Analysis
                     </h3>
                     <p className="mt-1 text-[10px] font-black tracking-[2px] text-blue-500 uppercase">
                       Cash Inflow Matrix
                     </p>
                   </div>
-                  <div className="flex gap-1 rounded-xl border border-slate-100 bg-slate-50 p-1">
+                  {/* Desktop segmented filters */}
+                  <div className="hidden sm:flex gap-1 rounded-xl border border-slate-100 bg-slate-50 p-1">
                     {(['week', 'month', 'year'] as const).map((f) => (
                       <button
                         key={f}
@@ -376,12 +386,47 @@ const GeneralDashboard: React.FC = () => {
                       </button>
                     ))}
                   </div>
+
+                  {/* Mobile icon filter */}
+                  <div className="sm:hidden relative">
+                    <button
+                      onClick={() => setShowRevenueDrop(!showRevenueDrop)}
+                      className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white hover:bg-slate-50 transition-colors shadow-sm"
+                      title="Filter Timeframe"
+                    >
+                      <Filter size={14} className="text-slate-600" />
+                    </button>
+                    {showRevenueDrop && (
+                      <>
+                        <div className="fixed inset-0 z-40" onClick={() => setShowRevenueDrop(false)} />
+                        <div className="absolute right-0 mt-2 w-32 rounded-xl border border-slate-100 bg-white p-1.5 shadow-xl z-[999] animate-in fade-in slide-in-from-top-2 duration-200">
+                          {(['week', 'month', 'year'] as const).map((f) => (
+                            <button
+                              key={f}
+                              onClick={() => {
+                                setRevenueFilter(f)
+                                setShowRevenueDrop(false)
+                              }}
+                              className={cn(
+                                'w-full rounded-lg px-3 py-2 text-left text-[10px] font-black tracking-widest uppercase transition-all',
+                                revenueFilter === f
+                                  ? 'bg-slate-900 text-white'
+                                  : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900',
+                              )}
+                            >
+                              {f}
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
-                <div className="h-[320px] w-full">
+                <div className="h-[220px] sm:h-[320px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart
                       data={revenueChartData}
-                      margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                      margin={{ top: 10, right: 10, left: -10, bottom: 0 }}
                     >
                       <defs>
                         <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
@@ -435,17 +480,18 @@ const GeneralDashboard: React.FC = () => {
               </div>
 
               {/* Expenditure Section */}
-              <div className="flex flex-col rounded-[32px] border border-slate-100 bg-white p-8 shadow-lg shadow-slate-200/50">
-                <div className="mb-8 flex items-center justify-between">
+              <div className="flex flex-col min-w-0 rounded-2xl lg:rounded-[32px] border border-slate-100 bg-white p-4 sm:p-8 shadow-lg shadow-slate-200/50">
+                <div className="mb-6 sm:mb-8 flex items-center justify-between">
                   <div>
-                    <h3 className="text-lg font-bold text-slate-900">
+                    <h3 className="text-base sm:text-lg font-bold text-slate-900">
                       Expenditure Analysis
                     </h3>
                     <p className="mt-1 text-[10px] font-black tracking-[2px] text-rose-500 uppercase">
                       Operational Outflow Matrix
                     </p>
                   </div>
-                  <div className="flex gap-1 rounded-xl border border-slate-100 bg-slate-50 p-1">
+                  {/* Desktop segmented filters */}
+                  <div className="hidden sm:flex gap-1 rounded-xl border border-slate-100 bg-slate-50 p-1">
                     {(['week', 'month', 'year'] as const).map((f) => (
                       <button
                         key={f}
@@ -461,12 +507,47 @@ const GeneralDashboard: React.FC = () => {
                       </button>
                     ))}
                   </div>
+
+                  {/* Mobile icon filter */}
+                  <div className="sm:hidden relative">
+                    <button
+                      onClick={() => setShowExpenditureDrop(!showExpenditureDrop)}
+                      className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white hover:bg-slate-50 transition-colors shadow-sm"
+                      title="Filter Timeframe"
+                    >
+                      <Filter size={14} className="text-slate-600" />
+                    </button>
+                    {showExpenditureDrop && (
+                      <>
+                        <div className="fixed inset-0 z-40" onClick={() => setShowExpenditureDrop(false)} />
+                        <div className="absolute right-0 mt-2 w-32 rounded-xl border border-slate-100 bg-white p-1.5 shadow-xl z-[999] animate-in fade-in slide-in-from-top-2 duration-200">
+                          {(['week', 'month', 'year'] as const).map((f) => (
+                            <button
+                              key={f}
+                              onClick={() => {
+                                setExpenditureFilter(f)
+                                setShowExpenditureDrop(false)
+                              }}
+                              className={cn(
+                                'w-full rounded-lg px-3 py-2 text-left text-[10px] font-black tracking-widest uppercase transition-all',
+                                expenditureFilter === f
+                                  ? 'bg-rose-600 text-white'
+                                  : 'text-slate-500 hover:bg-rose-50 hover:text-rose-600',
+                              )}
+                            >
+                              {f}
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
-                <div className="h-[320px] w-full">
+                <div className="h-[220px] sm:h-[320px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart
                       data={expenditureChartData}
-                      margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                      margin={{ top: 10, right: 10, left: -10, bottom: 0 }}
                     >
                       <defs>
                         <linearGradient
@@ -527,36 +608,38 @@ const GeneralDashboard: React.FC = () => {
             </>
           )}
 
-          <div className="relative flex h-[700px] flex-col overflow-hidden rounded-[32px] border border-slate-100 bg-white p-8 shadow-lg shadow-slate-200/50">
+          <div className="relative flex h-[700px] flex-col overflow-hidden min-w-0 rounded-2xl lg:rounded-[32px] border border-slate-100 bg-white p-4 sm:p-8 shadow-lg shadow-slate-200/50">
             <div className="pointer-events-none absolute top-0 right-0 p-8 opacity-[0.03]">
               <AlertCircle className="h-48 w-48 text-slate-900" />
             </div>
 
-            <div className="relative z-10 mb-8 flex flex-col justify-between gap-4 md:flex-row md:items-center">
+            <div className="relative z-10 mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h3 className="flex items-center gap-3 text-lg font-bold text-slate-900">
-                  <span className="h-3 w-3 animate-pulse rounded-full bg-amber-500 shadow-[0_0_8px_#f59e0b]"></span>
+                <h3 className="flex items-center gap-2.5 text-base sm:text-lg font-bold text-slate-900">
+                  <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-amber-500 shadow-[0_0_8px_#f59e0b]"></span>
                   Pending Operations Queue
                 </h3>
-                <p className="mt-1 text-sm font-medium text-slate-500">
+                <p className="mt-0.5 text-xs sm:text-sm font-medium text-slate-500">
                   Review orders and screenplate requests
                 </p>
               </div>
-              <div className="flex items-center gap-3">
-                <div className="relative">
+              <div className="flex items-center justify-between sm:justify-start gap-2 w-full sm:w-auto">
+                <div className="relative flex-1 sm:flex-none">
                   <Search
                     className="absolute top-1/2 left-3 -translate-y-1/2 text-slate-400"
-                    size={16}
+                    size={14}
                   />
                   <input
                     type="text"
                     placeholder="Search queue..."
                     value={queueSearch}
                     onChange={(e) => setQueueSearch(e.target.value)}
-                    className="w-48 rounded-xl border border-slate-100 bg-slate-50 py-2.5 pr-4 pl-10 text-xs font-bold transition-all focus:ring-2 focus:ring-blue-500/20 focus:outline-none lg:w-64"
+                    className="w-full sm:w-48 rounded-xl border border-slate-100 bg-slate-50 py-2 pr-3 pl-9 text-xs font-bold transition-all focus:ring-2 focus:ring-blue-500/20 focus:outline-none lg:w-64"
                   />
                 </div>
-                <div className="group relative">
+                
+                {/* Desktop Sort Select */}
+                <div className="hidden sm:block group relative">
                   <select
                     value={queueSort}
                     onChange={(e) =>
@@ -569,7 +652,7 @@ const GeneralDashboard: React.FC = () => {
                           | 'name-asc',
                       )
                     }
-                    className="cursor-pointer appearance-none rounded-xl border border-slate-100 bg-slate-50 py-2.5 pr-8 pl-9 text-xs font-bold transition-colors hover:bg-slate-100 focus:outline-none"
+                    className="cursor-pointer appearance-none rounded-xl border border-slate-100 bg-slate-50 py-2 pr-8 pl-9 text-xs font-bold transition-colors hover:bg-slate-100 focus:outline-none"
                   >
                     <option value="date-desc">Newest First</option>
                     <option value="date-asc">Oldest First</option>
@@ -585,6 +668,47 @@ const GeneralDashboard: React.FC = () => {
                     className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-slate-400"
                     size={12}
                   />
+                </div>
+
+                {/* Mobile Sort Icon Only Dropdown */}
+                <div className="sm:hidden relative">
+                  <button
+                    onClick={() => setShowQueueSortDrop(!showQueueSortDrop)}
+                    className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white hover:bg-slate-50 transition-colors shadow-sm"
+                    title="Sort Queue"
+                  >
+                    <ArrowUpDown size={14} className="text-slate-600" />
+                  </button>
+                  {showQueueSortDrop && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setShowQueueSortDrop(false)} />
+                      <div className="absolute right-0 mt-2 w-44 rounded-xl border border-slate-100 bg-white p-1.5 shadow-xl z-[999] animate-in fade-in slide-in-from-top-2 duration-200">
+                        {([
+                          { value: 'date-desc', label: 'Newest First' },
+                          { value: 'date-asc', label: 'Oldest First' },
+                          { value: 'total-desc', label: 'Highest Price' },
+                          { value: 'total-asc', label: 'Lowest Price' },
+                          { value: 'name-asc', label: 'A-Z Name' },
+                        ] as const).map((opt) => (
+                          <button
+                            key={opt.value}
+                            onClick={() => {
+                              setQueueSort(opt.value)
+                              setShowQueueSortDrop(false)
+                            }}
+                            className={cn(
+                              'w-full rounded-lg px-3 py-2 text-left text-[10px] font-black tracking-widest uppercase transition-all',
+                              queueSort === opt.value
+                                ? 'bg-slate-900 text-white'
+                                : 'text-slate-500 hover:bg-slate-50 hover:text-slate-950',
+                            )}
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
@@ -603,7 +727,8 @@ const GeneralDashboard: React.FC = () => {
                     key={item.id}
                     className="flex flex-col justify-between gap-4 rounded-[20px] border border-slate-200 bg-white p-5 transition-all hover:border-blue-300 hover:shadow-md md:flex-row md:items-center"
                   >
-                    <div className="flex flex-col">
+                    {/* Desktop Layout Details */}
+                    <div className="hidden md:flex flex-col">
                       <div className="mb-1 flex items-center gap-2">
                         <span className="text-[11px] font-black tracking-widest text-slate-400 uppercase">
                           {item.id}
@@ -636,17 +761,56 @@ const GeneralDashboard: React.FC = () => {
                         </span>
                       </p>
                     </div>
-                    <div className="flex shrink-0 items-center gap-3">
+
+                    {/* Mobile Layout Details (flex-column data, badge on right) */}
+                    <div className="flex md:hidden flex-col gap-3 w-full">
+                      {/* Top Row: ID & Type on left, Status Badge on right */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[11px] font-black tracking-widest text-slate-400 uppercase">
+                            {item.id}
+                          </span>
+                          <span
+                            className={cn(
+                              'tracking-widest rounded px-2 py-0.5 text-[9px] font-black uppercase',
+                              item.type === 'Order'
+                                ? 'bg-blue-50 text-blue-600'
+                                : 'bg-purple-50 text-purple-600',
+                            )}
+                          >
+                            {item.type}
+                          </span>
+                        </div>
+                        <span className="rounded-lg border border-amber-100 bg-amber-50 px-2.5 py-1 text-[10px] font-black uppercase text-amber-600 tracking-wider">
+                          {item.status}
+                        </span>
+                      </div>
+
+                      {/* Flex Column Data */}
+                      <div className="flex flex-col gap-1">
+                        <p className="text-base font-bold text-slate-900">
+                          {item.customerName}
+                        </p>
+                        <p className="text-xs font-semibold text-slate-500 italic">
+                          "{item.itemName}"
+                        </p>
+                        <p className="text-sm font-black text-slate-950 mt-1">
+                          ₱{item.total.toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex shrink-0 items-center justify-end md:justify-start gap-2">
                       <PermissionWrapper
                         allowedRoles={['admin']}
                         hideIfNoAccess
                       >
                         <button
                           onClick={() => handleStatusUpdate(item.id, 'CANCELLED')}
-                          className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-5 py-3 text-xs font-bold text-slate-600 transition-colors hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600"
+                          className="flex items-center justify-center rounded-xl border border-slate-200 bg-slate-50 p-3 sm:px-5 sm:py-3 text-xs font-bold text-slate-600 transition-colors hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600 gap-2"
+                          title="Reject"
                         >
                           <XCircle size={16} />
-                          REJECT
+                          <span className="hidden sm:inline">REJECT</span>
                         </button>
                       </PermissionWrapper>
 
@@ -656,10 +820,11 @@ const GeneralDashboard: React.FC = () => {
                       >
                         <button
                           onClick={() => handleStatusUpdate(item.id, 'PROCESSING')}
-                          className="flex items-center gap-2 rounded-xl border border-transparent bg-slate-900 px-6 py-3 text-xs font-bold text-[#75EEA5] shadow-lg transition-all hover:-translate-y-0.5 hover:bg-slate-800"
+                          className="flex items-center justify-center rounded-xl border border-transparent bg-slate-900 p-3 sm:px-6 sm:py-3 text-xs font-bold text-[#75EEA5] shadow-lg transition-all hover:-translate-y-0.5 hover:bg-slate-800 gap-2"
+                          title="Confirm"
                         >
                           <CheckCircle2 size={16} />
-                          CONFIRM
+                          <span className="hidden sm:inline">CONFIRM</span>
                         </button>
                       </PermissionWrapper>
 
@@ -713,7 +878,7 @@ const GeneralDashboard: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex flex-col rounded-[32px] border border-slate-100 bg-white p-8 shadow-lg shadow-slate-200/50">
+          <div className="flex flex-col min-w-0 rounded-2xl lg:rounded-[32px] border border-slate-100 bg-white p-4 sm:p-8 shadow-lg shadow-slate-200/50">
             <div className="mb-8 flex items-center justify-between">
               <div>
                 <h3 className="text-lg font-bold text-slate-900">
@@ -723,7 +888,8 @@ const GeneralDashboard: React.FC = () => {
                   Customer volume Analysis
                 </p>
               </div>
-              <div className="flex gap-1 rounded-xl border border-slate-100 bg-slate-50 p-1">
+              {/* Desktop segmented filters */}
+              <div className="hidden sm:flex gap-1 rounded-xl border border-slate-100 bg-slate-50 p-1">
                 {([10, 20, 50] as const).map((v) => (
                   <button
                     key={v}
@@ -738,6 +904,41 @@ const GeneralDashboard: React.FC = () => {
                     Top {v}
                   </button>
                 ))}
+              </div>
+
+              {/* Mobile icon filter */}
+              <div className="sm:hidden relative">
+                <button
+                  onClick={() => setShowLoyaltyDrop(!showLoyaltyDrop)}
+                  className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white hover:bg-slate-50 transition-colors shadow-sm"
+                  title="Filter Count"
+                >
+                  <Filter size={14} className="text-slate-600" />
+                </button>
+                {showLoyaltyDrop && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setShowLoyaltyDrop(false)} />
+                    <div className="absolute right-0 mt-2 w-32 rounded-xl border border-slate-100 bg-white p-1.5 shadow-xl z-[999] animate-in fade-in slide-in-from-top-2 duration-200">
+                      {([10, 20, 50] as const).map((v) => (
+                        <button
+                          key={v}
+                          onClick={() => {
+                            setLoyaltyFilter(v)
+                            setShowLoyaltyDrop(false)
+                          }}
+                          className={cn(
+                            'w-full rounded-lg px-3 py-2 text-left text-[10px] font-black tracking-widest uppercase transition-all',
+                            loyaltyFilter === v
+                              ? 'bg-slate-900 text-white'
+                              : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900',
+                          )}
+                        >
+                          Top {v}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 
@@ -795,7 +996,7 @@ const GeneralDashboard: React.FC = () => {
         </div>
 
         <div className="flex flex-col gap-6 lg:col-span-4 lg:gap-8">
-          <div className="flex flex-col rounded-[32px] border border-slate-100 bg-white p-8 shadow-lg shadow-slate-200/50">
+          <div className="flex flex-col min-w-0 rounded-2xl lg:rounded-[32px] border border-slate-100 bg-white p-4 sm:p-8 shadow-lg shadow-slate-200/50">
             <h3 className="mb-8 text-lg font-bold text-slate-900">
               Order Status Distribution
             </h3>
@@ -854,7 +1055,7 @@ const GeneralDashboard: React.FC = () => {
             </div>
           </div>
 
-          <div className="relative flex flex-1 flex-col overflow-hidden rounded-[32px] border border-slate-800 bg-slate-900 p-8 shadow-2xl">
+          <div className="relative flex flex-1 flex-col overflow-hidden min-w-0 rounded-2xl lg:rounded-[32px] border border-slate-800 bg-slate-900 p-4 sm:p-8 shadow-2xl">
             <div className="absolute top-0 right-0 p-8 opacity-5">
               <Crown className="h-48 w-48 text-white" />
             </div>
@@ -954,8 +1155,8 @@ const GeneralDashboard: React.FC = () => {
         </div>
       </div>
 
-      <section className="mt-8 overflow-hidden rounded-[32px] border border-slate-100 bg-white shadow-lg shadow-slate-200/50">
-        <div className="flex items-center justify-between border-b border-slate-100 bg-white p-8">
+      <section className="mt-8 overflow-hidden min-w-0 rounded-2xl lg:rounded-[32px] border border-slate-100 bg-white shadow-lg shadow-slate-200/50">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 bg-white p-4 sm:p-6 lg:p-8">
           <div>
             <h3 className="text-lg font-bold text-slate-900">
               Historical Registry
@@ -968,7 +1169,9 @@ const GeneralDashboard: React.FC = () => {
             Download Audit
           </button>
         </div>
-        <div className="overflow-x-auto">
+        
+        {/* Desktop Table View */}
+        <div className="hidden lg:block overflow-x-auto">
           <table className="w-full border-collapse text-left">
             <thead>
               <tr className="border-b border-slate-100 bg-slate-50/50">
@@ -1039,7 +1242,191 @@ const GeneralDashboard: React.FC = () => {
             </tbody>
           </table>
         </div>
+
+        {/* Mobile Cards View */}
+        <div className="block lg:hidden divide-y divide-slate-100">
+          {data.recentOrders.slice(0, 10).map((txn) => (
+            <div
+              key={txn.id}
+              onClick={() => setMobileHistoricalModal(txn)}
+              className="p-5 cursor-pointer hover:bg-slate-50/85 active:bg-slate-100/85 transition-colors space-y-3"
+            >
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="font-bold text-slate-900 leading-snug">
+                    {txn.customerName}
+                  </p>
+                  <p className="text-[10px] font-bold tracking-widest text-slate-400 uppercase mt-0.5">
+                    {txn.type}
+                  </p>
+                </div>
+                <p className="font-black text-slate-900 text-base">
+                  ₱{txn.total.toLocaleString()}
+                </p>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span
+                  className={cn(
+                    'rounded-lg border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider',
+                    txn.status === 'COMPLETED' || txn.status === 'DELIVERED' || txn.status === 'SHIPPED'
+                      ? 'border-emerald-100 bg-emerald-50/60 text-emerald-600'
+                      : txn.status === 'PENDING'
+                        ? 'border-amber-100 bg-amber-50/60 text-amber-600'
+                        : txn.status === 'PROCESSING'
+                          ? 'border-blue-100 bg-blue-50/60 text-blue-600'
+                          : txn.status === 'CANCELLED'
+                            ? 'border-rose-100 bg-rose-50/60 text-rose-600'
+                            : 'border-slate-100 bg-slate-50 text-slate-500',
+                  )}
+                >
+                  {txn.status || 'UNKNOWN'}
+                </span>
+
+                <div className="text-right">
+                  <p className="text-[10px] font-medium text-slate-400">
+                    {new Date(txn.createdAt).toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric',
+                    })}
+                  </p>
+                  <p className="font-mono text-[9px] font-semibold text-slate-400/80 mt-0.5">
+                    {txn.id}
+                  </p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       </section>
+
+      {/* Mobile Historical Registry Modal (Bottom Sheet) */}
+      <AnimatePresence>
+        {mobileHistoricalModal && (
+          <div className="fixed inset-0 z-[150] flex items-end justify-center lg:hidden">
+            {/* Backdrop */}
+            <m.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+              onClick={() => setMobileHistoricalModal(null)}
+            />
+            {/* Bottom Sheet Drawer */}
+            <m.div
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 220 }}
+              className="relative w-full max-h-[85vh] overflow-hidden rounded-t-[32px] bg-white shadow-2xl flex flex-col z-10 border-t border-slate-100"
+            >
+              {/* Drag Handle Indicator */}
+              <div className="flex justify-center py-3">
+                <div className="w-12 h-1.5 rounded-full bg-slate-200" />
+              </div>
+
+              {/* Header */}
+              <div className="px-6 pb-4 border-b border-slate-50 flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-black text-slate-900 uppercase italic">
+                    Audit Log Details
+                  </h3>
+                  <p className="text-[10px] font-bold text-slate-400 font-mono mt-0.5">
+                    Trace ID: {mobileHistoricalModal.id}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setMobileHistoricalModal(null)}
+                  className="rounded-full bg-slate-100 p-2 text-slate-400 transition-colors hover:bg-slate-200 active:bg-slate-300"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* Content */}
+              <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider block">Customer Entity</span>
+                    <span className="text-sm font-bold text-slate-900 block mt-1">
+                      {mobileHistoricalModal.customerName}
+                    </span>
+                  </div>
+                  <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider block">Transaction Type</span>
+                    <span className="text-sm font-bold text-slate-900 block mt-1">
+                      {mobileHistoricalModal.type}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider block">Value Amount</span>
+                    <span className="text-lg font-black text-slate-900 block mt-0.5">
+                      ₱{mobileHistoricalModal.total.toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider block">Status Node</span>
+                    <div className="mt-1">
+                      <span
+                        className={cn(
+                          'inline-block rounded-lg border px-3 py-1 text-[10px] font-bold uppercase tracking-wider',
+                          mobileHistoricalModal.status === 'COMPLETED' || mobileHistoricalModal.status === 'DELIVERED' || mobileHistoricalModal.status === 'SHIPPED'
+                            ? 'border-emerald-100 bg-emerald-50 text-emerald-600'
+                            : mobileHistoricalModal.status === 'PENDING'
+                              ? 'border-amber-100 bg-amber-50 text-amber-600'
+                              : mobileHistoricalModal.status === 'PROCESSING'
+                                ? 'border-blue-100 bg-blue-50 text-blue-600'
+                                : mobileHistoricalModal.status === 'CANCELLED'
+                                  ? 'border-rose-100 bg-rose-50 text-rose-600'
+                                  : 'border-slate-100 bg-slate-50 text-slate-500',
+                        )}
+                      >
+                        {mobileHistoricalModal.status || 'UNKNOWN'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider block">Item Details / Scope</span>
+                  <span className="text-sm font-semibold text-slate-700 block mt-1">
+                    {mobileHistoricalModal.itemName || 'No item description available'}
+                  </span>
+                </div>
+
+                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider block">Timestamp</span>
+                  <span className="text-sm font-semibold text-slate-700 block mt-1">
+                    {new Date(mobileHistoricalModal.createdAt).toLocaleDateString('en-US', {
+                      weekday: 'long',
+                      month: 'long',
+                      day: 'numeric',
+                      year: 'numeric',
+                    })} at {new Date(mobileHistoricalModal.createdAt).toLocaleTimeString('en-US', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </span>
+                </div>
+              </div>
+
+              {/* Action / Dismiss Button */}
+              <div className="p-6 border-t border-slate-50 bg-slate-50/50 flex gap-3">
+                <button
+                  onClick={() => setMobileHistoricalModal(null)}
+                  className="w-full rounded-2xl bg-slate-900 py-4 text-xs font-black tracking-widest text-white uppercase italic transition-all hover:bg-slate-800 active:scale-[0.98]"
+                >
+                  Close Registry Details
+                </button>
+              </div>
+            </m.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

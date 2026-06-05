@@ -81,4 +81,10 @@ class Employee extends Authenticatable
     {
         return $this->hasMany(EmployeeAddress::class);
     }
+
+    public function paymentMethods(): HasMany
+    {
+        return $this->hasMany(EmployeePaymentMethod::class);
+    }
 }
+

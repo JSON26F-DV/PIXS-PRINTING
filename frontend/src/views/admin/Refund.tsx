@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { m, AnimatePresence } from 'framer-motion'
 import {
   Plus, Search, Eye, X, Check, 
   CreditCard,
   ChevronDown, ChevronLeft, ChevronRight, Copy, User as UserIcon,
-  CheckCircle2, Landmark, Wallet, Ticket
+  CheckCircle2, Landmark, Wallet, Ticket, ListFilter
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { format } from 'date-fns'
@@ -64,6 +64,53 @@ interface IOrder {
   status: string
   created_at: string
   product_names: string[]
+}
+
+const FilterDropdown: React.FC<{
+  icon: React.ReactNode
+  value: string
+  options: { value: string; label: string }[]
+  onChange: (val: string) => void
+}> = ({ icon, value, options, onChange }) => {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-slate-500 transition-colors hover:border-slate-300 hover:text-slate-700"
+      >
+        {icon}
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full mt-1 z-999 min-w-[150px] max-sm:max-w-[90vw] overflow-y-auto max-h-[300px] rounded-xl border border-slate-100 bg-white py-1 shadow-2xl">
+          {options.map(opt => (
+            <button
+              key={opt.value}
+              onClick={() => { onChange(opt.value); setOpen(false) }}
+              className={`w-full px-3 py-2 text-left text-[10px] font-black tracking-wider uppercase transition-colors ${
+                value === opt.value
+                  ? 'text-rose-600 bg-rose-50'
+                  : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
 }
 
 const RefundPage: React.FC = () => {
@@ -235,7 +282,7 @@ const RefundPage: React.FC = () => {
         payment_id: formData.payment_id || null,
         generate_payment_code: formData.generate_payment_code,
         amount: parseFloat(formData.amount),
-        message: formData.message || null,
+        message: formData.message || 'Refund processed by admin',
       })
       
       toast.success('Refund created successfully')
@@ -276,10 +323,10 @@ const RefundPage: React.FC = () => {
         </div>
         <button
           onClick={() => setShowCreateModal(true)}
-          className="flex items-center gap-2 rounded-xl bg-rose-600 px-6 py-3 font-black text-white shadow-lg transition-transform hover:scale-105 active:scale-95"
+          className="flex items-center gap-2 rounded-xl bg-rose-600 px-4 py-3 font-black text-white shadow-lg transition-transform hover:scale-105 active:scale-95 sm:px-6"
         >
           <Plus size={20} />
-          Create Refund
+          <span className="hidden sm:inline">Create Refund</span>
         </button>
       </header>
 
@@ -295,16 +342,31 @@ const RefundPage: React.FC = () => {
             className="w-full rounded-xl border border-slate-200 py-3 pl-12 pr-4 text-sm"
           />
         </div>
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="rounded-xl border border-slate-200 px-4 py-3 text-sm"
-        >
-          <option value="all">All Status</option>
-          <option value="pending">Pending</option>
-          <option value="completed">Completed</option>
-          <option value="cancelled">Cancelled</option>
-        </select>
+        <div className="hidden sm:block">
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="rounded-xl border border-slate-200 px-4 py-3 text-sm"
+          >
+            <option value="all">All Status</option>
+            <option value="pending">Pending</option>
+            <option value="completed">Completed</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+        </div>
+        <div className="sm:hidden">
+          <FilterDropdown
+            icon={<><ListFilter size={18} /><ChevronDown size={14} /></>}
+            value={statusFilter}
+            options={[
+              { value: 'all', label: 'All Status' },
+              { value: 'pending', label: 'Pending' },
+              { value: 'completed', label: 'Completed' },
+              { value: 'cancelled', label: 'Cancelled' },
+            ]}
+            onChange={(val) => setStatusFilter(val)}
+          />
+        </div>
       </div>
 
       {/* Mobile Card Layout */}
@@ -317,28 +379,31 @@ const RefundPage: React.FC = () => {
           <div className="col-span-2 py-12 text-center text-slate-400">No refunds found</div>
         ) : (
           paginatedRefunds.map((refund) => (
-            <div key={refund.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-              <div className="mb-3 flex items-start justify-between gap-2">
-                <p className="font-mono text-[10px] font-semibold text-slate-500 leading-tight break-all">{refund.id}</p>
+            <div
+              key={refund.id}
+              onClick={() => { setSelectedRefund(refund); setShowViewModal(true) }}
+              className="cursor-pointer rounded-2xl border border-slate-200 bg-white p-4 shadow-sm active:scale-[0.97] transition-all"
+            >
+              <div className="mb-2 flex items-start justify-between gap-2">
+                <p className="font-mono text-[9px] font-semibold text-slate-400 leading-tight truncate">{refund.id}</p>
                 <span className={clsx(
-                  'shrink-0 rounded-md border px-2 py-0.5 text-[9px] font-bold uppercase',
+                  'shrink-0 rounded-md border px-1.5 py-0.5 text-[8px] font-bold uppercase',
                   refund.status === 'completed' && 'border-emerald-100 bg-emerald-50 text-emerald-600',
                   refund.status === 'pending' && 'border-amber-100 bg-amber-50 text-amber-600',
                   refund.status === 'cancelled' && 'border-slate-200 bg-slate-100 text-slate-500',
                 )}>{refund.status}</span>
               </div>
-              <p className="text-sm font-bold text-slate-900 truncate">{refund.customer_first_name} {refund.customer_last_name}</p>
-              <p className="mt-1 text-[10px] text-slate-500">
-                {refund.order_id || '-'} &middot; {format(new Date(refund.created_at), 'MMM d, yyyy')}
+              <p className="text-xs font-bold text-slate-900 truncate">{refund.customer_first_name} {refund.customer_last_name}</p>
+              <p className="mt-1 text-[9px] text-slate-400">
+                {format(new Date(refund.created_at), 'MMM d, yyyy')}
               </p>
               <div className="mt-3 flex items-center justify-between">
-                <span className="font-black text-rose-600">₱{refund.amount.toLocaleString()}</span>
-                <div className="flex items-center gap-1">
-                  <button onClick={() => { setSelectedRefund(refund); setShowViewModal(true) }} className="rounded-lg p-1.5 hover:bg-slate-100"><Eye size={14} /></button>
+                <span className="text-sm font-black text-rose-600">₱{refund.amount.toLocaleString()}</span>
+                <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                   {refund.status === 'pending' && (
                     <>
-                      <button onClick={() => handleUpdateStatus(refund.id, 'completed')} className="rounded-lg p-1.5 text-emerald-600 hover:bg-emerald-50"><Check size={14} /></button>
-                      <button onClick={() => handleUpdateStatus(refund.id, 'cancelled')} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100"><X size={14} /></button>
+                      <button onClick={() => handleUpdateStatus(refund.id, 'completed')} className="rounded-lg p-1.5 text-emerald-600 hover:bg-emerald-100 active:bg-emerald-200" title="Mark Complete"><Check size={14} /></button>
+                      <button onClick={() => handleUpdateStatus(refund.id, 'cancelled')} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 active:bg-slate-200" title="Cancel"><X size={14} /></button>
                     </>
                   )}
                 </div>
@@ -802,14 +867,14 @@ const RefundPage: React.FC = () => {
 
                 <div>
                   <label className="mb-2 block text-xs font-bold tracking-widest text-slate-500 uppercase">
-                    Message / Reason
+                    Message / Reason <span className="text-slate-300 font-normal tracking-normal normal-case">(optional)</span>
                   </label>
                   <textarea
                     value={formData.message}
                     onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                     className="w-full rounded-xl border border-slate-200 px-4 py-3"
                     rows={3}
-                    placeholder="Enter reason for refund..."
+                    placeholder="Leave empty to auto-generate..."
                   />
                 </div>
               </div>
