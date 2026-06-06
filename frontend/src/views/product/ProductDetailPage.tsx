@@ -47,7 +47,7 @@ const ProductDetailInner: React.FC<{
     ? `/images/products/${product.main_image}` 
     : ''
   const normalizedGallery = (product.gallery || []).map(
-    (img) => `/images/gallery/${img}`
+    (img) => `/images/products_gallery/${img}`
   )
 
   // Logic Engine Integration
@@ -90,6 +90,10 @@ const ProductDetailInner: React.FC<{
   }, [])
 
   const handleAddToCart = async () => {
+    if (!computed.canAddToCart) {
+      toast.error('Please complete all required selections (Variant, Color, and Screenplate).')
+      return
+    }
     const variant = computed.selectedVariant
     if (!variant) {
       toast.error('Please select a product variant.')
@@ -136,30 +140,21 @@ const ProductDetailInner: React.FC<{
         navigator.vibrate([80, 30, 80])
       }
 
-      toast.custom(
-        (t) => (
-          <div
-            className={clsx(
-              'flex items-center gap-3 rounded-full bg-slate-900 px-6 py-4 text-white shadow-2xl transition-all duration-300',
-              t.visible ? 'animate-[bounce_0.5s_ease-out]' : 'opacity-0 scale-95'
-            )}
-            style={{ animationFillMode: 'forwards' }}
-          >
-            <span className="text-xl">🛒✅</span>
-            <span className="text-[10px] font-black tracking-widest uppercase">
-              Added to cart!
-            </span>
-          </div>
-        ),
-        { duration: 2500 }
-      )
+      toast.success('Product successfully added to cart!', {
+        duration: 3000,
+        position: 'top-center',
+      })
     } catch (error) {
       console.error('Failed to add to cart:', error)
-      toast.error('Failed to add product to cart.')
+      toast.error('Failed to add product to cart. Please try again.')
     }
   }
 
   const handleBuyNow = async () => {
+    if (!computed.canAddToCart) {
+      toast.error('Please complete all required selections (Variant, Color, and Screenplate).')
+      return
+    }
     const variant = computed.selectedVariant
     if (!variant) {
       toast.error('Please select a product variant.')
@@ -363,14 +358,14 @@ const ProductDetailInner: React.FC<{
             </div>
 
             {/* Selection Node: Screen Plate Logic Allocation (Filtered Inventory) */}
-            {product.is_need_screenplate && (
+            {computed.isScreenplateRequired && (
               <>
                 <div className="stagger-item">
                   <PlateSelector
                     selectablePlates={state.selectablePlates}
                     selectedPlateId={state.selectedPlateId}
                     onPlateChange={actions.handlePlateChange}
-                    isRequired={product.is_need_screenplate}
+                    isRequired={computed.isScreenplateRequired}
                     productId={product.id}
                     selectedVariantSize={computed.selectedVariant?.size}
                     incompatiblePlateIds={state.incompatiblePlateIds}
@@ -388,7 +383,7 @@ const ProductDetailInner: React.FC<{
                 minOrder={product.min_order}
                 isQuantityTooLow={computed.isQuantityTooLow}
                 hasRequiredPlate={computed.hasRequiredPlate}
-                isNeedScreenplate={product.is_need_screenplate}
+                isNeedScreenplate={computed.isScreenplateRequired}
                 hasRequiredColor={computed.hasRequiredColor}
                 isNeedColor={product.is_need_color}
                 onAddToCart={handleAddToCart}

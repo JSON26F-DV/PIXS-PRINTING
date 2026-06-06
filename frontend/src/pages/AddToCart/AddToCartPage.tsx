@@ -177,6 +177,31 @@ const AddToCartPage: React.FC = () => {
     fetchData()
   }, [])
 
+  // Auto-remove products/variants that require a screenplate but have none attached
+  useEffect(() => {
+    if (isCartLoading || isLoading) return
+
+    const invalidItems = items.filter((item) => {
+      const prodNeed = item.fullProduct && (Number(item.fullProduct.is_need_screenplate) === 1 || item.fullProduct.is_need_screenplate === true)
+      if (!prodNeed) return false
+
+      const selectedVariant = item.fullProduct?.variants?.find(v => v.variant_id === item.variant.id)
+      let itemNeedsScreenplate = true
+      if (selectedVariant && selectedVariant.is_need_screenplate !== undefined) {
+        itemNeedsScreenplate = Number(selectedVariant.is_need_screenplate) === 1 || selectedVariant.is_need_screenplate === true
+      }
+      
+      return itemNeedsScreenplate && !item.plate
+    })
+
+    if (invalidItems.length > 0) {
+      invalidItems.forEach((invalidItem) => {
+        removeItem(invalidItem.id)
+        toast.error(`Removed "${invalidItem.productName}" from cart: Screenplate is required but missing.`)
+      })
+    }
+  }, [items, isCartLoading, isLoading, removeItem])
+
   // ─── Merged items list ────────────────────────────────────────────────────
   const mergedItems: CartItem[] = items.map(getMergedItem)
 

@@ -13,6 +13,7 @@ class Notification extends Model
     protected $fillable = [
         'id',
         'customer_id',
+        'employee_id',
         'title',
         'message',
         'type',
@@ -22,4 +23,14 @@ class Notification extends Model
     protected $casts = [
         'is_read' => 'boolean',
     ];
+
+    public function customer()
+    {
+        return $this->belongsTo(Customer::class, 'customer_id');
+    }
+
+    public function employee()
+    {
+        return $this->belongsTo(Employee::class, 'employee_id');
+    }
 }

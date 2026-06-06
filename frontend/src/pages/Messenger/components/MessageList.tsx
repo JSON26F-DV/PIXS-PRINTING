@@ -179,7 +179,7 @@ const MessageBubble: React.FC<{
     >
       <div
         className={clsx(
-          'relative flex max-w-[80%] min-[414px]:max-w-[85%] flex-col md:max-w-[70%]',
+          'relative flex w-full min-w-0 max-w-[80%] min-[414px]:max-w-[85%] flex-col md:max-w-[70%] pr-8',
           isCustomer ? 'items-end' : 'items-start',
         )}
       >        {/* Reply Snippet Node */}
@@ -205,7 +205,7 @@ const MessageBubble: React.FC<{
         {/* Message Container */}
         <div
           className={clsx(
-            'relative rounded-[14px] min-[360px]:rounded-[16px] sm:rounded-[20px] md:rounded-[28px] text-[10px] min-[360px]:text-[11px] min-[414px]:text-[12px] sm:text-[13px] md:text-sm leading-relaxed font-bold shadow-sm break-words',
+            'relative max-w-full rounded-[14px] pr-5 min-[360px]:rounded-[16px] sm:rounded-[20px] md:rounded-[28px] text-[10px] min-[360px]:text-[11px] min-[414px]:text-[12px] sm:text-[13px] md:text-sm leading-relaxed font-bold shadow-sm break-words whitespace-pre-wrap',
             (hasCard && !message.isDeleted) ? '' : 'px-2 py-1 min-[360px]:px-2.5 min-[360px]:py-1.5 min-[414px]:px-3 min-[414px]:py-2 sm:px-4 sm:py-3 md:px-6 md:py-4',
             message.isDeleted
               ? 'border border-slate-200 bg-slate-100 text-slate-400 font-normal italic'
@@ -309,11 +309,11 @@ const MessageBubble: React.FC<{
 
           {message.message_type === 'payment_code' && message.type_id && !isEditing && !message.isDeleted && (
             <div className={clsx(
-              "mt-3 flex items-center gap-2 rounded-lg p-2 border",
+              "mt-3 flex items-center gap-2 rounded-lg p-2 border overflow-hidden",
               isCustomer ? "bg-slate-800/50 border-white/10" : "bg-slate-50 border-slate-200"
             )}>
-              <span className={clsx("text-[10px] font-black uppercase", isCustomer ? "text-pixs-mint" : "text-slate-500")}>Pay Code:</span>
-              <span className="text-[12px] font-bold tracking-wider">{message.type_id}</span>
+              <span className={clsx("shrink-0 text-[10px] font-black uppercase", isCustomer ? "text-pixs-mint" : "text-slate-500")}>Pay Code:</span>
+              <span className="truncate text-[12px] font-bold tracking-wider min-w-0">{message.type_id}</span>
               <button 
                 onClick={() => { 
                   navigator.clipboard.writeText(message.type_id!); 
@@ -341,26 +341,26 @@ const MessageBubble: React.FC<{
           )}
 
           {message.is_email && (
-            <div className="mt-3 rounded-xl border border-blue-200 bg-blue-50/50 p-4">
+            <div className="mt-3 rounded-xl border border-blue-200 bg-blue-50/50 p-4 break-words">
               <div className="flex items-center gap-2 mb-2">
-                <Mail size={16} className="text-blue-500" />
+                <Mail size={16} className="text-blue-500 shrink-0" />
                 <span className="text-[10px] font-black tracking-widest uppercase text-blue-500">
                   EMAIL SENT
                 </span>
               </div>
-              <p className="text-sm font-medium">{message.text}</p>
+              <p className="text-sm font-medium whitespace-pre-wrap">{message.text}</p>
             </div>
           )}
 
           {message.product_concern && message.message_type !== 'refund' && !message.is_email && !message.text?.startsWith('[LIVE_QUEUE_COMPLETED]') && (
             <div className={clsx(
-              "mt-3 rounded-xl border p-4",
+              "mt-3 rounded-xl border p-4 break-words",
               message.text?.startsWith('[LIVE_QUEUE_NOT_COMPLETED]') 
                 ? "border-rose-200 bg-rose-50/50 text-rose-950" 
                 : "border-amber-200 bg-amber-50/50 text-amber-950"
             )}>
               <div className="flex items-center gap-2 mb-2">
-                <AlertCircle size={16} className={message.text?.startsWith('[LIVE_QUEUE_NOT_COMPLETED]') ? "text-rose-500" : "text-amber-500"} />
+                <AlertCircle size={16} className={"shrink-0 " + (message.text?.startsWith('[LIVE_QUEUE_NOT_COMPLETED]') ? "text-rose-500" : "text-amber-500")} />
                 <span className={clsx(
                   "text-[10px] font-black tracking-widest uppercase",
                   message.text?.startsWith('[LIVE_QUEUE_NOT_COMPLETED]') ? "text-rose-500" : "text-amber-500"
@@ -368,7 +368,7 @@ const MessageBubble: React.FC<{
                   {message.text?.startsWith('[LIVE_QUEUE_NOT_COMPLETED]') ? "PRODUCTION TASK INCOMPLETE" : "PRODUCT CONCERN"}
                 </span>
               </div>
-              <p className="text-sm font-medium">
+              <p className="text-sm font-medium whitespace-pre-wrap">
                 {message.text?.startsWith('[LIVE_QUEUE_NOT_COMPLETED]') 
                   ? message.text.replace('[LIVE_QUEUE_NOT_COMPLETED] ', '') 
                   : message.text}
@@ -379,7 +379,7 @@ const MessageBubble: React.FC<{
 
           {showOriginal && message.originalText && (
               <div
-                className="mt-3 rounded-xl border-t border-white/10 bg-white/5 p-3 pt-3 text-[11px] leading-tight text-slate-400 italic blur-[0.4px] hover:blur-none"
+                className="mt-3 rounded-xl border-t border-white/10 bg-white/5 p-3 pt-3 text-[11px] leading-tight text-slate-400 italic blur-[0.4px] hover:blur-none break-words whitespace-pre-wrap"
               >
                 <div className="mb-1.5 flex items-center gap-1.5 opacity-50">
                   <History size={10} />
@@ -421,7 +421,7 @@ const MessageBubble: React.FC<{
               >
                 {/* Mosaic image grid */}
                 {imageUrls.length > 0 && (
-                  <div className={clsx('w-full max-w-[320px] md:max-w-[380px]')}>
+                  <div className={clsx('w-full max-w-full sm:max-w-[320px] md:max-w-[380px]')}>
                     <MessageImageGrid
                       images={imageUrls}
                       onImageClick={(idx) => {
@@ -769,7 +769,7 @@ const MessageList: React.FC<MessageListProps> = ({
   }, [scrollToMessageId, messages])
 
   return (
-    <div className="relative w-[100vw] max-w-[100vw] h-full overflow-hidden flex flex-col">
+    <div className="relative w-full h-full overflow-x-hidden flex flex-col">
       {isLoading ? (
         <div className="flex h-full flex-1 flex-col items-center justify-center gap-4 py-20 text-slate-400 bg-emoji-pattern bg-slate-50/20">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-slate-800"></div>
@@ -788,7 +788,7 @@ const MessageList: React.FC<MessageListProps> = ({
       ) : (
         <Virtuoso
           ref={virtuosoRef}
-          className="MessageList no-scrollbar bg-emoji-pattern flex-1 bg-slate-50/20 px-6 pt-8 pb-10 md:px-12 md:pt-12 md:pb-14"
+          className="MessageList no-scrollbar overflow-x-hidden bg-emoji-pattern flex-1 bg-slate-50/20 px-6 pt-8 pb-10 md:px-12 md:pt-12 md:pb-14"
           data={messages}
           followOutput="auto"
           initialTopMostItemIndex={messages.length - 1}

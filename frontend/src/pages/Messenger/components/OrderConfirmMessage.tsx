@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { Check, MapPin, Phone } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../../context/AuthContext'
@@ -153,7 +153,7 @@ export default function OrderConfirmMessage({ messageId, orderId, isCustomer, is
             <div className="text-[9px] font-black uppercase tracking-wider mb-1 opacity-70">
               {isLiveQueueCompleted ? "Completion Message:" : "Reason / Remarks:"}
             </div>
-            <p className="italic font-bold">"{cleanMessageText}"</p>
+            <p className="italic font-bold whitespace-pre-wrap">"{cleanMessageText}"</p>
           </div>
         </div>
 

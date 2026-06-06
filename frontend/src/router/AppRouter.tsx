@@ -40,6 +40,7 @@ import AdminSettings from '../views/admin/Settings/AdminSettings'
 import PayCode from '../views/admin/PayCode'
 import RefundPage from '../views/admin/Refund'
 import AuditLog from '../views/admin/AuditLog'
+import Notifications from '../views/admin/Notifications'
 // import DisputeView from '../views/admin/DisputeView';
 // Staff Views
 import StaffOverview from '../views/staff/StaffOverview'
@@ -211,6 +212,7 @@ const AppRouter: React.FC = () => {
         <Route path="generatecode" element={<PayCode />} />
         <Route path="refund" element={<RefundPage />} />
         <Route path="auditlog" element={<AuditLog />} />
+        <Route path="notifications" element={<Notifications />} />
       </Route>
 
       {/* Staff Routes */}

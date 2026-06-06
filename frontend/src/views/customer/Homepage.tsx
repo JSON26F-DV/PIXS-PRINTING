@@ -126,7 +126,7 @@ const Homepage: React.FC = () => {
   })
 
   const [currentPage, setCurrentPage] = useState(1)
-  const itemsPerPage = isMobile ? 20 : 100
+  const itemsPerPage = isMobile ? 10 : 20
 
 
   // Data fetching
@@ -329,7 +329,7 @@ const Homepage: React.FC = () => {
                     animate={{ height: 'auto', opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
                     transition={{ duration: 0.3, ease: 'easeInOut' }}
-                    className="sticky top-[80px] z-[100] -mx-4 flex flex-col items-center justify-between gap-6 bg-slate-50/80 px-8 py-2 backdrop-blur-sm xl:flex-row xl:bg-transparent"
+                    className="sticky top-[80px] z-30 -mx-4 flex flex-col items-center justify-between gap-6 bg-slate-50/80 px-8 py-2 backdrop-blur-sm xl:flex-row xl:bg-transparent"
                   >
                     <div className="flex w-full flex-wrap items-center gap-3 xl:w-auto">
                       {/* Category Filter Dropdown */}

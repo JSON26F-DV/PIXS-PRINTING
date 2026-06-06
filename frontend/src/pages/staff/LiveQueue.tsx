@@ -23,6 +23,7 @@ import { useQuery } from '@tanstack/react-query'
 import axiosInstance from '../../lib/axiosInstance'
 import axios from 'axios'
 import { type Order } from '../../types/order'
+import { useNotifications } from '../../context/NotificationContextInstance'
 
 interface StaffAssignment {
   allowed_categories: string[]
@@ -40,10 +41,27 @@ const cn = (...classes: (string | boolean | undefined)[]) =>
   classes.filter(Boolean).join(' ')
 
 const LiveQueue: React.FC = () => {
+  const { refreshNotifications } = useNotifications()
+  
   // Dynamic page size based on viewport
   const [isMobile, setIsMobile] = useState(false)
   const [expandedOrderIds, setExpandedOrderIds] = useState<Set<string>>(new Set())
   const [mobileDetailOrder, setMobileDetailOrder] = useState<LiveQueueOrder | null>(null)
+
+  const handlePendingOrderClick = async (order: LiveQueueOrder) => {
+    try {
+      await axiosInstance.post('/api/notifications', {
+        title: `Pending Execution: Order #${order.order_id}`,
+        message: `Order #${order.order_id} is currently pending execution.`,
+        type: 'order_update',
+      })
+      toast.success(`Notification created for Order #${order.order_id}`)
+      refreshNotifications()
+    } catch (err) {
+      console.error('Failed to create execution notification', err)
+      toast.error('Failed to create notification')
+    }
+  }
   
   const [messageModal, setMessageModal] = useState<{
     isOpen: boolean
@@ -516,6 +534,7 @@ const LiveQueue: React.FC = () => {
                     key={order.order_id}
                     order={order}
                     onClick={() => setMobileDetailOrder(order)}
+                    onRecreateNotification={() => handlePendingOrderClick(order)}
                   />
                 ) : (
                   <OrderCardDesktop
@@ -535,6 +554,7 @@ const LiveQueue: React.FC = () => {
                       message: '',
                       isSubmitting: false,
                     })}
+                    onRecreateNotification={() => handlePendingOrderClick(order)}
                   />
                 )
               ))}
@@ -979,10 +999,16 @@ const CompactOrderCardMobile: React.FC<{
   order: LiveQueueOrder
   isLogged?: boolean
   onClick: () => void
-}> = ({ order, isLogged, onClick }) => {
+  onRecreateNotification?: () => void
+}> = ({ order, isLogged, onClick, onRecreateNotification }) => {
   return (
     <div
-      onClick={onClick}
+      onClick={() => {
+        onClick()
+        if (!isLogged && onRecreateNotification) {
+          onRecreateNotification()
+        }
+      }}
       className="cursor-pointer flex flex-col justify-between p-3.5 rounded-xl border border-slate-100 bg-white shadow-sm hover:shadow-md hover:border-slate-200 transition-all text-left"
     >
       <div className="space-y-1">
@@ -1029,14 +1055,20 @@ const OrderCardDesktop: React.FC<{
   onToggleExpand: () => void
   onStatusSelect?: (status: 'COMPLETED' | 'NOT_COMPLETED') => void
   onMessageClick?: () => void
-}> = ({ order, isLogged, isExpanded, onToggleExpand, onStatusSelect, onMessageClick }) => {
+  onRecreateNotification?: () => void
+}> = ({ order, isLogged, isExpanded, onToggleExpand, onStatusSelect, onMessageClick, onRecreateNotification }) => {
   return (
     <div
       className="overflow-hidden rounded-xl border border-slate-100 bg-white shadow-md hover:shadow-lg transition-all"
     >
       {/* CARD HEADER */}
       <div 
-        onClick={onToggleExpand}
+        onClick={() => {
+          onToggleExpand()
+          if (!isLogged && onRecreateNotification) {
+            onRecreateNotification()
+          }
+        }}
         className="cursor-pointer border-b border-slate-50 p-6 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center hover:bg-slate-50/50 transition-colors"
       >
         <div className="flex items-center gap-4">

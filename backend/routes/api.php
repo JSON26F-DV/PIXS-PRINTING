@@ -218,11 +218,11 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->prefix('admin')->group(func
     Route::get('/customers/{id}/payment-methods', [RefundController::class, 'customerPaymentMethods'])->middleware('role:admin');
     Route::get('/customers/{id}/orders', [RefundController::class, 'customerOrders'])->middleware('role:admin');
 
-    // Expenditures (Handled fully inside AdminStockAnalyticsController above)
-    // Route::get('/expenditures', [\App\Http\Controllers\Admin\ExpenditureController::class, 'index'])->middleware('role:admin');
-    // Route::post('/expenditures', [\App\Http\Controllers\Admin\ExpenditureController::class, 'store'])->middleware('role:admin');
-    // Route::patch('/expenditures/{id}', [\App\Http\Controllers\Admin\ExpenditureController::class, 'update'])->middleware('role:admin');
-    // Route::delete('/expenditures/{id}', [\App\Http\Controllers\Admin\ExpenditureController::class, 'destroy'])->middleware('role:admin');
+    // Admin Notifications CRUD
+    Route::get('/notifications', [NotificationController::class, 'adminIndex'])->middleware('role:admin');
+    Route::post('/notifications', [NotificationController::class, 'adminStore'])->middleware('role:admin');
+    Route::put('/notifications/{id}', [NotificationController::class, 'adminUpdate'])->middleware('role:admin');
+    Route::delete('/notifications/{id}', [NotificationController::class, 'adminDestroy'])->middleware('role:admin');
 });
 
 // Messaging & Notifications

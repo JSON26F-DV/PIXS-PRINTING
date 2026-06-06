@@ -1,0 +1,195 @@
+axiosInstance.ts:45 [axios] Retry #1 for /api/admin/dashboard-stats: canceled
+onRetry @ axiosInstance.ts:45
+axiosInstance.ts:45 [axios] Retry #2 for /api/admin/dashboard-stats: canceled
+onRetry @ axiosInstance.ts:45
+axiosInstance.ts:45 [axios] Retry #3 for /api/admin/dashboard-stats: canceled
+onRetry @ axiosInstance.ts:45
+recharts.js?v=c2722389:6298 The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width.
+warn @ recharts.js?v=c2722389:6298
+recharts.js?v=c2722389:6298 The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width.
+warn @ recharts.js?v=c2722389:6298
+recharts.js?v=c2722389:6298 The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width.
+warn @ recharts.js?v=c2722389:6298
+recharts.js?v=c2722389:6298 The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width.
+warn @ recharts.js?v=c2722389:6298
+recharts.js?v=c2722389:6298 The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width.
+warn @ recharts.js?v=c2722389:6298
+recharts.js?v=c2722389:6298 The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width.
+warn @ recharts.js?v=c2722389:6298
+axiosInstance.ts:45 [axios] Retry #1 for /api/admin/dashboard-stats: canceled
+onRetry @ axiosInstance.ts:45
+axiosInstance.ts:45 [axios] Retry #2 for /api/admin/dashboard-stats: canceled
+onRetry @ axiosInstance.ts:45
+axiosInstance.ts:45 [axios] Retry #3 for /api/admin/dashboard-stats: canceled
+onRetry @ axiosInstance.ts:45
+recharts.js?v=c2722389:6298 The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width.
+warn @ recharts.js?v=c2722389:6298
+recharts.js?v=c2722389:6298 The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width.
+warn @ recharts.js?v=c2722389:6298
+recharts.js?v=c2722389:6298 The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width.
+warn @ recharts.js?v=c2722389:6298
+recharts.js?v=c2722389:6298 The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width.
+warn @ recharts.js?v=c2722389:6298
+recharts.js?v=c2722389:6298 The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width.
+warn @ recharts.js?v=c2722389:6298
+recharts.js?v=c2722389:6298 The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width.
+warn @ recharts.js?v=c2722389:6298
+axiosInstance.ts:45 [axios] Retry #1 for /api/admin/dashboard-stats: canceled
+onRetry @ axiosInstance.ts:45
+axiosInstance.ts:45 [axios] Retry #2 for /api/admin/dashboard-stats: canceled
+onRetry @ axiosInstance.ts:45
+axiosInstance.ts:45 [axios] Retry #3 for /api/admin/dashboard-stats: canceled
+onRetry @ axiosInstance.ts:45
+axiosInstance.ts:45 [axios] Retry #1 for /api/admin/dashboard-stats: canceled
+onRetry @ axiosInstance.ts:45
+axiosInstance.ts:45 [axios] Retry #2 for /api/admin/dashboard-stats: canceled
+onRetry @ axiosInstance.ts:45
+axiosInstance.ts:45 [axios] Retry #3 for /api/admin/dashboard-stats: canceled
+onRetry @ axiosInstance.ts:45
+axiosInstance.ts:45 [axios] Retry #1 for /api/admin/dashboard-stats: canceled
+onRetry @ axiosInstance.ts:45
+axiosInstance.ts:45 [axios] Retry #2 for /api/admin/dashboard-stats: canceled
+onRetry @ axiosInstance.ts:45
+axiosInstance.ts:45 [axios] Retry #3 for /api/admin/dashboard-stats: canceled
+onRetry @ axiosInstance.ts:45
+recharts.js?v=c2722389:6298 The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width.
+warn @ recharts.js?v=c2722389:6298
+recharts.js?v=c2722389:6298 The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width.
+warn @ recharts.js?v=c2722389:6298
+recharts.js?v=c2722389:6298 The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width.
+warn @ recharts.js?v=c2722389:6298
+recharts.js?v=c2722389:6298 The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width.
+warn @ recharts.js?v=c2722389:6298
+recharts.js?v=c2722389:6298 The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width.
+warn @ recharts.js?v=c2722389:6298
+recharts.js?v=c2722389:6298 The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width.
+warn @ recharts.js?v=c2722389:6298
+recharts.js?v=c2722389:6298 The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width.
+warn @ recharts.js?v=c2722389:6298
+recharts.js?v=c2722389:6298 The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width.
+warn @ recharts.js?v=c2722389:6298
+recharts.js?v=c2722389:6298 The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width.
+warn @ recharts.js?v=c2722389:6298
+recharts.js?v=c2722389:6298 The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width.
+warn @ recharts.js?v=c2722389:6298
+axiosInstance.ts:45 [axios] Retry #1 for /api/admin/dashboard-stats: canceled
+onRetry @ axiosInstance.ts:45
+axiosInstance.ts:45 [axios] Retry #2 for /api/admin/dashboard-stats: canceled
+onRetry @ axiosInstance.ts:45
+axiosInstance.ts:45 [axios] Retry #3 for /api/admin/dashboard-stats: canceled
+onRetry @ axiosInstance.ts:45
+axiosInstance.ts:45 [axios] Retry #1 for /api/admin/dashboard-stats: canceled
+onRetry @ axiosInstance.ts:45
+axiosInstance.ts:45 [axios] Retry #2 for /api/admin/dashboard-stats: canceled
+onRetry @ axiosInstance.ts:45
+axiosInstance.ts:45 [axios] Retry #3 for /api/admin/dashboard-stats: canceled
+onRetry @ axiosInstance.ts:45
+client:906 [vite] hot updated: /src/index.css
+client:906 [vite] hot updated: /src/pages/Messenger/components/MessageList.tsx
+client:906 [vite] hot updated: /src/index.css
+client:906 [vite] hot updated: /src/pages/Messenger/components/MessageList.tsx
+:8000/api/customer/addresses:1  Failed to load resource: the server responded with a status of 401 (Unauthorized)
+:8000/api/customer/addresses:1  Failed to load resource: the server responded with a status of 401 (Unauthorized)
+client:906 [vite] hot updated: /src/index.css
+client:906 [vite] hot updated: /src/pages/Messenger/components/MessageList.tsx
+client:906 [vite] hot updated: /src/index.css
+client:906 [vite] hot updated: /src/pages/Messenger/components/MessageList.tsx
+client:906 [vite] hot updated: /src/index.css
+client:906 [vite] hot updated: /src/pages/Messenger/components/MessageList.tsx
+[Violation] 'requestAnimationFrame' handler took <N>ms
+[Violation] 'requestAnimationFrame' handler took <N>ms
+[Violation] 'requestAnimationFrame' handler took <N>ms
+[Violation] 'requestAnimationFrame' handler took <N>ms
+[Violation] 'requestAnimationFrame' handler took <N>ms
+[Violation] 'requestAnimationFrame' handler took <N>ms
+[Violation] 'requestAnimationFrame' handler took <N>ms
+[Violation] 'scroll' handler took <N>ms
+[Violation] 'scroll' handler took <N>ms
+[Violation] 'scroll' handler took <N>ms
+[Violation] 'scroll' handler took <N>ms
+[Violation] 'scroll' handler took <N>ms
+[Violation] 'scroll' handler took <N>ms
+[Violation] 'scroll' handler took <N>ms
+[Violation] 'scroll' handler took <N>ms
+[Violation] 'scroll' handler took <N>ms
+[Violation] 'scroll' handler took <N>ms
+[Violation] 'scroll' handler took <N>ms
+[Violation] 'scroll' handler took <N>ms
+react-virtuoso.js?v=c2722389:1684 [Violation] 'scroll' handler took 183ms
+react-virtuoso.js?v=c2722389:1684 [Violation] 'scroll' handler took 161ms
+react-virtuoso.js?v=c2722389:1684 [Violation] 'scroll' handler took 171ms
+react-virtuoso.js?v=c2722389:1684 [Violation] 'scroll' handler took 162ms
+react-virtuoso.js?v=c2722389:1684 [Violation] 'scroll' handler took 178ms
+react-virtuoso.js?v=c2722389:1684 [Violation] 'scroll' handler took 178ms
+react-virtuoso.js?v=c2722389:1684 [Violation] 'scroll' handler took 163ms
+react-virtuoso.js?v=c2722389:1684 [Violation] 'scroll' handler took 175ms
+react-virtuoso.js?v=c2722389:1684 [Violation] 'scroll' handler took 151ms
+react-virtuoso.js?v=c2722389:1684 [Violation] 'scroll' handler took 169ms
+react-virtuoso.js?v=c2722389:1684 [Violation] 'scroll' handler took 150ms
+react-virtuoso.js?v=c2722389:1684 [Violation] 'scroll' handler took 187ms

@@ -1,6 +1,5 @@
-import React from 'react'
-import { Phone, LayoutGrid, Circle, Users, ArrowLeft, Settings } from 'lucide-react'
-import { clsx } from 'clsx'
+import { type FC } from 'react'
+import { Phone, Circle, ArrowLeft, Settings } from 'lucide-react'
 import { useAuth } from '../../../hooks/useAuth'
 import { useNavigate } from 'react-router-dom'
 
@@ -14,15 +13,12 @@ interface ChatHeaderProps {
   subtitle?: string
 }
 
-const ChatHeader: React.FC<ChatHeaderProps> = ({
-  onToggleGallery,
-  isGalleryOpen,
-  onToggleAccounts,
-  isAccountsOpen,
-  onOpenAdminControls,
-  title,
-  subtitle,
-}) => {
+const ChatHeader: FC<ChatHeaderProps> = (props) => {
+  const {
+    onOpenAdminControls,
+    title,
+    subtitle,
+  } = props
   const { user } = useAuth()
   const navigate = useNavigate()
 

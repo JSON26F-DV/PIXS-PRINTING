@@ -16,7 +16,7 @@ const MessageNotFound: React.FC<MessageNotFoundProps> = ({
   return (
     <div
       className={clsx(
-        "w-full max-w-sm rounded-[32px] overflow-hidden shadow-2xl border",
+        "w-full max-w-full md:max-w-sm rounded-[32px] overflow-hidden shadow-2xl border",
         isCustomer 
           ? "bg-slate-800 border-white/10 text-white" 
           : "bg-white border-slate-100 text-slate-900"

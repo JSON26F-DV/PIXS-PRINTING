@@ -26,7 +26,7 @@ const ProductGrid: React.FC<ProductGridProps> = ({
 }) => {
   if (isLoading) {
     return (
-      <div className="grid grid-cols-2 gap-4 md:gap-10 lg:grid-cols-4 xl:grid-cols-5">
+      <div className="grid grid-cols-2 gap-4 md:gap-10 xl:grid-cols-5">
         {Array.from({ length: 20 }).map((_, i) => (
           <ProductSkeleton key={i} />
         ))}
@@ -51,7 +51,7 @@ const ProductGrid: React.FC<ProductGridProps> = ({
   }
 
   return (
-    <div className="grid grid-cols-2 gap-4 md:gap-10 lg:grid-cols-4 xl:grid-cols-5">
+    <div className="grid grid-cols-2 gap-4 md:gap-10 xl:grid-cols-5">
       {products.map((product) => (
         <ProductCard
           key={product.id}

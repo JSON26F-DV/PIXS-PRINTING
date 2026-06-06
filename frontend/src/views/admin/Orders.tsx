@@ -1314,16 +1314,10 @@ const Orders: React.FC = () => {
                       </th>
                     )}
                     <th className="px-8 py-6 text-[10px] font-black tracking-widest text-slate-400 uppercase">
-                      Items
-                    </th>
-                    <th className="px-8 py-6 text-[10px] font-black tracking-widest text-slate-400 uppercase">
                       Total Amount
                     </th>
                     <th className="px-8 py-6 text-[10px] font-black tracking-widest text-slate-400 uppercase">
                       Status
-                    </th>
-                    <th className="px-8 py-6 text-[10px] font-black tracking-widest text-slate-400 uppercase">
-                      Date
                     </th>
                     {user?.role === 'admin' && (
                       <th className="px-8 py-6 text-[10px] font-black tracking-widest text-slate-400 uppercase">
@@ -1380,19 +1374,7 @@ const Orders: React.FC = () => {
                               </p>
                             </td>
                           )}
-                          <td className="px-8 py-6">
-                            <div className="flex items-center gap-2">
-                              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-xs font-black text-slate-900">
-                                {order.products.reduce(
-                                  (sum, i) => sum + i.quantity,
-                                  0,
-                                )}
-                              </div>
-                              <div className="text-[10px] font-bold tracking-widest text-slate-500 uppercase">
-                                {order.products.length} Product Types
-                              </div>
-                            </div>
-                          </td>
+
                           <td className="px-8 py-6">
                             <span className="text-base font-black tracking-tighter text-slate-900 italic">
                               ₱{order.total_amount.toLocaleString()}
@@ -1461,11 +1443,7 @@ const Orders: React.FC = () => {
                               )}
                             </div>
                           </td>
-                          <td className="px-8 py-6">
-                            <span className="text-[10px] font-bold text-slate-500">
-                              {format(parseISO(order.created_at), 'MMM dd, yyyy')}
-                            </span>
-                          </td>
+
                           {/* Queue Assignments Column */}
                           {user?.role === 'admin' && (
                             <td className="px-4 py-6" onClick={e => e.stopPropagation()}>
@@ -1522,7 +1500,7 @@ const Orders: React.FC = () => {
                               className="bg-slate-50/30 overflow-hidden"
                             >
                               <td
-                                colSpan={selectedCustomerId ? 8 : 9}
+                                colSpan={selectedCustomerId ? 6 : 7}
                                 className="px-12 py-8"
                               >
                                 <div className="grid grid-cols-1 gap-8 border-l-4 border-slate-900 pl-8 md:grid-cols-2">
@@ -1717,7 +1695,7 @@ const Orders: React.FC = () => {
                   {paginatedOrders.length === 0 && (
                     <tr>
                       <td
-                        colSpan={7}
+                        colSpan={selectedCustomerId ? 6 : 7}
                         className="bg-slate-50/20 px-8 py-32 text-center"
                       >
                         <div className="flex flex-col items-center gap-4 opacity-30">

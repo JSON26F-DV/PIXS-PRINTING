@@ -32,10 +32,32 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
     setImageErrors((prev) => ({ ...prev, [index]: true }))
   }
 
+  const touchStartRef = React.useRef<number | null>(null)
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 1) {
+      touchStartRef.current = e.touches[0].clientX
+    }
+  }
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartRef.current !== null && e.changedTouches.length === 1) {
+      const diffX = e.changedTouches[0].clientX - touchStartRef.current
+      if (diffX > 50) {
+        prev()
+      } else if (diffX < -50) {
+        next()
+      }
+    }
+    touchStartRef.current = null
+  }
+
   return (
     <div className="space-y-6">
       {/* Primary Display Logic */}
       <div
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
         className="group hover:shadow-pixs-mint/5 relative aspect-[4/5] cursor-zoom-in overflow-hidden rounded-[48px] border border-slate-100 bg-white p-4 shadow-2xl shadow-slate-200/50 transition-all duration-700 md:aspect-[3/4]"
         onClick={() => onImageClick?.(activeIndex)}
       >
@@ -65,7 +87,10 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
 
         <div className="absolute bottom-10 left-1/2 flex -translate-x-1/2 translate-y-4 items-center gap-3 rounded-[24px] border border-slate-50 bg-white/90 px-6 py-3 opacity-0 shadow-2xl backdrop-blur-md transition-all group-hover:translate-y-0 group-hover:opacity-100">
           <button
-            onClick={prev}
+            onClick={(e) => {
+              e.stopPropagation()
+              prev()
+            }}
             className="rounded-xl p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-900"
           >
             <ChevronLeft size={20} />
@@ -74,7 +99,10 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
             {activeIndex + 1} / {images.length}
           </span>
           <button
-            onClick={next}
+            onClick={(e) => {
+              e.stopPropagation()
+              next()
+            }}
             className="rounded-xl p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-900"
           >
             <ChevronRight size={20} />

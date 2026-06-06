@@ -13,7 +13,7 @@ import {
   Star,
 } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
-import CustomerNavbar from '../../components/customer/CustomerNavbar'
+import GuestNavbar from '../../components/customer/GuestNavbar'
 import Footer from '../../components/Footer/Footer'
 
 const FloatingCard: React.FC<{
@@ -81,7 +81,7 @@ const LandingPage: React.FC = () => {
 
   return (
     <div className="LandingPage min-h-screen bg-[#f8fafc] selection:bg-[#75EEA5] selection:text-slate-900">
-      <CustomerNavbar />
+      <GuestNavbar />
 
       <main>
         {/* ── HERO SECTION ─────────────────────────────────────────────────── */}

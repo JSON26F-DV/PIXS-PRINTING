@@ -159,6 +159,7 @@ class ProductController extends Controller
                 'height' => $v->height,
                 'price' => (float) $v->price,
                 'stock' => (int) $v->stock,
+                'is_need_screenplate' => (bool) $v->is_need_screenplate,
             ]);
             $data['gallery'] = $product->gallery->sortBy('sort_order')->values()->map(
                 fn ($img) => $img->image_url

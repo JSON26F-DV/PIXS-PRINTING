@@ -17,7 +17,7 @@ export default function EmailMessage({ messageText, created_at, isCustomer }: Em
   return (
     <div 
       className={clsx(
-        "w-full max-w-md rounded-[24px] overflow-hidden shadow-xl border p-5 transition-all text-left",
+        "w-full max-w-full md:max-w-md rounded-[24px] overflow-hidden shadow-xl border p-5 transition-all text-left",
         isCustomer ? "bg-slate-900 border-white/10 text-white" : "bg-white border-slate-100 text-slate-900"
       )}
     >

@@ -305,10 +305,20 @@ export const useProductDetail = ({
     return () => clearTimeout(t)
   }, [stockForVariant, product.min_order, setQuantity])
 
+  const isScreenplateRequired = useMemo(() => {
+    const prodNeed = Number(product.is_need_screenplate) === 1 || product.is_need_screenplate === true
+    if (!prodNeed) return false
+    
+    if (selectedVariant && selectedVariant.is_need_screenplate !== undefined) {
+      return Number(selectedVariant.is_need_screenplate) === 1 || selectedVariant.is_need_screenplate === true
+    }
+    return true
+  }, [product.is_need_screenplate, selectedVariant])
+
   // Enforced Protocols: Check if required metadata selections are satisfied
   const hasRequiredPlate =
-    !product.is_need_screenplate ||
-    (product.is_need_screenplate && !!selectedPlateId)
+    !isScreenplateRequired ||
+    (isScreenplateRequired && selectablePlates.length > 0 && !!selectedPlateId)
   const hasRequiredColor =
     !product.is_need_color ||
     (product.is_need_color && selectedColorIds.length > 0)
@@ -385,6 +395,7 @@ export const useProductDetail = ({
       canAddToCart,
       hasRequiredPlate,
       hasRequiredColor,
+      isScreenplateRequired,
     },
   }
 }

@@ -32,6 +32,26 @@ const FullscreenGalleryModal: React.FC<FullscreenGalleryModalProps> = ({
     setImageErrors((prev) => ({ ...prev, [index]: true }))
   }
 
+  const touchStartRef = useRef<number | null>(null)
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (scale === 1 && e.touches.length === 1) {
+      touchStartRef.current = e.touches[0].clientX
+    }
+  }
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (scale === 1 && touchStartRef.current !== null && e.changedTouches.length === 1) {
+      const diffX = e.changedTouches[0].clientX - touchStartRef.current
+      if (diffX > 50) {
+        handlePrev()
+      } else if (diffX < -50) {
+        handleNext()
+      }
+    }
+    touchStartRef.current = null
+  }
+
   // Reset during render logic
   if (isOpen && !prevIsOpen) {
     setPrevIsOpen(true)
@@ -154,6 +174,8 @@ const FullscreenGalleryModal: React.FC<FullscreenGalleryModalProps> = ({
         {/* Cinematic Viewing Area */}
         <div 
             ref={containerRef}
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
             className={clsx(
                 "relative flex flex-1 items-center justify-center overflow-hidden px-6 md:px-20",
                 scale > 1 ? "cursor-grab" : "cursor-default"

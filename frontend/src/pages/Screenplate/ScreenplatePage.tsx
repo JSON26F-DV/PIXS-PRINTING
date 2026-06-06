@@ -196,15 +196,11 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
         {/* Pricing Summary */}
         <div className="mx-8 mb-6 rounded-[18px] bg-slate-50 p-5">
           <div className="flex items-center justify-between text-xs text-slate-500">
-            <span className="font-bold">Base Setup Fee</span>
+            <span className="font-bold">
+              {data.colorCount ? `${data.colorCount} Color Setup Fee` : 'Setup Fee'}
+            </span>
             <span className="font-mono font-black italic">
               ₱{data.baseFee.toLocaleString()}
-            </span>
-          </div>
-          <div className="mt-2 flex items-center justify-between text-xs text-slate-500">
-            <span className="font-bold">Color Multiplier</span>
-            <span className="font-mono font-black italic">
-              {data.colorCount ? `x${data.colorCount}` : '—'}
             </span>
           </div>
           <div className="mt-4 flex items-end justify-between border-t border-slate-200 pt-4">
@@ -385,8 +381,23 @@ const ScreenplatePage: React.FC = () => {
     })).filter(p => p.variants && p.variants.length > 0)
   }, [searchQuery, productsData])
 
-  const BASE_SETUP_FEE = 700
-  const calculatedTotal = colorCount ? BASE_SETUP_FEE * colorCount : 0
+  const colorPricing = useMemo(() => {
+    const saved = localStorage.getItem('screenplate_color_pricing')
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved)
+        if (parsed[1] && parsed[2] && parsed[3]) {
+          return parsed
+        }
+      } catch {
+        // Fallback to default pricing
+      }
+    }
+    return { 1: 700, 2: 1400, 3: 2100 }
+  }, [])
+
+  const currentSetupFee = colorCount ? (colorPricing[colorCount] ?? 0) : 0
+  const calculatedTotal = currentSetupFee
   const isValid = selectedProduct && selectedVariant && colorCount > 0 && alignment
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -567,7 +578,7 @@ const ScreenplatePage: React.FC = () => {
           referenceImage,
           comment,
           total: calculatedTotal,
-          baseFee: BASE_SETUP_FEE,
+          baseFee: colorCount ? (colorPricing[colorCount] ?? 0) : 0,
         }}
       />
 
@@ -914,15 +925,11 @@ const ScreenplatePage: React.FC = () => {
 
             <div className="mb-6 space-y-4 border-b border-slate-100 pb-6">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-500">Base Setup Fee</span>
-                <span className="font-mono text-xs font-black italic">
-                  ₱{BASE_SETUP_FEE.toLocaleString()}
+                <span className="text-xs font-bold text-slate-500">
+                  {colorCount ? `${colorCount} Color Setup Fee` : 'Setup Fee'}
                 </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-500">Color Multiplier</span>
                 <span className="font-mono text-xs font-black italic">
-                  {colorCount ? `x${colorCount}` : '-'}
+                  ₱{currentSetupFee.toLocaleString()}
                 </span>
               </div>
             </div>

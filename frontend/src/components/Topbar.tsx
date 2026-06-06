@@ -21,10 +21,7 @@ import { useNotifications } from '../context/NotificationContextInstance'
 import type { INotification } from '../types/notification'
 import type { User as AuthUser } from '../context/auth.types'
 import type { NavigateFunction } from 'react-router-dom'
-import productsData from '../data/products.json'
-import ordersData from '../data/order.json'
-import usersData from '../data/users.json'
-import { SafeTerminal } from '../utils/safeTerminal'
+import axiosInstance from '../lib/axiosInstance'
 
 interface IProduct {
   id: string
@@ -41,9 +38,15 @@ interface IUserData {
   email: string
 }
 
-interface RawUsers {
-  employees: IUserData[]
-  customers: IUserData[]
+interface ISearchOrderItem {
+  productName: string
+}
+
+interface ISearchOrder {
+  order_id: string
+  user_id: string
+  status: string
+  products: ISearchOrderItem[]
 }
 
 function cn(...inputs: ClassValue[]) {
@@ -90,8 +93,34 @@ const SmartSearch: React.FC<{
   const [results, setResults] = useState<SearchResult[]>([])
   const inputRef = useRef<HTMLInputElement>(null)
 
+  const [products, setProducts] = useState<IProduct[]>([])
+  const [orders, setOrders] = useState<ISearchOrder[]>([])
+  const [accounts, setAccounts] = useState<IUserData[]>([])
+
   useEffect(() => {
     inputRef.current?.focus()
+
+    let isMounted = true
+    Promise.all([
+      axiosInstance.get('/api/admin/products').catch(() => ({ data: [] })),
+      axiosInstance.get('/api/admin/orders').catch(() => ({ data: { orders: [] } })),
+      axiosInstance.get('/api/admin/accounts').catch(() => ({ data: { data: [] } }))
+    ]).then(([prodRes, orderRes, accountRes]) => {
+      if (!isMounted) return
+
+      const pData = prodRes.data.data || prodRes.data || []
+      setProducts(Array.isArray(pData) ? pData : [])
+
+      const oData = orderRes.data.orders || orderRes.data || []
+      setOrders(Array.isArray(oData) ? oData : [])
+
+      const aData = accountRes.data.data || accountRes.data || []
+      setAccounts(Array.isArray(aData) ? aData : [])
+    })
+
+    return () => {
+      isMounted = false
+    }
   }, [])
 
   useEffect(() => {
@@ -115,7 +144,8 @@ const SmartSearch: React.FC<{
             link: item.id,
           })
         })
-      ;(productsData as IProduct[])
+
+      products
         .filter(
           (p) =>
             p.name.toLowerCase().includes(lowerQuery) ||
@@ -127,25 +157,17 @@ const SmartSearch: React.FC<{
             id: `product-${p.id}`,
             type: 'product',
             title: p.name,
-            subtitle: `${p.category} • ₱${p.base_price}`,
-            link: 'product',
+            subtitle: `${p.category || 'General'} • ₱${p.base_price}`,
+            link: 'products',
           })
         })
 
-      interface IOrderData {
-        order_id: string
-        user_id: string
-        status: string
-        products?: { productName: string }[]
-      }
-
-      const allOrders = ordersData as unknown as IOrderData[]
-      allOrders
+      orders
         .filter(
           (o) =>
             o.order_id.toLowerCase().includes(lowerQuery) ||
             (o.products &&
-              o.products[0]?.productName.toLowerCase().includes(lowerQuery)),
+              o.products.some((item: ISearchOrderItem) => item.productName?.toLowerCase().includes(lowerQuery))),
         )
         .slice(0, 5)
         .forEach((o) => {
@@ -157,17 +179,13 @@ const SmartSearch: React.FC<{
             link: user.role === 'staff' ? 'history' : 'orders',
           })
         })
-      ;(
-        [
-          ...SafeTerminal.array<IUserData>(
-            (usersData as unknown as RawUsers).employees,
-          ),
-          ...SafeTerminal.array<IUserData>(
-            (usersData as unknown as RawUsers).customers,
-          ),
-        ] as IUserData[]
-      )
-        .filter((u) => u.name.toLowerCase().includes(lowerQuery))
+
+      accounts
+        .filter(
+          (u) =>
+            u.name.toLowerCase().includes(lowerQuery) ||
+            u.email.toLowerCase().includes(lowerQuery)
+        )
         .slice(0, 5)
         .forEach((u) => {
           searchResults.push({
@@ -175,7 +193,7 @@ const SmartSearch: React.FC<{
             type: 'customer',
             title: u.name,
             subtitle: `${u.role || u.type || 'Client'} • ${u.email}`,
-            link: 'account',
+            link: 'accounts',
           })
         })
 
@@ -183,7 +201,7 @@ const SmartSearch: React.FC<{
     }, 100)
 
     return () => clearTimeout(handler)
-  }, [query, user.role])
+  }, [query, user.role, products, orders, accounts])
 
   const handleSelect = (result: SearchResult) => {
     onClose()

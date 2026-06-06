@@ -21,11 +21,33 @@ export function ScreenplateVisibilitySection({
   const [categoryFilter, setCategoryFilter] = useState<string>('All')
   const [expandedProduct, setExpandedProduct] = useState<string | null>(null)
 
+  const [prices, setPrices] = useState<{ [key: number]: number }>(() => {
+    const saved = localStorage.getItem('screenplate_color_pricing')
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved)
+        if (parsed[1] && parsed[2] && parsed[3]) {
+          return parsed
+        }
+      } catch {
+        // Fallback to default pricing
+      }
+    }
+    return { 1: 700, 2: 1400, 3: 2100 }
+  })
+
+  const handlePriceChange = (color: number, value: string) => {
+    const numeric = parseFloat(value) || 0
+    const updated = { ...prices, [color]: numeric }
+    setPrices(updated)
+    localStorage.setItem('screenplate_color_pricing', JSON.stringify(updated))
+  }
+
   const categories = useMemo(() => {
     const map = new Map<string, string>()
     products.forEach(p => {
-      const id = (p as any).category_id
-      const label = (p as any).category_label || p.category
+      const id = p.category_id
+      const label = p.category_label || p.category
       if (id) map.set(id, label)
     })
     return [{ id: 'All', label: 'All' }, ...Array.from(map.entries()).map(([id, label]) => ({ id, label }))]
@@ -61,14 +83,43 @@ export function ScreenplateVisibilitySection({
     const q = searchQuery.trim().toLowerCase()
     const matchesSearch = !q || (
       p.name.toLowerCase().includes(q) ||
-      ((p as any).category_label || p.category || '').toLowerCase().includes(q)
+      (p.category_label || p.category || '').toLowerCase().includes(q)
     )
-    const matchesCategory = categoryFilter === 'All' || (p as any).category_id === categoryFilter
+    const matchesCategory = categoryFilter === 'All' || p.category_id === categoryFilter
     return matchesSearch && matchesCategory
   })
 
   return (
     <div className="space-y-6">
+      {/* Color Pricing Section */}
+      <div className="rounded-[28px] border border-slate-100 bg-white p-6 shadow-sm">
+        <h3 className="mb-2 text-sm font-black tracking-widest text-slate-900 uppercase italic">
+          Color Pricing Matrix
+        </h3>
+        <p className="mb-6 text-[10px] font-bold tracking-[2px] text-slate-400 uppercase">
+          Set setup fees for color separations
+        </p>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          {[1, 2, 3].map((num) => (
+            <div key={num} className="flex flex-col gap-1.5 rounded-2xl bg-slate-50 p-4 border border-slate-100">
+              <label className="text-[10px] font-black tracking-widest text-slate-400 uppercase">
+                {num} Color{num > 1 ? 's' : ''} Setup Price
+              </label>
+              <div className="relative flex items-center">
+                <span className="absolute left-4 font-mono text-xs font-bold text-slate-400">₱</span>
+                <input
+                  type="number"
+                  value={prices[num]}
+                  onChange={(e) => handlePriceChange(num, e.target.value)}
+                  className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-8 pr-4 font-mono text-xs font-black italic text-slate-900 outline-none transition-colors focus:border-slate-900"
+                  placeholder="Enter price"
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
       <div className="flex items-center gap-4">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
@@ -126,7 +177,7 @@ export function ScreenplateVisibilitySection({
                       {p.name}
                     </p>
                     <p className="text-[9px] font-bold tracking-widest text-slate-400 uppercase">
-                      {(p as any).category_label || p.category}
+                      {p.category_label || p.category}
                     </p>
                   </div>
                   <button
