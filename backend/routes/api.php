@@ -265,6 +265,13 @@ Route::middleware(['auth:sanctum', 'role:admin', 'throttle:api'])->get('/admin/t
     return response()->json(['message' => 'Admin access granted']);
 });
 
+Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
+    Route::delete('/accounts/{id}/soft-delete', [AdminAccountController::class, 'softDestroy']);
+    Route::delete('/accounts/deleted/{id}/purge', [AdminAccountController::class, 'purgeDeleted']);
+    Route::get('/accounts/deleted', [AdminAccountController::class, 'deletedAccounts']);
+});
+
+
 // Cart Routes
 Route::middleware(['auth:sanctum', 'role:customer', 'throttle:api'])->prefix('cart')->group(function () {
     Route::get('/', [CartController::class, 'index']);

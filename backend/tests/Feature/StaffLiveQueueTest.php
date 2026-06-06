@@ -61,7 +61,10 @@ it('updates the task status and records it in production logs and messages', fun
     expect($log->employee_id)->toBe($employee->id);
 
     // 7. Verify message insertion
-    $message = DB::table('messages')->where('order_id', $order->id)->first();
+    $message = DB::table('messages')
+        ->where('message_type', 'order')
+        ->where('type_id', $order->id)
+        ->first();
     expect($message)->not->toBeNull();
     expect($message->sender_id)->toBe($employee->id);
     expect($message->receiver_id)->toBe($customer->id);

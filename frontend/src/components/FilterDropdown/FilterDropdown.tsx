@@ -5,7 +5,7 @@ import { clsx } from 'clsx'
 
 interface FilterDropdownProps {
   label: string
-  icon: React.ElementType
+  icon: React.ComponentType<{ size?: number | string; className?: string }>;
   value: string | null
   options: { label: string; value: string | null }[] | string[]
   onChange: (val: string | null) => void
@@ -18,6 +18,7 @@ const FilterDropdown: React.FC<FilterDropdownProps> = ({
   options,
   onChange,
 }) => {
+
   const [isOpen, setIsOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 

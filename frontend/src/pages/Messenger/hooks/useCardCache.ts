@@ -32,9 +32,15 @@ function getPending(namespace: string): Map<string, Promise<unknown>> {
   return pendingRequests.get(namespace)!
 }
 
+interface CacheEntry<T> {
+  data: T | null
+  error: Error | null
+}
+
 interface CardCacheResult<T> {
   data: T | null
   loading: boolean
+  error: Error | null
 }
 
 /**
@@ -51,9 +57,10 @@ export function useCardCache<T>(
   const pending = getPending(namespace)
 
   const key = String(id ?? '')
-  const cached = id != null ? (cache.get(key) as T | undefined) : undefined
+  const cached = id != null ? (cache.get(key) as CacheEntry<T> | undefined) : undefined
 
-  const [data, setData] = useState<T | null>(cached ?? null)
+  const [data, setData] = useState<T | null>(cached ? cached.data : null)
+  const [error, setError] = useState<Error | null>(cached ? cached.error : null)
   const [loading, setLoading] = useState<boolean>(cached === undefined && id != null)
   const mountedRef = useRef(true)
 
@@ -70,42 +77,46 @@ export function useCardCache<T>(
 
     // Already in cache — use it immediately
     if (cache.has(k)) {
-      setData(cache.get(k) as T)
+      const entry = cache.get(k) as CacheEntry<T>
+      setData(entry.data)
+      setError(entry.error)
       setLoading(false)
       return
     }
 
     // Re-use an in-flight request for the same ID (deduplication)
-    let req: Promise<unknown>
+    let req: Promise<CacheEntry<T>>
     if (pending.has(k)) {
-      req = pending.get(k)!
+      req = pending.get(k) as Promise<CacheEntry<T>>
     } else {
       req = fetchFn()
         .then((result) => {
-          cache.set(k, result)
-          return result
+          const entry = { data: result, error: null }
+          cache.set(k, entry)
+          return entry
         })
         .catch((err) => {
-          // Cache null on error so we never retry a failed fetch
-          cache.set(k, null)
+          const entry = { data: null, error: err instanceof Error ? err : new Error(String(err)) }
+          cache.set(k, entry)
           console.error(`[useCardCache:${namespace}] fetch error for "${k}":`, err)
-          return null
+          return entry
         })
         .finally(() => {
           pending.delete(k)
         })
-      pending.set(k, req)
+      pending.set(k, req as Promise<unknown> as Promise<CacheEntry<T>>)
     }
 
     setLoading(true)
-    req.then((result) => {
+    req.then((entry) => {
       if (mountedRef.current) {
-        setData(result as T | null)
+        setData(entry.data)
+        setError(entry.error)
         setLoading(false)
       }
     })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [namespace, String(id)])
 
-  return { data, loading }
+  return { data, loading, error }
 }

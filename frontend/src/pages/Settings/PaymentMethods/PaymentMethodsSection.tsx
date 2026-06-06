@@ -40,7 +40,7 @@ const paymentSchema = z.object({
 type PaymentFormValues = z.infer<typeof paymentSchema>;
 
 // ─── Constants: Icon Mapping ─────────────────────────────────────────────────
-const BRAND_ICONS: Record<string, React.ElementType> = {
+const BRAND_ICONS: Record<string, React.ComponentType<{ size?: number | string; className?: string }>> = {
   'GCash': FiSmartphone,
   'Maya': FiSmartphone,
   'ShopeePay': FiSmartphone,
@@ -64,7 +64,7 @@ const PaymentMethodCard: React.FC<{
   onRemove: (id: string) => void;
 }> = ({ method, onSetDefault, onEdit, onRemove }) => {
   const displayLabel = method.provider || method.bank_name || method.type;
-  const Icon = BRAND_ICONS[method.provider || method.bank_name || ''] || (method.type === 'bank' ? FiBriefcase : FiCreditCard);
+  const Icon = (BRAND_ICONS[method.provider || method.bank_name || ''] || (method.type === 'bank' ? FiBriefcase : FiCreditCard));
 
   return (
     <m.div

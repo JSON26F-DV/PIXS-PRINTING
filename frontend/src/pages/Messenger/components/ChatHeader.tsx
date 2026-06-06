@@ -28,7 +28,10 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
 
   return (
     <header className="ChatHeader sticky top-0 z-20 flex items-center justify-between border-b border-slate-50 bg-white/80 px-3 py-3 backdrop-blur-xl min-[360px]:px-4 min-[414px]:px-6 md:px-10 md:py-6">
-      <div className="flex items-center gap-3 md:gap-4">
+      <div 
+        onClick={() => onOpenAdminControls?.()}
+        className="flex cursor-pointer items-center gap-3 md:gap-4 hover:opacity-85 select-none"
+      >
         <div className="relative">
           <div className="flex h-10 w-10 items-center justify-center rounded-[14px] border border-slate-800 bg-slate-900 shadow-lg shadow-slate-900/10 min-[360px]:h-11 min-[360px]:w-11 min-[414px]:h-12 min-[414px]:w-12 min-[414px]:rounded-[18px]">
             <span className="text-pixs-mint text-[10px] min-[360px]:text-[11px] min-[414px]:text-xs font-black italic">
@@ -68,68 +71,24 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
           <Phone size={16} />
         </a>
 
-        {user?.role === 'admin' ? (
-          <>
-            {/* Gallery Assets Button */}
-            <button
-              onClick={onToggleGallery}
-              className={clsx(
-                'flex h-9 w-9 items-center justify-center rounded-xl transition-all active:scale-90 min-[360px]:h-10 min-[360px]:w-10',
-                isGalleryOpen
-                  ? 'bg-slate-900 text-white'
-                  : 'bg-slate-50 text-slate-400 hover:bg-slate-100 hover:text-slate-900',
-              )}
-              title="Gallery Assets"
-            >
-              <LayoutGrid size={16} />
-            </button>
+        {/* Admin Controls Modal Button */}
+        <button
+          onClick={onOpenAdminControls}
+          className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-50 text-slate-400 transition-all hover:bg-slate-100 hover:text-slate-900 active:scale-90 min-[360px]:h-10 min-[360px]:w-10"
+          title="Admin Controls"
+        >
+          <Settings size={16} />
+        </button>
 
-            {/* Accounts Panel Button */}
-            <button
-              onClick={onToggleAccounts}
-              className={clsx(
-                'flex h-9 w-9 items-center justify-center rounded-xl transition-all active:scale-90 min-[360px]:h-10 min-[360px]:w-10',
-                isAccountsOpen
-                  ? 'bg-slate-900 text-white'
-                  : 'bg-slate-50 text-slate-400 hover:bg-slate-100 hover:text-slate-900',
-              )}
-              title="Accounts Registry"
-            >
-              <Users size={16} />
-            </button>
-
-            {/* Admin Controls Modal Button */}
-            <button
-              onClick={onOpenAdminControls}
-              className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-50 text-slate-400 transition-all hover:bg-slate-100 hover:text-slate-900 active:scale-90 min-[360px]:h-10 min-[360px]:w-10"
-              title="Admin Controls"
-            >
-              <Settings size={16} />
-            </button>
-
-            {/* Dashboard Navigation Button */}
-            <button
-              onClick={() => navigate('/admin/dashboard')}
-              className="flex h-9 px-3 items-center justify-center gap-1.5 rounded-xl bg-slate-900 text-white font-bold text-xs uppercase italic tracking-wider transition-all hover:bg-slate-800 active:scale-95 min-[360px]:h-10 shadow-sm"
-              title="Back to Dashboard"
-            >
-              <ArrowLeft size={14} className="text-pixs-mint" />
-              <span className="hidden sm:inline">Dashboard</span>
-            </button>
-          </>
-        ) : (
-          /* Default Customer/Employee layout controls */
+        {user?.role === 'admin' && (
+          /* Dashboard Navigation Button */
           <button
-            onClick={onToggleGallery}
-            className={clsx(
-              'flex h-9 w-9 items-center justify-center rounded-xl transition-all active:scale-90 min-[360px]:h-10 min-[360px]:w-10',
-              isGalleryOpen
-                ? 'bg-slate-900 text-white'
-                : 'bg-slate-50 text-slate-400 hover:bg-slate-100 hover:text-slate-900',
-            )}
-            title="Gallery Assets"
+            onClick={() => navigate('/admin/dashboard')}
+            className="flex h-9 px-3 items-center justify-center gap-1.5 rounded-xl bg-slate-900 text-white font-bold text-xs uppercase italic tracking-wider transition-all hover:bg-slate-800 active:scale-95 min-[360px]:h-10 shadow-sm"
+            title="Back to Dashboard"
           >
-            <LayoutGrid size={16} />
+            <ArrowLeft size={14} className="text-pixs-mint" />
+            <span className="hidden sm:inline">Dashboard</span>
           </button>
         )}
       </div>

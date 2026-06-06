@@ -1,9 +1,7 @@
-import React, { useRef, useEffect, useState, useCallback } from 'react'
+import React, { useRef, useEffect, useState } from 'react'
 import { Virtuoso, type VirtuosoHandle } from 'react-virtuoso'
 
 import { createPortal } from 'react-dom'
-import { m, AnimatePresence, MotionConfig } from 'framer-motion'
-import type { PanInfo } from 'framer-motion'
 import {
   Smile,
   MoreHorizontal,
@@ -18,7 +16,6 @@ import {
   ArrowDown,
   Pin,
   Copy,
-  DollarSign,
   Mail,
   AlertCircle,
 } from 'lucide-react'
@@ -37,6 +34,7 @@ import RefundMessage from './RefundMessage'
 import EmailMessage from './EmailMessage'
 import MessageImageGrid from './MessageImageGrid'
 import FullscreenGalleryModal from '../../../components/common/FullscreenGalleryModal'
+import MessageNotFound from './MessageNotFound'
 
 interface MessageListProps {
   messages: IMessage[]
@@ -65,59 +63,6 @@ const MessagePortal: React.FC<PortalProps> = ({ children }) => {
   return createPortal(children, mount)
 }
 
-// ---------------------------------------------------------------------------
-// LazyCard — viewport-gated card renderer
-// Renders a skeleton-height placeholder until the card is near the viewport,
-// then mounts the real component ONCE and never unmounts it again.
-// This prevents Virtuoso's virtual-scroll from remounting cards on scroll,
-// which was causing one API call per remount.
-// ---------------------------------------------------------------------------
-interface LazyCardProps {
-  /** Approximate height of the loaded card (keeps scroll stable while loading) */
-  approxHeight: number
-  children: React.ReactNode
-  /** Extra bottom margin added below card in the list */
-  className?: string
-}
-
-const LazyCard: React.FC<LazyCardProps> = ({ approxHeight, children, className }) => {
-  const containerRef = useRef<HTMLDivElement>(null)
-  const [revealed, setRevealed] = useState(false)
-
-  useEffect(() => {
-    const el = containerRef.current
-    if (!el) return
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          setRevealed(true)
-          observer.disconnect() // one-shot — stays rendered forever after this
-        }
-      },
-      { rootMargin: '300px 0px' }, // start loading 300px before entering viewport
-    )
-
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, [])
-
-  return (
-    <div
-      ref={containerRef}
-      className={className}
-      style={!revealed ? { minHeight: approxHeight, width: '100%' } : undefined}
-    >
-      {revealed ? children : (
-        // Placeholder while offscreen — matches approximate card height
-        <div
-          style={{ height: approxHeight }}
-          className="w-full max-w-sm rounded-[32px] border border-slate-100 bg-white animate-pulse"
-        />
-      )}
-    </div>
-  )
-}
 
 const QuickReactBar: React.FC<{
   onSelect: (emoji: string) => void
@@ -222,15 +167,10 @@ const MessageBubble: React.FC<{
     if (onCancelEdit) onCancelEdit()
   }
 
-  const hasCard = !!(message.order_id || message.screenplate_request_id || message.expenditures_id || message.refund_id || message.an_email);
+  const hasCard = !!(message.message_type || message.is_email);
 
   return (
-    <m.div
-      drag="x"
-      dragConstraints={{ left: 0, right: 0 }}
-      onDragEnd={(_, info: PanInfo) => {
-        if (info.offset.x < -100 || info.offset.x > 100) onReply()
-      }}
+    <div
       className={clsx(
         'group relative mb-3 md:mb-8 flex cursor-default flex-col',
         isHighlighted && 'bg-pixs-mint/10',
@@ -330,63 +270,53 @@ const MessageBubble: React.FC<{
             </>
           )}
 
-          {message.order_id && !isEditing && !message.isDeleted && (
+          {message.message_type === 'order' && message.type_id && !isEditing && !message.isDeleted && (
             <div className="mt-2 group-last:mb-0">
-              <LazyCard approxHeight={480}>
-                <OrderConfirmMessage
+              <OrderConfirmMessage
                   messageId={message.id}
-                  orderId={message.order_id}
+                  orderId={message.type_id}
                   isCustomer={isCustomer}
                   isConfirm={message.is_confirm}
                   productConcern={message.product_concern}
                   messageText={message.text}
                 />
-              </LazyCard>
             </div>
           )}
 
-          {message.expenditures_id && !isEditing && !message.isDeleted && (
+          {message.message_type === 'expenditure' && message.type_id && !isEditing && !message.isDeleted && (
             <div className="mt-2 group-last:mb-0">
-              <LazyCard approxHeight={290}>
-                <ExpenditureConfirmMessage expenditureId={message.expenditures_id} isCustomer={isCustomer} />
-              </LazyCard>
+              <ExpenditureConfirmMessage expenditureId={message.type_id} isCustomer={isCustomer} />
             </div>
           )}
 
-          {message.refund_id && !isEditing && !message.isDeleted && (
+          {message.message_type === 'refund' && message.type_id && !isEditing && !message.isDeleted && (
             <div className="mt-2 group-last:mb-0">
-              <LazyCard approxHeight={390}>
-                <RefundMessage refundId={message.refund_id} isCustomer={isCustomer} />
-              </LazyCard>
+              <RefundMessage refundId={message.type_id} isCustomer={isCustomer} />
             </div>
           )}
 
-          {message.an_email && !isEditing && !message.isDeleted && (
+          {message.is_email && !isEditing && !message.isDeleted && (
             <div className="mt-2 group-last:mb-0">
-              <LazyCard approxHeight={160}>
-                <EmailMessage messageText={message.text} created_at={message.timestamp} isCustomer={isCustomer} />
-              </LazyCard>
+              <EmailMessage messageText={message.text} created_at={message.timestamp} isCustomer={isCustomer} />
             </div>
           )}
 
-          {message.screenplate_request_id && !isEditing && !message.isDeleted && (
+          {message.message_type === 'screenplate_request' && message.type_id && !isEditing && !message.isDeleted && (
             <div className="mt-2 group-last:mb-0">
-              <LazyCard approxHeight={580}>
-                <ScreenplateConfirmMessage requestId={message.screenplate_request_id} isCustomer={isCustomer} onImageClick={onImageClick} />
-              </LazyCard>
+              <ScreenplateConfirmMessage requestId={message.type_id} isCustomer={isCustomer} onImageClick={onImageClick} />
             </div>
           )}
 
-          {message.payment_code_id && !isEditing && !message.isDeleted && (
+          {message.message_type === 'payment_code' && message.type_id && !isEditing && !message.isDeleted && (
             <div className={clsx(
               "mt-3 flex items-center gap-2 rounded-lg p-2 border",
               isCustomer ? "bg-slate-800/50 border-white/10" : "bg-slate-50 border-slate-200"
             )}>
               <span className={clsx("text-[10px] font-black uppercase", isCustomer ? "text-pixs-mint" : "text-slate-500")}>Pay Code:</span>
-              <span className="text-[12px] font-bold tracking-wider">{message.payment_code_id}</span>
+              <span className="text-[12px] font-bold tracking-wider">{message.type_id}</span>
               <button 
                 onClick={() => { 
-                  navigator.clipboard.writeText(message.payment_code_id!); 
+                  navigator.clipboard.writeText(message.type_id!); 
                   toast.success('Payment code copied!'); 
                 }}
                 className={clsx(
@@ -398,23 +328,19 @@ const MessageBubble: React.FC<{
               </button>
             </div>
           )}
-
-          {message.refund_id && (
-            <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50/50 p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <DollarSign size={16} className="text-rose-500" />
-                <span className="text-[10px] font-black tracking-widest uppercase text-rose-500">
-                  REFUND NOTICE
-                </span>
-              </div>
-              <p className="text-sm font-medium">{message.text}</p>
-              <button className="mt-3 text-[10px] font-bold uppercase tracking-widest text-rose-600 hover:underline">
-                View Refund Details →
-              </button>
+          
+          {(message.message_type && message.type_id && 
+            !['order', 'screenplate_request', 'payment_code', 'refund', 'expenditure'].includes(message.message_type)) && (
+            <div className="mt-2">
+              <MessageNotFound 
+                  messageType={message.message_type}
+                  typeId={message.type_id}
+                  isCustomer={isCustomer}
+                />
             </div>
           )}
 
-          {message.an_email && (
+          {message.is_email && (
             <div className="mt-3 rounded-xl border border-blue-200 bg-blue-50/50 p-4">
               <div className="flex items-center gap-2 mb-2">
                 <Mail size={16} className="text-blue-500" />
@@ -426,7 +352,7 @@ const MessageBubble: React.FC<{
             </div>
           )}
 
-          {message.product_concern && !message.refund_id && !message.an_email && !message.text?.startsWith('[LIVE_QUEUE_COMPLETED]') && (
+          {message.product_concern && message.message_type !== 'refund' && !message.is_email && !message.text?.startsWith('[LIVE_QUEUE_COMPLETED]') && (
             <div className={clsx(
               "mt-3 rounded-xl border p-4",
               message.text?.startsWith('[LIVE_QUEUE_NOT_COMPLETED]') 
@@ -451,12 +377,8 @@ const MessageBubble: React.FC<{
             </div>
           )}
 
-          <AnimatePresence>
-            {showOriginal && message.originalText && (
-              <m.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
+          {showOriginal && message.originalText && (
+              <div
                 className="mt-3 rounded-xl border-t border-white/10 bg-white/5 p-3 pt-3 text-[11px] leading-tight text-slate-400 italic blur-[0.4px] hover:blur-none"
               >
                 <div className="mb-1.5 flex items-center gap-1.5 opacity-50">
@@ -466,9 +388,8 @@ const MessageBubble: React.FC<{
                   </span>
                 </div>
                 {message.originalText}
-              </m.div>
+              </div>
             )}
-          </AnimatePresence>
 
           <div
             className={clsx(
@@ -621,8 +542,7 @@ const MessageBubble: React.FC<{
                 <Smile size={18} />
               </button>
 
-              <AnimatePresence>
-                {showQuickBar && (
+              {showQuickBar && (
                   <>
                     <QuickReactBar
                       isCustomer={isCustomer}
@@ -642,10 +562,8 @@ const MessageBubble: React.FC<{
                     />
                   </>
                 )}
-              </AnimatePresence>
 
-              <AnimatePresence>
-                {showFullPicker && anchorRect && (
+              {showFullPicker && anchorRect && (
                   <MessagePortal>
                     <div
                       style={{
@@ -676,7 +594,6 @@ const MessageBubble: React.FC<{
                     </div>
                   </MessagePortal>
                 )}
-              </AnimatePresence>
             </div>
 
             <div className="relative">
@@ -690,8 +607,7 @@ const MessageBubble: React.FC<{
                 <MoreHorizontal size={18} />
               </button>
 
-              <AnimatePresence>
-                {showOptions && anchorRect && (
+              {showOptions && anchorRect && (
                   <MessagePortal>
                     <div
                       style={{
@@ -801,16 +717,15 @@ const MessageBubble: React.FC<{
                     </div>
                   </MessagePortal>
                 )}
-              </AnimatePresence>
             </div>
           </div>
         )}
       </div>
-    </m.div>
+    </div>
   )
 }
 
-const INITIAL_FIRST_ITEM_INDEX = 10000
+
 
 
 
@@ -829,13 +744,9 @@ const MessageList: React.FC<MessageListProps> = ({
   onDeleteMedia,
 }) => {
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null)
-  const scrollContainerRef = useRef<HTMLDivElement>(null)
   const virtuosoRef = useRef<VirtuosoHandle>(null)
-  const [scrollContainer, setScrollContainer] = useState<HTMLDivElement | null>(null)
-  const [hasScrolledUp, setHasScrolledUp] = useState(false)
-  const prevLengthRef = useRef(messages.length)
-  const prevFirstMessageIdRef = useRef<string | null>(messages[0]?.id ?? null)
-  const prevLastMessageIdRef = useRef<string | null>(messages[messages.length - 1]?.id ?? null)
+  const [isNearBottom, setIsNearBottom] = useState(true)
+  const [showScrollDown, setShowScrollDown] = useState(false)
 
   const [galleryOpen, setGalleryOpen] = useState(false)
   const [activeImage, setActiveImage] = useState('')
@@ -857,186 +768,86 @@ const MessageList: React.FC<MessageListProps> = ({
     })
   }, [scrollToMessageId, messages])
 
-  // Check if viewport is at the bottom
-  const isNearBottom = (): boolean => {
-    const container = scrollContainerRef.current
-    if (!container) return true
-    
-    const { scrollTop, scrollHeight, clientHeight } = container
-    return scrollHeight - scrollTop - clientHeight < 50
-  }
-
-  // Scroll to the very bottom of messages
-  const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
-    const container = scrollContainerRef.current
-    if (!container) return
-    
-    container.scrollTo({
-      top: container.scrollHeight,
-      behavior,
-    })
-  }
-
-  // Handle scroll event
-  const handleScroll = useCallback(() => {
-    setHasScrolledUp(!isNearBottom())
-  }, [])
-
-  useEffect(() => {
-    const container = scrollContainerRef.current
-    if (!container) return
-
-    container.addEventListener('scroll', handleScroll)
-    return () => container.removeEventListener('scroll', handleScroll)
-  }, [scrollContainer, handleScroll])
-
-  useEffect(() => {
-    const currentFirstMessageId = messages[0]?.id ?? null
-    const currentLastMessageId = messages[messages.length - 1]?.id ?? null
-    const prevFirstMessageId = prevFirstMessageIdRef.current
-    const prevLastMessageId = prevLastMessageIdRef.current
-    const isPrepended = prevFirstMessageId && currentFirstMessageId !== prevFirstMessageId
-    const isAppended = prevLastMessageId && currentLastMessageId !== prevLastMessageId
-
-    prevFirstMessageIdRef.current = currentFirstMessageId
-    prevLastMessageIdRef.current = currentLastMessageId
-    prevLengthRef.current = messages.length
-
-    let timerId: ReturnType<typeof setTimeout> | undefined
-
-    if (isAppended || isNearBottom()) {
-      timerId = setTimeout(() => {
-        scrollToBottom(isAppended ? 'smooth' : 'auto')
-      }, 50)
-    }
-
-    if (isPrepended && !isNearBottom()) {
-      // Preserve the user's current view when older messages are loaded from the top.
-      return () => { if (timerId) clearTimeout(timerId) }
-    }
-
-    return () => { if (timerId) clearTimeout(timerId) }
-  }, [messages])
-
-  // Scroll to bottom when loading finishes or on mount.
-  // We attempt multiple times at increasing intervals to account for
-  // card components that expand as their data loads (e.g. OrderConfirmMessage).
-  // The 800ms attempt gives even slow API responses time to settle.
-  useEffect(() => {
-    if (!isLoading && messages.length > 0) {
-      scrollToBottom('auto')
-      const t1 = setTimeout(() => scrollToBottom('auto'), 150)
-      const t2 = setTimeout(() => scrollToBottom('auto'), 400)
-      const t3 = setTimeout(() => scrollToBottom('auto'), 800)
-      return () => {
-        clearTimeout(t1)
-        clearTimeout(t2)
-        clearTimeout(t3)
-      }
-    }
-  }, [isLoading, messages.length])
-
-  // Scroll-lock while loading older messages.
-  // Prevents the user from scrolling up while the server is fetching
-  // more history — avoids layout confusion from prepended items mid-scroll.
-  useEffect(() => {
-    const container = scrollContainerRef.current
-    if (!container) return
-    if (isLoadingMore) {
-      // Freeze the scroll container completely
-      container.style.overflowY = 'hidden'
-    } else {
-      // Restore normal scroll
-      container.style.overflowY = 'auto'
-    }
-  }, [isLoadingMore])
-
   return (
-    <MotionConfig transition={{ duration: 0 }} reducedMotion="always">
-      <div className="relative w-full h-full overflow-hidden">
-        <div
-          ref={(el) => {
-            scrollContainerRef.current = el
-            setScrollContainer(el)
-          }}
-          className="MessageList flex flex-col bg-emoji-pattern bg-slate-50/20 px-2 min-[360px]:px-3 min-[414px]:px-3 sm:px-8 pt-6 md:pt-12 md:pb-14"
-        style={{
-          height: '100%',
-          overflowY: 'auto',
-          WebkitOverflowScrolling: 'touch',
-          scrollbarWidth: 'thin',
-          scrollbarColor: '#39ff14 transparent',
-        }}
-      >
-        <div className="mx-auto flex min-h-0 w-full max-w-4xl flex-col">
-          {isLoading ? (
-            <div className="flex h-full flex-col items-center justify-center gap-4 py-20 text-slate-400">
-              <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-slate-800"></div>
-              <p className="text-xs font-black uppercase tracking-widest">Loading Conversation...</p>
-            </div>
-          ) : messages.length === 0 ? (
-            <div className="flex h-full flex-col items-center justify-center py-20 text-center opacity-60 transition-opacity hover:opacity-100">
-              <div className="mb-6 flex h-24 w-24 items-center justify-center rounded-[32px] bg-white shadow-2xl shadow-slate-200/50">
-                <FileText size={40} className="text-slate-300" />
-              </div>
-              <h3 className="mb-2 text-xl font-black tracking-tight text-slate-800 uppercase italic">Awaiting Transmission</h3>
-              <p className="max-w-xs text-[10px] font-bold tracking-[2px] text-slate-400 uppercase leading-relaxed">
-                The communication channel is open. Send a message to initiate contact directly with PIXS Administration.
-              </p>
-            </div>
-          ) : (
-            <Virtuoso
-              ref={virtuosoRef}
-              customScrollParent={scrollContainer || undefined}
-              data={messages}
-              firstItemIndex={INITIAL_FIRST_ITEM_INDEX}
-              startReached={() => {
-                if (onLoadMore && !isLoadingMore) {
-                  onLoadMore()
-                }
-              }}
-              initialTopMostItemIndex={messages.length - 1}
-              itemContent={(_index, msg) => (
-                <MessageBubble
-                  key={msg.id}
-                  message={msg}
-                  onReact={(emoji) => onReact(msg.id, emoji)}
-                  onReply={() => {
-                    setEditingMessageId(null)
-                    onReply(msg)
-                  }}
-                  onEdit={(text) => onEdit(msg.id, text)}
-                  onDelete={(isHard) => onDelete(msg.id, isHard)}
-                  onPin={onPin ? () => onPin(msg.id) : undefined}
-                  isAdmin={isAdmin}
-                  onImageClick={handleImageClick}
-                  onDeleteMedia={onDeleteMedia}
-                  isEditing={editingMessageId === msg.id}
-                  onStartEdit={() => setEditingMessageId(msg.id)}
-                  onCancelEdit={() => setEditingMessageId(null)}
-                />
-              )}
-              components={{
-                Header: () => isLoadingMore ? (
-                  // Spinner shown at top while older messages load.
-                  // Scroll is locked (see effect above) so user stays put.
-                  <div className="flex items-center justify-center py-6">
-                    <div className="flex items-center gap-3 rounded-full border border-slate-200 bg-white px-5 py-3 shadow-md">
-                      <div className="h-4 w-4 animate-spin rounded-full border-[2.5px] border-slate-200 border-t-slate-800" />
-                      <span className="text-[9px] font-black uppercase tracking-[3px] text-slate-500">
-                        Loading messages
-                      </span>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="h-4" />
-                ),
-                Footer: () => <div className="md:pb-10" />,
-              }}
-            />
-          )}
+    <div className="relative w-[100vw] max-w-[100vw] h-full overflow-hidden flex flex-col">
+      {isLoading ? (
+        <div className="flex h-full flex-1 flex-col items-center justify-center gap-4 py-20 text-slate-400 bg-emoji-pattern bg-slate-50/20">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-slate-800"></div>
+          <p className="text-xs font-black uppercase tracking-widest">Loading Conversation...</p>
         </div>
-      </div>
+      ) : messages.length === 0 ? (
+        <div className="flex h-full flex-1 flex-col items-center justify-center py-20 text-center opacity-60 transition-opacity hover:opacity-100 bg-emoji-pattern bg-slate-50/20">
+          <div className="mb-6 flex h-24 w-24 items-center justify-center rounded-[32px] bg-white shadow-2xl shadow-slate-200/50">
+            <FileText size={40} className="text-slate-300" />
+          </div>
+          <h3 className="mb-2 text-xl font-black tracking-tight text-slate-800 uppercase italic">Awaiting Transmission</h3>
+          <p className="max-w-xs text-[10px] font-bold tracking-[2px] text-slate-400 uppercase leading-relaxed">
+            The communication channel is open. Send a message to initiate contact directly with PIXS Administration.
+          </p>
+        </div>
+      ) : (
+        <Virtuoso
+          ref={virtuosoRef}
+          className="MessageList no-scrollbar bg-emoji-pattern flex-1 bg-slate-50/20 px-6 pt-8 pb-10 md:px-12 md:pt-12 md:pb-14"
+          data={messages}
+          followOutput="auto"
+          initialTopMostItemIndex={messages.length - 1}
+          increaseViewportBy={400}
+          style={{
+            height: '100%',
+            WebkitOverflowScrolling: 'touch',
+          }}
+          atBottomStateChange={(atBottom) => {
+            setIsNearBottom(atBottom)
+            if (atBottom) setShowScrollDown(false)
+          }}
+          rangeChanged={({ startIndex }) => {
+            setShowScrollDown(startIndex < messages.length - 10 && !isNearBottom)
+          }}
+          startReached={() => {
+            if (onLoadMore && !isLoadingMore) {
+              onLoadMore()
+            }
+          }}
+          itemContent={(_, msg) => (
+            <div className="mx-auto max-w-4xl">
+              <MessageBubble
+                key={msg.id}
+                message={msg}
+                onReact={(emoji) => onReact(msg.id, emoji)}
+                onReply={() => {
+                  setEditingMessageId(null)
+                  onReply(msg)
+                }}
+                onEdit={(text) => onEdit(msg.id, text)}
+                onDelete={(isHard) => onDelete(msg.id, isHard)}
+                onPin={onPin ? () => onPin(msg.id) : undefined}
+                isAdmin={isAdmin}
+                onImageClick={handleImageClick}
+                onDeleteMedia={onDeleteMedia}
+                isEditing={editingMessageId === msg.id}
+                onStartEdit={() => setEditingMessageId(msg.id)}
+                onCancelEdit={() => setEditingMessageId(null)}
+              />
+            </div>
+          )}
+          components={{
+            Header: () => isLoadingMore ? (
+              <div className="flex items-center justify-center py-6">
+                <div className="flex items-center gap-3 rounded-full border border-slate-200 bg-white px-5 py-3 shadow-md">
+                  <div className="h-4 w-4 animate-spin rounded-full border-[2.5px] border-slate-200 border-t-slate-800" />
+                  <span className="text-[9px] font-black uppercase tracking-[3px] text-slate-500">
+                    Loading messages
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div className="h-4" />
+            ),
+            Footer: () => <div className="md:pb-10" />,
+          }}
+        />
+      )}
 
       <MessagePortal>
         <FullscreenGalleryModal
@@ -1047,25 +858,22 @@ const MessageList: React.FC<MessageListProps> = ({
         />
       </MessagePortal>
 
-      <AnimatePresence>
-        {hasScrolledUp && (
-          <button
-            onClick={() => scrollToBottom()}
-            className="group absolute bottom-4 md:bottom-6 left-1/2 z-50 flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full border border-slate-100 bg-white text-slate-900 shadow-2xl active:scale-95"
-            style={{ transform: 'translateX(-50%)' }}
-          >
-            <ArrowDown
-              size={20}
-              className="group-hover:translate-y-0.5 md:group-hover:translate-y-1 md:size-[24px]"
-            />
-            <div className="absolute -top-12 rounded-xl bg-slate-900 px-4 py-2 text-[10px] font-black tracking-widest whitespace-nowrap text-white uppercase opacity-0 transition-opacity group-hover:opacity-100">
-              Latest fulfillment
-            </div>
-          </button>
-        )}
-      </AnimatePresence>
-      </div>
-    </MotionConfig>
+      {showScrollDown && (
+        <button
+          onClick={() => virtuosoRef.current?.scrollToIndex({ index: messages.length - 1, behavior: 'smooth' })}
+          className="group absolute bottom-4 md:bottom-6 left-1/2 z-50 flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full border border-slate-100 bg-white text-slate-900 shadow-2xl active:scale-95"
+          style={{ transform: 'translateX(-50%)' }}
+        >
+          <ArrowDown
+            size={20}
+            className="group-hover:translate-y-0.5 md:group-hover:translate-y-1 md:size-[24px]"
+          />
+          <div className="absolute -top-12 rounded-xl bg-slate-900 px-4 py-2 text-[10px] font-black tracking-widest whitespace-nowrap text-white uppercase opacity-0 transition-opacity group-hover:opacity-100">
+            Latest fulfillment
+          </div>
+        </button>
+      )}
+    </div>
   )
 }
 

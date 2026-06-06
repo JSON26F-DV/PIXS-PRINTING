@@ -1,4 +1,4 @@
-import React from 'react'
+
 import { Mail, Shield, Calendar } from 'lucide-react'
 import { clsx } from 'clsx'
 
@@ -8,7 +8,7 @@ interface EmailMessageProps {
   isCustomer: boolean
 }
 
-const EmailMessage: React.FC<EmailMessageProps> = ({ messageText, created_at, isCustomer }) => {
+export default function EmailMessage({ messageText, created_at, isCustomer }: EmailMessageProps) {
   // Split subject and body: if first line is relatively short, treat as subject.
   const lines = messageText.split('\n')
   const subject = lines[0] && lines[0].length < 100 ? lines[0] : 'Official Notification'
@@ -72,5 +72,3 @@ const EmailMessage: React.FC<EmailMessageProps> = ({ messageText, created_at, is
     </div>
   )
 }
-
-export default EmailMessage

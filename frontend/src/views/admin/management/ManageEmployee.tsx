@@ -428,17 +428,17 @@ const ManageEmployee = () => {
   }
 
   return (
-    <div className="mx-auto max-w-[1000px] animate-in fade-in space-y-8 px-4 pb-16 pt-8 duration-500">
+    <div className="mx-auto max-w-[1000px] animate-in fade-in space-y-6 md:space-y-8 px-4 pb-16 pt-4 md:pt-8 duration-500">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3 md:gap-4">
           <Link
             to="/admin/account"
-            className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-600 transition-colors hover:bg-slate-200"
+            className="flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full bg-slate-100 text-slate-600 transition-colors hover:bg-slate-200"
           >
             <ArrowLeft size={20} />
           </Link>
           <div>
-            <h1 className="text-3xl font-black tracking-tighter text-slate-900 uppercase italic">
+            <h1 className="text-xl md:text-3xl font-black tracking-tighter text-slate-900 uppercase italic">
               {isEditing ? 'Manage Employee' : 'Provision Employee'}
             </h1>
             <p className="text-xs font-bold tracking-[2px] text-slate-400 uppercase">
@@ -448,31 +448,31 @@ const ManageEmployee = () => {
         </div>
         <button
           onClick={handleSubmit(onSubmit)}
-          className="flex items-center gap-2 rounded-[20px] bg-slate-900 px-8 py-4 text-xs font-black tracking-widest text-white shadow-xl shadow-slate-900/20 transition-all hover:-translate-y-1 hover:bg-slate-800"
+          className="flex items-center gap-2 rounded-[20px] bg-slate-900 px-3 py-3 md:px-8 md:py-4 text-xs font-black tracking-widest text-white shadow-xl shadow-slate-900/20 transition-all hover:-translate-y-1 hover:bg-slate-800"
         >
           <Save size={16} />
-          SAVE CHANGES
+          <span className="hidden md:inline">SAVE CHANGES</span>
         </button>
       </div>
 
       <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
         {/* Basic Information */}
-        <section className="rounded-[32px] border border-slate-100 bg-white p-8 shadow-2xl shadow-slate-200/40">
+        <section className="rounded-[32px] border border-slate-100 bg-white p-4 md:p-8 shadow-2xl shadow-slate-200/40">
           <div className="mb-6 flex items-center gap-3">
             <div className="rounded-xl bg-blue-50 p-2 text-blue-600">
               <User size={20} />
             </div>
-            <h2 className="text-lg font-black tracking-tight text-slate-900 uppercase italic">Basic Information</h2>
+            <h2 className="text-sm md:text-lg font-black tracking-tight text-slate-900 uppercase italic">Basic Information</h2>
           </div>
 
-          <div className="grid gap-6 md:grid-cols-2">
+          <div className="grid gap-4 md:gap-6 md:grid-cols-2">
             {/* Profile Picture Upload Section */}
             <div className="md:col-span-2 flex flex-col items-center gap-4 border border-dashed border-slate-200 rounded-2xl p-6 bg-slate-50/50">
               <label className="block text-[10px] font-black tracking-[2px] text-slate-400 uppercase self-start">Profile Picture</label>
               <div className="relative group">
                 <div
                   onClick={() => fileInputRef.current?.click()}
-                  className="relative h-32 w-32 overflow-hidden rounded-[40px] border-4 border-white bg-slate-900 shadow-xl transition-transform duration-300 hover:scale-105 cursor-pointer"
+                    className="relative h-24 w-24 md:h-32 md:w-32 overflow-hidden rounded-[28px] md:rounded-[40px] border-4 border-white bg-slate-900 shadow-xl transition-transform duration-300 hover:scale-105 cursor-pointer"
                 >
                   <BoxFallback
                     className={`flex h-full w-full items-center justify-center bg-slate-900 transition-opacity duration-300 ${
@@ -508,7 +508,7 @@ const ManageEmployee = () => {
                   accept=".jpg,.jpeg,.png,.webp"
                 />
               </div>
-              <p className="text-[9px] font-black tracking-widest text-slate-400 uppercase">Click to change profile picture</p>
+              <p className="text-[8px] md:text-[9px] font-black tracking-widest text-slate-400 uppercase">Click to change profile picture</p>
             </div>
 
             <div>
@@ -554,26 +554,27 @@ const ManageEmployee = () => {
         </section>
 
         {/* Contact Numbers */}
-        <section className="rounded-[32px] border border-slate-100 bg-white p-8 shadow-2xl shadow-slate-200/40">
+        <section className="rounded-[32px] border border-slate-100 bg-white p-4 md:p-8 shadow-2xl shadow-slate-200/40">
           <div className="mb-6 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="rounded-xl bg-emerald-50 p-2 text-emerald-600">
                 <Phone size={20} />
               </div>
-              <h2 className="text-lg font-black tracking-tight text-slate-900 uppercase italic">Contact Numbers</h2>
+              <h2 className="text-sm md:text-lg font-black tracking-tight text-slate-900 uppercase italic">Contact Numbers</h2>
             </div>
             <button
               type="button"
               onClick={() => appendContact({ number: '', is_default: contactFields.length === 0 })}
-              className="flex items-center gap-2 rounded-xl bg-slate-100 px-4 py-2 text-xs font-bold text-slate-600 transition-colors hover:bg-slate-200"
+              className="flex items-center gap-2 rounded-xl bg-slate-100 px-2 py-2 md:px-4 text-xs font-bold text-slate-600 transition-colors hover:bg-slate-200"
             >
-              <Plus size={16} /> Add Contact
+              <Plus size={16} />
+              <span className="hidden md:inline">Add Contact</span>
             </button>
           </div>
 
           <div className="space-y-4">
             {contactFields.map((field, index) => (
-              <div key={field.id} className="flex items-center gap-4 rounded-2xl border border-slate-100 bg-slate-50 p-4">
+              <div key={field.id} className="flex items-center gap-3 rounded-2xl border border-slate-100 bg-slate-50 p-3 md:p-4 active:scale-[0.99] transition-transform">
                 <div className="flex-1">
                   <input placeholder="Phone Number" {...register(`contacts.${index}.number`)} className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2 font-bold text-slate-900 focus:outline-none" />
                 </div>
@@ -613,26 +614,27 @@ const ManageEmployee = () => {
         </section>
 
         {/* Payment Methods */}
-        <section className="rounded-[32px] border border-slate-100 bg-white p-8 shadow-2xl shadow-slate-200/40">
+        <section className="rounded-[32px] border border-slate-100 bg-white p-4 md:p-8 shadow-2xl shadow-slate-200/40">
           <div className="mb-6 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="rounded-xl bg-amber-50 p-2 text-amber-600">
                 <CreditCard size={20} />
               </div>
-              <h2 className="text-lg font-black tracking-tight text-slate-900 uppercase italic">Payment Methods</h2>
+              <h2 className="text-sm md:text-lg font-black tracking-tight text-slate-900 uppercase italic">Payment Methods</h2>
             </div>
             <button
               type="button"
               onClick={() => appendPM({ type: '', bank_name: '', provider: '', masked_number: '', is_default: false })}
-              className="flex items-center gap-2 rounded-xl bg-slate-100 px-4 py-2 text-xs font-bold text-slate-600 transition-colors hover:bg-slate-200"
+              className="flex items-center gap-2 rounded-xl bg-slate-100 px-2 py-2 md:px-4 text-xs font-bold text-slate-600 transition-colors hover:bg-slate-200"
             >
-              <Plus size={16} /> Add Payment Method
+              <Plus size={16} />
+              <span className="hidden md:inline">Add Payment Method</span>
             </button>
           </div>
 
           <div className="space-y-4">
             {pmFields.map((field, index) => (
-              <div key={field.id} className="grid gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-6 md:grid-cols-2 relative">
+              <div key={field.id} className="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 md:p-6 md:grid-cols-2 relative active:scale-[0.99] transition-transform">
                 <button type="button" onClick={() => removePM(index)} className="absolute right-4 top-4 rounded-lg p-2 text-rose-500 hover:bg-rose-50">
                   <Trash2 size={18} />
                 </button>
@@ -678,20 +680,21 @@ const ManageEmployee = () => {
         </section>
 
         {/* Addresses */}
-        <section className="rounded-[32px] border border-slate-100 bg-white p-8 shadow-2xl shadow-slate-200/40">
+        <section className="rounded-[32px] border border-slate-100 bg-white p-4 md:p-8 shadow-2xl shadow-slate-200/40">
           <div className="mb-6 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="rounded-xl bg-purple-50 p-2 text-purple-600">
                 <MapPin size={20} />
               </div>
-              <h2 className="text-lg font-black tracking-tight text-slate-900 uppercase italic">Addresses</h2>
+              <h2 className="text-sm md:text-lg font-black tracking-tight text-slate-900 uppercase italic">Addresses</h2>
             </div>
             <button
               type="button"
               onClick={() => appendAddress({ full_name: '', phone: '', region: '', province: '', city: '', barangay: '', street: '', address: '', postal_code: '', is_default: false })}
-              className="flex items-center gap-2 rounded-xl bg-slate-100 px-4 py-2 text-xs font-bold text-slate-600 transition-colors hover:bg-slate-200"
+              className="flex items-center gap-2 rounded-xl bg-slate-100 px-2 py-2 md:px-4 text-xs font-bold text-slate-600 transition-colors hover:bg-slate-200"
             >
-              <Plus size={16} /> Add Address
+              <Plus size={16} />
+              <span className="hidden md:inline">Add Address</span>
             </button>
           </div>
 
@@ -717,7 +720,7 @@ const ManageEmployee = () => {
                 : []
 
               return (
-                <div key={field.id} className="relative grid gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-6 md:grid-cols-2">
+                <div key={field.id} className="relative grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 md:p-6 md:grid-cols-2 active:scale-[0.99] transition-transform">
                   <button
                     type="button"
                     onClick={() => {

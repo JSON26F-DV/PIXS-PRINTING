@@ -310,7 +310,8 @@ const Transactions: React.FC = () => {
         formData.append('message', messageBody);
         formData.append('receiver_id', '1'); // Admin
         formData.append('receiver_type', 'employee');
-        formData.append('order_id', orderId);
+        formData.append('message_type', 'order');
+        formData.append('type_id', orderId);
 
         await axiosInstance.post('/api/messages/send', formData, {
           headers: { 'Content-Type': 'multipart/form-data' }

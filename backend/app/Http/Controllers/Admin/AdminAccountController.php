@@ -522,4 +522,95 @@ class AdminAccountController extends Controller
             'production_orders' => $productionOrders,
         ]);
     }
+
+    public function softDestroy(Request $request, string $id)
+    {
+        $request->validate([
+            'password' => 'required|string',
+        ]);
+
+        $admin = $request->user();
+        if (! Hash::check($request->password, $admin->password)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Authentication failed. Invalid password.'
+            ], 403);
+        }
+
+        $deletedByType = ($admin instanceof Customer) ? 'customer' : 'employee';
+        
+        $customer = Customer::find($id);
+        if ($customer) {
+            $customer->softDeleteWithRelations(
+                $admin->id,
+                $deletedByType,
+                $request->reason
+            );
+        } else {
+            $employee = Employee::findOrFail($id);
+            $employee->softDeleteWithRelations(
+                $admin->id,
+                $deletedByType,
+                $request->reason
+            );
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Account moved to deleted accounts'
+        ]);
+    }
+
+    public function purgeDeleted(Request $request, int $id)
+    {
+        $request->validate([
+            'password' => 'required|string',
+        ]);
+
+        $admin = $request->user();
+        if (! Hash::check($request->password, $admin->password)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Authentication failed. Invalid password.'
+            ], 403);
+        }
+
+        $deletedAccount = DeletedAccount::findOrFail($id);
+        $deletedAccount->delete();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Account permanently purged from database'
+        ]);
+    }
+
+    public function deletedAccounts(Request $request)
+    {
+        $query = DeletedAccount::query();
+        
+        if ($request->filled('type')) {
+            $query->where('account_type', $request->type);
+        }
+        
+        if ($request->filled('search')) {
+            $query->where(function ($q) use ($request) {
+                $q->where('email', 'like', "%{$request->search}%")
+                  ->orWhere('original_id', 'like', "%{$request->search}%");
+            });
+        }
+
+        $perPage = $request->input('per_page', 20);
+        $deleted = $query->orderBy('deleted_at', 'desc')->paginate($perPage);
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $deleted->items(),
+            'meta' => [
+                'current_page' => $deleted->currentPage(),
+                'last_page' => $deleted->lastPage(),
+                'total' => $deleted->total(),
+            ]
+        ]);
+    }
 }
+

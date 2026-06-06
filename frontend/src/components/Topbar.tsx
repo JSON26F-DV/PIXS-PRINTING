@@ -204,7 +204,7 @@ const SmartSearch: React.FC<{
 
   const typeLabels: Record<
     string,
-    { label: string; icon: React.ElementType; color: string }
+    { label: string; icon: React.ComponentType<{ size?: number | string; className?: string }>; color: string }
   > = {
     menu: { label: 'Menu', icon: ChevronRight, color: 'text-slate-500' },
     product: { label: 'Products', icon: Package, color: 'text-blue-500' },

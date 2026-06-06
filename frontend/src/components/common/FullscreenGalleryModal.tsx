@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { m, AnimatePresence } from 'framer-motion'
 import { X, ChevronLeft, ChevronRight, Download, Maximize2, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react'
 import { clsx } from 'clsx'
 import BoxFallback from './BoxFallback'
@@ -26,7 +25,6 @@ const FullscreenGalleryModal: React.FC<FullscreenGalleryModalProps> = ({
   // Zoom & Pan State
   const [scale, setScale] = useState(1)
   const [position, setPosition] = useState({ x: 0, y: 0 })
-  const [isDragging, setIsDragging] = useState(false)
   
   const containerRef = useRef<HTMLDivElement>(null)
 
@@ -101,13 +99,7 @@ const FullscreenGalleryModal: React.FC<FullscreenGalleryModalProps> = ({
   if (!isOpen) return null
 
   return (
-    <AnimatePresence>
-      <m.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[10000] flex flex-col bg-slate-950/95 backdrop-blur-xl pointer-events-auto"
-      >
+    <div className="fixed inset-0 z-[10000] flex flex-col bg-slate-950/95 backdrop-blur-xl pointer-events-auto">
         {/* Superior Control Header */}
         <div className="flex items-center justify-between p-6 md:p-10 z-20">
           <div className="space-y-1">
@@ -164,29 +156,13 @@ const FullscreenGalleryModal: React.FC<FullscreenGalleryModalProps> = ({
             ref={containerRef}
             className={clsx(
                 "relative flex flex-1 items-center justify-center overflow-hidden px-6 md:px-20",
-                scale > 1 ? "cursor-grab" : "cursor-default",
-                isDragging && "cursor-grabbing"
+                scale > 1 ? "cursor-grab" : "cursor-default"
             )}
         >
-          <AnimatePresence mode="wait">
-            <m.div
+            <div
               key={currentIndex}
-              initial={{ opacity: 0, scale: 0.9, x: 40 }}
-              animate={{ 
-                opacity: 1, 
-                scale: scale, 
-                x: position.x,
-                y: position.y
-              }}
-              exit={{ opacity: 0, scale: 0.9, x: -40 }}
-              transition={isDragging ? { type: 'spring', damping: 100, stiffness: 1000 } : { duration: 0.5, ease: 'circOut' }}
-              drag={scale > 1}
-              onDragStart={() => setIsDragging(true)}
-              onDragEnd={(_, info) => {
-                setIsDragging(false)
-                setPosition({ x: info.offset.x, y: info.offset.y })
-              }}
-              className="relative flex h-full w-full items-center justify-center"
+              className="relative flex h-full w-full items-center justify-center transition-transform"
+              style={{ transform: `scale(${scale}) translate(${position.x}px, ${position.y}px)` }}
             >
               {images[currentIndex] && !imageErrors[currentIndex] ? (
                 <img
@@ -198,15 +174,12 @@ const FullscreenGalleryModal: React.FC<FullscreenGalleryModalProps> = ({
               ) : (
                 <BoxFallback className="flex h-[50vh] w-[50vh] items-center justify-center rounded-2xl bg-white/5" />
               )}
-            </m.div>
-          </AnimatePresence>
+            </div>
 
           {/* Navigation Controls */}
           {images.length > 1 && scale === 1 && (
             <>
-              <m.button
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
+              <button
                 onClick={handlePrev}
                 className="hover:bg-pixs-mint group absolute left-6 flex h-16 w-16 items-center justify-center rounded-full border border-white/5 bg-black/40 text-white shadow-2xl backdrop-blur-md transition-all hover:text-slate-900 active:scale-95 md:left-12"
               >
@@ -214,10 +187,8 @@ const FullscreenGalleryModal: React.FC<FullscreenGalleryModalProps> = ({
                   size={32}
                   className="transition-transform group-hover:-translate-x-1"
                 />
-              </m.button>
-              <m.button
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
+              </button>
+              <button
                 onClick={handleNext}
                 className="hover:bg-pixs-mint group absolute right-6 flex h-16 w-16 items-center justify-center rounded-full border border-white/5 bg-black/40 text-white shadow-2xl backdrop-blur-md transition-all hover:text-slate-900 active:scale-95 md:right-12"
               >
@@ -225,7 +196,7 @@ const FullscreenGalleryModal: React.FC<FullscreenGalleryModalProps> = ({
                   size={32}
                   className="transition-transform group-hover:translate-x-1"
                 />
-              </m.button>
+              </button>
             </>
           )}
 
@@ -271,8 +242,7 @@ const FullscreenGalleryModal: React.FC<FullscreenGalleryModalProps> = ({
             </button>
           ))}
         </div>
-      </m.div>
-    </AnimatePresence>
+    </div>
   )
 }
 

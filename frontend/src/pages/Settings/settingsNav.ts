@@ -21,7 +21,7 @@ export type SectionKey =
 export interface NavItem {
   key: SectionKey
   label: string
-  icon: React.ElementType
+  icon: React.ComponentType<{ size?: number | string; className?: string }>
   description: string
 }
 

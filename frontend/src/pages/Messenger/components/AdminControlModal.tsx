@@ -19,6 +19,7 @@ interface AdminControlModalProps {
   onSendMessage?: (text: string, attachments?: { type: 'image' | 'file'; url: string; name: string; fileObj?: File }[], payment_code_id?: string) => void
   onToggleGallery?: () => void
   onScrollToMessage?: (messageId: string) => void
+  isAdmin?: boolean
 }
 
 // ─── Sub-panel: Pinned Messages ──────────────────────────────────────────────
@@ -183,19 +184,19 @@ const OrdersScreenplatesPanel: React.FC<{
             <span>{format(new Date(msg.timestamp), 'MMM d, HH:mm')}</span>
           </div>
           <div className="flex flex-wrap gap-1 mb-2">
-            {msg.order_id && (
+            {msg.message_type === 'order' && (
               <span className="px-2 py-0.5 text-[8px] font-black bg-pixs-mint/20 text-slate-800 rounded uppercase tracking-wider">
                 Order
               </span>
             )}
-            {msg.screenplate_request_id && (
+            {msg.message_type === 'screenplate_request' && (
               <span className="px-2 py-0.5 text-[8px] font-black bg-blue-50 text-blue-600 border border-blue-100 rounded uppercase tracking-wider">
                 Screenplate
               </span>
             )}
           </div>
           <p className="text-xs font-bold text-slate-800 line-clamp-3">
-            {msg.text || (msg.order_id ? 'Order Confirmation Message' : 'Screenplate Confirmation Message')}
+            {msg.text || (msg.message_type === 'order' ? 'Order Confirmation Message' : 'Screenplate Confirmation Message')}
           </p>
         </button>
       ))}
@@ -213,7 +214,8 @@ const AdminControlModal: React.FC<AdminControlModalProps> = ({
   onDeleteConversation,
   onSendMessage,
   onToggleGallery,
-  onScrollToMessage
+  onScrollToMessage,
+  isAdmin = false
 }) => {
   const [imgError, setImgError] = useState(false)
   const [activePanel, setActivePanel] = useState<null | 'pinned' | 'search' | 'orders'>(null)
@@ -253,7 +255,7 @@ const AdminControlModal: React.FC<AdminControlModalProps> = ({
   }
 
   const pinnedMsgs = messages.filter(m => m.is_pinned && !m.isDeleted)
-  const orderScreenplateMsgs = messages.filter(m => !m.isDeleted && (m.order_id || m.screenplate_request_id))
+  const orderScreenplateMsgs = messages.filter(m => !m.isDeleted && (m.message_type === 'order' || m.message_type === 'screenplate_request'))
 
   // Build all image URLs from conversation attachments
   const getAssetUrl = (at: { type: string; name: string; url: string }) => {
@@ -413,14 +415,16 @@ const AdminControlModal: React.FC<AdminControlModalProps> = ({
               </section>
 
               {/* ── Generate PayCode ── */}
-              <section>
-                <button
-                  onClick={handleGeneratePayCode}
-                  className="w-full flex items-center justify-center gap-2 bg-slate-900 text-white p-4 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-slate-800 transition active:scale-[0.98] shadow-lg shadow-slate-900/20"
-                >
-                  <Zap size={16} className="text-pixs-mint fill-current" /> Generate & Send PayCode
-                </button>
-              </section>
+              {isAdmin && (
+                <section>
+                  <button
+                    onClick={handleGeneratePayCode}
+                    className="w-full flex items-center justify-center gap-2 bg-slate-900 text-white p-4 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-slate-800 transition active:scale-[0.98] shadow-lg shadow-slate-900/20"
+                  >
+                    <Zap size={16} className="text-pixs-mint fill-current" /> Generate & Send PayCode
+                  </button>
+                </section>
+              )}
 
               {/* ── Pinned Messages — button that opens sub-panel ── */}
               <section>
@@ -469,22 +473,24 @@ const AdminControlModal: React.FC<AdminControlModalProps> = ({
             </div>
 
             {/* Footer: Delete Chat */}
-            <div className="p-6 border-t border-slate-100 bg-slate-50 shrink-0">
-              <button
-                onClick={() => {
-                  if (window.confirm('Are you absolutely sure you want to delete this entire conversation?')) {
-                    if (targetUser?.id && onDeleteConversation) {
-                      onDeleteConversation(targetUser.id)
-                      onClose()
+            {isAdmin && (
+              <div className="p-6 border-t border-slate-100 bg-slate-50 shrink-0">
+                <button
+                  onClick={() => {
+                    if (window.confirm('Are you absolutely sure you want to delete this entire conversation?')) {
+                      if (targetUser?.id && onDeleteConversation) {
+                        onDeleteConversation(targetUser.id)
+                        onClose()
+                      }
                     }
-                  }
-                }}
-                disabled={!targetUser?.id}
-                className="w-full flex items-center justify-center gap-2 bg-red-50 text-red-600 border border-red-100 p-3 rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-red-500 hover:text-white transition disabled:opacity-50"
-              >
-                <Trash2 size={14} /> Delete Entire Conversation
-              </button>
-            </div>
+                  }}
+                  disabled={!targetUser?.id}
+                  className="w-full flex items-center justify-center gap-2 bg-red-50 text-red-600 border border-red-100 p-3 rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-red-500 hover:text-white transition disabled:opacity-50"
+                >
+                  <Trash2 size={14} /> Delete Entire Conversation
+                </button>
+              </div>
+            )}
           </m.div>
         </div>
       )}

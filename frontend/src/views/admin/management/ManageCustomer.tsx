@@ -13,7 +13,8 @@ import {
   Camera,
   X,
   RefreshCw,
-  Check
+  Check,
+  ChevronDown
 } from 'lucide-react'
 import { m, AnimatePresence } from 'framer-motion'
 import Cropper, { type Area } from 'react-easy-crop'
@@ -140,7 +141,6 @@ const getChangesList = (initial: any, current: any, isEmployee: boolean) => {
     }
   }
 
-  // Simple length/change checks for lists
   const initialContacts = initial.contacts || []
   const currentContacts = current.contacts || []
   if (initialContacts.length !== currentContacts.length) {
@@ -429,57 +429,57 @@ const ManageCustomer = () => {
   }
 
   return (
-    <div className="mx-auto max-w-[1000px] animate-in fade-in space-y-8 px-4 pb-16 pt-8 duration-500">
+    <div className="mx-auto max-w-[1000px] animate-in fade-in space-y-4 md:space-y-8 p-4 md:p-8 duration-500">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3 md:gap-4">
           <Link
             to="/admin/account"
-            className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-600 transition-colors hover:bg-slate-200"
+            className="flex h-8 w-8 md:h-12 md:w-12 items-center justify-center rounded-full bg-slate-100 text-slate-600 transition-colors hover:bg-slate-200"
           >
-            <ArrowLeft size={20} />
+            <ArrowLeft size={16} />
           </Link>
           <div>
-            <h1 className="text-3xl font-black tracking-tighter text-slate-900 uppercase italic">
+            <h1 className="text-lg md:text-3xl font-black tracking-tighter text-slate-900 uppercase italic">
               {isEditing ? 'Manage Customer' : 'Provision Customer'}
             </h1>
-            <p className="text-xs font-bold tracking-[2px] text-slate-400 uppercase">
+            <p className="text-[9px] md:text-xs font-bold tracking-[2px] text-slate-400 uppercase">
               {isEditing ? `ID: ${id}` : 'New Registration'}
             </p>
           </div>
         </div>
         <button
           onClick={handleSubmit(onSubmit)}
-          className="flex items-center gap-2 rounded-[20px] bg-[#75EEA5] px-8 py-4 text-xs font-black tracking-widest text-slate-900 shadow-xl shadow-[#75EEA5]/20 transition-all hover:-translate-y-1 hover:bg-[#5de291]"
+          className="flex items-center justify-center gap-2 rounded-[20px] bg-[#75EEA5] px-4 py-3 md:px-8 md:py-4 text-xs font-black tracking-widest text-slate-900 shadow-xl shadow-[#75EEA5]/20 transition-all hover:-translate-y-1 hover:bg-[#5de291]"
         >
           <Save size={16} />
-          SAVE CHANGES
+          <span className="hidden md:inline">SAVE CHANGES</span>
         </button>
       </div>
 
-      <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
+      <form className="space-y-4 md:space-y-6" onSubmit={handleSubmit(onSubmit)}>
         {/* Basic Information */}
-        <section className="rounded-[32px] border border-slate-100 bg-white p-8 shadow-2xl shadow-slate-200/40">
-          <div className="mb-6 flex items-center gap-3">
+        <section className="rounded-[32px] border border-slate-100 bg-white p-4 md:p-8 shadow-2xl shadow-slate-200/40">
+          <div className="mb-4 md:mb-6 flex items-center gap-3">
             <div className="rounded-xl bg-blue-50 p-2 text-blue-600">
               <User size={20} />
             </div>
-            <h2 className="text-lg font-black tracking-tight text-slate-900 uppercase italic">Basic Information</h2>
+            <h2 className="text-base md:text-lg font-black tracking-tight text-slate-900 uppercase italic">Basic Information</h2>
           </div>
 
-          <div className="grid gap-6 md:grid-cols-2">
+          <div className="grid gap-4 md:gap-6 md:grid-cols-2">
             {/* Profile Picture Upload Section */}
-            <div className="md:col-span-2 flex flex-col items-center gap-4 border border-dashed border-slate-200 rounded-2xl p-6 bg-slate-50/50">
-              <label className="block text-[10px] font-black tracking-[2px] text-slate-400 uppercase self-start">Profile Picture</label>
+            <div className="md:col-span-2 flex flex-col items-center gap-3 md:gap-4 border border-dashed border-slate-200 rounded-2xl p-4 md:p-6 bg-slate-50/50">
+              <label className="block text-[9px] md:text-[10px] font-black tracking-[2px] text-slate-400 uppercase self-start">Profile Picture</label>
               <div className="relative group">
                 <div
                   onClick={() => fileInputRef.current?.click()}
-                  className="relative h-32 w-32 overflow-hidden rounded-[40px] border-4 border-white bg-slate-900 shadow-xl transition-transform duration-300 hover:scale-105 cursor-pointer"
+                  className="relative h-20 w-20 md:h-32 md:w-32 overflow-hidden rounded-[16px] md:rounded-[40px] border-4 border-white bg-slate-900 shadow-xl transition-transform duration-300 hover:scale-105 cursor-pointer"
                 >
                   <BoxFallback
                     className={`flex h-full w-full items-center justify-center bg-slate-900 transition-opacity duration-300 ${
                       profilePreview && !hasImageError ? 'absolute inset-0 z-0' : 'relative z-10'
                     }`}
-                    iconClassName="h-12 w-12 opacity-30 brightness-0 invert"
+                    iconClassName="h-8 w-8 md:h-12 md:w-12 opacity-30 brightness-0 invert"
                   />
 
                   {profilePreview && !hasImageError && (
@@ -498,7 +498,7 @@ const ManageCustomer = () => {
                     />
                   )}
                   <div className="absolute inset-0 z-20 flex items-center justify-center bg-slate-900/40 opacity-0 backdrop-blur-sm transition-all group-hover:opacity-100">
-                    <Camera className="text-white" size={24} />
+                    <Camera className="text-white" size={20} />
                   </div>
                 </div>
                 <input
@@ -509,83 +509,93 @@ const ManageCustomer = () => {
                   accept=".jpg,.jpeg,.png,.webp"
                 />
               </div>
-              <p className="text-[9px] font-black tracking-widest text-slate-400 uppercase">Click to change profile picture</p>
+              <p className="text-[8px] md:text-[9px] font-black tracking-widest text-slate-400 uppercase">Click to change profile picture</p>
             </div>
 
             <div>
-              <label className="mb-2 block text-[10px] font-black tracking-[2px] text-slate-400 uppercase">First Name</label>
-              <input {...register('first_name', { required: true })} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 font-bold text-slate-900 focus:border-blue-500 focus:outline-none" />
+              <label className="mb-1.5 md:mb-2 block text-[9px] md:text-[10px] font-black tracking-[2px] text-slate-400 uppercase">First Name</label>
+              <input {...register('first_name', { required: true })} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5 md:px-4 md:py-3 text-sm md:text-base font-bold text-slate-900 focus:border-blue-500 focus:outline-none" />
             </div>
             <div>
-              <label className="mb-2 block text-[10px] font-black tracking-[2px] text-slate-400 uppercase">Last Name</label>
-              <input {...register('last_name', { required: true })} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 font-bold text-slate-900 focus:border-blue-500 focus:outline-none" />
+              <label className="mb-1.5 md:mb-2 block text-[9px] md:text-[10px] font-black tracking-[2px] text-slate-400 uppercase">Last Name</label>
+              <input {...register('last_name', { required: true })} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5 md:px-4 md:py-3 text-sm md:text-base font-bold text-slate-900 focus:border-blue-500 focus:outline-none" />
             </div>
             <div>
-              <label className="mb-2 block text-[10px] font-black tracking-[2px] text-slate-400 uppercase">Email</label>
-              <input type="email" {...register('email', { required: true })} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 font-bold text-slate-900 focus:border-blue-500 focus:outline-none" />
+              <label className="mb-1.5 md:mb-2 block text-[9px] md:text-[10px] font-black tracking-[2px] text-slate-400 uppercase">Email</label>
+              <input type="email" {...register('email', { required: true })} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5 md:px-4 md:py-3 text-sm md:text-base font-bold text-slate-900 focus:border-blue-500 focus:outline-none" />
             </div>
             <div>
-              <label className="mb-2 block text-[10px] font-black tracking-[2px] text-slate-400 uppercase">Password (Leave empty to keep)</label>
-              <input type="password" {...register('password')} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 font-bold text-slate-900 focus:border-blue-500 focus:outline-none" />
+              <label className="mb-1.5 md:mb-2 block text-[9px] md:text-[10px] font-black tracking-[2px] text-slate-400 uppercase">Password (Leave empty to keep)</label>
+              <input type="password" {...register('password')} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5 md:px-4 md:py-3 text-sm md:text-base font-bold text-slate-900 focus:border-blue-500 focus:outline-none" />
             </div>
             <div>
-              <label className="mb-2 block text-[10px] font-black tracking-[2px] text-slate-400 uppercase">Role</label>
-              <select {...register('role')} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 font-bold text-slate-900 focus:border-blue-500 focus:outline-none">
-                <option value="customer">Customer</option>
-              </select>
+              <label className="mb-1.5 md:mb-2 block text-[9px] md:text-[10px] font-black tracking-[2px] text-slate-400 uppercase">Role</label>
+              <div className="relative">
+                <select {...register('role')} className="appearance-none w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5 md:px-4 md:py-3 pr-8 md:pr-10 text-sm md:text-base font-bold text-slate-900 focus:border-blue-500 focus:outline-none">
+                  <option value="customer">Customer</option>
+                </select>
+                <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400" />
+              </div>
             </div>
             <div>
-              <label className="mb-2 block text-[10px] font-black tracking-[2px] text-slate-400 uppercase">Status</label>
-              <select {...register('status')} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 font-bold text-slate-900 focus:border-blue-500 focus:outline-none">
-                <option value="active">Active</option>
-                <option value="suspended">Suspended</option>
-              </select>
+              <label className="mb-1.5 md:mb-2 block text-[9px] md:text-[10px] font-black tracking-[2px] text-slate-400 uppercase">Status</label>
+              <div className="relative">
+                <select {...register('status')} className="appearance-none w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5 md:px-4 md:py-3 pr-8 md:pr-10 text-sm md:text-base font-bold text-slate-900 focus:border-blue-500 focus:outline-none">
+                  <option value="active">Active</option>
+                  <option value="suspended">Suspended</option>
+                </select>
+                <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400" />
+              </div>
             </div>
             <div>
-              <label className="mb-2 block text-[10px] font-black tracking-[2px] text-slate-400 uppercase">Age</label>
-              <input type="number" {...register('age')} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 font-bold text-slate-900 focus:border-blue-500 focus:outline-none" />
+              <label className="mb-1.5 md:mb-2 block text-[9px] md:text-[10px] font-black tracking-[2px] text-slate-400 uppercase">Age</label>
+              <input type="number" {...register('age')} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5 md:px-4 md:py-3 text-sm md:text-base font-bold text-slate-900 focus:border-blue-500 focus:outline-none" />
             </div>
             <div>
-              <label className="mb-2 block text-[10px] font-black tracking-[2px] text-slate-400 uppercase">Gender</label>
-              <select {...register('gender')} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 font-bold text-slate-900 focus:border-blue-500 focus:outline-none">
-                <option value="">Select</option>
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-                <option value="other">Other</option>
-              </select>
+              <label className="mb-1.5 md:mb-2 block text-[9px] md:text-[10px] font-black tracking-[2px] text-slate-400 uppercase">Gender</label>
+              <div className="relative">
+                <select {...register('gender')} className="appearance-none w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5 md:px-4 md:py-3 pr-8 md:pr-10 text-sm md:text-base font-bold text-slate-900 focus:border-blue-500 focus:outline-none">
+                  <option value="">Select</option>
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                  <option value="other">Other</option>
+                </select>
+                <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400" />
+              </div>
             </div>
             <div className="md:col-span-2">
-              <label className="mb-2 block text-[10px] font-black tracking-[2px] text-slate-400 uppercase">Company Name</label>
-              <input {...register('company_name')} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 font-bold text-slate-900 focus:border-blue-500 focus:outline-none" />
+              <label className="mb-1.5 md:mb-2 block text-[9px] md:text-[10px] font-black tracking-[2px] text-slate-400 uppercase">Company Name</label>
+              <input {...register('company_name')} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5 md:px-4 md:py-3 text-sm md:text-base font-bold text-slate-900 focus:border-blue-500 focus:outline-none" />
             </div>
           </div>
         </section>
 
         {/* Contact Numbers */}
-        <section className="rounded-[32px] border border-slate-100 bg-white p-8 shadow-2xl shadow-slate-200/40">
-          <div className="mb-6 flex items-center justify-between">
+        <section className="rounded-[32px] border border-slate-100 bg-white p-4 md:p-8 shadow-2xl shadow-slate-200/40">
+          <div className="mb-4 md:mb-6 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="rounded-xl bg-emerald-50 p-2 text-emerald-600">
                 <Phone size={20} />
               </div>
-              <h2 className="text-lg font-black tracking-tight text-slate-900 uppercase italic">Contact Numbers</h2>
+              <h2 className="text-base md:text-lg font-black tracking-tight text-slate-900 uppercase italic">Contact Numbers</h2>
             </div>
             <button
               type="button"
               onClick={() => appendContact({ number: '', is_default: contactFields.length === 0 })}
-              className="flex items-center gap-2 rounded-xl bg-slate-100 px-4 py-2 text-xs font-bold text-slate-600 transition-colors hover:bg-slate-200"
+              className="flex items-center justify-center gap-2 rounded-xl bg-slate-100 px-3 py-2 md:px-4 md:py-2 text-xs font-bold text-slate-600 transition-colors hover:bg-slate-200"
             >
-              <Plus size={16} /> Add Contact
+              <Plus size={16} />
+              <span className="hidden md:inline">Add Contact</span>
             </button>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-3 md:space-y-4">
             {contactFields.map((field, index) => (
-              <div key={field.id} className="flex items-center gap-4 rounded-2xl border border-slate-100 bg-slate-50 p-4">
-                <div className="flex-1">
-                  <input placeholder="Phone Number" {...register(`contacts.${index}.number`)} className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2 font-bold text-slate-900 focus:outline-none" />
+              <div key={field.id} className="flex items-center gap-3 md:gap-4 rounded-2xl border border-slate-100 bg-slate-50 p-3 md:p-4">
+                <div className="flex-1 min-w-0">
+                  <input placeholder="Phone Number" {...register(`contacts.${index}.number`)} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 md:px-4 md:py-2 text-sm md:text-base font-bold text-slate-900 focus:outline-none" />
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1 md:gap-2 shrink-0">
                   <input
                     type="radio"
                     name="contacts_default_radio"
@@ -595,9 +605,9 @@ const ManageCustomer = () => {
                         setValue(`contacts.${idx}.is_default`, idx === index)
                       })
                     }}
-                    className="h-5 w-5 border-slate-300 accent-slate-900 cursor-pointer"
+                    className="h-4 w-4 md:h-5 md:w-5 border-slate-300 accent-slate-900 cursor-pointer"
                   />
-                  <span className="text-xs font-bold text-slate-500">Default</span>
+                  <span className="text-[9px] md:text-xs font-bold text-slate-500">Default</span>
                 </div>
                 <button
                   type="button"
@@ -612,9 +622,9 @@ const ManageCustomer = () => {
                       }, 0)
                     }
                   }}
-                  className="rounded-lg p-2 text-rose-500 hover:bg-rose-50"
+                  className="rounded-lg p-1.5 md:p-2 text-rose-500 hover:bg-rose-50 shrink-0"
                 >
-                  <Trash2 size={18} />
+                  <Trash2 size={16} />
                 </button>
               </div>
             ))}
@@ -622,30 +632,31 @@ const ManageCustomer = () => {
         </section>
 
         {/* Payment Methods */}
-        <section className="rounded-[32px] border border-slate-100 bg-white p-8 shadow-2xl shadow-slate-200/40">
-          <div className="mb-6 flex items-center justify-between">
+        <section className="rounded-[32px] border border-slate-100 bg-white p-4 md:p-8 shadow-2xl shadow-slate-200/40">
+          <div className="mb-4 md:mb-6 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="rounded-xl bg-amber-50 p-2 text-amber-600">
                 <CreditCard size={20} />
               </div>
-              <h2 className="text-lg font-black tracking-tight text-slate-900 uppercase italic">Payment Methods</h2>
+              <h2 className="text-base md:text-lg font-black tracking-tight text-slate-900 uppercase italic">Payment Methods</h2>
             </div>
             <button
               type="button"
               onClick={() => appendPM({ type: '', bank_name: '', provider: '', masked_number: '', is_default: false })}
-              className="flex items-center gap-2 rounded-xl bg-slate-100 px-4 py-2 text-xs font-bold text-slate-600 transition-colors hover:bg-slate-200"
+              className="flex items-center justify-center gap-2 rounded-xl bg-slate-100 px-3 py-2 md:px-4 md:py-2 text-xs font-bold text-slate-600 transition-colors hover:bg-slate-200"
             >
-              <Plus size={16} /> Add Payment Method
+              <Plus size={16} />
+              <span className="hidden md:inline">Add Payment Method</span>
             </button>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-3 md:space-y-4">
             {pmFields.map((field, index) => (
-              <div key={field.id} className="grid gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-6 md:grid-cols-2 relative">
-                <button type="button" onClick={() => removePM(index)} className="absolute right-4 top-4 rounded-lg p-2 text-rose-500 hover:bg-rose-50">
-                  <Trash2 size={18} />
+              <div key={field.id} className="relative grid gap-3 md:gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 md:p-6 md:grid-cols-2">
+                <button type="button" onClick={() => removePM(index)} className="absolute right-3 top-3 md:right-4 md:top-4 rounded-lg p-1.5 md:p-2 text-rose-500 hover:bg-rose-50 z-10">
+                  <Trash2 size={16} />
                 </button>
-                <div className="md:col-span-2 flex items-center gap-2 mb-2">
+                <div className="md:col-span-2 flex items-center gap-2 mb-1 md:mb-2">
                   <input
                     type="radio"
                     name="payment_methods_default_radio"
@@ -655,30 +666,33 @@ const ManageCustomer = () => {
                         setValue(`paymentMethods.${idx}.is_default`, idx === index)
                       })
                     }}
-                    className="h-5 w-5 border-slate-300 accent-slate-900 cursor-pointer"
+                    className="h-4 w-4 md:h-5 md:w-5 border-slate-300 accent-slate-900 cursor-pointer"
                   />
-                  <span className="text-xs font-bold text-slate-500">Set as Default Payment</span>
+                  <span className="text-[9px] md:text-xs font-bold text-slate-500">Set as Default Payment</span>
                 </div>
                 <div>
-                  <label className="mb-1 block text-[10px] font-black tracking-[1px] text-slate-400 uppercase">Type</label>
-                  <select {...register(`paymentMethods.${index}.type`)} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-900 focus:outline-none">
-                    <option value="">Select Type</option>
-                    <option value="bank">Bank Transfer</option>
-                    <option value="ewallet">E-Wallet</option>
-                    <option value="credit_card">Credit Card</option>
-                    <option value="cod">Cash on Delivery (COD)</option>
-                  </select>
+                  <label className="mb-1 block text-[9px] md:text-[10px] font-black tracking-[1px] text-slate-400 uppercase">Type</label>
+                  <div className="relative">
+                    <select {...register(`paymentMethods.${index}.type`)} className="appearance-none w-full rounded-xl border border-slate-200 bg-white px-3 py-2 pr-8 text-sm font-bold text-slate-900 focus:outline-none">
+                      <option value="">Select Type</option>
+                      <option value="bank">Bank Transfer</option>
+                      <option value="ewallet">E-Wallet</option>
+                      <option value="credit_card">Credit Card</option>
+                      <option value="cod">Cash on Delivery (COD)</option>
+                    </select>
+                    <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400" />
+                  </div>
                 </div>
                 <div>
-                  <label className="mb-1 block text-[10px] font-black tracking-[1px] text-slate-400 uppercase">Provider (e.g., Visa)</label>
+                  <label className="mb-1 block text-[9px] md:text-[10px] font-black tracking-[1px] text-slate-400 uppercase">Provider (e.g., Visa)</label>
                   <input {...register(`paymentMethods.${index}.provider`)} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-900 focus:outline-none" />
                 </div>
                 <div>
-                  <label className="mb-1 block text-[10px] font-black tracking-[1px] text-slate-400 uppercase">Bank Name</label>
+                  <label className="mb-1 block text-[9px] md:text-[10px] font-black tracking-[1px] text-slate-400 uppercase">Bank Name</label>
                   <input {...register(`paymentMethods.${index}.bank_name`)} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-900 focus:outline-none" />
                 </div>
                 <div>
-                  <label className="mb-1 block text-[10px] font-black tracking-[1px] text-slate-400 uppercase">Masked Number (e.g., **** 1234)</label>
+                  <label className="mb-1 block text-[9px] md:text-[10px] font-black tracking-[1px] text-slate-400 uppercase">Masked Number (e.g., **** 1234)</label>
                   <input {...register(`paymentMethods.${index}.masked_number`)} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-900 focus:outline-none" />
                 </div>
               </div>
@@ -687,24 +701,25 @@ const ManageCustomer = () => {
         </section>
 
         {/* Addresses */}
-        <section className="rounded-[32px] border border-slate-100 bg-white p-8 shadow-2xl shadow-slate-200/40">
-          <div className="mb-6 flex items-center justify-between">
+        <section className="rounded-[32px] border border-slate-100 bg-white p-4 md:p-8 shadow-2xl shadow-slate-200/40">
+          <div className="mb-4 md:mb-6 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="rounded-xl bg-purple-50 p-2 text-purple-600">
                 <MapPin size={20} />
               </div>
-              <h2 className="text-lg font-black tracking-tight text-slate-900 uppercase italic">Addresses</h2>
+              <h2 className="text-base md:text-lg font-black tracking-tight text-slate-900 uppercase italic">Addresses</h2>
             </div>
             <button
               type="button"
               onClick={() => appendAddress({ adress_label: '', contact_number: '', region: '', province: '', city: '', barangay: '', street: '', postal_code: '', is_default: false })}
-              className="flex items-center gap-2 rounded-xl bg-slate-100 px-4 py-2 text-xs font-bold text-slate-600 transition-colors hover:bg-slate-200"
+              className="flex items-center justify-center gap-2 rounded-xl bg-slate-100 px-3 py-2 md:px-4 md:py-2 text-xs font-bold text-slate-600 transition-colors hover:bg-slate-200"
             >
-              <Plus size={16} /> Add Address
+              <Plus size={16} />
+              <span className="hidden md:inline">Add Address</span>
             </button>
           </div>
 
-          <div className="space-y-6">
+          <div className="space-y-4 md:space-y-6">
             {addressFields.map((field, index) => {
               const codes = addressCodes[index] || {
                 regionCode: '',
@@ -726,7 +741,7 @@ const ManageCustomer = () => {
                 : []
 
               return (
-                <div key={field.id} className="relative grid gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-6 md:grid-cols-2">
+                <div key={field.id} className="relative grid gap-3 md:gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 md:p-6 md:grid-cols-2">
                   <button
                     type="button"
                     onClick={() => {
@@ -737,11 +752,11 @@ const ManageCustomer = () => {
                         return next
                       })
                     }}
-                    className="absolute right-4 top-4 rounded-lg p-2 text-rose-500 hover:bg-rose-50 z-10"
+                    className="absolute right-3 top-3 md:right-4 md:top-4 rounded-lg p-1.5 md:p-2 text-rose-500 hover:bg-rose-50 z-10"
                   >
-                    <Trash2 size={18} />
+                    <Trash2 size={16} />
                   </button>
-                  <div className="md:col-span-2 flex items-center gap-2 mb-2">
+                  <div className="md:col-span-2 flex items-center gap-2 mb-1 md:mb-2">
                     <input
                       type="radio"
                       name="addresses_default_radio"
@@ -751,26 +766,26 @@ const ManageCustomer = () => {
                           setValue(`addresses.${idx}.is_default`, idx === index)
                         })
                       }}
-                      className="h-5 w-5 border-slate-300 accent-slate-900 cursor-pointer"
+                      className="h-4 w-4 md:h-5 md:w-5 border-slate-300 accent-slate-900 cursor-pointer"
                     />
-                    <span className="text-xs font-bold text-slate-500">Set as Default Address</span>
+                    <span className="text-[9px] md:text-xs font-bold text-slate-500">Set as Default Address</span>
                   </div>
                   <div>
-                    <label className="mb-1 block text-[10px] font-black tracking-[1px] text-slate-400 uppercase">Address Label (e.g. Home/Work)</label>
+                    <label className="mb-1 block text-[9px] md:text-[10px] font-black tracking-[1px] text-slate-400 uppercase">Address Label (e.g. Home/Work)</label>
                     <input {...register(`addresses.${index}.adress_label`)} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-900 focus:outline-none" />
                   </div>
                   <div>
-                    <label className="mb-1 block text-[10px] font-black tracking-[1px] text-slate-400 uppercase">Contact Number</label>
+                    <label className="mb-1 block text-[9px] md:text-[10px] font-black tracking-[1px] text-slate-400 uppercase">Contact Number</label>
                     <input {...register(`addresses.${index}.contact_number`)} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-900 focus:outline-none" />
                   </div>
                   <div>
-                    <label className="mb-1 block text-[10px] font-black tracking-[1px] text-slate-400 uppercase">Street / Bldg / Unit</label>
+                    <label className="mb-1 block text-[9px] md:text-[10px] font-black tracking-[1px] text-slate-400 uppercase">Street / Bldg / Unit</label>
                     <input {...register(`addresses.${index}.street`)} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-900 focus:outline-none" />
                   </div>
 
                   {/* Dropdowns */}
                   <div>
-                    <label className="mb-1 block text-[10px] font-black tracking-[1px] text-slate-400 uppercase">Region</label>
+                    <label className="mb-1 block text-[9px] md:text-[10px] font-black tracking-[1px] text-slate-400 uppercase">Region</label>
                     <Select
                       options={regionOptions}
                       value={regionOptions.find((o) => o.value === codes.regionCode) || null}
@@ -796,7 +811,7 @@ const ManageCustomer = () => {
                   </div>
 
                   <div>
-                    <label className="mb-1 block text-[10px] font-black tracking-[1px] text-slate-400 uppercase">Province</label>
+                    <label className="mb-1 block text-[9px] md:text-[10px] font-black tracking-[1px] text-slate-400 uppercase">Province</label>
                     <Select
                       options={provinceOptions}
                       value={provinceOptions.find((o) => o.value === codes.provinceCode) || null}
@@ -822,7 +837,7 @@ const ManageCustomer = () => {
                   </div>
 
                   <div>
-                    <label className="mb-1 block text-[10px] font-black tracking-[1px] text-slate-400 uppercase">City</label>
+                    <label className="mb-1 block text-[9px] md:text-[10px] font-black tracking-[1px] text-slate-400 uppercase">City</label>
                     <Select
                       options={cityOptions}
                       value={cityOptions.find((o) => o.value === codes.municipalityCode) || null}
@@ -846,7 +861,7 @@ const ManageCustomer = () => {
                   </div>
 
                   <div>
-                    <label className="mb-1 block text-[10px] font-black tracking-[1px] text-slate-400 uppercase">Barangay</label>
+                    <label className="mb-1 block text-[9px] md:text-[10px] font-black tracking-[1px] text-slate-400 uppercase">Barangay</label>
                     <Select
                       options={barangayOptions}
                       value={barangayOptions.find((o) => o.value === codes.barangayCode) || null}
@@ -868,7 +883,7 @@ const ManageCustomer = () => {
                   </div>
 
                   <div>
-                    <label className="mb-1 block text-[10px] font-black tracking-[1px] text-slate-400 uppercase">Postal Code</label>
+                    <label className="mb-1 block text-[9px] md:text-[10px] font-black tracking-[1px] text-slate-400 uppercase">Postal Code</label>
                     <input {...register(`addresses.${index}.postal_code`)} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-900 focus:outline-none" />
                   </div>
                 </div>

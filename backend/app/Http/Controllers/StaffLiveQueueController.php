@@ -45,11 +45,9 @@ class StaffLiveQueueController extends Controller
         foreach ($allPendingOrders as $o) {
             $orderId = (string) $o->id;
 
-            // If the user is not an admin, they MUST be explicitly assigned to see the order.
-            if (!$assignments['is_admin']) {
-                if (!isset($queueMap[$orderId]) || !in_array($employeeId, $queueMap[$orderId], true)) {
-                    continue; // Employee is not assigned to this order
-                }
+            // The user MUST be explicitly assigned to see the order.
+            if (!isset($queueMap[$orderId]) || !in_array($employeeId, $queueMap[$orderId], true)) {
+                continue; // Employee is not assigned to this order
             }
 
             $formattedOrder = [
@@ -152,7 +150,11 @@ class StaffLiveQueueController extends Controller
                 $convId = $employeeId . '_' . $customerId;
 
                 // Ensure conversation exists
-                DB::insert('INSERT IGNORE INTO conversations (id, created_at, updated_at) VALUES (?, NOW(), NOW())', [$convId]);
+                DB::table('conversations')->insertOrIgnore([
+                    'id' => $convId,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
 
                 $msgId = 'msg_' . Str::random(10);
                 DB::table('messages')->insert([
@@ -164,11 +166,9 @@ class StaffLiveQueueController extends Controller
                     'receiver_type' => 'customer',
                     'message' => $messageText,
                     'reply_to_id' => null,
-                    'order_id' => $id,
-                    'screenplate_request_id' => null,
-                    'payment_code_id' => null,
+                    'message_type' => 'order',
+                    'type_id' => $id,
                     'product_concern' => 1,
-                    'expenditures_id' => null,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);

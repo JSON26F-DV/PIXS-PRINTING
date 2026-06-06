@@ -9,6 +9,9 @@ import {
   Package,
   Star,
   ShoppingBag,
+  Home,
+  Search,
+  User,
 } from 'lucide-react'
 
 import { useAuth } from '../../context/AuthContext'
@@ -228,7 +231,7 @@ const Homepage: React.FC = () => {
   )
 
   return (
-    <div className="flex min-h-screen flex-col items-center bg-white mt-0 md:mt-20">
+    <div className="flex min-h-screen flex-col items-center bg-white mt-0 md:mt-20 pb-20 md:pb-0">
       {/* Hero Section - Matching OrderPage Spaciousness */}
       <section
         className="relative w-full overflow-hidden pb-10"
@@ -253,15 +256,15 @@ const Homepage: React.FC = () => {
 
       {/* Categories Row (Production Line) */}
       <section
-        className="mx-auto w-full max-w-[1873px] px-6 md:px-16"
+        className="mx-auto w-full max-w-[1873px] px-4 md:px-16"
         aria-label="Product Categories"
       >
-        <div className="mb-12 flex items-end justify-between">
+        <div className="mb-6 flex items-end justify-between md:mb-12">
           <div>
-            <h3 className="mb-4 text-4xl leading-none font-black tracking-tighter text-slate-900 uppercase italic md:text-6xl">
+            <h3 className="mb-2 text-2xl leading-none font-black tracking-tighter text-slate-900 uppercase italic md:mb-4 md:text-6xl">
               Production Line
             </h3>
-            <p className="text-xs font-bold tracking-[4px] text-slate-400 uppercase md:text-sm">
+            <p className="text-[10px] font-bold tracking-[3px] text-slate-400 uppercase md:text-sm md:tracking-[4px]">
               Select your substrate matrix
             </p>
           </div>
@@ -281,20 +284,20 @@ const Homepage: React.FC = () => {
         <section
           id="marketplace"
           ref={productGridRef}
-          className="relative bg-slate-50/50 px-6 py-20 md:px-16 md:py-32"
+          className="relative bg-slate-50/50 px-4 py-12 md:px-16 md:py-32"
           aria-label="Product Marketplace"
         >
           <div className="mx-auto max-w-[1873px]">
-            <div className="mb-20 flex flex-col gap-10">
-              <div className="flex flex-col justify-between gap-8 md:flex-row md:items-end">
+            <div className="mb-12 flex flex-col gap-6 md:mb-20 md:gap-10">
+              <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
                 <div>
-                  <h2 className="mb-4 text-5xl leading-none font-black tracking-tighter text-slate-900 uppercase italic md:text-8xl">
+                  <h2 className="mb-2 text-3xl leading-none font-black tracking-tighter text-slate-900 uppercase italic md:mb-4 md:text-8xl">
                     The{' '}
                     <span className="text-slate-400 opacity-50">
                       Marketplace
                     </span>
                   </h2>
-                  <p className="text-xs font-bold tracking-[4px] text-slate-400 uppercase md:text-sm">
+                  <p className="text-[10px] font-bold tracking-[3px] text-slate-400 uppercase md:text-sm md:tracking-[4px]">
                     Access the industrial registry
                   </p>
                 </div>
@@ -504,6 +507,28 @@ const Homepage: React.FC = () => {
             </AnimatePresence>
           </div>
         </section>
+      </div>
+
+      {/* Mobile Bottom Navigation */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 px-4 py-3 md:hidden z-50">
+        <div className="flex justify-around items-center">
+          <button className="flex flex-col items-center gap-1 p-2 active:scale-95 transition-transform">
+            <Home size={20} className="text-emerald-500" />
+            <span className="text-[9px] font-bold text-emerald-500">Home</span>
+          </button>
+          <button onClick={() => navigate('/discovery')} className="flex flex-col items-center gap-1 p-2 active:scale-95 transition-transform">
+            <Search size={20} className="text-slate-400" />
+            <span className="text-[9px] font-bold text-slate-400">Discover</span>
+          </button>
+          <button className="flex flex-col items-center gap-1 p-2 active:scale-95 transition-transform">
+            <ShoppingBag size={20} className="text-slate-400" />
+            <span className="text-[9px] font-bold text-slate-400">Orders</span>
+          </button>
+          <button onClick={() => navigate('/account')} className="flex flex-col items-center gap-1 p-2 active:scale-95 transition-transform">
+            <User size={20} className="text-slate-400" />
+            <span className="text-[9px] font-bold text-slate-400">Account</span>
+          </button>
+        </div>
       </div>
 
       <Footer />

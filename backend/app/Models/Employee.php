@@ -86,5 +86,33 @@ class Employee extends Authenticatable
     {
         return $this->hasMany(EmployeePaymentMethod::class);
     }
+
+    public function softDeleteWithRelations(string $deletedBy, string $deletedByType, ?string $reason = null): void
+    {
+        $deletedAccountData = [
+            'original_id' => $this->id,
+            'account_type' => 'employee',
+            'email' => $this->email,
+            'password' => $this->password,
+            'deleted_by' => $deletedBy,
+            'deleted_by_type' => $deletedByType,
+            'reason' => $reason,
+            'deleted_at' => now(),
+        ];
+
+        \Illuminate\Support\Facades\DB::transaction(function () use ($deletedAccountData) {
+            // 1. Save to deleted_accounts
+            \App\Models\DeletedAccount::create($deletedAccountData);
+
+            // 2. Delete related tables
+            $this->contacts()->delete();
+            $this->addresses()->delete();
+            $this->paymentMethods()->delete();
+
+            // 3. Delete employee
+            $this->delete();
+        });
+    }
 }
+
 

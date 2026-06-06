@@ -123,7 +123,8 @@ class RefundController extends Controller
             'receiver_id' => $validated['customer_id'],
             'receiver_type' => 'customer',
             'message' => $messageText,
-            'refund_id' => $refundId,
+            'message_type' => 'refund',
+            'type_id' => $refundId,
             'created_at' => now(),
             'updated_at' => now(),
         ]);

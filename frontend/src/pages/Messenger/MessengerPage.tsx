@@ -42,14 +42,11 @@ export interface IMessage {
   replyTo?: { id: string; text: string; senderName: string; isDeleted?: boolean }
   senderId?: string
   receiverId?: string
-  order_id?: string
-  screenplate_request_id?: string
+  message_type?: string | null
+  type_id?: string | null
   is_confirm?: number
-  payment_code_id?: string
   is_pinned?: string | null
-  refund_id?: string
-  expenditures_id?: string
-  an_email?: boolean
+  is_email?: boolean
   product_concern?: boolean
 }
 
@@ -71,14 +68,11 @@ interface ApiMessage {
     sender_id: string;
     is_deleted?: number;
   } | null;
-  order_id?: string
-  screenplate_request_id?: string
+  message_type?: string | null
+  type_id?: string | null
   is_confirm?: number
-  payment_code_id?: string
   is_pinned?: string | null
-  refund_id?: string
-  expenditures_id?: string
-  an_email?: number | boolean
+  is_email?: number | boolean
   product_concern?: number | boolean
 }
 
@@ -196,15 +190,12 @@ const MessengerPage: React.FC = () => {
           replyTo,
           senderId: m.sender_id,
           receiverId: m.receiver_id,
-          order_id: m.order_id,
-          screenplate_request_id: m.screenplate_request_id,
+          message_type: m.message_type,
+          type_id: m.type_id,
           is_confirm: m.is_confirm,
-          payment_code_id: m.payment_code_id,
           is_pinned: m.is_pinned,
           isDeleted: m.is_deleted === 1,
-          refund_id: m.refund_id,
-          expenditures_id: m.expenditures_id,
-          an_email: Boolean(m.an_email),
+          is_email: Boolean(m.is_email),
           product_concern: Boolean(m.product_concern)
         }
       })
@@ -330,7 +321,8 @@ const MessengerPage: React.FC = () => {
       timestamp: new Date().toISOString(),
       attachments: attachments.map(a => ({ type: a.type, url: a.url, name: a.name })),
       reactions: [],
-      payment_code_id,
+      message_type: payment_code_id ? 'payment_code' : null,
+      type_id: payment_code_id || null,
       replyTo: activeReplyTo
         ? {
             id: activeReplyTo.id,
@@ -560,7 +552,13 @@ const MessengerPage: React.FC = () => {
               isGalleryOpen={isGalleryOpen}
               onToggleAccounts={handleToggleAccounts}
               isAccountsOpen={isAccountsOpen}
-              onOpenAdminControls={() => setIsAdminControlsOpen(true)}
+              onOpenAdminControls={() => {
+                if (!selectedUserId) {
+                  setIsAccountsOpen(true)
+                } else {
+                  setIsAdminControlsOpen(true)
+                }
+              }}
               title={selectedUser?.name}
               subtitle={messages.length > 0 ? `Response: ${format(new Date(messages[messages.length - 1].timestamp), 'HH:mm')}` : 'No messages'}
             />
@@ -568,7 +566,7 @@ const MessengerPage: React.FC = () => {
 
           <main className="relative flex flex-1 overflow-hidden pt-[80px] pb-[116px]">
             {selectedUserId ? (
-              <div className="flex flex-1 flex-col px-0.5 min-[360px]:px-1 min-[414px]:px-1 sm:px-0">
+              <div className="flex flex-1 flex-col overflow-x-hidden">
                 <MessageList 
                   messages={messages} 
                   onReact={handleReaction} 
@@ -706,6 +704,7 @@ const MessengerPage: React.FC = () => {
               <ChatHeader
                 onToggleGallery={() => setIsGalleryOpen(!isGalleryOpen)}
                 isGalleryOpen={isGalleryOpen}
+                onOpenAdminControls={() => setIsAdminControlsOpen(true)}
                 subtitle={messages.length > 0 ? `Response: ${format(new Date(messages[messages.length - 1].timestamp), 'HH:mm')}` : 'Response: ~5m'}
               />
             </div>
@@ -729,12 +728,13 @@ const MessengerPage: React.FC = () => {
               <ChatHeader
                 onToggleGallery={() => setIsGalleryOpen(!isGalleryOpen)}
                 isGalleryOpen={isGalleryOpen}
+                onOpenAdminControls={() => setIsAdminControlsOpen(true)}
                 subtitle={messages.length > 0 ? `Response: ${format(new Date(messages[messages.length - 1].timestamp), 'HH:mm')}` : 'Response: ~5m'}
               />
             </div>
 
             <main className="relative flex flex-1 overflow-hidden pt-[80px] pb-[196px] md:pt-[176px] md:pb-[116px]">
-              <div className="flex flex-1 flex-col px-0.5 min-[360px]:px-1 min-[414px]:px-1 sm:px-0">
+              <div className="flex flex-1 flex-col overflow-x-hidden">
                 <MessageList
                   messages={messages}
                   onReact={handleReaction}
@@ -942,27 +942,31 @@ const MessengerPage: React.FC = () => {
         className="pointer-events-none fixed inset-0 z-[10000]"
       />
 
-      {/* AdminControlModal — admin only */}
-      {user?.role === 'admin' && (
-        <AdminControlModal
-          isOpen={isAdminControlsOpen}
-          onClose={() => setIsAdminControlsOpen(false)}
-          messages={messages}
-          targetUser={users.find(u => u.id === selectedUserId)}
-          onDeleteConversation={handleDeleteConversation}
-          onSendMessage={handleSendMessage}
-          onToggleGallery={() => {
-            setIsGalleryOpen(true)
-            setIsAccountsOpen(false)
-          }}
-          onScrollToMessage={(id) => {
-            setScrollToMessageId(id)
-            setIsAdminControlsOpen(false)   // hide the modal so message is visible
-            // Reset after a moment so the same message can be re-scrolled to
-            setTimeout(() => setScrollToMessageId(null), 800)
-          }}
-        />
-      )}
+      {/* AdminControlModal */}
+      <AdminControlModal
+        isOpen={isAdminControlsOpen}
+        onClose={() => {
+          setIsAdminControlsOpen(false)
+          if (user?.role === 'admin') {
+            setIsAccountsOpen(true)
+          }
+        }}
+        messages={messages}
+        targetUser={user?.role === 'admin' ? users.find(u => u.id === selectedUserId) : { id: '1', name: 'PIXS Admin', profile_picture: undefined, company_name: 'PIXS Administration' }}
+        onDeleteConversation={user?.role === 'admin' ? handleDeleteConversation : undefined}
+        onSendMessage={handleSendMessage}
+        onToggleGallery={() => {
+          setIsGalleryOpen(true)
+          setIsAccountsOpen(false)
+        }}
+        onScrollToMessage={(id) => {
+          setScrollToMessageId(id)
+          setIsAdminControlsOpen(false)   // hide the modal so message is visible
+          // Reset after a moment so the same message can be re-scrolled to
+          setTimeout(() => setScrollToMessageId(null), 800)
+        }}
+        isAdmin={user?.role === 'admin'}
+      />
     </div>
   )
 }

@@ -26,8 +26,8 @@ class MessageController extends Controller
             'id', 'conversation_id', 'sender_id', 'sender_type',
             'receiver_id', 'receiver_type', 'message',
             'reply_to_id', 'is_edited', 'is_deleted', 'is_read',
-            'order_id', 'screenplate_request_id', 'payment_code_id', 'is_pinned', 'is_confirm',
-            'refund_id', 'expenditures_id', 'product_concern', 'an_email',
+            'message_type', 'type_id', 'is_pinned', 'is_confirm',
+            'product_concern', 'is_email',
             'created_at', 'updated_at',
         ];
 
@@ -201,6 +201,8 @@ class MessageController extends Controller
             'receiver_id' => 'required|string|max:20',
             'receiver_type' => 'required|in:employee,customer',
             'reply_to_id' => 'nullable|string|max:30',
+            'message_type' => 'nullable|in:order,screenplate_request,payment_code,refund,expenditure',
+            'type_id' => 'nullable|string|max:30',
             'order_id' => 'nullable|string|max:30',
             'screenplate_request_id' => 'nullable|string|max:20',
             'payment_code_id' => 'nullable|string|max:30',
@@ -291,16 +293,35 @@ class MessageController extends Controller
         }
 
         $msgId = 'msg_'.Str::random(10);
+        
+        $messageType = $validated['message_type'] ?? null;
+        $typeId = $validated['type_id'] ?? null;
+        
+        if (!$messageType && !$typeId) {
+            if (!empty($validated['order_id'])) {
+                $messageType = 'order';
+                $typeId = $validated['order_id'];
+            } elseif (!empty($validated['screenplate_request_id'])) {
+                $messageType = 'screenplate_request';
+                $typeId = $validated['screenplate_request_id'];
+            } elseif (!empty($validated['payment_code_id'])) {
+                $messageType = 'payment_code';
+                $typeId = $validated['payment_code_id'];
+            } elseif (!empty($validated['expenditures_id'])) {
+                $messageType = 'expenditure';
+                $typeId = $validated['expenditures_id'];
+            }
+        }
 
-        DB::transaction(function () use ($msgId, $convId, $senderId, $senderType, $receiverId, $receiverType, $validated, $attachments, $request) {
+        DB::transaction(function () use ($msgId, $convId, $senderId, $senderType, $receiverId, $receiverType, $validated, $attachments, $request, $messageType, $typeId) {
             // Ensure conversation exists
             DB::insert('INSERT IGNORE INTO conversations (id, created_at, updated_at) VALUES (?, NOW(), NOW())', [$convId]);
 
             // Insert message
             DB::insert('
                 INSERT INTO messages 
-                (id, conversation_id, sender_id, sender_type, receiver_id, receiver_type, message, reply_to_id, order_id, screenplate_request_id, payment_code_id, product_concern, expenditures_id, created_at, updated_at) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+                (id, conversation_id, sender_id, sender_type, receiver_id, receiver_type, message, reply_to_id, message_type, type_id, product_concern, created_at, updated_at) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
             ', [
                 $msgId,
                 $convId,
@@ -310,11 +331,9 @@ class MessageController extends Controller
                 $receiverType,
                 $validated['message'],
                 $validated['reply_to_id'] ?? null,
-                $validated['order_id'] ?? null,
-                $validated['screenplate_request_id'] ?? null,
-                $validated['payment_code_id'] ?? null,
+                $messageType,
+                $typeId,
                 ! empty($validated['product_concern']) ? 1 : 0,
-                $validated['expenditures_id'] ?? null,
             ]);
 
             if (! empty($attachments)) {
@@ -812,7 +831,8 @@ class MessageController extends Controller
         }
 
         DB::table('messages')->where('id', $id)->update([
-            'payment_code_id' => $validated['payment_code_id'],
+            'message_type' => $validated['payment_code_id'] ? 'payment_code' : null,
+            'type_id' => $validated['payment_code_id'],
             'updated_at' => now(),
         ]);
 
@@ -827,7 +847,7 @@ class MessageController extends Controller
         $validated = request()->validate([
             'refund_id' => 'nullable|string|max:30',
             'product_concern' => 'nullable|boolean',
-            'an_email' => 'nullable|boolean',
+            'is_email' => 'nullable|boolean',
         ]);
 
         $user = request()->user();
@@ -841,13 +861,14 @@ class MessageController extends Controller
         $updateData = ['updated_at' => now()];
 
         if (array_key_exists('refund_id', $validated)) {
-            $updateData['refund_id'] = $validated['refund_id'];
+            $updateData['message_type'] = $validated['refund_id'] ? 'refund' : null;
+            $updateData['type_id'] = $validated['refund_id'];
         }
         if (array_key_exists('product_concern', $validated)) {
             $updateData['product_concern'] = $validated['product_concern'] ? 1 : 0;
         }
-        if (array_key_exists('an_email', $validated)) {
-            $updateData['an_email'] = $validated['an_email'] ? 1 : 0;
+        if (array_key_exists('is_email', $validated)) {
+            $updateData['is_email'] = $validated['is_email'] ? 1 : 0;
         }
 
         DB::table('messages')->where('id', $id)->update($updateData);

@@ -12,14 +12,14 @@ return new class extends Migration
             $table->string('refund_id', 30)->nullable()->after('payment_code_id');
             $table->string('expenditures_id', 30)->nullable()->after('refund_id');
             $table->boolean('product_concern')->default(false)->after('is_read');
-            $table->boolean('an_email')->default(false)->after('product_concern');
+            $table->boolean('is_email')->default(false)->after('product_concern');
         });
     }
 
     public function down(): void
     {
         Schema::table('messages', function (Blueprint $table) {
-            $table->dropColumn(['refund_id', 'expenditures_id', 'product_concern', 'an_email']);
+            $table->dropColumn(['refund_id', 'expenditures_id', 'product_concern', 'is_email']);
         });
     }
 };

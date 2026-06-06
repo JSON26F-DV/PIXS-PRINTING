@@ -531,8 +531,8 @@ class OrderController extends Controller
                     'receiver_id' => $adminId,
                     'receiver_type' => 'employee',
                     'message' => 'review your shipping address',
-                    'order_id' => $orderId,
-                    'payment_code_id' => $payCode ? $payCode->id : null,
+                    'message_type' => 'order',
+                    'type_id' => $orderId,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);
