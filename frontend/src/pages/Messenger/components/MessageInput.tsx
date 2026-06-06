@@ -8,6 +8,7 @@ import {
   CornerUpRight,
   AlertTriangle,
 } from 'lucide-react'
+import debounce from 'lodash/debounce'
 import type { IMessage } from '../MessengerPage.tsx'
 
 // --- Upload Constraints ---
@@ -44,9 +45,12 @@ const MessageInput: React.FC<MessageInputProps> = ({
 
   // Handle responsive placeholder
   React.useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 768)
+    const checkMobile = debounce(() => setIsMobile(window.innerWidth < 768), 150)
     window.addEventListener('resize', checkMobile)
-    return () => window.removeEventListener('resize', checkMobile)
+    return () => {
+      window.removeEventListener('resize', checkMobile)
+      checkMobile.cancel()
+    }
   }, [])
 
   // Modal alert state

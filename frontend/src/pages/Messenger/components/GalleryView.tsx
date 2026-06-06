@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 
 import { format } from 'date-fns'
+import debounce from 'lodash/debounce'
 import FullscreenGalleryModal from '../../../components/common/FullscreenGalleryModal'
 import type { IMessage } from '../MessengerPage.tsx'
 
@@ -33,9 +34,12 @@ const GalleryView: React.FC<GalleryViewProps> = ({
   const portalRoot = typeof document !== 'undefined' ? document.body : null
 
   React.useEffect(() => {
-    const handleResize = () => setWindowWidth(window.innerWidth)
+    const handleResize = debounce(() => setWindowWidth(window.innerWidth), 150)
     window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
+    return () => {
+      window.removeEventListener('resize', handleResize)
+      handleResize.cancel()
+    }
   }, [])
 
   const isSmallMobile = windowWidth <= 430

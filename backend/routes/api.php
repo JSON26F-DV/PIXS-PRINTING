@@ -32,6 +32,44 @@ use Illuminate\Support\Facades\Route;
 // Public Data Routes
 Route::get('/delivery-methods', [DeliveryMethodController::class, 'index']);
 
+// Xendit Webhooks
+Route::post('/xendit/invoice-webhook', function (\Illuminate\Http\Request $request) {
+    $token = $request->header('x-callback-token');
+    if ($token !== config('xendivel.webhook_verification_token')) {
+        return response()->json(['message' => 'Unauthorized'], 401);
+    }
+
+    $data = $request->all();
+    logger('Xendit Invoice Webhook received: ', $data);
+
+    $status = $data['status'] ?? null;
+    $orderId = $data['external_id'] ?? null;
+
+    if (($status === 'PAID' || $status === 'SETTLED') && $orderId) {
+        $order = \App\Models\Order::find($orderId);
+        if ($order) {
+            $order->status = 'PROCESSING';
+            $order->save();
+
+            \App\Services\AuditService::updated('order', $order->id, [], ['status' => 'PROCESSING']);
+
+            // Create notification for customer
+            \App\Models\Notification::create([
+                'id' => \Illuminate\Support\Str::uuid(),
+                'customer_id' => $order->customer_id,
+                'title' => 'Payment Successful',
+                'message' => "Payment for Order {$order->id} was successfully completed via Xendit.",
+                'type' => 'success',
+                'is_read' => false,
+            ]);
+
+            logger("Order {$orderId} status successfully updated to PROCESSING via Invoice webhook.");
+        }
+    }
+
+    return response()->json(['status' => 'success']);
+});
+
 // Public Auth Routes (rate limited)
 Route::middleware('throttle:auth')->prefix('auth')->group(function () {
     Route::post('/login', [AuthController::class, 'login'])->name('login');
@@ -78,6 +116,26 @@ Route::middleware(['auth:sanctum', 'role:customer', 'throttle:api'])->prefix('cu
     Route::delete('/payment-methods', [CustomerController::class, 'deleteAllPaymentMethods']);
     Route::delete('/payment-methods/{id}', [CustomerController::class, 'deletePaymentMethod']);
     Route::post('/payment-methods/{id}/default', [CustomerController::class, 'setDefaultPaymentMethod']);
+
+    // Xendit Payments
+    Route::post('/pay-via-ewallet', function (\Illuminate\Http\Request $request) {
+        try {
+            config(['xendivel.auto_id' => false]);
+            $payment = \GlennRaya\Xendivel\Xendivel::payWithEwallet($request)->getResponse();
+            return response()->json($payment);
+        } catch (\Exception $e) {
+            $msg = $e->getMessage();
+            logger()->error('Xendit E-Wallet Error: ' . $msg);
+            
+            $decoded = json_decode($msg, true);
+            $cleanMessage = $decoded['message'] ?? $msg;
+            $cleanMessage = str_ireplace(['exception', 'error:'], '', $cleanMessage);
+            
+            return response()->json([
+                'message' => $cleanMessage
+            ], 400);
+        }
+    });
 
     // Promotions / Awards
     Route::get('/awards', [CustomerController::class, 'promotions']);

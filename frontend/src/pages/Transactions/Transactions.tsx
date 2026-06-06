@@ -290,6 +290,7 @@ const Transactions: React.FC = () => {
       
       const orderId = response?.id || 'ORD-NEW'
       const orderTotal = response?.total_amount || 0
+      const checkoutUrl = response?.checkout_url
 
       setLastOrderId(orderId)
       setLastOrderTotal(orderTotal)
@@ -297,10 +298,6 @@ const Transactions: React.FC = () => {
       if ('vibrate' in navigator) {
         navigator.vibrate([100, 50, 100, 50, 200])
       }
-
-      setIsSuccessModalOpen(true)
-      toast.success('Order placed successfully!')
-      fetchNotifications() // fetch real-time success notification
       
       // Construct message for admin
       try {
@@ -319,6 +316,18 @@ const Transactions: React.FC = () => {
       } catch (msgErr) {
         console.error('Failed to send order message to admin:', msgErr);
       }
+
+      if (checkoutUrl) {
+        toast.success('Order placed! Redirecting to GCash...')
+        setTimeout(() => {
+          window.location.href = checkoutUrl
+        }, 1500)
+        return
+      }
+
+      setIsSuccessModalOpen(true)
+      toast.success('Order placed successfully!')
+      fetchNotifications() // fetch real-time success notification
 
       setTimeout(() => {
         navigate('/orders')

@@ -162,14 +162,19 @@ const AddressBookSection: React.FC = () => {
   useEffect(() => {
     const editId = searchParams.get('edit')
     const action = searchParams.get('action')
+    let timerId: ReturnType<typeof setTimeout>
 
     if (editId) {
       const addr = addresses.find((a) => a.id === editId)
       if (addr) {
-        setTimeout(() => openEditForm(addr), 0)
+        timerId = setTimeout(() => openEditForm(addr), 0)
       }
     } else if (action === 'new') {
-      setTimeout(() => openAddForm(), 0)
+      timerId = setTimeout(() => openAddForm(), 0)
+    }
+
+    return () => {
+      if (timerId) clearTimeout(timerId)
     }
   }, [searchParams, addresses, openAddForm, openEditForm])
 

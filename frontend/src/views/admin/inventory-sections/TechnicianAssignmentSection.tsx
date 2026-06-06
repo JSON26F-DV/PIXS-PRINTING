@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import {
   Users,
   Search,
@@ -87,7 +87,7 @@ export const TechnicianAssignmentSection: React.FC<
   const [isLoadingPending, setIsLoadingPending] = useState(false)
 
   // Fetch pending orders function
-  const fetchPendingOrders = async () => {
+  const fetchPendingOrders = useCallback(async () => {
     setIsLoadingPending(true)
     try {
       const res = await axiosInstance.post('/api/admin/employees/pending-orders', {
@@ -102,7 +102,7 @@ export const TechnicianAssignmentSection: React.FC<
     } finally {
       setIsLoadingPending(false)
     }
-  }
+  }, [selectedEmployeeIds, pendingOrdersFilter.category, pendingOrdersFilter.orderId])
 
   useEffect(() => {
     if (viewMode === 'pending' && selectedEmployeeIds.size > 0) {
@@ -113,7 +113,7 @@ export const TechnicianAssignmentSection: React.FC<
     } else if (viewMode === 'pending' && selectedEmployeeIds.size === 0) {
       setPendingOrders([])
     }
-  }, [viewMode, selectedEmployeeIds, pendingOrdersFilter.category, pendingOrdersFilter.orderId])
+  }, [viewMode, selectedEmployeeIds.size, fetchPendingOrders])
 
   const getProfilePictureUrl = (pic?: string | null) => {
     if (!pic) return 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'
@@ -405,6 +405,7 @@ export const TechnicianAssignmentSection: React.FC<
                       <div className="relative">
                         <img
                           src={getProfilePictureUrl(emp.profile_picture)}
+                          alt={emp.name || 'Employee profile picture'}
                           className="h-12 w-12 rounded-2xl border border-slate-100 object-cover shadow-sm grayscale transition-all group-hover:grayscale-0"
                         />
                         <div
@@ -657,6 +658,7 @@ export const TechnicianAssignmentSection: React.FC<
                       <div className="relative">
                         <img
                           src={getProfilePictureUrl(selectedEmp.profile_picture)}
+                          alt={selectedEmp.name || 'Employee profile picture'}
                           className="h-20 w-20 rounded-[32px] object-cover shadow-2xl ring-[6px] ring-emerald-50"
                         />
                         <div className="absolute -top-2 -right-2 animate-bounce rounded-xl bg-slate-900 p-2 text-[#75EEA5] shadow-lg">

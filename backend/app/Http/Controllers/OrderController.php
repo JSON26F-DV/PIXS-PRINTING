@@ -537,6 +537,53 @@ class OrderController extends Controller
                     'updated_at' => now(),
                 ]);
 
+                // STEP 9.6: If payment method is GCash, initiate a payment link via Xendit Invoices
+                $paymentMethod = null;
+                $checkoutUrl = null;
+                if (! empty($validated['payment_method_id'])) {
+                    $paymentMethod = DB::table('customer_payment_methods')
+                        ->where('id', $validated['payment_method_id'])
+                        ->first();
+                }
+
+                if ($paymentMethod && $paymentMethod->type === 'ewallet' && strtolower($paymentMethod->provider) === 'gcash') {
+                    try {
+                        $origin = request()->header('Origin') ?: config('app.url');
+                        $invoicePayload = [
+                            'external_id' => $orderId,
+                            'amount' => (int) $finalAmount,
+                            'description' => 'Payment for Order ' . $orderId,
+                            'currency' => 'PHP',
+                            'success_redirect_url' => $origin . '/orders',
+                            'failure_redirect_url' => $origin . '/orders',
+                        ];
+                        
+                        if ($user) {
+                            $invoicePayload['customer'] = [
+                                'given_names' => $user->first_name,
+                                'surname' => $user->last_name,
+                                'email' => $user->email,
+                            ];
+                        }
+                        
+                        $xenditRes = \GlennRaya\Xendivel\XenditApi::api('post', 'v2/invoices', $invoicePayload);
+                        
+                        if ($xenditRes->failed()) {
+                            throw new \Exception($xenditRes->body());
+                        }
+                        
+                        $decodedRes = json_decode($xenditRes->body());
+                        $checkoutUrl = $decodedRes->invoice_url ?? null;
+                        
+                        // Set status to UNPAID since it's created but not yet paid on the Xendit checkout portal
+                        $order->status = 'UNPAID';
+                        $order->save();
+                    } catch (\Exception $xenditEx) {
+                        // Throwing exception rolls back DB transaction completely
+                        throw new \Exception('Xendit Payment Failed: ' . $xenditEx->getMessage());
+                    }
+                }
+
                 // STEP 10: Return JSON response (201)
                 AuditService::created('order', $orderId, [
                     'total_amount' => $finalAmount,
@@ -548,25 +595,37 @@ class OrderController extends Controller
                     'id' => $orderId,
                     'total_amount' => $finalAmount,
                     'status' => $order->status,
+                    'checkout_url' => $checkoutUrl,
                 ], 201);
             });
         } catch (\Throwable $e) {
             Log::error('OrderController@store failed', ['message' => $e->getMessage()]);
 
-            try {
-                Notification::create([
-                    'id' => Str::uuid(),
-                    'customer_id' => $user->id,
-                    'title' => 'Purchase Failed',
-                    'message' => 'An error occurred while processing your order.',
-                    'type' => 'error',
-                    'is_read' => false,
-                ]);
-            } catch (\Exception $ex) {
-                Log::error('Failed to save error notification: '.$ex->getMessage());
+            $errMsg = $e->getMessage();
+            $statusCode = 500;
+            if (str_contains($errMsg, 'Xendit Payment Failed:')) {
+                $statusCode = 400;
+                $rawXenditMsg = str_replace('Xendit Payment Failed: ', '', $errMsg);
+                $decoded = json_decode($rawXenditMsg, true);
+                $cleanMsg = $decoded['message'] ?? $rawXenditMsg;
+                $cleanMsg = str_ireplace(['exception', 'error:'], '', $cleanMsg);
+                $errMsg = $cleanMsg;
+            } else {
+                try {
+                    Notification::create([
+                        'id' => Str::uuid(),
+                        'customer_id' => $user->id,
+                        'title' => 'Purchase Failed',
+                        'message' => 'An error occurred while processing your order.',
+                        'type' => 'error',
+                        'is_read' => false,
+                    ]);
+                } catch (\Exception $ex) {
+                    Log::error('Failed to save error notification: '.$ex->getMessage());
+                }
             }
 
-            return response()->json(['message' => 'Failed to create order: '.$e->getMessage()], 500);
+            return response()->json(['message' => $errMsg], $statusCode);
         }
     }
 }

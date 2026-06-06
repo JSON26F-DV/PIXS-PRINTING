@@ -5,6 +5,7 @@ import { Search, User as UserIcon } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useAuth } from '../../hooks/useAuth'
 import BoxFallback from '../../components/common/BoxFallback'
+import debounce from 'lodash/debounce'
 import { format } from 'date-fns'
 
 // Local Components
@@ -276,14 +277,17 @@ const MessengerPage: React.FC = () => {
   // Auto-manage panel visibility based on terminal viewport
   // Accounts panel is admin-only — never auto-open for other roles
   useEffect(() => {
-    const handleResize = () => {
+    const handleResize = debounce(() => {
       setWindowWidth(window.innerWidth)
       if (window.innerWidth >= 1024 && user?.role === 'admin') {
         setIsAccountsOpen(true)
       }
-    }
+    }, 150)
     window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
+    return () => {
+      window.removeEventListener('resize', handleResize)
+      handleResize.cancel()
+    }
   }, [user?.role])
 
   const handleToggleGallery = () => {

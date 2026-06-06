@@ -72,17 +72,35 @@ const QuickReactBar: React.FC<{
 }> = ({ onSelect, onShowMore, isCustomer, anchorRect }) => {
   if (!anchorRect) return null
 
+  const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 375
+  const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 667
+
+  const quickBarWidth = 296
+  const quickBarHeight = 54
+
+  // Top position: default above anchor. If not enough space, place below.
+  let top = anchorRect.top - quickBarHeight - 6
+  if (top < 8) {
+    top = anchorRect.bottom + 6
+  }
+  // Clamp top to viewport boundaries
+  top = Math.max(8, Math.min(viewportHeight - quickBarHeight - 8, top))
+
+  // Left position
+  const calculatedLeft = isCustomer ? anchorRect.right - quickBarWidth : anchorRect.left
+  const left = Math.max(8, Math.min(viewportWidth - quickBarWidth - 8, calculatedLeft))
+
   return (
     <MessagePortal>
       <div
         style={{
           position: 'fixed',
-          top: anchorRect.top - 60,
-          left: isCustomer ? anchorRect.right - 280 : anchorRect.left,
+          top,
+          left,
           zIndex: 9999,
         }}
         className={clsx(
-          'pointer-events-auto flex items-center gap-1 rounded-full border border-slate-100 bg-white p-1.5 shadow-2xl',
+          'pointer-events-auto flex items-center gap-1 rounded-full border border-slate-100 bg-white p-1.5 shadow-2xl transition-all duration-200',
           isCustomer ? 'origin-right' : 'origin-left',
         )}
       >
@@ -107,7 +125,7 @@ const QuickReactBar: React.FC<{
   )
 }
 
-const MessageBubble: React.FC<{
+const MessageBubbleComponent: React.FC<{
   message: IMessage
   onReact: (emoji: string) => void
   onReply: () => void
@@ -121,6 +139,10 @@ const MessageBubble: React.FC<{
   isEditing?: boolean
   onStartEdit?: () => void
   onCancelEdit?: () => void
+  activeReactionMessageId: string | null
+  setActiveReactionMessageId: (id: string | null) => void
+  activeOptionsMessageId: string | null
+  setActiveOptionsMessageId: (id: string | null) => void
 }> = ({
   message,
   onReact,
@@ -135,6 +157,10 @@ const MessageBubble: React.FC<{
   isEditing = false,
   onStartEdit,
   onCancelEdit,
+  activeReactionMessageId,
+  setActiveReactionMessageId,
+  activeOptionsMessageId,
+  setActiveOptionsMessageId,
 }) => {
   const [showQuickBar, setShowQuickBar] = useState(false)
   const [showFullPicker, setShowFullPicker] = useState(false)
@@ -144,6 +170,97 @@ const MessageBubble: React.FC<{
   const [showOriginal, setShowOriginal] = useState(false)
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null)
   const anchorRef = useRef<HTMLDivElement>(null)
+  
+  const swipeTranslationRef = useRef(0)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const indicatorRef = useRef<HTMLDivElement>(null)
+
+  React.useEffect(() => {
+    if (activeReactionMessageId !== message.id) {
+      setShowQuickBar(false)
+      setShowFullPicker(false)
+    }
+  }, [activeReactionMessageId, message.id])
+
+  React.useEffect(() => {
+    if (activeOptionsMessageId !== message.id) {
+      setShowOptions(false)
+    }
+  }, [activeOptionsMessageId, message.id])
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null)
+  const isSwipingRef = useRef(false)
+  const swipeThreshold = 60
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length !== 1 || isEditing || message.isDeleted) return
+    const touch = e.touches[0]
+    touchStartRef.current = { x: touch.clientX, y: touch.clientY }
+    isSwipingRef.current = false
+  }
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!touchStartRef.current || isEditing || message.isDeleted) return
+    const touch = e.touches[0]
+    const diffX = touch.clientX - touchStartRef.current.x
+    const diffY = touch.clientY - touchStartRef.current.y
+
+    if (!isSwipingRef.current) {
+      const absX = Math.abs(diffX)
+      const absY = Math.abs(diffY)
+      if (absX > 10 && absX > absY) {
+        isSwipingRef.current = true
+      }
+    }
+
+    if (isSwipingRef.current) {
+      if (e.cancelable) e.preventDefault()
+      
+      let translation = diffX
+      if (isCustomer && translation > 0) translation = 0
+      if (!isCustomer && translation < 0) translation = 0
+
+      const maxSwipe = 80
+      if (Math.abs(translation) > maxSwipe) {
+        const sign = translation > 0 ? 1 : -1
+        translation = sign * (maxSwipe + Math.log(Math.abs(translation) - (maxSwipe - 1)) * 5)
+      }
+      
+      swipeTranslationRef.current = translation
+
+      if (containerRef.current) {
+        containerRef.current.style.transform = `translateX(${translation}px)`
+        containerRef.current.style.transition = 'none'
+      }
+
+      if (indicatorRef.current) {
+        indicatorRef.current.style.opacity = String(Math.min(1, Math.abs(translation) / swipeThreshold))
+        indicatorRef.current.style.transform = `translateY(-50%) scale(${Math.min(1.2, 0.6 + (Math.abs(translation) / swipeThreshold) * 0.4)})`
+        indicatorRef.current.style.color = Math.abs(translation) >= swipeThreshold ? '#10b981' : '#94a3b8'
+      }
+    }
+  }
+
+  const handleTouchEnd = () => {
+    if (!touchStartRef.current) return
+    if (isSwipingRef.current && Math.abs(swipeTranslationRef.current) >= swipeThreshold) {
+      onReply()
+      if (navigator.vibrate) {
+        navigator.vibrate(15)
+      }
+    }
+    swipeTranslationRef.current = 0
+    if (containerRef.current) {
+      containerRef.current.style.transform = `translateX(0px)`
+      containerRef.current.style.transition = 'transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)'
+    }
+    if (indicatorRef.current) {
+      indicatorRef.current.style.opacity = '0'
+      indicatorRef.current.style.transform = 'translateY(-50%) scale(0.6)'
+      indicatorRef.current.style.color = '#94a3b8'
+    }
+    touchStartRef.current = null
+    isSwipingRef.current = false
+  }
 
   React.useEffect(() => {
     if (isEditing) {
@@ -202,10 +319,52 @@ const MessageBubble: React.FC<{
           </div>
         )}
 
+        {/* Swipe Reply Indicator */}
+        <div
+          ref={indicatorRef}
+          className={clsx(
+            "absolute top-1/2 -translate-y-1/2 flex items-center justify-center pointer-events-none z-0",
+            isCustomer ? "right-4" : "left-4"
+          )}
+          style={{
+            opacity: 0,
+            transform: `translateY(-50%) scale(0.6)`,
+            color: '#94a3b8'
+          }}
+        >
+          <CornerUpRight size={18} className={clsx(isCustomer ? "scale-x-[-1]" : "")} />
+        </div>
+
         {/* Message Container */}
         <div
+          ref={containerRef}
+          onClick={(e) => {
+            if (window.innerWidth < 768) {
+              const target = e.target as HTMLElement;
+              if (target.closest('button') || target.closest('a') || target.closest('textarea')) {
+                return;
+              }
+              e.stopPropagation();
+              setAnchorRect(e.currentTarget.getBoundingClientRect());
+              const nextVal = !showQuickBar;
+              setShowQuickBar(nextVal);
+              if (nextVal) {
+                setActiveReactionMessageId(message.id);
+                setActiveOptionsMessageId(null);
+              } else {
+                setActiveReactionMessageId(null);
+              }
+            }
+          }}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          style={{
+            transform: `translateX(0px)`,
+            transition: 'transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+          }}
           className={clsx(
-            'relative max-w-full rounded-[14px] pr-5 min-[360px]:rounded-[16px] sm:rounded-[20px] md:rounded-[28px] text-[10px] min-[360px]:text-[11px] min-[414px]:text-[12px] sm:text-[13px] md:text-sm leading-relaxed font-bold shadow-sm break-words whitespace-pre-wrap',
+            'relative max-w-full rounded-[14px] pr-5 min-[360px]:rounded-[16px] sm:rounded-[20px] md:rounded-[28px] text-[10px] min-[360px]:text-[11px] min-[414px]:text-[12px] sm:text-[13px] md:text-sm leading-relaxed font-bold shadow-sm break-words whitespace-pre-wrap select-none md:select-text z-10 cursor-pointer md:cursor-default',
             (hasCard && !message.isDeleted) ? '' : 'px-2 py-1 min-[360px]:px-2.5 min-[360px]:py-1.5 min-[414px]:px-3 min-[414px]:py-2 sm:px-4 sm:py-3 md:px-6 md:py-4',
             message.isDeleted
               ? 'border border-slate-200 bg-slate-100 text-slate-400 font-normal italic'
@@ -502,8 +661,8 @@ const MessageBubble: React.FC<{
         {message.reactions && message.reactions.length > 0 && (
           <div
             className={clsx(
-              'absolute -bottom-3 flex gap-1',
-              isCustomer ? 'right-2' : 'left-2',
+              'absolute -bottom-3 flex gap-1 z-[999]',
+              isCustomer ? 'right-12' : 'left-4',
             )}
           >
             {Array.from(new Set(message.reactions.map((r) => r.emoji))).map(
@@ -535,13 +694,20 @@ const MessageBubble: React.FC<{
               <button
                 onClick={(e) => {
                   setAnchorRect(e.currentTarget.getBoundingClientRect())
-                  setShowQuickBar(!showQuickBar)
+                  const nextVal = !showQuickBar
+                  setShowQuickBar(nextVal)
+                  if (nextVal) {
+                    setActiveReactionMessageId(message.id)
+                    setActiveOptionsMessageId(null)
+                  } else {
+                    setActiveReactionMessageId(null)
+                  }
                 }}
                 className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-100 bg-white text-slate-400 shadow-md hover:text-slate-900"
               >
                 <Smile size={18} />
               </button>
-
+ 
               {showQuickBar && (
                   <>
                     <QuickReactBar
@@ -550,6 +716,7 @@ const MessageBubble: React.FC<{
                       onSelect={(emoji) => {
                         onReact(emoji)
                         setShowQuickBar(false)
+                        setActiveReactionMessageId(null)
                       }}
                       onShowMore={() => {
                         setShowQuickBar(false)
@@ -557,62 +724,115 @@ const MessageBubble: React.FC<{
                       }}
                     />
                     <button
-                      onClick={() => setShowQuickBar(false)}
+                      onClick={() => {
+                        setShowQuickBar(false)
+                        setActiveReactionMessageId(null)
+                      }}
                       className="pointer-events-auto fixed inset-0 z-[9998] border-none bg-transparent outline-none"
                     />
                   </>
                 )}
+ 
+              {showFullPicker && anchorRect && (() => {
+                const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 375
+                const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 667
+                const pickerWidth = viewportWidth < 360 ? 280 : 320
+                const pickerHeight = 380
 
-              {showFullPicker && anchorRect && (
+                let top = anchorRect.top - pickerHeight - 10
+                if (top < 10) {
+                  top = anchorRect.bottom + 10
+                }
+                if (top + pickerHeight > viewportHeight - 10 || viewportWidth < 768) {
+                  top = Math.max(10, (viewportHeight - pickerHeight) / 2)
+                } else {
+                  top = Math.max(10, Math.min(viewportHeight - pickerHeight - 10, top))
+                }
+
+                let left = viewportWidth < 768
+                  ? Math.max(10, (viewportWidth - pickerWidth) / 2)
+                  : isCustomer
+                    ? anchorRect.right - pickerWidth
+                    : anchorRect.left
+                left = Math.max(10, Math.min(viewportWidth - pickerWidth - 10, left))
+
+                return (
                   <MessagePortal>
                     <div
                       style={{
                         position: 'fixed',
-                        top: Math.max(10, anchorRect.top - 450),
-                        left: isCustomer
-                          ? Math.max(10, anchorRect.right - 350)
-                          : anchorRect.left,
+                        top,
+                        left,
                         zIndex: 9999,
                         pointerEvents: 'auto',
                       }}
                     >
-                      <div className="overflow-hidden rounded-2xl border border-slate-100 shadow-2xl">
+                      <div className="overflow-hidden rounded-2xl border border-slate-100 shadow-2xl bg-white">
                         <EmojiPicker
                           onEmojiClick={(emoji: EmojiClickData) => {
                             onReact(emoji.emoji)
                             setShowFullPicker(false)
+                            setActiveReactionMessageId(null)
                           }}
                           theme={Theme.LIGHT}
                           skinTonesDisabled
                           searchDisabled
+                          width={pickerWidth}
+                          height={pickerHeight}
                         />
                       </div>
                       <button
-                        onClick={() => setShowFullPicker(false)}
+                        onClick={() => {
+                          setShowFullPicker(false)
+                          setActiveReactionMessageId(null)
+                        }}
                         className="fixed inset-0 z-[-1] border-none bg-transparent outline-none"
                       />
                     </div>
                   </MessagePortal>
-                )}
+                )
+              })()}
             </div>
-
+ 
             <div className="relative">
               <button
                 onClick={(e) => {
                   setAnchorRect(e.currentTarget.getBoundingClientRect())
-                  setShowOptions(!showOptions)
+                  const nextVal = !showOptions
+                  setShowOptions(nextVal)
+                  if (nextVal) {
+                    setActiveOptionsMessageId(message.id)
+                    setActiveReactionMessageId(null)
+                  } else {
+                    setActiveOptionsMessageId(null)
+                  }
                 }}
                 className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-100 bg-white text-slate-400 shadow-md hover:text-slate-900"
               >
                 <MoreHorizontal size={18} />
               </button>
-
-              {showOptions && anchorRect && (
+ 
+              {showOptions && anchorRect && (() => {
+                const getVisibleOptionsCount = () => {
+                  if (message.isDeleted) {
+                    return isAdmin ? 2 : 0;
+                  }
+                  let count = 1; // Reply
+                  if (isCustomer && onStartEdit) count++;
+                  if (isAdmin && onPin) count++;
+                  if (isAdmin || isCustomer) count++;
+                  if (isAdmin) count++;
+                  return count;
+                };
+                const visibleCount = getVisibleOptionsCount();
+                const estimatedHeight = visibleCount * 44 + 16;
+ 
+                return (
                   <MessagePortal>
                     <div
                       style={{
                         position: 'fixed',
-                        top: Math.max(10, anchorRect.top - 160),
+                        top: Math.max(10, anchorRect.top - estimatedHeight),
                         left: isCustomer
                           ? anchorRect.right - 144
                           : anchorRect.right + 10,
@@ -632,6 +852,7 @@ const MessageBubble: React.FC<{
                             onClick={() => {
                               setShowDeletedText(!showDeletedText)
                               setShowOptions(false)
+                              setActiveOptionsMessageId(null)
                             }}
                             className="flex w-full items-center gap-3 rounded-xl p-3 text-[10px] font-black tracking-widest text-slate-700 uppercase hover:bg-slate-50"
                           >
@@ -644,6 +865,7 @@ const MessageBubble: React.FC<{
                                 onDelete(true)
                               }
                               setShowOptions(false)
+                              setActiveOptionsMessageId(null)
                             }}
                             className="flex w-full items-center gap-3 rounded-xl p-3 text-[10px] font-black tracking-widest text-white bg-red-600 uppercase hover:bg-red-700"
                           >
@@ -656,6 +878,7 @@ const MessageBubble: React.FC<{
                             onClick={() => {
                               onReply()
                               setShowOptions(false)
+                              setActiveOptionsMessageId(null)
                             }}
                             className="flex w-full items-center gap-3 rounded-xl p-3 text-[10px] font-black tracking-widest text-slate-700 uppercase hover:bg-slate-50"
                           >
@@ -667,6 +890,7 @@ const MessageBubble: React.FC<{
                               onClick={() => {
                                 onStartEdit()
                                 setShowOptions(false)
+                                setActiveOptionsMessageId(null)
                               }}
                               className="flex w-full items-center gap-3 rounded-xl p-3 text-[10px] font-black tracking-widest text-slate-700 uppercase hover:bg-slate-50"
                             >
@@ -678,6 +902,7 @@ const MessageBubble: React.FC<{
                               onClick={() => {
                                 onPin()
                                 setShowOptions(false)
+                                setActiveOptionsMessageId(null)
                               }}
                               className="flex w-full items-center gap-3 rounded-xl p-3 text-[10px] font-black tracking-widest text-emerald-600 uppercase hover:bg-emerald-50"
                             >
@@ -689,6 +914,7 @@ const MessageBubble: React.FC<{
                               onClick={() => {
                                 onDelete()
                                 setShowOptions(false)
+                                setActiveOptionsMessageId(null)
                               }}
                               className="flex w-full items-center gap-3 rounded-xl p-3 text-[10px] font-black tracking-widest text-rose-500 uppercase hover:bg-rose-50"
                             >
@@ -702,6 +928,7 @@ const MessageBubble: React.FC<{
                                   onDelete(true)
                                 }
                                 setShowOptions(false)
+                                setActiveOptionsMessageId(null)
                               }}
                               className="flex w-full items-center gap-3 rounded-xl p-3 text-[10px] font-black tracking-widest text-white bg-red-600 uppercase hover:bg-red-700"
                             >
@@ -711,12 +938,16 @@ const MessageBubble: React.FC<{
                         </>
                       )}
                       <button
-                        onClick={() => setShowOptions(false)}
+                        onClick={() => {
+                          setShowOptions(false)
+                          setActiveOptionsMessageId(null)
+                        }}
                         className="fixed inset-0 z-[-1] border-none bg-transparent outline-none"
                       />
                     </div>
                   </MessagePortal>
-                )}
+                )
+              })()}
             </div>
           </div>
         )}
@@ -724,6 +955,17 @@ const MessageBubble: React.FC<{
     </div>
   )
 }
+
+const MessageBubble = React.memo(MessageBubbleComponent, (prevProps, nextProps) => {
+  return (
+    prevProps.message === nextProps.message &&
+    prevProps.isEditing === nextProps.isEditing &&
+    prevProps.isHighlighted === nextProps.isHighlighted &&
+    prevProps.isAdmin === nextProps.isAdmin &&
+    prevProps.activeReactionMessageId === nextProps.activeReactionMessageId &&
+    prevProps.activeOptionsMessageId === nextProps.activeOptionsMessageId
+  )
+})
 
 
 
@@ -744,6 +986,8 @@ const MessageList: React.FC<MessageListProps> = ({
   onDeleteMedia,
 }) => {
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null)
+  const [activeReactionMessageId, setActiveReactionMessageId] = useState<string | null>(null)
+  const [activeOptionsMessageId, setActiveOptionsMessageId] = useState<string | null>(null)
   const virtuosoRef = useRef<VirtuosoHandle>(null)
   const [isNearBottom, setIsNearBottom] = useState(true)
   const [showScrollDown, setShowScrollDown] = useState(false)
@@ -768,6 +1012,29 @@ const MessageList: React.FC<MessageListProps> = ({
     })
   }, [scrollToMessageId, messages])
 
+  // Auto-scroll to bottom on new messages
+  const prevMessagesLength = useRef(messages.length)
+  const prevLastMessageId = useRef<string | null>(messages.length > 0 ? messages[messages.length - 1].id : null)
+
+  useEffect(() => {
+    const currentLength = messages.length
+    const currentLastMessageId = currentLength > 0 ? messages[currentLength - 1].id : null
+
+    if (currentLength > prevMessagesLength.current && currentLastMessageId !== prevLastMessageId.current) {
+      if (virtuosoRef.current) {
+        setTimeout(() => {
+          virtuosoRef.current?.scrollToIndex({
+            index: currentLength - 1,
+            behavior: 'smooth',
+          })
+        }, 100)
+      }
+    }
+    
+    prevMessagesLength.current = currentLength
+    prevLastMessageId.current = currentLastMessageId
+  }, [messages])
+
   return (
     <div className="relative w-full h-full overflow-x-hidden flex flex-col">
       {isLoading ? (
@@ -790,6 +1057,7 @@ const MessageList: React.FC<MessageListProps> = ({
           ref={virtuosoRef}
           className="MessageList no-scrollbar overflow-x-hidden bg-emoji-pattern flex-1 bg-slate-50/20 px-6 pt-8 pb-10 md:px-12 md:pt-12 md:pb-14"
           data={messages}
+          computeItemKey={(_, item) => item.id}
           followOutput="auto"
           initialTopMostItemIndex={messages.length - 1}
           increaseViewportBy={400}
@@ -828,6 +1096,10 @@ const MessageList: React.FC<MessageListProps> = ({
                 isEditing={editingMessageId === msg.id}
                 onStartEdit={() => setEditingMessageId(msg.id)}
                 onCancelEdit={() => setEditingMessageId(null)}
+                activeReactionMessageId={activeReactionMessageId}
+                setActiveReactionMessageId={setActiveReactionMessageId}
+                activeOptionsMessageId={activeOptionsMessageId}
+                setActiveOptionsMessageId={setActiveOptionsMessageId}
               />
             </div>
           )}

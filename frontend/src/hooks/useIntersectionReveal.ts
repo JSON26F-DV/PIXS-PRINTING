@@ -1,34 +1,47 @@
-import { useEffect, useRef, useState } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 
-export const useIntersectionReveal = (options?: IntersectionObserverInit) => {
-  const elementRef = useRef<HTMLElement>(null)
-  const [isVisible, setIsVisible] = useState(
-    () =>
-      typeof window !== 'undefined' &&
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches,
-  )
+interface UseIntersectionRevealOptions extends IntersectionObserverInit {
+  triggerOnce?: boolean
+}
+
+export function useIntersectionReveal<T extends Element>(
+  options: UseIntersectionRevealOptions = {}
+) {
+  const { triggerOnce = false, ...observerOptions } = options
+  const ref = useRef<T>(null)
+  const [isIntersecting, setIsIntersecting] = useState(false)
+  const hasTriggered = useRef(false)
+
+  const updateIntersection = useCallback((entries: IntersectionObserverEntry[]) => {
+    const [entry] = entries
+    if (triggerOnce && hasTriggered.current) return
+    
+    if (entry.isIntersecting) {
+      if (triggerOnce) {
+        hasTriggered.current = true
+      }
+      setIsIntersecting(true)
+    } else if (!triggerOnce) {
+      setIsIntersecting(false)
+    }
+  }, [triggerOnce])
 
   useEffect(() => {
-    if (isVisible) return // Already visible due to reduced motion preference
+    const element = ref.current
+    if (!element) return
 
-    const observer = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting) {
-        setIsVisible(true)
-        observer.unobserve(entry.target)
-      }
-    }, options)
+    const observer = new IntersectionObserver(updateIntersection, {
+      root: observerOptions.root,
+      rootMargin: observerOptions.rootMargin,
+      threshold: observerOptions.threshold,
+    })
+    observer.observe(element)
 
-    const currentElement = elementRef.current
-    if (currentElement) {
-      observer.observe(currentElement)
-    }
-
+    // CLEANUP: This is the key fix!
     return () => {
-      if (currentElement) {
-        observer.unobserve(currentElement)
-      }
+      observer.disconnect()
     }
-  }, [options, isVisible])
+  }, [updateIntersection, observerOptions.root, observerOptions.rootMargin, observerOptions.threshold])
 
-  return { elementRef, isVisible }
+  return [ref, isIntersecting] as const
 }
