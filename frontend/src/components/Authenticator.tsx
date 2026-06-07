@@ -8,7 +8,7 @@ export interface AuthenticatorProps {
   email: string
   codeType: 'forgot_password' | 'delete_order' | 'delete_account'
   targetId?: string
-  onSuccess: () => void
+  onSuccess: (code: string) => void
   onCancel: () => void
 }
 
@@ -189,7 +189,7 @@ const Authenticator: React.FC<AuthenticatorProps> = ({
 
         if (data.status === 'success') {
           setIsSuccess(true)
-          setTimeout(() => onSuccess(), 1000)
+          setTimeout(() => onSuccess(code), 1000)
         }
       } else {
         const { data } = await axiosInstance.post('/api/admin/verification/verify-code', {
@@ -199,7 +199,7 @@ const Authenticator: React.FC<AuthenticatorProps> = ({
 
         if (data.status === 'success') {
           setIsSuccess(true)
-          setTimeout(() => onSuccess(), 1000)
+          setTimeout(() => onSuccess(code), 1000)
         }
       }
     } catch (err: any) {

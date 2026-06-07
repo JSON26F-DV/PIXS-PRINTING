@@ -12,6 +12,7 @@ const ForgotPasswordPage: React.FC = () => {
   const [step, setStep] = useState<'email' | 'verify' | 'reset' | 'success'>('email')
   const [isSending, setIsSending] = useState(false)
 
+  const [verifiedCode, setVerifiedCode] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [isResetting, setIsResetting] = useState(false)
@@ -32,7 +33,8 @@ const ForgotPasswordPage: React.FC = () => {
     }
   }
 
-  const handleVerifySuccess = () => {
+  const handleVerifySuccess = (code: string) => {
+    setVerifiedCode(code)
     setStep('reset')
   }
 
@@ -53,7 +55,7 @@ const ForgotPasswordPage: React.FC = () => {
     try {
       const { data } = await axiosInstance.post('/api/auth/forgot-password/reset', {
         email,
-        code: '000000',
+        code: verifiedCode,
         password,
         password_confirmation: confirmPassword,
       })
