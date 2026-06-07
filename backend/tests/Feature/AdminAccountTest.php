@@ -1,11 +1,10 @@
 <?php
 
-use App\Models\Employee;
 use App\Models\Customer;
 use App\Models\DeletedAccount;
-use Laravel\Sanctum\Sanctum;
+use App\Models\Employee;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
+use Laravel\Sanctum\Sanctum;
 
 uses(RefreshDatabase::class);
 
@@ -64,8 +63,8 @@ it('can soft delete a customer, list it, and purge it', function () {
                 [
                     'original_id' => 'CUST-001',
                     'email' => 'janesmith@example.com',
-                ]
-            ]
+                ],
+            ],
         ]);
 
     // 6. Purge Customer (requires password)

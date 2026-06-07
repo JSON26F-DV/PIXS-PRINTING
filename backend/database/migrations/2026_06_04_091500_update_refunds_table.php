@@ -28,7 +28,6 @@ return new class extends Migration
             }
         });
 
-
     }
 
     /**
@@ -37,7 +36,6 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('refunds', function (Blueprint $table) {
-
 
             if (Schema::hasColumn('refunds', 'payment_id')) {
                 $table->dropColumn('payment_id');

@@ -454,7 +454,7 @@ class AdminOrderController extends Controller
                 ->whereIn('order_id', $validated['order_ids'])
                 ->delete();
 
-            if (!empty($validated['employee_ids'])) {
+            if (! empty($validated['employee_ids'])) {
                 $rows = [];
                 $now = now();
                 foreach ($validated['order_ids'] as $orderId) {

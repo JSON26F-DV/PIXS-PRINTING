@@ -1,8 +1,6 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
@@ -16,7 +14,7 @@ return new class extends Migration
             ->whereNotNull('order_id')
             ->update([
                 'message_type' => 'order',
-                'type_id' => DB::raw('order_id')
+                'type_id' => DB::raw('order_id'),
             ]);
 
         // Migrate screenplate_request_id
@@ -24,7 +22,7 @@ return new class extends Migration
             ->whereNotNull('screenplate_request_id')
             ->update([
                 'message_type' => 'screenplate_request',
-                'type_id' => DB::raw('screenplate_request_id')
+                'type_id' => DB::raw('screenplate_request_id'),
             ]);
 
         // Migrate payment_code_id
@@ -32,7 +30,7 @@ return new class extends Migration
             ->whereNotNull('payment_code_id')
             ->update([
                 'message_type' => 'payment_code',
-                'type_id' => DB::raw('payment_code_id')
+                'type_id' => DB::raw('payment_code_id'),
             ]);
 
         // Migrate refund_id
@@ -40,7 +38,7 @@ return new class extends Migration
             ->whereNotNull('refund_id')
             ->update([
                 'message_type' => 'refund',
-                'type_id' => DB::raw('refund_id')
+                'type_id' => DB::raw('refund_id'),
             ]);
 
         // Migrate expenditures_id
@@ -48,7 +46,7 @@ return new class extends Migration
             ->whereNotNull('expenditures_id')
             ->update([
                 'message_type' => 'expenditure',
-                'type_id' => DB::raw('expenditures_id')
+                'type_id' => DB::raw('expenditures_id'),
             ]);
     }
 

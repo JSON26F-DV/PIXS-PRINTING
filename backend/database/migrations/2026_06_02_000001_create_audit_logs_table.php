@@ -18,7 +18,7 @@ return new class extends Migration
             $table->text('details')->nullable();
             $table->string('ip_address', 45)->nullable();
             $table->text('user_agent')->nullable();
-            
+
             $table->string('error_code', 10)->nullable();
             $table->string('error_type', 50)->nullable();
             $table->string('severity', 20)->default('info');

@@ -2,14 +2,14 @@
 
 namespace App\Exceptions;
 
-use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
-use Throwable;
 use App\Services\AuditService;
-use Illuminate\Validation\ValidationException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
+use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpKernel\Exception\HttpException;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Throwable;
 
 class Handler extends ExceptionHandler
 {
@@ -54,7 +54,7 @@ class Handler extends ExceptionHandler
                 AuditService::notFound('Resource', $context);
             } elseif ($e instanceof HttpException) {
                 AuditService::httpError(
-                    (string)$e->getStatusCode(),
+                    (string) $e->getStatusCode(),
                     $e->getMessage() ?: 'HTTP Exception',
                     $context
                 );

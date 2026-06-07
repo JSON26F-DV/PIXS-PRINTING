@@ -24,7 +24,7 @@ it('logs validation errors', function () {
     $response = $this->postJson('/api/auth/login', [
         'email' => 'invalid-email',
     ]);
-    
+
     $response->assertStatus(422);
 
     // Verify audit log entry for validation failure
@@ -36,7 +36,7 @@ it('logs validation errors', function () {
 it('logs uncaught exceptions using the exception handler', function () {
     // Register a test route that throws an exception
     Route::get('/api/test-throw-exception', function () {
-        throw new \Exception('Test Uncaught Exception');
+        throw new Exception('Test Uncaught Exception');
     });
 
     $response = $this->getJson('/api/test-throw-exception');

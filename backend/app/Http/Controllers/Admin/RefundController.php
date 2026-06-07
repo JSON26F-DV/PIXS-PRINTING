@@ -193,8 +193,6 @@ class RefundController extends Controller
         return response()->json(['message' => 'Refund deleted.']);
     }
 
-
-
     public function customerOrders(string $customerId): JsonResponse
     {
         $orders = Order::with('items.product')

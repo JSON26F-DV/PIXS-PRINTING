@@ -10,8 +10,11 @@ use App\Http\Controllers\Admin\AdminPayrollController;
 use App\Http\Controllers\Admin\AdminScreenplateController;
 use App\Http\Controllers\Admin\AdminScreenplateRequestController;
 use App\Http\Controllers\Admin\AdminStockAnalyticsController;
+use App\Http\Controllers\Admin\AdminVerificationController;
 use App\Http\Controllers\Admin\RefundController;
 use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\Auth\ForgotPasswordController;
+use App\Http\Controllers\Auth\PasswordChangeNotificationController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CategoryController;
@@ -27,13 +30,20 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ScreenplateRequestController;
 use App\Http\Controllers\StaffLiveQueueController;
 use App\Http\Controllers\User\UserController;
+use App\Models\Notification;
+use App\Models\Order;
+use App\Services\AuditService;
+use GlennRaya\Xendivel\Xendivel;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Str;
 
 // Public Data Routes
 Route::get('/delivery-methods', [DeliveryMethodController::class, 'index']);
 
 // Xendit Webhooks
-Route::post('/xendit/invoice-webhook', function (\Illuminate\Http\Request $request) {
+Route::post('/xendit/invoice-webhook', function (Request $request) {
     $token = $request->header('x-callback-token');
     if ($token !== config('xendivel.webhook_verification_token')) {
         return response()->json(['message' => 'Unauthorized'], 401);
@@ -43,27 +53,44 @@ Route::post('/xendit/invoice-webhook', function (\Illuminate\Http\Request $reque
     logger('Xendit Invoice Webhook received: ', $data);
 
     $status = $data['status'] ?? null;
-    $orderId = $data['external_id'] ?? null;
+    $externalId = $data['external_id'] ?? null;
 
-    if (($status === 'PAID' || $status === 'SETTLED') && $orderId) {
-        $order = \App\Models\Order::find($orderId);
-        if ($order) {
-            $order->status = 'PROCESSING';
-            $order->save();
+    if (($status === 'PAID' || $status === 'SETTLED') && $externalId) {
+        // New flow: Try to find pending order data in cache
+        $pendingData = Cache::get("pending_order_{$externalId}");
 
-            \App\Services\AuditService::updated('order', $order->id, [], ['status' => 'PROCESSING']);
+        if ($pendingData) {
+            // Create order from pending data (no order existed before payment)
+            $order = OrderController::createOrderFromPendingData($pendingData);
 
-            // Create notification for customer
-            \App\Models\Notification::create([
-                'id' => \Illuminate\Support\Str::uuid(),
-                'customer_id' => $order->customer_id,
-                'title' => 'Payment Successful',
-                'message' => "Payment for Order {$order->id} was successfully completed via Xendit.",
-                'type' => 'success',
-                'is_read' => false,
-            ]);
+            if ($order) {
+                Cache::forget("pending_order_{$externalId}");
+                logger("Order {$order->id} created from pending Xendit payment (external_id: {$externalId}).");
 
-            logger("Order {$orderId} status successfully updated to PROCESSING via Invoice webhook.");
+                return response()->json(['status' => 'success', 'order_id' => $order->id]);
+            }
+
+            logger("Failed to create order from pending data (external_id: {$externalId}).");
+        } else {
+            // Legacy flow: Order already exists, just update status
+            $order = Order::find($externalId);
+            if ($order) {
+                $order->status = 'PROCESSING';
+                $order->save();
+
+                AuditService::updated('order', $order->id, [], ['status' => 'PROCESSING']);
+
+                Notification::create([
+                    'id' => Str::uuid(),
+                    'customer_id' => $order->customer_id,
+                    'title' => 'Payment Successful',
+                    'message' => "Payment for Order {$order->id} was successfully completed via Xendit.",
+                    'type' => 'success',
+                    'is_read' => false,
+                ]);
+
+                logger("Order {$externalId} status updated to PROCESSING via Invoice webhook (legacy flow).");
+            }
         }
     }
 
@@ -82,10 +109,18 @@ Route::middleware('throttle:auth')->prefix('auth')->group(function () {
         ->where('provider', 'google|facebook');
 });
 
+// Forgot Password Routes (limited rate)
+Route::prefix('auth')->group(function () {
+    Route::post('/forgot-password/send-code', [ForgotPasswordController::class, 'sendCode'])->middleware('throttle:6,1');
+    Route::post('/forgot-password/verify', [ForgotPasswordController::class, 'verifyCode'])->middleware('throttle:10,1');
+    Route::post('/forgot-password/reset', [ForgotPasswordController::class, 'resetPassword'])->middleware('throttle:5,1');
+});
+
 // Protected Auth Routes
 Route::middleware(['auth:sanctum', 'throttle:api'])->prefix('auth')->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
     Route::post('/logout', [AuthController::class, 'logout']);
+    Route::post('/password-changed-notification', [PasswordChangeNotificationController::class, 'sendNotification']);
 });
 
 // User Profile Routes
@@ -109,24 +144,23 @@ Route::middleware(['auth:sanctum', 'role:customer', 'throttle:api'])->prefix('cu
     Route::delete('/addresses/{id}', [CustomerController::class, 'deleteAddress']);
     Route::post('/addresses/{id}/default', [CustomerController::class, 'setDefaultAddress']);
 
-
-
     // Xendit Payments
-    Route::post('/pay-via-ewallet', function (\Illuminate\Http\Request $request) {
+    Route::post('/pay-via-ewallet', function (Request $request) {
         try {
             config(['xendivel.auto_id' => false]);
-            $payment = \GlennRaya\Xendivel\Xendivel::payWithEwallet($request)->getResponse();
+            $payment = Xendivel::payWithEwallet($request)->getResponse();
+
             return response()->json($payment);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $msg = $e->getMessage();
-            logger()->error('Xendit E-Wallet Error: ' . $msg);
-            
+            logger()->error('Xendit E-Wallet Error: '.$msg);
+
             $decoded = json_decode($msg, true);
             $cleanMessage = $decoded['message'] ?? $msg;
             $cleanMessage = str_ireplace(['exception', 'error:'], '', $cleanMessage);
-            
+
             return response()->json([
-                'message' => $cleanMessage
+                'message' => $cleanMessage,
             ], 400);
         }
     });
@@ -147,6 +181,7 @@ Route::middleware(['auth:sanctum', 'role:customer', 'throttle:api'])->prefix('cu
     Route::get('/orders/{id}', [OrderController::class, 'show']);
     Route::post('/orders', [OrderController::class, 'store']);
     Route::patch('/orders/{id}', [OrderController::class, 'update']);
+    Route::post('/xendit/checkout', [OrderController::class, 'xenditCheckout']);
 
     // Discounts
     Route::get('/discounts/mine', [DiscountController::class, 'mine']);
@@ -275,6 +310,11 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->prefix('admin')->group(func
     Route::post('/notifications', [NotificationController::class, 'adminStore'])->middleware('role:admin');
     Route::put('/notifications/{id}', [NotificationController::class, 'adminUpdate'])->middleware('role:admin');
     Route::delete('/notifications/{id}', [NotificationController::class, 'adminDestroy'])->middleware('role:admin');
+
+    // Admin Verification Routes
+    Route::post('/verification/send-order-delete-code', [AdminVerificationController::class, 'sendOrderDeleteCode'])->middleware('role:admin');
+    Route::post('/verification/send-account-delete-code', [AdminVerificationController::class, 'sendAccountDeleteCode'])->middleware('role:admin');
+    Route::post('/verification/verify-code', [AdminVerificationController::class, 'verifyCode'])->middleware('role:admin');
 });
 
 // Messaging & Notifications
@@ -322,7 +362,6 @@ Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
     Route::delete('/accounts/deleted/{id}/purge', [AdminAccountController::class, 'purgeDeleted']);
     Route::get('/accounts/deleted', [AdminAccountController::class, 'deletedAccounts']);
 });
-
 
 // Cart Routes
 Route::middleware(['auth:sanctum', 'role:customer', 'throttle:api'])->prefix('cart')->group(function () {

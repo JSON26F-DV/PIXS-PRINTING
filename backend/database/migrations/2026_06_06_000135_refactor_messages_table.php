@@ -18,11 +18,11 @@ return new class extends Migration
                 'screenplate_request',
                 'payment_code',
                 'refund',
-                'expenditure'
+                'expenditure',
             ])->nullable()->after('reply_to_id');
-            
+
             $table->string('type_id', 30)->nullable()->after('message_type');
-            
+
             // Create index for faster lookups
             $table->index(['message_type', 'type_id']);
         });

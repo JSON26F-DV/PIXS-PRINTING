@@ -131,8 +131,8 @@ class AdminAccountController extends Controller
             if (isset($validated['paymentMethods'])) {
                 $employee->paymentMethods()->delete();
                 foreach ($validated['paymentMethods'] as $pm) {
-                    if (!isset($pm['id']) || empty($pm['id']) || str_starts_with($pm['id'], 'temp_')) {
-                        $pm['id'] = 'PAY-' . mt_rand(10000, 99999);
+                    if (! isset($pm['id']) || empty($pm['id']) || str_starts_with($pm['id'], 'temp_')) {
+                        $pm['id'] = 'PAY-'.mt_rand(10000, 99999);
                     }
                     $employee->paymentMethods()->create($pm);
                 }
@@ -274,7 +274,7 @@ class AdminAccountController extends Controller
                 $target->addresses()->delete();
                 $target->contacts()->delete();
                 $target->paymentMethods()->delete();
-                
+
                 DB::table('employee_attendance')->where('employee_id', $id)->delete();
                 DB::table('order_employee_queue')->where('employee_id', $id)->delete();
                 DB::table('inventory_logs')->where('employee_id', $id)->delete();
@@ -285,18 +285,18 @@ class AdminAccountController extends Controller
                 $target->contacts()->delete();
                 $target->paymentMethods()->delete();
                 $target->discounts()->delete();
-                
+
                 // Get order IDs to clean up related data in other tables
                 $orderIds = DB::table('orders')->where('customer_id', $id)->pluck('id')->toArray();
-                
-                if (!empty($orderIds)) {
+
+                if (! empty($orderIds)) {
                     DB::table('order_employee_queue')->whereIn('order_id', $orderIds)->delete();
                     DB::table('production_logs')->whereIn('order_id', $orderIds)->delete();
                     DB::table('refunds')->whereIn('order_id', $orderIds)->delete();
                     DB::table('order_items')->whereIn('order_id', $orderIds)->delete();
                     DB::table('orders')->whereIn('id', $orderIds)->delete();
                 }
-                
+
                 // Clean up any remaining direct references
                 DB::table('cart_items')->where('customer_id', $id)->delete();
                 DB::table('product_reviews')->where('customer_id', $id)->delete();
@@ -533,12 +533,12 @@ class AdminAccountController extends Controller
         if (! Hash::check($request->password, $admin->password)) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Authentication failed. Invalid password.'
+                'message' => 'Authentication failed. Invalid password.',
             ], 403);
         }
 
         $deletedByType = ($admin instanceof Customer) ? 'customer' : 'employee';
-        
+
         $customer = Customer::find($id);
         if ($customer) {
             $customer->softDeleteWithRelations(
@@ -557,7 +557,7 @@ class AdminAccountController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Account moved to deleted accounts'
+            'message' => 'Account moved to deleted accounts',
         ]);
     }
 
@@ -571,7 +571,7 @@ class AdminAccountController extends Controller
         if (! Hash::check($request->password, $admin->password)) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Authentication failed. Invalid password.'
+                'message' => 'Authentication failed. Invalid password.',
             ], 403);
         }
 
@@ -580,22 +580,22 @@ class AdminAccountController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Account permanently purged from database'
+            'message' => 'Account permanently purged from database',
         ]);
     }
 
     public function deletedAccounts(Request $request)
     {
         $query = DeletedAccount::query();
-        
+
         if ($request->filled('type')) {
             $query->where('account_type', $request->type);
         }
-        
+
         if ($request->filled('search')) {
             $query->where(function ($q) use ($request) {
                 $q->where('email', 'like', "%{$request->search}%")
-                  ->orWhere('original_id', 'like', "%{$request->search}%");
+                    ->orWhere('original_id', 'like', "%{$request->search}%");
             });
         }
 
@@ -609,8 +609,7 @@ class AdminAccountController extends Controller
                 'current_page' => $deleted->currentPage(),
                 'last_page' => $deleted->lastPage(),
                 'total' => $deleted->total(),
-            ]
+            ],
         ]);
     }
 }
-

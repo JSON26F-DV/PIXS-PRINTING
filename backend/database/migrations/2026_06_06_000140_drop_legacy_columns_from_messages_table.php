@@ -2,8 +2,8 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
@@ -16,13 +16,13 @@ return new class extends Migration
             if (DB::getDriverName() === 'sqlite') {
                 try {
                     $table->dropForeign(['payment_code_id']);
-                } catch (\Throwable $e) {
+                } catch (Throwable $e) {
                     // Ignore
                 }
             } else {
                 try {
                     $table->dropForeign('fk_message_payment_code');
-                } catch (\Throwable $e) {
+                } catch (Throwable $e) {
                     // Ignore
                 }
             }
@@ -34,7 +34,7 @@ return new class extends Migration
                 'screenplate_request_id',
                 'payment_code_id',
                 'refund_id',
-                'expenditures_id'
+                'expenditures_id',
             ]);
         });
     }
@@ -59,7 +59,7 @@ return new class extends Migration
                         ->references('id')
                         ->on('payment_codes')
                         ->onDelete('set null');
-                } catch (\Throwable $e) {
+                } catch (Throwable $e) {
                     // Ignore
                 }
             } else {
@@ -68,7 +68,7 @@ return new class extends Migration
                         ->references('id')
                         ->on('payment_codes')
                         ->onDelete('set null');
-                } catch (\Throwable $e) {
+                } catch (Throwable $e) {
                     // Ignore
                 }
             }

@@ -151,6 +151,8 @@ const Transactions: React.FC = () => {
   const [codeAlertMessage, setCodeAlertMessage] = useState('')
 
 
+
+
   // Initial Data Load
   useEffect(() => {
     const fetchInitialData = async () => {
@@ -215,6 +217,12 @@ const Transactions: React.FC = () => {
     (selectedPaymentId === 'payment_code' ? paymentCode.trim().length > 0 : selectedPaymentId) &&
     selectedDeliveryId
 
+  interface CreateOrderResponse {
+    id?: string
+    total_amount?: number
+    checkout_url?: string | null
+  }
+
   const handlePurchase = async () => {
     if (!isFormValid) {
       toast.error('Please complete all sections to proceed.')
@@ -247,101 +255,58 @@ const Transactions: React.FC = () => {
 
     setIsProcessing(true)
 
-    const payload: import('../../api/orders.api').CreateOrderPayload = {
-      cart_item_ids: checkoutItems.map(i => i.id),
-      address_id: selectedAddr.id,
-      payment_type: selectedPaymentId === 'payment_code' ? null : selectedPaymentId,
-      payment_code: selectedPaymentId === 'payment_code' ? paymentCode.trim() : null,
-      delivery_method_id: delMeta?.id || selectedDeliveryId,
-      production_notes: notes,
-      discount_id: selectedDiscount?.id ?? null,
-    };
-
-    console.log('Final Order Payload:', payload)
-
-    try {
-      const response = await orderApi.createOrder(payload)
-      console.log('Order Response:', response)
-
-      // The backend creates order, order items, and deletes the cart items. 
-      // We can trigger an event or just remove checkout_nodes so it refreshes.
-      const currentCartRaw = localStorage.getItem('pixs_cart_v1')
-      if (currentCartRaw) {
-        try {
-          const currentCart: CartItem[] = JSON.parse(currentCartRaw)
-          const purchasedIds = checkoutItems.map((i) => i.id)
-          const remainingCart = currentCart.filter((i) => !purchasedIds.includes(i.id))
-          localStorage.setItem('pixs_cart_v1', JSON.stringify(remainingCart))
-          window.dispatchEvent(new Event('storage')) // Trigger cross-tab sync if necessary
-        } catch {
-          // silently ignore parse errors
-        }
+    if (selectedPaymentId === 'payment_code') {
+      // Payment Code flow: create order immediately
+      const payload: import('../../api/orders.api').CreateOrderPayload = {
+        cart_item_ids: checkoutItems.map(i => i.id),
+        address_id: selectedAddr.id,
+        payment_type: null,
+        payment_code: paymentCode.trim(),
+        delivery_method_id: delMeta?.id || selectedDeliveryId,
+        production_notes: notes,
+        discount_id: selectedDiscount?.id ?? null,
       }
 
-      localStorage.removeItem('pixs_checkout_node')
-      localStorage.removeItem('pixs_buy_now_v1')
-      
-      const orderId = response?.id || 'ORD-NEW'
-      const orderTotal = response?.total_amount || 0
-      const checkoutUrl = response?.checkout_url
-
-      setLastOrderId(orderId)
-      setLastOrderTotal(orderTotal)
-      
-      if ('vibrate' in navigator) {
-        navigator.vibrate([100, 50, 100, 50, 200])
-      }
-      
-      // Construct message for admin
       try {
-        const messageBody = `review your shipping address ${orderId}`;
-        
-        const formData = new FormData();
-        formData.append('message', messageBody);
-        formData.append('receiver_id', '1'); // Admin
-        formData.append('receiver_type', 'employee');
-        formData.append('message_type', 'order');
-        formData.append('type_id', orderId);
-
-        await axiosInstance.post('/api/messages/send', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' }
-        });
-      } catch (msgErr) {
-        console.error('Failed to send order message to admin:', msgErr);
+        const response = await orderApi.createOrder(payload)
+        await handleOrderCreated(response)
+      } catch (err) {
+        handleOrderError(err)
+      } finally {
+        setIsProcessing(false)
       }
+      return
+    }
+
+    // Xendit flow: create checkout URL without creating order
+    try {
+      const response = await axiosInstance.post('/api/customer/xendit/checkout', {
+        cart_item_ids: checkoutItems.map(i => i.id),
+        address_id: selectedAddr.id,
+        delivery_method_id: delMeta?.id || selectedDeliveryId,
+        production_notes: notes,
+        discount_id: selectedDiscount?.id ?? null,
+        payment_method: selectedPaymentId,
+      })
+
+      const checkoutUrl = response.data.checkout_url
 
       if (checkoutUrl) {
-        toast.success('Order placed! Redirecting to GCash...')
+        localStorage.removeItem('pixs_checkout_node')
+        localStorage.removeItem('pixs_buy_now_v1')
+
+        toast.success('Redirecting to payment...')
         setTimeout(() => {
           window.location.href = checkoutUrl
-        }, 1500)
+        }, 1000)
         return
       }
 
-      setIsSuccessModalOpen(true)
-      toast.success('Order placed successfully!')
-      fetchNotifications() // fetch real-time success notification
-
-      setTimeout(() => {
-        navigate('/orders')
-      }, 3000)
+      toast.error('Failed to get payment URL')
     } catch (err) {
-      console.error('Purchase Error:', err)
-
-      const axiosErr = err as { response?: { status?: number; data?: { message?: string; error_code?: string; stock_errors?: { product_name: string; requested: number; available: number }[] } } };
+      console.error('Checkout Error:', err)
+      const axiosErr = err as { response?: { status?: number; data?: { message?: string; stock_errors?: { product_name: string; requested: number; available: number }[] } } }
       const backendData = axiosErr.response?.data
-
-      if (backendData?.error_code === 'PAYMENT_CODE_ALREADY_USED') {
-        setCodeAlertMessage('THIS PAYMENT CODE HAS ALREADY BEEN USED. CODES ARE ONE-TIME USE ONLY.')
-        setIsCodeAlertOpen(true)
-        return
-      }
-
-      if (axiosErr.response?.status === 404 && backendData?.message?.toLowerCase().includes('payment code')) {
-        setCodeAlertMessage('THE PAYMENT CODE IS INVALID. PLEASE VERIFY THE SPELLING.')
-        setIsCodeAlertOpen(true)
-        return
-      }
 
       if (backendData?.message === 'INSUFFICIENT_STOCK' && backendData?.stock_errors) {
         setStockAlertItems(
@@ -352,15 +317,112 @@ const Transactions: React.FC = () => {
           }))
         )
         setIsStockAlertOpen(true)
+        setIsProcessing(false)
         return
       }
 
-      const msg = backendData?.message || 'Failed to place order.'
+      const msg = backendData?.message || 'Failed to initialize payment.'
       toast.error(msg)
-      fetchNotifications() // fetch real-time failed notification
     } finally {
       setIsProcessing(false)
     }
+  }
+
+  const handleOrderCreated = async (response: CreateOrderResponse) => {
+    const currentCartRaw = localStorage.getItem('pixs_cart_v1')
+    if (currentCartRaw) {
+      try {
+        const currentCart: CartItem[] = JSON.parse(currentCartRaw)
+        const purchasedIds = checkoutItems.map((i) => i.id)
+        const remainingCart = currentCart.filter((i) => !purchasedIds.includes(i.id))
+        localStorage.setItem('pixs_cart_v1', JSON.stringify(remainingCart))
+        window.dispatchEvent(new Event('storage'))
+      } catch {
+        // silently ignore parse errors
+      }
+    }
+
+    localStorage.removeItem('pixs_checkout_node')
+    localStorage.removeItem('pixs_buy_now_v1')
+
+    const orderId = response?.id || 'ORD-NEW'
+    const orderTotal = response?.total_amount || 0
+    const checkoutUrl = response?.checkout_url
+
+    setLastOrderId(orderId)
+    setLastOrderTotal(orderTotal)
+
+    if ('vibrate' in navigator) {
+      navigator.vibrate([100, 50, 100, 50, 200])
+    }
+
+    // Construct message for admin
+    try {
+      const messageBody = `review your shipping address ${orderId}`
+      const formData = new FormData()
+      formData.append('message', messageBody)
+      formData.append('receiver_id', '1')
+      formData.append('receiver_type', 'employee')
+      formData.append('message_type', 'order')
+      formData.append('type_id', orderId)
+
+      await axiosInstance.post('/api/messages/send', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      })
+    } catch (msgErr) {
+      console.error('Failed to send order message to admin:', msgErr)
+    }
+
+    if (checkoutUrl) {
+      toast.success('Order placed! Redirecting to GCash...')
+      setTimeout(() => {
+        window.location.href = checkoutUrl
+      }, 1500)
+      return
+    }
+
+    setIsSuccessModalOpen(true)
+    toast.success('Order placed successfully!')
+    fetchNotifications()
+
+    setTimeout(() => {
+      navigate('/orders')
+    }, 3000)
+  }
+
+  const handleOrderError = (err: unknown) => {
+    console.error('Purchase Error:', err)
+
+    const axiosErr = err as { response?: { status?: number; data?: { message?: string; error_code?: string; stock_errors?: { product_name: string; requested: number; available: number }[] } } }
+    const backendData = axiosErr.response?.data
+
+    if (backendData?.error_code === 'PAYMENT_CODE_ALREADY_USED') {
+      setCodeAlertMessage('THIS PAYMENT CODE HAS ALREADY BEEN USED. CODES ARE ONE-TIME USE ONLY.')
+      setIsCodeAlertOpen(true)
+      return
+    }
+
+    if (axiosErr.response?.status === 404 && backendData?.message?.toLowerCase().includes('payment code')) {
+      setCodeAlertMessage('THE PAYMENT CODE IS INVALID. PLEASE VERIFY THE SPELLING.')
+      setIsCodeAlertOpen(true)
+      return
+    }
+
+    if (backendData?.message === 'INSUFFICIENT_STOCK' && backendData?.stock_errors) {
+      setStockAlertItems(
+        backendData.stock_errors.map((item) => ({
+          name: item.product_name,
+          requested: item.requested,
+          available: item.available,
+        }))
+      )
+      setIsStockAlertOpen(true)
+      return
+    }
+
+    const msg = backendData?.message || 'Failed to place order.'
+    toast.error(msg)
+    fetchNotifications()
   }
 
   return (

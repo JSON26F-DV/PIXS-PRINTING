@@ -46,7 +46,7 @@ class StaffLiveQueueController extends Controller
             $orderId = (string) $o->id;
 
             // The user MUST be explicitly assigned to see the order.
-            if (!isset($queueMap[$orderId]) || !in_array($employeeId, $queueMap[$orderId], true)) {
+            if (! isset($queueMap[$orderId]) || ! in_array($employeeId, $queueMap[$orderId], true)) {
                 continue; // Employee is not assigned to this order
             }
 
@@ -58,14 +58,14 @@ class StaffLiveQueueController extends Controller
                 'total_amount' => (float) $o->total_amount,
                 'status' => $o->status,
                 'created_at' => $o->created_at->toIso8601String(),
-                'products' => $o->items->map(fn($item) => [
+                'products' => $o->items->map(fn ($item) => [
                     'id' => $item->id,
                     'order_id' => $item->order_id,
                     'customer_id' => $item->customer_id,
                     'productId' => $item->product_id,
                     'productName' => $item->product?->name ?? 'Deleted Product',
                     'productImage' => $item->product && $item->product->main_image
-                        ? '/images/products/' . $item->product->main_image
+                        ? '/images/products/'.$item->product->main_image
                         : '',
                     'category' => $item->product?->category?->label ?? 'General',
                     'quantity' => $item->quantity,
@@ -74,7 +74,7 @@ class StaffLiveQueueController extends Controller
                         'size' => $item->variant?->size ?? 'N/A',
                         'unitPrice' => (float) $item->unit_price,
                     ],
-                    'colors' => $item->colors->map(fn($c) => [
+                    'colors' => $item->colors->map(fn ($c) => [
                         'name' => $c->colorDetails?->name ?? 'Unknown',
                         'hex' => $c->colorDetails?->hex ?? '#000000',
                     ]),
@@ -119,7 +119,7 @@ class StaffLiveQueueController extends Controller
         $employeeId = $user->id;
 
         $order = Order::find($id);
-        if (!$order) {
+        if (! $order) {
             return response()->json(['message' => 'Order not found'], 404);
         }
 
@@ -130,7 +130,7 @@ class StaffLiveQueueController extends Controller
         if ($taskStatus === 'COMPLETED') {
             $messageText = '[LIVE_QUEUE_COMPLETED] The production task for this order has been successfully completed.';
         } else {
-            $messageText = '[LIVE_QUEUE_NOT_COMPLETED] ' . (!empty($validated['message']) ? $validated['message'] : 'The production task for this order could not be completed at this time.');
+            $messageText = '[LIVE_QUEUE_NOT_COMPLETED] '.(! empty($validated['message']) ? $validated['message'] : 'The production task for this order could not be completed at this time.');
         }
 
         try {
@@ -139,7 +139,7 @@ class StaffLiveQueueController extends Controller
                 DB::table('production_logs')->updateOrInsert(
                     ['order_id' => $id],
                     [
-                        'id' => 'prod_' . Str::random(10),
+                        'id' => 'prod_'.Str::random(10),
                         'employee_id' => $employeeId,
                         'task_status' => $taskStatus,
                         'requested_at' => now(),
@@ -147,7 +147,7 @@ class StaffLiveQueueController extends Controller
                 );
 
                 // 2. Create message in messages table with product_concern = 1
-                $convId = $employeeId . '_' . $customerId;
+                $convId = $employeeId.'_'.$customerId;
 
                 // Ensure conversation exists
                 DB::table('conversations')->insertOrIgnore([
@@ -156,7 +156,7 @@ class StaffLiveQueueController extends Controller
                     'updated_at' => now(),
                 ]);
 
-                $msgId = 'msg_' . Str::random(10);
+                $msgId = 'msg_'.Str::random(10);
                 DB::table('messages')->insert([
                     'id' => $msgId,
                     'conversation_id' => $convId,
@@ -176,7 +176,7 @@ class StaffLiveQueueController extends Controller
 
             return response()->json(['message' => 'Task status logged and customer notified.']);
         } catch (\Throwable $e) {
-            return response()->json(['message' => 'Failed to update task status: ' . $e->getMessage()], 500);
+            return response()->json(['message' => 'Failed to update task status: '.$e->getMessage()], 500);
         }
     }
 }

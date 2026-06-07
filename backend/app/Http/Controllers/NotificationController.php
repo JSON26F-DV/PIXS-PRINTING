@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Customer;
 use App\Models\Notification;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -16,7 +17,7 @@ class NotificationController extends Controller
             return response()->json(['message' => 'Unauthorized'], 401);
         }
 
-        $isCustomer = $user instanceof \App\Models\Customer;
+        $isCustomer = $user instanceof Customer;
 
         $query = Notification::query();
         if ($isCustomer) {
@@ -41,12 +42,12 @@ class NotificationController extends Controller
         ]);
 
         $user = $request->user();
-        $isCustomer = $user instanceof \App\Models\Customer;
+        $isCustomer = $user instanceof Customer;
 
         $notification = Notification::create([
             'id' => (string) Str::uuid(),
             'customer_id' => $isCustomer ? $user->id : null,
-            'employee_id' => !$isCustomer ? $user->id : null,
+            'employee_id' => ! $isCustomer ? $user->id : null,
             'title' => $validated['title'],
             'message' => $validated['message'],
             'type' => $validated['type'],
@@ -59,7 +60,7 @@ class NotificationController extends Controller
     public function markAsRead(Request $request, $id): JsonResponse
     {
         $user = $request->user();
-        $isCustomer = $user instanceof \App\Models\Customer;
+        $isCustomer = $user instanceof Customer;
 
         $notification = Notification::where('id', $id)
             ->where(function ($q) use ($user, $isCustomer) {
@@ -81,7 +82,7 @@ class NotificationController extends Controller
     public function markAllAsRead(Request $request): JsonResponse
     {
         $user = $request->user();
-        $isCustomer = $user instanceof \App\Models\Customer;
+        $isCustomer = $user instanceof Customer;
 
         $query = Notification::query();
         if ($isCustomer) {
@@ -97,7 +98,7 @@ class NotificationController extends Controller
     public function destroy(Request $request, $id): JsonResponse
     {
         $user = $request->user();
-        $isCustomer = $user instanceof \App\Models\Customer;
+        $isCustomer = $user instanceof Customer;
 
         Notification::where('id', $id)
             ->where(function ($q) use ($user, $isCustomer) {
@@ -115,7 +116,7 @@ class NotificationController extends Controller
     public function clearAll(Request $request): JsonResponse
     {
         $user = $request->user();
-        $isCustomer = $user instanceof \App\Models\Customer;
+        $isCustomer = $user instanceof Customer;
 
         $query = Notification::query();
         if ($isCustomer) {
@@ -132,6 +133,7 @@ class NotificationController extends Controller
     public function adminIndex(Request $request): JsonResponse
     {
         $notifications = Notification::orderBy('created_at', 'desc')->get();
+
         return response()->json([
             'data' => $notifications,
         ]);

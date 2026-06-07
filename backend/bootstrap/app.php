@@ -1,9 +1,12 @@
 <?php
 
+use App\Exceptions\Handler;
 use App\Http\Middleware\CheckOwnership;
 use App\Http\Middleware\CheckRole;
+use App\Http\Middleware\ErrorLoggingMiddleware;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
+use Illuminate\Contracts\Debug\ExceptionHandler;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Application;
@@ -27,9 +30,9 @@ $app = Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role' => CheckRole::class,
             'ownership' => CheckOwnership::class,
-            'error.log' => \App\Http\Middleware\ErrorLoggingMiddleware::class,
+            'error.log' => ErrorLoggingMiddleware::class,
         ]);
-        $middleware->append(\App\Http\Middleware\ErrorLoggingMiddleware::class);
+        $middleware->append(ErrorLoggingMiddleware::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->render(function (Throwable $e, Request $request) {
@@ -114,8 +117,8 @@ $app = Application::configure(basePath: dirname(__DIR__))
     })->create();
 
 $app->singleton(
-    \Illuminate\Contracts\Debug\ExceptionHandler::class,
-    \App\Exceptions\Handler::class
+    ExceptionHandler::class,
+    Handler::class
 );
 
 return $app;

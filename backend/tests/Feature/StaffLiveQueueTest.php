@@ -1,11 +1,11 @@
 <?php
 
-use App\Models\Employee;
 use App\Models\Customer;
+use App\Models\Employee;
 use App\Models\Order;
-use Laravel\Sanctum\Sanctum;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Laravel\Sanctum\Sanctum;
 
 uses(RefreshDatabase::class);
 

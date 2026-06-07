@@ -49,10 +49,12 @@ class DeletedAccount extends Model
         $lastName = count($nameParts) > 1 ? ucfirst($nameParts[1]) : ($this->account_type === 'customer' ? 'Customer' : 'Staff');
 
         if ($this->account_type === 'customer') {
-            $exists = \App\Models\Customer::find($this->original_id);
-            if ($exists) return false;
-            
-            $customer = new \App\Models\Customer();
+            $exists = Customer::find($this->original_id);
+            if ($exists) {
+                return false;
+            }
+
+            $customer = new Customer;
             $customer->id = $this->original_id;
             $customer->email = $this->email;
             $customer->password = $this->password;
@@ -63,10 +65,12 @@ class DeletedAccount extends Model
             $customer->date_created = now();
             $customer->save();
         } else {
-            $exists = \App\Models\Employee::find($this->original_id);
-            if ($exists) return false;
-            
-            $employee = new \App\Models\Employee();
+            $exists = Employee::find($this->original_id);
+            if ($exists) {
+                return false;
+            }
+
+            $employee = new Employee;
             $employee->id = $this->original_id;
             $employee->email = $this->email;
             $employee->password = $this->password;
@@ -80,7 +84,7 @@ class DeletedAccount extends Model
         }
 
         $this->delete();
+
         return true;
     }
-
 }

@@ -293,21 +293,21 @@ class MessageController extends Controller
         }
 
         $msgId = 'msg_'.Str::random(10);
-        
+
         $messageType = $validated['message_type'] ?? null;
         $typeId = $validated['type_id'] ?? null;
-        
-        if (!$messageType && !$typeId) {
-            if (!empty($validated['order_id'])) {
+
+        if (! $messageType && ! $typeId) {
+            if (! empty($validated['order_id'])) {
                 $messageType = 'order';
                 $typeId = $validated['order_id'];
-            } elseif (!empty($validated['screenplate_request_id'])) {
+            } elseif (! empty($validated['screenplate_request_id'])) {
                 $messageType = 'screenplate_request';
                 $typeId = $validated['screenplate_request_id'];
-            } elseif (!empty($validated['payment_code_id'])) {
+            } elseif (! empty($validated['payment_code_id'])) {
                 $messageType = 'payment_code';
                 $typeId = $validated['payment_code_id'];
-            } elseif (!empty($validated['expenditures_id'])) {
+            } elseif (! empty($validated['expenditures_id'])) {
                 $messageType = 'expenditure';
                 $typeId = $validated['expenditures_id'];
             }

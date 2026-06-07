@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        if (!Schema::hasTable('screenplate_requests')) {
+        if (! Schema::hasTable('screenplate_requests')) {
             Schema::create('screenplate_requests', function (Blueprint $table) {
                 $table->string('id', 20)->primary();
                 $table->string('customer_id', 20)->index('customer_id');

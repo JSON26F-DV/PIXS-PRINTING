@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\HasApiTokens;
 
 class Employee extends Authenticatable
@@ -100,9 +101,9 @@ class Employee extends Authenticatable
             'deleted_at' => now(),
         ];
 
-        \Illuminate\Support\Facades\DB::transaction(function () use ($deletedAccountData) {
+        DB::transaction(function () use ($deletedAccountData) {
             // 1. Save to deleted_accounts
-            \App\Models\DeletedAccount::create($deletedAccountData);
+            DeletedAccount::create($deletedAccountData);
 
             // 2. Delete related tables
             $this->contacts()->delete();
@@ -114,5 +115,3 @@ class Employee extends Authenticatable
         });
     }
 }
-
-

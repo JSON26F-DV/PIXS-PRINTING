@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class AuditService
@@ -101,7 +102,7 @@ class AuditService
                 'created_at' => now(),
             ]);
         } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error('Failed to insert audit log: ' . $e->getMessage(), [
+            Log::error('Failed to insert audit log: '.$e->getMessage(), [
                 'original_error_code' => $errorCode,
                 'original_error_message' => $errorMessage,
             ]);
@@ -111,7 +112,7 @@ class AuditService
     // Convenience methods for common errors
     public static function httpError(int $code, string $message, ?array $context = null): void
     {
-        self::error((string)$code, 'HttpException', $message, self::getSeverityFromCode($code), $context);
+        self::error((string) $code, 'HttpException', $message, self::getSeverityFromCode($code), $context);
     }
 
     public static function validationError(string $message, array $errors, ?array $context = null): void
@@ -152,7 +153,7 @@ class AuditService
 
     private static function getSeverityFromCode(int $code): string
     {
-        return match($code) {
+        return match ($code) {
             400, 401, 403 => 'medium',
             402 => 'high',
             404, 422 => 'low',

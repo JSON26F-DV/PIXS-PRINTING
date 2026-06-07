@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::table('notifications', function (Blueprint $table) {
             $table->string('customer_id')->nullable()->change();
             $table->string('employee_id')->nullable()->after('customer_id');
-            
+
             $table->foreign('employee_id')->references('id')->on('employees')->onDelete('cascade');
         });
     }

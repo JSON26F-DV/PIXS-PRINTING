@@ -3,6 +3,10 @@
 namespace App\Listeners;
 
 use App\Events\eWalletEvents;
+use App\Models\Notification;
+use App\Models\Order;
+use App\Services\AuditService;
+use Illuminate\Support\Str;
 
 class eWalletWebhookListener
 {
@@ -38,16 +42,16 @@ class eWalletWebhookListener
         $referenceId = $data['data']['reference_id'] ?? $data['reference_id'] ?? null;
 
         if ($status === 'SUCCEEDED' && $referenceId) {
-            $order = \App\Models\Order::find($referenceId);
+            $order = Order::find($referenceId);
             if ($order) {
                 $order->status = 'PROCESSING';
                 $order->save();
 
-                \App\Services\AuditService::updated('order', $order->id, [], ['status' => 'PROCESSING']);
+                AuditService::updated('order', $order->id, [], ['status' => 'PROCESSING']);
 
                 // Create a notification for the customer
-                \App\Models\Notification::create([
-                    'id' => \Illuminate\Support\Str::uuid(),
+                Notification::create([
+                    'id' => Str::uuid(),
                     'customer_id' => $order->customer_id,
                     'title' => 'Payment Successful',
                     'message' => "Payment for Order {$order->id} was successfully received via GCash.",

@@ -39,6 +39,7 @@ import { format, parseISO } from 'date-fns'
 import { toast } from 'react-hot-toast'
 import { useAuth } from '../../context/AuthContext'
 import { useAdminOrders, type Order, type OrderItem } from '../../hooks/useAdminOrders'
+import Authenticator from '../../components/Authenticator'
 import axiosInstance from '../../lib/axiosInstance'
 import { useDebounce } from '../../hooks/useDebounce'
 
@@ -107,6 +108,10 @@ const Orders: React.FC = () => {
   }>({ isOpen: false, orderId: '', newStatus: '' })
   const [expandedOrderIds, setExpandedOrderIds] = useState<Set<string>>(new Set())
   const [deleteModal, setDeleteModal] = useState<{
+    isOpen: boolean
+    orderId: string
+  }>({ isOpen: false, orderId: '' })
+  const [authenticatorModal, setAuthenticatorModal] = useState<{
     isOpen: boolean
     orderId: string
   }>({ isOpen: false, orderId: '' })
@@ -1272,7 +1277,11 @@ const Orders: React.FC = () => {
                             <button 
                               onClick={(e) => {
                                 e.stopPropagation()
-                                setDeleteModal({ isOpen: true, orderId: order.order_id })
+                                if (user?.email) {
+                                  setAuthenticatorModal({ isOpen: true, orderId: order.order_id })
+                                } else {
+                                  toast.error('Admin email not configured for verification')
+                                }
                               }}
                               className="rounded p-1 text-rose-400 hover:bg-rose-50"
                             >
@@ -1465,7 +1474,13 @@ const Orders: React.FC = () => {
                             <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
                               {user?.role === 'admin' ? (
                                 <button 
-                                  onClick={() => setDeleteModal({ isOpen: true, orderId: order.order_id })}
+                                  onClick={() => {
+                                    if (user?.email) {
+                                      setAuthenticatorModal({ isOpen: true, orderId: order.order_id })
+                                    } else {
+                                      toast.error('Admin email not configured for verification')
+                                    }
+                                  }}
                                   className="orders-action-btn rounded-xl p-3 text-rose-400 transition-all hover:bg-rose-50 hover:text-rose-600"
                                   title="Delete Order"
                                 >
@@ -2470,6 +2485,24 @@ const Orders: React.FC = () => {
                 </div>
               </form>
             </m.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Authenticator Modal */}
+      <AnimatePresence>
+        {authenticatorModal.isOpen && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/80 backdrop-blur-sm p-4">
+            <Authenticator
+              email={user?.email || ''}
+              codeType="delete_order"
+              targetId={authenticatorModal.orderId}
+              onSuccess={() => {
+                setAuthenticatorModal({ isOpen: false, orderId: '' })
+                setDeleteModal({ isOpen: true, orderId: authenticatorModal.orderId })
+              }}
+              onCancel={() => setAuthenticatorModal({ isOpen: false, orderId: '' })}
+            />
           </div>
         )}
       </AnimatePresence>

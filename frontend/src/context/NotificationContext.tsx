@@ -7,13 +7,18 @@ import React, {
 import { NotificationContext } from './NotificationContextInstance'
 import type { INotification } from '../types/notification'
 import axiosInstance from '../lib/axiosInstance.ts'
+import { useAuth } from './AuthContext'
 
 export const NotificationProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
   const [notifications, setNotifications] = useState<INotification[]>([])
+  const { user } = useAuth()
+
+  const isLoggedIn = Boolean(user?.isLoggedIn)
 
   const refreshNotifications = useCallback(async () => {
+    if (!isLoggedIn) return
     try {
       const { data } = await axiosInstance.get('/api/notifications')
       const formatted: INotification[] = (data.data || []).map((n: {
@@ -39,9 +44,11 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({
     } catch (error) {
       console.error('Failed to fetch notifications in context', error)
     }
-  }, [])
+  }, [isLoggedIn])
 
   useEffect(() => {
+    if (!isLoggedIn) return
+
     const timer = setTimeout(() => {
       refreshNotifications()
     }, 0)
@@ -54,9 +61,12 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({
       clearTimeout(timer)
       clearInterval(interval)
     }
-  }, [refreshNotifications])
+  }, [isLoggedIn, refreshNotifications])
 
-  const unreadCount = notifications.filter((n) => !n.isRead).length
+  // Derive effective notifications — if user is logged out, always return empty
+  // This avoids calling setNotifications([]) inside an effect on logout
+  const effectiveNotifications = isLoggedIn ? notifications : []
+  const unreadCount = effectiveNotifications.filter((n) => !n.isRead).length
 
   const markAsRead = async (id: string) => {
     try {
@@ -81,7 +91,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({
   return (
     <NotificationContext.Provider
       value={{
-        notifications,
+        notifications: effectiveNotifications,
         unreadCount,
         markAsRead,
         markAllAsRead,

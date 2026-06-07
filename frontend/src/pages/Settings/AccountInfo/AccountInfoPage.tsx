@@ -41,6 +41,7 @@ import {
 } from './utils/validation'
 
 import { useAuth } from '../../../context/AuthContext'
+import axiosInstance from '../../../lib/axiosInstance'
 
 const AccountInfoPage: React.FC = () => {
   const {
@@ -264,6 +265,13 @@ const AccountInfoPage: React.FC = () => {
       resetPass()
       otp.resetVerification()
       setOtpInput('')
+      try {
+        await axiosInstance.post('/api/auth/password-changed-notification', {
+          email: user?.email,
+        })
+      } catch {
+        // Notification is best-effort
+      }
     }
   }
 

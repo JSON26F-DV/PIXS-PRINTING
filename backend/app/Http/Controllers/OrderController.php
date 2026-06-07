@@ -12,8 +12,10 @@ use App\Models\OrderItemColor;
 use App\Models\Product;
 use App\Models\ProductReview;
 use App\Services\AuditService;
+use GlennRaya\Xendivel\XenditApi;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -254,6 +256,368 @@ class OrderController extends Controller
         }
 
         return response()->json(['message' => 'Order updated']);
+    }
+
+    /**
+     * Store a newly created order in storage.
+     */
+    public function xenditCheckout(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        if (! $user instanceof Customer) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+
+        try {
+            $validated = $request->validate([
+                'cart_item_ids' => 'required|array|min:1',
+                'cart_item_ids.*' => 'required|string',
+                'address_id' => 'required|string',
+                'delivery_method_id' => 'required|string|exists:delivery_methods,id',
+                'production_notes' => 'nullable|string',
+                'discount_id' => 'nullable|string|exists:discounts,id',
+                'payment_method' => 'nullable|string|in:gcash,bdo,paymaya',
+            ]);
+        } catch (ValidationException $e) {
+            return response()->json(['message' => 'Validation failed', 'errors' => $e->errors()], 422);
+        }
+
+        // Load cart items with relations
+        $cartItems = CartItem::with(['colors', 'variant', 'screenplate', 'product'])
+            ->whereIn('id', $validated['cart_item_ids'])
+            ->get();
+
+        // Validate ownership
+        foreach ($cartItems as $cartItem) {
+            if ($cartItem->customer_id !== $user->id) {
+                return response()->json(['message' => 'Forbidden access to cart item.'], 403);
+            }
+        }
+
+        if ($cartItems->count() !== count($validated['cart_item_ids'])) {
+            return response()->json(['message' => 'Some cart items were not found or do not belong to you.'], 400);
+        }
+
+        // Stock validation
+        $stockErrors = [];
+        foreach ($cartItems as $cartItem) {
+            if ($cartItem->variant && $cartItem->quantity > $cartItem->variant->stock) {
+                $stockErrors[] = [
+                    'cart_item_id' => $cartItem->id,
+                    'product_name' => $cartItem->product?->name ?? 'Unknown Product',
+                    'variant_id' => $cartItem->variant_id,
+                    'requested' => $cartItem->quantity,
+                    'available' => $cartItem->variant->stock,
+                ];
+            }
+        }
+
+        if (! empty($stockErrors)) {
+            return response()->json([
+                'message' => 'INSUFFICIENT_STOCK',
+                'stock_errors' => $stockErrors,
+            ], 422);
+        }
+
+        // Calculate totals
+        $totalAmount = $cartItems->sum('total_cart_price');
+        $discountId = $validated['discount_id'] ?? null;
+        $totalDiscountAmount = 0;
+
+        if ($discountId) {
+            $discount = Discount::find($discountId);
+            if ($discount && ! $discount->already_used) {
+                $isValid = true;
+                if ($discount->customer_id && $discount->customer_id !== $user->id) {
+                    $isValid = false;
+                }
+                if ($discount->expires_at && $discount->expires_at->isPast()) {
+                    $isValid = false;
+                }
+                if ($totalAmount < $discount->min_spend) {
+                    $isValid = false;
+                }
+
+                if ($isValid) {
+                    if ($discount->variant_id) {
+                        $relevantItems = $cartItems->where('variant_id', $discount->variant_id);
+                        if ($relevantItems->count() > 0) {
+                            $relevantSubtotal = $relevantItems->sum('total_cart_price');
+                            $totalDiscountAmount = $discount->type === 'fixed'
+                                ? min($discount->value, $relevantSubtotal)
+                                : $relevantSubtotal * ($discount->value / 100);
+                        }
+                    } elseif ($discount->product_id) {
+                        $relevantItems = $cartItems->where('product_id', $discount->product_id);
+                        if ($relevantItems->count() > 0) {
+                            $relevantSubtotal = $relevantItems->sum('total_cart_price');
+                            $totalDiscountAmount = $discount->type === 'fixed'
+                                ? min($discount->value, $relevantSubtotal)
+                                : $relevantSubtotal * ($discount->value / 100);
+                        }
+                    } else {
+                        $totalDiscountAmount = $discount->type === 'fixed'
+                            ? min($discount->value, $totalAmount)
+                            : $totalAmount * ($discount->value / 100);
+                    }
+                }
+            }
+        }
+
+        $finalAmount = max(0, $totalAmount - $totalDiscountAmount);
+
+        // Generate external_id for Xendit
+        $externalId = 'XENDIT_'.strtoupper(Str::random(20));
+
+        // Store pending order data in cache (24h TTL)
+        $pendingData = [
+            'customer_id' => $user->id,
+            'cart_item_ids' => $validated['cart_item_ids'],
+            'address_id' => $validated['address_id'],
+            'delivery_method_id' => $validated['delivery_method_id'],
+            'production_notes' => $validated['production_notes'] ?? null,
+            'discount_id' => $discountId,
+            'total_amount' => $finalAmount,
+            'total_discount_amount' => $totalDiscountAmount,
+            'discount_marked_used' => $discountId && isset($discount) && $discount && ! $discount->already_used,
+        ];
+
+        Cache::put("pending_order_{$externalId}", $pendingData, now()->addHours(24));
+
+        // Create Xendit invoice — filter payment methods based on selection
+        try {
+            $origin = $request->header('Origin') ?: config('app.url');
+            $invoicePayload = [
+                'external_id' => $externalId,
+                'amount' => (int) $finalAmount,
+                'description' => 'Payment for PIXS Order',
+                'currency' => 'PHP',
+                'success_redirect_url' => $origin.'/payment/success?external_id='.$externalId,
+                'failure_redirect_url' => $origin.'/transactions?payment=failed',
+            ];
+
+            $paymentMethod = $validated['payment_method'] ?? null;
+            if ($paymentMethod === 'gcash') {
+                $invoicePayload['payment_methods'] = ['GCASH'];
+            } elseif ($paymentMethod === 'paymaya') {
+                $invoicePayload['payment_methods'] = ['PAYMAYA'];
+            }
+            // bdo or any other: omit payment_methods so Xendit shows all enabled methods
+
+            if ($user) {
+                $invoicePayload['customer'] = [
+                    'given_names' => $user->first_name,
+                    'surname' => $user->last_name,
+                    'email' => $user->email,
+                ];
+            }
+
+            $xenditRes = XenditApi::api('post', 'v2/invoices', $invoicePayload);
+
+            if ($xenditRes->failed()) {
+                Cache::forget("pending_order_{$externalId}");
+                throw new \Exception($xenditRes->body());
+            }
+
+            $decodedRes = json_decode($xenditRes->body());
+            $checkoutUrl = $decodedRes->invoice_url ?? null;
+
+            if (! $checkoutUrl) {
+                Cache::forget("pending_order_{$externalId}");
+
+                return response()->json(['message' => 'Failed to retrieve checkout URL from Xendit.'], 500);
+            }
+
+            return response()->json([
+                'checkout_url' => $checkoutUrl,
+                'external_id' => $externalId,
+            ]);
+        } catch (\Exception $xenditEx) {
+            Cache::forget("pending_order_{$externalId}");
+            $rawMsg = $xenditEx->getMessage();
+            $decoded = json_decode($rawMsg, true);
+            $cleanMsg = $decoded['message'] ?? $rawMsg;
+            $cleanMsg = str_ireplace(['exception', 'error:'], '', $cleanMsg);
+
+            return response()->json(['message' => 'Xendit checkout failed: '.$cleanMsg], 400);
+        }
+    }
+
+    /**
+     * Create an order from pending checkout data (called by Xendit webhook on successful payment).
+     */
+    public static function createOrderFromPendingData(array $pendingData): ?Order
+    {
+        $customerId = $pendingData['customer_id'];
+        $cartItemIds = $pendingData['cart_item_ids'];
+        $paymentMethod = $pendingData['payment_method'];
+
+        $customer = Customer::find($customerId);
+        if (! $customer) {
+            Log::error('createOrderFromPendingData: Customer not found', ['customer_id' => $customerId]);
+
+            return null;
+        }
+
+        try {
+            return DB::transaction(function () use ($pendingData, $cartItemIds, $customer, $customerId) {
+                // Reload cart items
+                $cartItems = CartItem::with(['colors', 'variant', 'screenplate', 'product'])
+                    ->whereIn('id', $cartItemIds)
+                    ->get();
+
+                if ($cartItems->isEmpty()) {
+                    Log::warning('createOrderFromPendingData: No cart items found', ['cart_item_ids' => $cartItemIds]);
+
+                    return null;
+                }
+
+                // Mark discount as used if applicable
+                $discountId = $pendingData['discount_id'] ?? null;
+                if ($discountId && ($pendingData['discount_marked_used'] ?? false)) {
+                    $discount = Discount::find($discountId);
+                    if ($discount && ! $discount->already_used) {
+                        $discount->already_used = true;
+                        $discount->save();
+                    }
+                }
+
+                $finalAmount = $pendingData['total_amount'];
+                $totalDiscountAmount = $pendingData['total_discount_amount'];
+
+                // Generate order ID
+                $orderId = 'ORD-'.strtoupper(Str::random(10));
+
+                // Create the order
+                $order = Order::create([
+                    'id' => $orderId,
+                    'customer_id' => $customerId,
+                    'address_id' => $pendingData['address_id'],
+                    'payment_method_id' => null,
+                    'payment_code_id' => null,
+                    'delivery_method_id' => $pendingData['delivery_method_id'],
+                    'production_notes' => $pendingData['production_notes'] ?? null,
+                    'discount_id' => $discountId,
+                    'total_discount_amount' => $totalDiscountAmount,
+                    'total_amount' => $finalAmount,
+                    'status' => 'PROCESSING',
+                    'rating' => 0,
+                    'feedback' => null,
+                    'admin_comment' => null,
+                    'complaint' => null,
+                ]);
+
+                // Update customer lifetime value
+                $customer->increment('orders');
+                $customer->increment('total_orders_value', $finalAmount);
+
+                // Create order items
+                foreach ($cartItems as $cartItem) {
+                    $orderItem = OrderItem::create([
+                        'order_id' => $orderId,
+                        'customer_id' => $cartItem->customer_id,
+                        'product_id' => $cartItem->product_id,
+                        'variant_id' => $cartItem->variant_id,
+                        'screenplate_id' => $cartItem->screenplate_id,
+                        'quantity' => $cartItem->quantity,
+                        'unit_price' => $cartItem->unit_price,
+                        'plate_price' => $cartItem->plate_price,
+                    ]);
+
+                    // Deduct stock
+                    if ($cartItem->variant_id) {
+                        DB::statement('
+                            UPDATE product_variants
+                            SET stock = GREATEST(0, CAST(stock AS SIGNED) - ?)
+                            WHERE variant_id = ?
+                        ', [$cartItem->quantity, $cartItem->variant_id]);
+                    }
+
+                    // Update product sold count and stock status
+                    if ($cartItem->product_id) {
+                        DB::statement('
+                            UPDATE products
+                            SET
+                                total_sold = total_sold + ?,
+                                is_in_stock = (
+                                    SELECT EXISTS(
+                                        SELECT 1 FROM product_variants
+                                        WHERE product_id = products.id
+                                        AND stock >= products.min_order
+                                    )
+                                )
+                            WHERE id = ?
+                        ', [$cartItem->quantity, $cartItem->product_id]);
+                    }
+
+                    // Create order item colors
+                    if ($cartItem->colors) {
+                        foreach ($cartItem->colors as $cartItemColor) {
+                            OrderItemColor::create([
+                                'order_item_id' => $orderItem->id,
+                                'color_id' => $cartItemColor->color_id,
+                                'channel_label' => $cartItemColor->channel_label,
+                                'channel_order' => $cartItemColor->channel_order,
+                            ]);
+                        }
+                    }
+                }
+
+                // Cleanup cart items
+                CartItem::whereIn('id', $cartItemIds)->where('temp', true)->delete();
+                CartItem::whereIn('id', $cartItemIds)->where('temp', false)->update(['selected' => 0]);
+
+                // Send success notification to customer
+                Notification::create([
+                    'id' => Str::uuid(),
+                    'customer_id' => $customerId,
+                    'title' => 'Payment Successful',
+                    'message' => "Order {$orderId} has been successfully placed and payment confirmed.",
+                    'type' => 'success',
+                    'is_read' => false,
+                ]);
+
+                // Notify admin via chat
+                $adminId = '1';
+                $convId = $adminId.'_'.$customerId;
+                DB::table('conversations')->insertOrIgnore([
+                    'id' => $convId,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+
+                DB::table('messages')->insert([
+                    'id' => 'msg_'.Str::random(10),
+                    'conversation_id' => $convId,
+                    'sender_id' => $customerId,
+                    'sender_type' => 'customer',
+                    'receiver_id' => $adminId,
+                    'receiver_type' => 'employee',
+                    'message' => 'review your shipping address',
+                    'message_type' => 'order',
+                    'type_id' => $orderId,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+
+                AuditService::created('order', $orderId, [
+                    'total_amount' => $finalAmount,
+                    'status' => 'PROCESSING',
+                    'item_count' => $cartItems->count(),
+                ]);
+
+                Log::info("Order {$orderId} created from pending Xendit payment.");
+
+                return $order;
+            });
+        } catch (\Throwable $e) {
+            Log::error('createOrderFromPendingData failed', [
+                'error' => $e->getMessage(),
+                'customer_id' => $customerId,
+            ]);
+
+            return null;
+        }
     }
 
     /**
@@ -542,7 +906,7 @@ class OrderController extends Controller
                 $checkoutUrl = null;
 
                 if (in_array($paymentType, ['gcash', 'bdo', 'paymaya'])) {
-                    $xenditPaymentMethods = match($paymentType) {
+                    $xenditPaymentMethods = match ($paymentType) {
                         'gcash' => ['GCASH'],
                         'bdo' => ['BDO'],
                         'paymaya' => ['PAYMAYA'],
@@ -553,13 +917,13 @@ class OrderController extends Controller
                         $invoicePayload = [
                             'external_id' => $orderId,
                             'amount' => (int) $finalAmount,
-                            'description' => 'Payment for Order ' . $orderId,
+                            'description' => 'Payment for Order '.$orderId,
                             'currency' => 'PHP',
-                            'success_redirect_url' => $origin . '/homepage?payment=success&orderId=' . $orderId,
-                            'failure_redirect_url' => $origin . '/homepage?payment=failed&orderId=' . $orderId,
+                            'success_redirect_url' => $origin.'/homepage?payment=success&orderId='.$orderId,
+                            'failure_redirect_url' => $origin.'/homepage?payment=failed&orderId='.$orderId,
                             'payment_methods' => $xenditPaymentMethods,
                         ];
-                        
+
                         if ($user) {
                             $invoicePayload['customer'] = [
                                 'given_names' => $user->first_name,
@@ -567,23 +931,23 @@ class OrderController extends Controller
                                 'email' => $user->email,
                             ];
                         }
-                        
-                        $xenditRes = \GlennRaya\Xendivel\XenditApi::api('post', 'v2/invoices', $invoicePayload);
-                        
+
+                        $xenditRes = XenditApi::api('post', 'v2/invoices', $invoicePayload);
+
                         if ($xenditRes->failed()) {
                             throw new \Exception($xenditRes->body());
                         }
-                        
+
                         $decodedRes = json_decode($xenditRes->body());
                         $checkoutUrl = $decodedRes->invoice_url ?? null;
-                        
+
                         // Set status to PENDING — user is actively paying on Xendit portal
                         // Webhook will update to PROCESSING once payment is confirmed by Xendit
                         $order->status = 'PENDING';
                         $order->save();
                     } catch (\Exception $xenditEx) {
                         // Throwing exception rolls back DB transaction completely
-                        throw new \Exception('Xendit Payment Failed: ' . $xenditEx->getMessage());
+                        throw new \Exception('Xendit Payment Failed: '.$xenditEx->getMessage());
                     }
                 }
 

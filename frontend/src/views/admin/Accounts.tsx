@@ -26,6 +26,7 @@ import axiosInstance from '../../lib/axiosInstance'
 import { useAuth } from '../../context/AuthContext'
 import toast from 'react-hot-toast'
 import { motion, AnimatePresence } from 'framer-motion'
+import Authenticator from '../../components/Authenticator'
 
 // Utility for class merging
 function cn(...inputs: ClassValue[]) {
@@ -251,6 +252,11 @@ const Accounts: React.FC = () => {
   const [deleteReason, setDeleteReason] = useState('')
   const [adminPassword, setAdminPassword] = useState('')
   const [passwordError, setPasswordError] = useState<string | null>(null)
+  const [authenticatorModal, setAuthenticatorModal] = useState<{
+    isOpen: boolean
+    accountId: string
+    accountEmail: string
+  }>({ isOpen: false, accountId: '', accountEmail: '' })
 
   const [searchTerm, setSearchTerm] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
@@ -578,7 +584,18 @@ const Accounts: React.FC = () => {
                           <Edit2 size={14} />
                         </Link>
                         <button
-                          onClick={() => setShowDeleteConfirm(user.id)}
+                          onClick={() => {
+                            const userObj = users.find(u => u.id === user.id)
+                            if (userObj?.email) {
+                              setAuthenticatorModal({
+                                isOpen: true,
+                                accountId: user.id,
+                                accountEmail: userObj.email,
+                              })
+                            } else {
+                              toast.error('Account email not found')
+                            }
+                          }}
                           className="rounded-2xl p-2.5 bg-slate-50 text-slate-600 hover:bg-rose-500 hover:text-white transition-all active:scale-90"
                         >
                           <Trash2 size={14} />
@@ -724,7 +741,17 @@ const Accounts: React.FC = () => {
                                 <Edit2 size={16} />
                               </Link>
                               <button
-                                onClick={() => setShowDeleteConfirm(user.id)}
+                                onClick={() => {
+                                  if (user.email) {
+                                    setAuthenticatorModal({
+                                      isOpen: true,
+                                      accountId: user.id,
+                                      accountEmail: user.email,
+                                    })
+                                  } else {
+                                    toast.error('Account email not found')
+                                  }
+                                }}
                                 className="rounded-2xl p-3 text-slate-400 shadow-sm transition-all hover:bg-rose-500 hover:text-white active:scale-95"
                               >
                                 <Trash2 size={16} />
@@ -792,6 +819,24 @@ const Accounts: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Authenticator Modal */}
+      <AnimatePresence>
+        {authenticatorModal.isOpen && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/80 backdrop-blur-sm p-4">
+            <Authenticator
+              email={authenticatorModal.accountEmail}
+              codeType="delete_account"
+              targetId={authenticatorModal.accountId}
+              onSuccess={() => {
+                setAuthenticatorModal({ isOpen: false, accountId: '', accountEmail: '' })
+                setShowDeleteConfirm(authenticatorModal.accountId)
+              }}
+              onCancel={() => setAuthenticatorModal({ isOpen: false, accountId: '', accountEmail: '' })}
+            />
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Soft Delete Confirmation Modal (Mobile Bottom Sheet, Desktop Centered Modal) */}
       <AnimatePresence>

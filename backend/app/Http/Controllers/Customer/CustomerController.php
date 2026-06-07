@@ -166,8 +166,6 @@ class CustomerController extends Controller
         return response()->json(['message' => 'Default address updated']);
     }
 
-
-
     /**
      * Get available promotions for the customer.
      */

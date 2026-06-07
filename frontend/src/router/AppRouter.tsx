@@ -6,6 +6,7 @@ import ProductDetailPage from '../views/product/ProductDetailPage'
 import AddToCartPage from '../pages/AddToCart/AddToCartPage'
 import SettingsPage from '../views/customer/SettingsPage'
 import Transactions from '../pages/Transactions/Transactions'
+import PaymentSuccess from '../pages/Transactions/PaymentSuccess'
 import OrderSuccess from '../pages/Transactions/OrderSuccess'
 import MessengerPage from '../pages/Messenger/MessengerPage'
 import ScreenplatePage from '../pages/Screenplate/ScreenplatePage'
@@ -14,6 +15,7 @@ import OrderPage from '../pages/Order/OrderPage'
 import DiscoveryPage from '../pages/Discovery/DiscoveryPage'
 import LoginPage from '../views/auth/LoginPage'
 import RegisterPage from '../views/auth/RegisterPage'
+import ForgotPasswordPage from '../views/auth/ForgotPasswordPage'
 import CustomerLayout from '../layouts/CustomerLayout'
 import { useAuth } from '../context/AuthContext'
 import { getHomePathForRole } from '../utils/authRouting'
@@ -144,6 +146,16 @@ const AppRouter: React.FC = () => {
           )
         }
       />
+      <Route
+        path="/forgot-password"
+        element={
+          user.isLoggedIn ? (
+            <Navigate to={getHomePath()} replace />
+          ) : (
+            <ForgotPasswordPage />
+          )
+        }
+      />
 
       {/* Customer Routes with Navbar */}
       <Route
@@ -158,6 +170,7 @@ const AppRouter: React.FC = () => {
         <Route path="/cart" element={<AddToCartPage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/transactions" element={<Transactions />} />
+        <Route path="/payment/success" element={<PaymentSuccess />} />
         <Route path="/order-success/:orderId" element={<OrderSuccess />} />
         <Route path="/chat" element={<MessengerPage />} />
         <Route path="/screenplate" element={<ScreenplatePage />} />

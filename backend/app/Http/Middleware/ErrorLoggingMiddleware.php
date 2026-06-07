@@ -51,7 +51,7 @@ class ErrorLoggingMiddleware
 
     private function getErrorMessage(int $code): string
     {
-        return match($code) {
+        return match ($code) {
             400 => 'Bad Request',
             401 => 'Unauthorized',
             402 => 'Payment Required',

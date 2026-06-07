@@ -99,7 +99,6 @@ class Customer extends Authenticatable
         return $this->hasMany(Discount::class, 'customer_id');
     }
 
-
     /**
      * Get the attributes that should be cast.
      *
@@ -133,17 +132,15 @@ class Customer extends Authenticatable
 
         \Illuminate\Support\Facades\DB::transaction(function () use ($deletedAccountData) {
             // 1. Save to deleted_accounts
-            \App\Models\DeletedAccount::create($deletedAccountData);
+            DeletedAccount::create($deletedAccountData);
 
             // 2. Delete related tables (cascade should handle this, but explicit delete for safety)
             $this->contacts()->delete();
             $this->addresses()->delete();
             $this->discounts()->delete();
 
-
             // 3. Delete customer
             $this->delete();
         });
     }
 }
-
