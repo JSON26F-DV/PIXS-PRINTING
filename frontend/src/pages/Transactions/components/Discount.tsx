@@ -37,7 +37,9 @@ const Discount: React.FC<DiscountProps> = ({ selectedId, onSelect, cartItems }) 
     const fetchDiscounts = async () => {
       try {
         const res = await axiosInstance.get('/api/customer/discounts/mine')
-        setDiscounts(res.data.data ?? [])
+        const all: IDiscountItem[] = res.data.data ?? []
+        // Hide already-used discounts entirely — no point showing them
+        setDiscounts(all.filter((d) => !d.already_used))
       } catch {
         setDiscounts([])
       } finally {

@@ -99,10 +99,6 @@ class Customer extends Authenticatable
         return $this->hasMany(Discount::class, 'customer_id');
     }
 
-    public function paymentMethods(): HasMany
-    {
-        return $this->hasMany(CustomerPaymentMethod::class);
-    }
 
     /**
      * Get the attributes that should be cast.
@@ -143,7 +139,7 @@ class Customer extends Authenticatable
             $this->contacts()->delete();
             $this->addresses()->delete();
             $this->discounts()->delete();
-            $this->paymentMethods()->delete();
+
 
             // 3. Delete customer
             $this->delete();

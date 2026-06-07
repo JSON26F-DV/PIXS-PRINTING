@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useRef } from 'react'
+import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { m, AnimatePresence } from 'framer-motion'
 import {
@@ -34,6 +34,7 @@ import ProductGrid from '../../components/VirtualizedProductGrid/ProductGrid'
 import Pagination from '../../components/Pagination/Pagination'
 import Footer from '../../components/Footer/Footer'
 import FilterDropdown from '../../components/FilterDropdown/FilterDropdown'
+import PaymentResultModal from '../../components/Transactions/PaymentResultModal'
 
 
 
@@ -85,6 +86,29 @@ const Homepage: React.FC = () => {
   const navigate = useNavigate()
   // const { openDiscovery } = useDiscovery()
   const productGridRef = useRef<HTMLDivElement>(null)
+
+  // Payment result modal state — initialized lazily from Xendit redirect URL params
+  const [paymentModal, setPaymentModal] = useState<{
+    isOpen: boolean
+    type: 'success' | 'failed'
+    orderId?: string
+  }>(() => {
+    const params = new URLSearchParams(window.location.search)
+    const payment = params.get('payment')
+    const orderId = params.get('orderId') ?? undefined
+    if (payment === 'success' || payment === 'failed') {
+      return { isOpen: true, type: payment as 'success' | 'failed', orderId }
+    }
+    return { isOpen: false, type: 'success' }
+  })
+
+  // Clean URL params after detecting Xendit redirect (no setState needed here)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('payment')) {
+      window.history.replaceState({}, '', window.location.pathname)
+    }
+  }, [])
 
   // Screen size detection for itemsPerPage and Filter layout
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1280)
@@ -532,6 +556,14 @@ const Homepage: React.FC = () => {
       </div>
 
       <Footer />
+
+      {/* Xendit Payment Result Modal */}
+      <PaymentResultModal
+        isOpen={paymentModal.isOpen}
+        type={paymentModal.type}
+        orderId={paymentModal.orderId}
+        onClose={() => setPaymentModal((prev) => ({ ...prev, isOpen: false }))}
+      />
     </div>
   )
 }

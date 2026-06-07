@@ -28,7 +28,7 @@ import ExtraNotesSection from '../../components/Transactions/ExtraNotesSection'
 import Discount from './components/Discount'
 
 import { useCustomerAddressStore } from '../../store/useCustomerAddressStore'
-import { usePaymentMethodStore } from '../../store/usePaymentMethodStore'
+
 import { useNotificationStore } from '../../store/useNotificationStore'
 // import { usePromotionStore, type Promotion } from '../../store/usePromotionStore'
 import axiosInstance from '../../lib/axiosInstance'
@@ -93,8 +93,7 @@ const Transactions: React.FC = () => {
   // const { user } = useAuth()
 
   const { addresses, fetchAddresses } = useCustomerAddressStore()
-  const { methods: paymentMethods, fetchMethods: fetchPayments } =
-    usePaymentMethodStore()
+
   const { fetchNotifications } = useNotificationStore()
   // const { promotions, fetchPromotions } = usePromotionStore()
   
@@ -102,7 +101,7 @@ const Transactions: React.FC = () => {
 
   // Selections
   const [selectedAddressId, setSelectedAddressId] = useState('')
-  const [selectedPaymentId, setSelectedPaymentId] = useState('')
+  const [selectedPaymentId, setSelectedPaymentId] = useState('gcash')
   const [deliveryData, setDeliveryData] = useState<IDeliveryMethod[]>([])
   const [selectedDeliveryId, setSelectedDeliveryId] = useState('')
   const [notes, setNotes] = useState('')
@@ -159,7 +158,7 @@ const Transactions: React.FC = () => {
         const [delRes] = await Promise.all([
           axiosInstance.get('/api/delivery-methods'),
           fetchAddresses(),
-          fetchPayments(),
+
         ])
 
         setDeliveryData(delRes.data)
@@ -192,7 +191,7 @@ const Transactions: React.FC = () => {
     }
 
     fetchInitialData()
-  }, [navigate, location.search, fetchAddresses, fetchPayments])
+  }, [navigate, location.search, fetchAddresses])
 
   // Set defaults once data is loaded
   useEffect(() => {
@@ -202,12 +201,7 @@ const Transactions: React.FC = () => {
     }
   }, [addresses, selectedAddressId])
 
-  useEffect(() => {
-    if (paymentMethods.length > 0 && !selectedPaymentId) {
-      const def = paymentMethods.find((p) => p.is_default) || paymentMethods[0]
-      setSelectedPaymentId(def.id)
-    }
-  }, [paymentMethods, selectedPaymentId])
+
 
   const availableDiscounts: IDiscountItem[] = []
 
@@ -228,7 +222,6 @@ const Transactions: React.FC = () => {
     }
 
     const selectedAddr = addresses.find((a) => a.id === selectedAddressId)
-    const selectedPay = paymentMethods.find((p) => p.id === selectedPaymentId)
     const delMeta = deliveryData.find((d: { id: string }) => d.id === selectedDeliveryId)
 
     if (!selectedAddr || !selectedAddr.contact_number) {
@@ -257,7 +250,7 @@ const Transactions: React.FC = () => {
     const payload: import('../../api/orders.api').CreateOrderPayload = {
       cart_item_ids: checkoutItems.map(i => i.id),
       address_id: selectedAddr.id,
-      payment_method_id: selectedPaymentId === 'payment_code' ? null : selectedPay?.id,
+      payment_type: selectedPaymentId === 'payment_code' ? null : selectedPaymentId,
       payment_code: selectedPaymentId === 'payment_code' ? paymentCode.trim() : null,
       delivery_method_id: delMeta?.id || selectedDeliveryId,
       production_notes: notes,

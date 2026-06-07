@@ -13,9 +13,7 @@ import type { SectionKey, NavItem } from '../../pages/Settings/settingsNav'
 const AccountInfoPage = lazy(
   () => import('../../pages/Settings/AccountInfo/AccountInfoPage'),
 )
-const PaymentMethodsSection = lazy(
-  () => import('../../pages/Settings/PaymentMethods/PaymentMethodsSection'),
-)
+
 const AddressBookSection = lazy(
   () => import('../../pages/Settings/AddressBook/AddressBookSection'),
 )
@@ -43,7 +41,7 @@ const SectionLoader = () => (
 const SECTION_MAP: Partial<Record<SectionKey, React.ReactNode>> = {
   account: <AccountInfoPage />,
   address: <AddressBookSection />,
-  payment: <PaymentMethodsSection />,
+
   awards: <AwardsSection />,
   help: <HelpSupportSection />,
   policies: <PoliciesSection />,

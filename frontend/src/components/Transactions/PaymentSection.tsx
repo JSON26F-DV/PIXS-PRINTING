@@ -1,6 +1,19 @@
 import React from 'react'
-import { CreditCard, Wallet, Landmark, CheckCircle2, Ticket } from 'lucide-react'
-import { usePaymentMethodStore } from '../../store/usePaymentMethodStore'
+import { CreditCard, Wallet, Landmark, CheckCircle2, Ticket, Lock } from 'lucide-react'
+
+interface PaymentOption {
+  id: string
+  name: string
+  type: string
+  masked_number: string
+  disabled?: boolean
+}
+
+const PAYMENT_OPTIONS: PaymentOption[] = [
+  { id: 'gcash', name: 'GCash', type: 'ewallet', masked_number: 'E-Wallet' },
+  { id: 'bdo', name: 'BDO', type: 'bank', masked_number: 'Online Banking' },
+  { id: 'paymaya', name: 'PayMaya', type: 'ewallet', masked_number: 'E-Wallet' },
+]
 
 interface PaymentSectionProps {
   selectedId: string
@@ -15,16 +28,16 @@ const PaymentSection: React.FC<PaymentSectionProps> = ({
   paymentCode = '',
   onPaymentCodeChange,
 }) => {
-  const { methods: paymentMethods } = usePaymentMethodStore()
 
-  const getIcon = (type: string) => {
+  const getIcon = (type: string, disabled?: boolean) => {
+    const cls = disabled ? 'text-slate-300' : 'text-pixs-mint'
     switch (type) {
       case 'bank':
-        return <Landmark size={20} className="text-pixs-mint" />
+        return <Landmark size={20} className={cls} />
       case 'ewallet':
-        return <Wallet size={20} className="text-pixs-mint" />
+        return <Wallet size={20} className={cls} />
       default:
-        return <CreditCard size={20} className="text-pixs-mint" />
+        return <CreditCard size={20} className={cls} />
     }
   }
 
@@ -38,34 +51,50 @@ const PaymentSection: React.FC<PaymentSectionProps> = ({
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {paymentMethods.map((pay) => (
+        {PAYMENT_OPTIONS.map((pay) => (
           <div
             key={pay.id}
-            onClick={() => onSelect(pay.id)}
-            className={`PaymentCard group relative cursor-pointer rounded-2xl border p-4 transition-all active:scale-[0.98] ${
-              selectedId === pay.id
-                ? 'border-pixs-mint bg-white shadow-lg'
-                : 'border-slate-100 bg-slate-50/50 hover:border-slate-200'
+            onClick={() => !pay.disabled && onSelect(pay.id)}
+            className={`PaymentCard group relative rounded-2xl border p-4 transition-all ${
+              pay.disabled
+                ? 'cursor-not-allowed border-slate-100 bg-slate-50/30 opacity-50'
+                : `cursor-pointer active:scale-[0.98] ${
+                    selectedId === pay.id
+                      ? 'border-pixs-mint bg-white shadow-lg'
+                      : 'border-slate-100 bg-slate-50/50 hover:border-slate-200'
+                  }`
             }`}
           >
+            {/* Unavailable badge */}
+            {pay.disabled && (
+              <div className="absolute top-2.5 right-3 flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5">
+                <Lock size={8} className="text-slate-400" />
+                <span className="text-[8px] font-black tracking-widest text-slate-400 uppercase">
+                  Unavailable
+                </span>
+              </div>
+            )}
+
             <div className="flex items-center gap-4">
               <div
                 className={`PaymentRadio flex h-6 w-6 items-center justify-center rounded-full border-2 transition-colors ${
-                  selectedId === pay.id
+                  pay.disabled
+                    ? 'border-slate-200 bg-slate-100'
+                    : selectedId === pay.id
                     ? 'border-pixs-mint'
                     : 'border-slate-200'
                 }`}
               >
-                {selectedId === pay.id && (
+                {!pay.disabled && selectedId === pay.id && (
                   <CheckCircle2 size={16} className="text-pixs-mint" />
                 )}
               </div>
 
               <div className="flex-1">
                 <div className="flex items-center gap-2">
-                  {getIcon(pay.type)}
-                  <span className="text-sm font-black tracking-tight text-slate-900 uppercase italic">
-                    {pay.bank_name || pay.provider}
+                  {getIcon(pay.type, pay.disabled)}
+                  <span className={`text-sm font-black tracking-tight uppercase italic ${pay.disabled ? 'text-slate-400' : 'text-slate-900'}`}>
+                    {pay.name}
                   </span>
                 </div>
                 <p className="mt-1 text-[10px] font-black tracking-[2.5px] text-slate-400 uppercase italic">
@@ -73,12 +102,6 @@ const PaymentSection: React.FC<PaymentSectionProps> = ({
                 </p>
               </div>
             </div>
-
-            {pay.is_default && (
-              <span className="text-pixs-mint absolute top-4 right-4 rounded-full bg-slate-900 px-1.5 py-0.5 text-[7px] font-black tracking-widest uppercase">
-                Primary
-              </span>
-            )}
           </div>
         ))}
 

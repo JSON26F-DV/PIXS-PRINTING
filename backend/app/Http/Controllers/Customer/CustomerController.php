@@ -27,7 +27,7 @@ class CustomerController extends Controller
         }
 
         // Load relationships
-        $customer->load(['contacts', 'addresses', 'discounts', 'paymentMethods']);
+        $customer->load(['contacts', 'addresses', 'discounts']);
 
         return response()->json([
             'id' => $customer->id,
@@ -43,7 +43,6 @@ class CustomerController extends Controller
             'contacts' => $customer->contacts,
             'addresses' => $customer->addresses,
             'discounts' => $customer->discounts,
-            'payment_methods' => $customer->paymentMethods,
         ]);
     }
 
@@ -167,98 +166,7 @@ class CustomerController extends Controller
         return response()->json(['message' => 'Default address updated']);
     }
 
-    /**
-     * Get payment methods.
-     */
-    public function paymentMethods(Request $request): JsonResponse
-    {
-        return response()->json([
-            'data' => $request->user()->paymentMethods,
-        ]);
-    }
 
-    /**
-     * Store payment method.
-     */
-    public function storePaymentMethod(Request $request): JsonResponse
-    {
-        $validated = $request->validate([
-            'type' => 'required|in:bank,ewallet,credit_card,cod',
-            'bank_name' => 'nullable|string',
-            'provider' => 'nullable|string',
-            'masked_number' => 'required|string',
-            'gateway_token' => 'nullable|string',
-        ]);
-
-        // Generate ID
-        $validated['id'] = 'PAY-'.mt_rand(10000, 99999);
-        $validated['is_default'] = $request->user()->paymentMethods()->count() === 0;
-
-        $method = $request->user()->paymentMethods()->create($validated);
-
-        AuditService::created('customer_payment_method', $method->id, ['type' => $validated['type']]);
-
-        return response()->json([
-            'message' => 'Payment method added successfully',
-            'data' => $method,
-        ]);
-    }
-
-    /**
-     * Delete payment method.
-     */
-    public function deletePaymentMethod(Request $request, string $id): JsonResponse
-    {
-        $request->user()->paymentMethods()->where('id', $id)->delete();
-
-        AuditService::deleted('customer_payment_method', $id);
-
-        return response()->json(['message' => 'Payment method deleted successfully']);
-    }
-
-    /**
-     * Set default payment method.
-     */
-    public function setDefaultPaymentMethod(Request $request, string $id): JsonResponse
-    {
-        $request->user()->paymentMethods()->update(['is_default' => false]);
-        $request->user()->paymentMethods()->where('id', $id)->update(['is_default' => true]);
-
-        return response()->json(['message' => 'Default payment method updated']);
-    }
-
-    /**
-     * Update payment method.
-     */
-    public function updatePaymentMethod(Request $request, string $id): JsonResponse
-    {
-        $method = $request->user()->paymentMethods()->findOrFail($id);
-
-        $validated = $request->validate([
-            'type' => 'sometimes|in:bank,ewallet,credit_card,cod',
-            'bank_name' => 'nullable|string',
-            'provider' => 'nullable|string',
-            'masked_number' => 'sometimes|string',
-            'gateway_token' => 'nullable|string',
-        ]);
-
-        $method->update($validated);
-
-        return response()->json([
-            'message' => 'Payment method updated successfully',
-            'data' => $method,
-        ]);
-    }
-
-    /**
-     * Delete all payment methods.
-     */
-    public function deleteAllPaymentMethods(Request $request): JsonResponse
-    {
-        $request->user()->paymentMethods()->delete();
-
-        return response()->json(['message' => 'All payment methods deleted']);
-    }
 
     /**
      * Get available promotions for the customer.

@@ -28,14 +28,7 @@ return new class extends Migration
             }
         });
 
-        // Add foreign key constraint if it does not already exist
-        try {
-            Schema::table('refunds', function (Blueprint $table) {
-                $table->foreign('payment_id')->references('id')->on('customer_payment_methods')->onDelete('restrict')->onUpdate('restrict');
-            });
-        } catch (Exception $e) {
-            // Already exists or failed to add
-        }
+
     }
 
     /**
@@ -44,10 +37,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('refunds', function (Blueprint $table) {
-            try {
-                $table->dropForeign(['payment_id']);
-            } catch (Exception $e) {
-            }
+
 
             if (Schema::hasColumn('refunds', 'payment_id')) {
                 $table->dropColumn('payment_id');

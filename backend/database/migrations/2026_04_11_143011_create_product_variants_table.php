@@ -19,6 +19,7 @@ return new class extends Migration
             $table->string('height', 20)->nullable();
             $table->decimal('price', 10)->default(0);
             $table->unsignedInteger('stock')->default(0);
+            $table->boolean('is_need_screenplate')->default(true);
         });
     }
 

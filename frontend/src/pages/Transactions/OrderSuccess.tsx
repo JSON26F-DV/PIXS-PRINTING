@@ -64,13 +64,13 @@ const OrderSuccess: React.FC = () => {
 
           <div className="flex w-full flex-col gap-6 pt-8 sm:flex-row">
             <button
-              onClick={() => navigate('/')}
+              onClick={() => navigate('/homepage')}
               className="flex flex-1 items-center justify-center gap-3 rounded-[32px] bg-slate-900 py-6 text-xs font-black tracking-widest text-white uppercase italic shadow-xl transition-all hover:scale-[1.02] active:scale-95"
             >
               Return to Hub <ArrowRight size={16} />
             </button>
             <button
-              onClick={() => navigate('/settings?section=orders')}
+              onClick={() => navigate('/order')}
               className="flex flex-1 items-center justify-center gap-3 rounded-[32px] border border-slate-100 bg-white py-6 text-xs font-black tracking-widest text-slate-900 uppercase italic shadow-sm transition-all hover:bg-slate-50 active:scale-95"
             >
               Track Deployment Node

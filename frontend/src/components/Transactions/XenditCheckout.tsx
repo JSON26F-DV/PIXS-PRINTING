@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { useEffect, useRef, useState } from 'react';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 declare const Xendit: any;
 
 type XenditErrorItem = {
@@ -47,6 +48,7 @@ type QrCodeResponse = {
             };
         };
     };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     [key: string]: any;
 };
 
@@ -78,7 +80,7 @@ const Checkout = () => {
         card_exp_year: '',
         card_cvn: '',
     });
-    const [currency, setCurrency] = useState('PHP');
+    const [currency] = useState('PHP');
     const [amount, setAmount] = useState('');
     const [qrType, setQrType] = useState<'DYNAMIC' | 'STATIC'>('DYNAMIC');
     const [qrAmount, setQrAmount] = useState('');
@@ -108,10 +110,12 @@ const Checkout = () => {
         setErrors(EMPTY_ERRORS);
     };
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const showResponse = (response: Record<string, any>) => {
         setApiResponse(JSON.stringify(response, null, 2));
     };
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const normalizeAuthorizedCharge = (response: Record<string, any>) => {
         const authorizedAmount = response.authorized_amount ?? response.capture_amount ?? amount;
 
@@ -131,6 +135,7 @@ const Checkout = () => {
         }
     };
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const parseAxiosError = (error: any) => {
         const fallback = {
             message: error?.response?.data?.message || error?.message || 'Unable to process the payment request.',
@@ -155,6 +160,7 @@ const Checkout = () => {
         return fallback;
     };
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const handleApiError = (error: any) => {
         const parsedError = parseAxiosError(error);
         setErrorMessage(parsedError.message);
@@ -407,10 +413,12 @@ const Checkout = () => {
         }
 
         let cancelled = false;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const QRCodeLib = (window as any).QRCode;
 
         loadScript('https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js', 'qrcode-script')
             .then(() => {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const QRCodeCtor = (window as any).QRCode ?? QRCodeLib;
 
                 if (cancelled || !qrCanvasRef.current || !QRCodeCtor) {

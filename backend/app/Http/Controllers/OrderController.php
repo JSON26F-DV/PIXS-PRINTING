@@ -273,7 +273,7 @@ class OrderController extends Controller
                 'cart_item_ids' => 'required|array|min:1',
                 'cart_item_ids.*' => 'required|string',
                 'address_id' => 'required|string',
-                'payment_method_id' => 'nullable|string',
+                'payment_type' => 'nullable|string|in:gcash,bdo,paymaya,payment_code',
                 'payment_code' => 'nullable|string',
                 'delivery_method_id' => 'required|string|exists:delivery_methods,id',
                 'production_notes' => 'nullable|string',
@@ -285,7 +285,7 @@ class OrderController extends Controller
             return response()->json(['message' => 'Validation failed', 'errors' => $e->errors()], 422);
         }
 
-        if (empty($validated['payment_code']) && empty($validated['payment_method_id'])) {
+        if (empty($validated['payment_code']) && empty($validated['payment_type'])) {
             return response()->json(['message' => 'Either a payment method or a payment code is required.'], 422);
         }
 
@@ -418,7 +418,7 @@ class OrderController extends Controller
                     'id' => $orderId,
                     'customer_id' => $user->id,
                     'address_id' => $validated['address_id'],
-                    'payment_method_id' => $validated['payment_method_id'] ?? null,
+                    'payment_method_id' => null,
                     'payment_code_id' => $payCode ? $payCode->id : null,
                     'delivery_method_id' => $validated['delivery_method_id'],
                     'production_notes' => $validated['production_notes'] ?? null,
@@ -537,16 +537,17 @@ class OrderController extends Controller
                     'updated_at' => now(),
                 ]);
 
-                // STEP 9.6: If payment method is GCash, initiate a payment link via Xendit Invoices
-                $paymentMethod = null;
+                // STEP 9.6: If payment method is an e-wallet, initiate a payment link via Xendit Invoices
+                $paymentType = $validated['payment_type'] ?? null;
                 $checkoutUrl = null;
-                if (! empty($validated['payment_method_id'])) {
-                    $paymentMethod = DB::table('customer_payment_methods')
-                        ->where('id', $validated['payment_method_id'])
-                        ->first();
-                }
 
-                if ($paymentMethod && $paymentMethod->type === 'ewallet' && strtolower($paymentMethod->provider) === 'gcash') {
+                if (in_array($paymentType, ['gcash', 'bdo', 'paymaya'])) {
+                    $xenditPaymentMethods = match($paymentType) {
+                        'gcash' => ['GCASH'],
+                        'bdo' => ['BDO'],
+                        'paymaya' => ['PAYMAYA'],
+                    };
+
                     try {
                         $origin = request()->header('Origin') ?: config('app.url');
                         $invoicePayload = [
@@ -554,8 +555,9 @@ class OrderController extends Controller
                             'amount' => (int) $finalAmount,
                             'description' => 'Payment for Order ' . $orderId,
                             'currency' => 'PHP',
-                            'success_redirect_url' => $origin . '/orders',
-                            'failure_redirect_url' => $origin . '/orders',
+                            'success_redirect_url' => $origin . '/homepage?payment=success&orderId=' . $orderId,
+                            'failure_redirect_url' => $origin . '/homepage?payment=failed&orderId=' . $orderId,
+                            'payment_methods' => $xenditPaymentMethods,
                         ];
                         
                         if ($user) {
@@ -575,8 +577,9 @@ class OrderController extends Controller
                         $decodedRes = json_decode($xenditRes->body());
                         $checkoutUrl = $decodedRes->invoice_url ?? null;
                         
-                        // Set status to UNPAID since it's created but not yet paid on the Xendit checkout portal
-                        $order->status = 'UNPAID';
+                        // Set status to PENDING — user is actively paying on Xendit portal
+                        // Webhook will update to PROCESSING once payment is confirmed by Xendit
+                        $order->status = 'PENDING';
                         $order->save();
                     } catch (\Exception $xenditEx) {
                         // Throwing exception rolls back DB transaction completely

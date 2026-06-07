@@ -21,14 +21,9 @@ class RefundController extends Controller
                 'refunds.*',
                 'customers.first_name as customer_first_name',
                 'customers.last_name as customer_last_name',
-                'customer_payment_methods.type as payment_method_type',
-                'customer_payment_methods.masked_number as payment_method_masked_number',
-                'customer_payment_methods.bank_name as payment_method_bank_name',
-                'customer_payment_methods.provider as payment_method_provider',
                 'payment_codes.code as payment_code'
             )
             ->leftJoin('customers', 'refunds.customer_id', '=', 'customers.id')
-            ->leftJoin('customer_payment_methods', 'refunds.payment_id', '=', 'customer_payment_methods.id')
             ->leftJoin('payment_codes', 'refunds.payment_code_id', '=', 'payment_codes.id')
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);
@@ -148,14 +143,9 @@ class RefundController extends Controller
                 'customers.first_name as customer_first_name',
                 'customers.last_name as customer_last_name',
                 'customers.email as customer_email',
-                'customer_payment_methods.type as payment_method_type',
-                'customer_payment_methods.masked_number as payment_method_masked_number',
-                'customer_payment_methods.bank_name as payment_method_bank_name',
-                'customer_payment_methods.provider as payment_method_provider',
                 'payment_codes.code as payment_code'
             )
             ->leftJoin('customers', 'refunds.customer_id', '=', 'customers.id')
-            ->leftJoin('customer_payment_methods', 'refunds.payment_id', '=', 'customer_payment_methods.id')
             ->leftJoin('payment_codes', 'refunds.payment_code_id', '=', 'payment_codes.id')
             ->where('refunds.id', $id)
             ->first();
@@ -203,25 +193,7 @@ class RefundController extends Controller
         return response()->json(['message' => 'Refund deleted.']);
     }
 
-    public function customerPaymentMethods(string $customerId): JsonResponse
-    {
-        $paymentMethods = DB::table('customer_payment_methods')
-            ->where('customer_id', $customerId)
-            ->get();
 
-        $paymentCodes = DB::table('payment_codes')
-            ->join('orders', 'payment_codes.id', '=', 'orders.payment_code_id')
-            ->where('orders.customer_id', $customerId)
-            ->select('payment_codes.id', 'payment_codes.code', 'orders.total_amount as amount', 'payment_codes.created_at')
-            ->get();
-
-        return response()->json([
-            'data' => [
-                'payment_methods' => $paymentMethods,
-                'payment_codes' => $paymentCodes,
-            ],
-        ]);
-    }
 
     public function customerOrders(string $customerId): JsonResponse
     {

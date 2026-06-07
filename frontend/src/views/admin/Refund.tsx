@@ -2,10 +2,9 @@ import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { m, AnimatePresence } from 'framer-motion'
 import {
-  Plus, Search, Eye, X, Check, 
-  CreditCard,
+  Plus, Search, Eye, X, Check,
   ChevronDown, ChevronLeft, ChevronRight, Copy, User as UserIcon,
-  CheckCircle2, Landmark, Wallet, Ticket, ListFilter
+  CheckCircle2, Ticket, ListFilter
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { format } from 'date-fns'
@@ -41,22 +40,7 @@ interface Refund {
   payment_method_provider?: string | null
 }
 
-interface PaymentMethod {
-  id: string
-  type: string
-  masked_number: string
-  bank_name?: string | null
-  provider?: string | null
-  is_default: boolean
-}
 
-interface PaymentCode {
-  id: string
-  code: string
-  amount: number
-  status: string
-  created_at: string
-}
 
 interface IOrder {
   id: string
@@ -154,10 +138,8 @@ const RefundPage: React.FC = () => {
     payment_id: '',
     generate_payment_code: false,
   })
-  const [customerPaymentMethods, setCustomerPaymentMethods] = useState<PaymentMethod[]>([])
-  const [customerPaycodes, setCustomerPaycodes] = useState<PaymentCode[]>([])
-  const [customerOrders, setCustomerOrders] = useState<IOrder[]>([])
-  const [showPaycodes, setShowPaycodes] = useState(false)
+
+
   // Customer search autocomplete
   const [allCustomers, setAllCustomers] = useState<ICustomer[]>([])
   const [customerSearch, setCustomerSearch] = useState('')
@@ -168,6 +150,7 @@ const RefundPage: React.FC = () => {
   const [orderSearchQuery, setOrderSearchQuery] = useState('')
   const debouncedOrderSearchQuery = useDebounce(orderSearchQuery, 300)
   const [isOrderDropdownOpen, setIsOrderDropdownOpen] = useState(false)
+  const [customerOrders, setCustomerOrders] = useState<IOrder[]>([])
 
   useEffect(() => {
     fetchRefunds()
@@ -175,11 +158,8 @@ const RefundPage: React.FC = () => {
 
   useEffect(() => {
     if (formData.customer_id) {
-      fetchCustomerPaymentData(formData.customer_id)
       fetchCustomerOrders(formData.customer_id)
     } else {
-      setCustomerPaymentMethods([])
-      setCustomerPaycodes([])
       setCustomerOrders([])
     }
   }, [formData.customer_id])
@@ -245,15 +225,7 @@ const RefundPage: React.FC = () => {
     }
   }
 
-  const fetchCustomerPaymentData = async (customerId: string) => {
-    try {
-      const res = await axiosInstance.get(`/api/admin/customers/${customerId}/payment-methods`)
-      setCustomerPaymentMethods(res.data.data?.payment_methods || [])
-      setCustomerPaycodes(res.data.data?.payment_codes || [])
-    } catch (error) {
-      console.error('Failed to fetch payment data', error)
-    }
-  }
+
 
   const fetchCustomerOrders = async (customerId: string) => {
     try {
@@ -581,8 +553,6 @@ const RefundPage: React.FC = () => {
                         setIsCustomerDropdownOpen(true)
                         if (!e.target.value) {
                           setFormData({ ...formData, customer_id: '', payment_id: '', order_id: '', generate_payment_code: false })
-                          setCustomerPaymentMethods([])
-                          setCustomerPaycodes([])
                           setCustomerOrders([])
                           setOrderSearchQuery('')
                         }
@@ -607,8 +577,6 @@ const RefundPage: React.FC = () => {
                             setCustomerSearch(`${c.first_name} ${c.last_name}`)
                             setOrderSearchQuery('')
                             setIsCustomerDropdownOpen(false)
-                            setCustomerPaymentMethods([])
-                            setCustomerPaycodes([])
                           }}
                           className="flex cursor-pointer items-center gap-3 border-b border-slate-100 p-4 text-sm transition-colors hover:bg-rose-50 last:border-0"
                         >
@@ -641,16 +609,8 @@ const RefundPage: React.FC = () => {
                   <div className="space-y-3 rounded-xl border border-slate-100 bg-slate-50 p-4">
                     <div className="flex items-center justify-between">
                       <h3 className="text-xs font-bold tracking-widest text-slate-500 uppercase">
-                        Payment Data
+                        Refund Options
                       </h3>
-                      <button
-                        type="button"
-                        onClick={() => setShowPaycodes(!showPaycodes)}
-                        className="flex items-center gap-1 text-xs font-bold text-rose-600"
-                      >
-                        {showPaycodes ? 'Hide' : 'Show'} Paycodes
-                        <ChevronDown size={14} className={showPaycodes ? 'rotate-180' : ''} />
-                      </button>
                     </div>
 
                     <div className="space-y-3">
@@ -658,59 +618,6 @@ const RefundPage: React.FC = () => {
                         Select Refund Method *
                       </p>
                       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                        {customerPaymentMethods.map((pay) => {
-                          const isSelected = formData.payment_id === pay.id && !formData.generate_payment_code
-                          return (
-                            <div
-                              key={pay.id}
-                              onClick={() => setFormData({ ...formData, payment_id: pay.id, generate_payment_code: false })}
-                              className={`PaymentCard group relative cursor-pointer rounded-2xl border p-4 transition-all active:scale-[0.98] ${
-                                isSelected
-                                  ? 'border-[#75EEA5] bg-white shadow-lg'
-                                  : 'border-slate-100 bg-slate-50/50 hover:border-slate-200'
-                              }`}
-                            >
-                              <div className="flex items-center gap-4">
-                                <div
-                                  className={`PaymentRadio flex h-6 w-6 items-center justify-center rounded-full border-2 transition-colors ${
-                                    isSelected
-                                      ? 'border-[#75EEA5]'
-                                      : 'border-slate-200'
-                                  }`}
-                                >
-                                  {isSelected && (
-                                    <CheckCircle2 size={16} className="text-[#75EEA5]" />
-                                  )}
-                                </div>
-
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2">
-                                    {pay.type === 'bank' ? (
-                                      <Landmark size={20} className="text-[#75EEA5]" />
-                                    ) : pay.type === 'ewallet' ? (
-                                      <Wallet size={20} className="text-[#75EEA5]" />
-                                    ) : (
-                                      <CreditCard size={20} className="text-[#75EEA5]" />
-                                    )}
-                                    <span className="text-sm font-black tracking-tight text-slate-900 uppercase italic">
-                                      {pay.bank_name || pay.provider}
-                                    </span>
-                                  </div>
-                                  <p className="mt-1 text-[10px] font-black tracking-[2.5px] text-slate-400 uppercase italic">
-                                    {pay.masked_number}
-                                  </p>
-                                </div>
-                              </div>
-
-                              {pay.is_default && (
-                                <span className="text-[#75EEA5] absolute top-4 right-4 rounded-full bg-slate-900 px-1.5 py-0.5 text-[7px] font-black tracking-widest uppercase">
-                                  Primary
-                                </span>
-                              )}
-                            </div>
-                          )
-                        })}
-
                         {/* Payment Code Option Card */}
                         <div
                           onClick={() => setFormData({ ...formData, payment_id: '', generate_payment_code: true })}
@@ -747,40 +654,7 @@ const RefundPage: React.FC = () => {
                           </div>
                         </div>
                       </div>
-
-                      {customerPaymentMethods.length === 0 && (
-                        <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-4 text-xs font-bold text-amber-800">
-                          ⚠️ This customer has no registered payment methods. You can select "Payment Code" to generate a refund code.
-                        </div>
-                      )}
                     </div>
-
-                    {showPaycodes && customerPaycodes.length > 0 && (
-                      <div>
-                        <p className="mb-2 text-[10px] font-bold tracking-widest text-slate-400 uppercase">
-                          Payment Codes (Reference)
-                        </p>
-                        <div className="space-y-2">
-                          {customerPaycodes.map((pc) => (
-                            <div key={pc.id} className="flex items-center justify-between rounded-lg bg-white p-3">
-                              <div>
-                                <p className="font-mono text-sm font-bold">{pc.code}</p>
-                                <p className="text-xs text-slate-500">₱{pc.amount.toLocaleString()}</p>
-                              </div>
-                              <button
-                                onClick={() => {
-                                  navigator.clipboard.writeText(pc.code)
-                                  toast.success('Code copied!')
-                                }}
-                                className="rounded-lg p-2 hover:bg-slate-100"
-                              >
-                                <Copy size={14} />
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
                   </div>
                 )}
 

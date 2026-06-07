@@ -109,13 +109,7 @@ Route::middleware(['auth:sanctum', 'role:customer', 'throttle:api'])->prefix('cu
     Route::delete('/addresses/{id}', [CustomerController::class, 'deleteAddress']);
     Route::post('/addresses/{id}/default', [CustomerController::class, 'setDefaultAddress']);
 
-    // Payment Methods
-    Route::get('/payment-methods', [CustomerController::class, 'paymentMethods']);
-    Route::post('/payment-methods', [CustomerController::class, 'storePaymentMethod']);
-    Route::patch('/payment-methods/{id}', [CustomerController::class, 'updatePaymentMethod']);
-    Route::delete('/payment-methods', [CustomerController::class, 'deleteAllPaymentMethods']);
-    Route::delete('/payment-methods/{id}', [CustomerController::class, 'deletePaymentMethod']);
-    Route::post('/payment-methods/{id}/default', [CustomerController::class, 'setDefaultPaymentMethod']);
+
 
     // Xendit Payments
     Route::post('/pay-via-ewallet', function (\Illuminate\Http\Request $request) {
@@ -273,7 +267,7 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->prefix('admin')->group(func
     Route::get('/refunds/{id}', [RefundController::class, 'show'])->middleware('role:admin');
     Route::patch('/refunds/{id}', [RefundController::class, 'update'])->middleware('role:admin');
     Route::delete('/refunds/{id}', [RefundController::class, 'destroy'])->middleware('role:admin');
-    Route::get('/customers/{id}/payment-methods', [RefundController::class, 'customerPaymentMethods'])->middleware('role:admin');
+
     Route::get('/customers/{id}/orders', [RefundController::class, 'customerOrders'])->middleware('role:admin');
 
     // Admin Notifications CRUD

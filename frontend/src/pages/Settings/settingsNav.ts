@@ -1,7 +1,6 @@
 import React from 'react'
 import {
   FiUser,
-  FiCreditCard,
   FiMapPin,
   FiGift,
   FiHelpCircle,
@@ -11,7 +10,7 @@ import {
 
 export type SectionKey =
   | 'account'
-  | 'payment'
+
   | 'address'
   | 'awards'
   | 'help'
@@ -32,12 +31,7 @@ export const NAV_ITEMS: NavItem[] = [
     icon: FiUser,
     description: 'Name, email, phone, password',
   },
-  {
-    key: 'payment',
-    label: 'Payment Methods',
-    icon: FiCreditCard,
-    description: 'Saved cards & billing',
-  },
+
   {
     key: 'address',
     label: 'Address Book',
