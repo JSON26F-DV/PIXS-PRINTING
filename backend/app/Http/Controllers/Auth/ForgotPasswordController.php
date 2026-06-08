@@ -49,6 +49,8 @@ class ForgotPasswordController extends Controller
         $sent = $this->mailService->sendVerificationCode($email, $code, 'forgot_password');
 
         if (! $sent) {
+            $this->verificationService->clearCode($email, 'forgot_password');
+
             return response()->json([
                 'status' => 'error',
                 'message' => 'Failed to send verification code. Please try again.',
@@ -96,7 +98,7 @@ class ForgotPasswordController extends Controller
 
         $email = strtolower($request->email);
 
-        $result = $this->verificationService->verifyCode($email, 'forgot_password', $request->code);
+        $result = $this->verificationService->checkCode($email, 'forgot_password', $request->code);
         if (! $result['success']) {
             return response()->json([
                 'status' => 'error',
@@ -116,6 +118,8 @@ class ForgotPasswordController extends Controller
 
         $user->password = Hash::make($request->password);
         $user->save();
+
+        $this->verificationService->clearCode($email, 'forgot_password');
 
         $this->mailService->sendVerificationCode($email, '', 'password_changed');
 

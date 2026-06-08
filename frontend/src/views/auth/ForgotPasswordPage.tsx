@@ -1,7 +1,7 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Mail, ArrowLeft, CheckCircle2, RefreshCw, AlertTriangle } from 'lucide-react'
+import { Mail, ArrowLeft, CheckCircle2, RefreshCw, AlertTriangle, Eye, EyeOff, X } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import axiosInstance from '../../lib/axiosInstance'
 import Authenticator from '../../components/Authenticator'
@@ -11,23 +11,60 @@ const ForgotPasswordPage: React.FC = () => {
   const [email, setEmail] = useState('')
   const [step, setStep] = useState<'email' | 'verify' | 'reset' | 'success'>('email')
   const [isSending, setIsSending] = useState(false)
+  const [cooldown, setCooldown] = useState(0)
+
+  useEffect(() => {
+    if (cooldown <= 0) return
+    const timer = setInterval(() => setCooldown(prev => prev - 1), 1000)
+    return () => clearInterval(timer)
+  }, [cooldown])
 
   const [verifiedCode, setVerifiedCode] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [isResetting, setIsResetting] = useState(false)
   const [passError, setPassError] = useState<string | null>(null)
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirm, setShowConfirm] = useState(false)
+
+  const passwordChecks = {
+    minLength: password.length >= 8,
+    hasUpper: /[A-Z]/.test(password),
+    hasNumber: /[0-9]/.test(password),
+    hasSpecial: /[@$!%*?&#^()_\-+=.,]/.test(password),
+  }
+
+  const passedCount = Object.values(passwordChecks).filter(Boolean).length
+  const strength =
+    passedCount <= 1 ? 'weak' : passedCount <= 3 ? 'medium' : 'strong'
+  const strengthColor =
+    strength === 'weak' ? 'bg-red-500' : strength === 'medium' ? 'bg-amber-500' : 'bg-emerald-500'
+  const strengthWidth = `${(passedCount / 4) * 100}%`
 
   const handleSendCode = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!email) return
+    if (!email || isSending) return
 
     setIsSending(true)
     try {
-      await axiosInstance.post('/api/auth/forgot-password/send-code', { email })
+      const res = await fetch('/api/auth/forgot-password/send-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      })
+
+      if (!res.ok) {
+        if (res.status === 429) {
+          setCooldown(60)
+          return
+        }
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data?.message || `Request failed (${res.status})`)
+      }
+
       setStep('verify')
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'Failed to send code')
+    } catch (err: unknown) {
+      toast.error((err as Error).message || 'Failed to send code')
     } finally {
       setIsSending(false)
     }
@@ -64,8 +101,9 @@ const ForgotPasswordPage: React.FC = () => {
         setStep('success')
         setTimeout(() => navigate('/login'), 3000)
       }
-    } catch (err: any) {
-      const message = err?.response?.data?.message || 'Failed to reset password'
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { data?: { message?: string } } }
+      const message = axiosErr?.response?.data?.message || 'Failed to reset password'
       setPassError(message)
     } finally {
       setIsResetting(false)
@@ -125,7 +163,7 @@ const ForgotPasswordPage: React.FC = () => {
 
                 <button
                   type="submit"
-                  disabled={isSending || !email}
+                  disabled={isSending || !email || cooldown > 0}
                   className="w-full rounded-3xl bg-slate-900 py-5 text-[10px] font-black tracking-widest text-white uppercase italic shadow-xl transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-3"
                 >
                   {isSending ? (
@@ -133,6 +171,8 @@ const ForgotPasswordPage: React.FC = () => {
                       <RefreshCw size={16} className="animate-spin" />
                       Sending...
                     </>
+                  ) : cooldown > 0 ? (
+                    `Wait ${cooldown}s`
                   ) : (
                     'Send Verification Code'
                   )}
@@ -153,6 +193,7 @@ const ForgotPasswordPage: React.FC = () => {
                 codeType="forgot_password"
                 onSuccess={handleVerifySuccess}
                 onCancel={() => setStep('email')}
+                autoSend={false}
               />
             </motion.div>
           )}
@@ -180,24 +221,88 @@ const ForgotPasswordPage: React.FC = () => {
               </div>
 
               <form onSubmit={handleResetPassword} className="space-y-5">
-                <div>
+                <div className="relative">
                   <input
-                    type="password"
+                    type={showPassword ? 'text' : 'password'}
                     value={password}
                     onChange={e => setPassword(e.target.value)}
                     placeholder="New Password"
-                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-sm font-semibold outline-none focus:border-slate-900 focus:bg-white transition-all"
+                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 pr-12 text-sm font-semibold outline-none focus:border-slate-900 focus:bg-white transition-all"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
                 </div>
-                <div>
-                  <input
-                    type="password"
-                    value={confirmPassword}
-                    onChange={e => setConfirmPassword(e.target.value)}
-                    placeholder="Confirm Password"
-                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-sm font-semibold outline-none focus:border-slate-900 focus:bg-white transition-all"
-                  />
-                </div>
+
+                {password && (
+                  <>
+                    <div className="space-y-2">
+                      <div className="flex gap-4 text-[11px] font-bold flex-wrap">
+                        {[
+                          { label: '8+ characters', check: passwordChecks.minLength },
+                          { label: 'Uppercase letter', check: passwordChecks.hasUpper },
+                          { label: 'Number', check: passwordChecks.hasNumber },
+                          { label: 'Special character', check: passwordChecks.hasSpecial },
+                        ].map(({ label, check }) => (
+                          <span
+                            key={label}
+                            className={`flex items-center gap-1 ${check ? 'text-emerald-600' : 'text-slate-400'}`}
+                          >
+                            {check ? <CheckCircle2 size={12} /> : <X size={12} />}
+                            {label}
+                          </span>
+                        ))}
+                      </div>
+
+                      <div className="h-1.5 w-full rounded-full bg-slate-100 overflow-hidden">
+                        <motion.div
+                          layout
+                          className={`h-full rounded-full ${strengthColor}`}
+                          style={{ width: strengthWidth }}
+                          transition={{ duration: 0.3 }}
+                        />
+                      </div>
+                      <p className={`text-[10px] font-black uppercase italic tracking-wider ${
+                        strength === 'weak' ? 'text-red-500' : strength === 'medium' ? 'text-amber-500' : 'text-emerald-500'
+                      }`}>
+                        {strength === 'weak' ? 'Weak' : strength === 'medium' ? 'Medium' : 'Strong'}
+                      </p>
+                    </div>
+
+                    <div className="relative">
+                      <input
+                        type={showConfirm ? 'text' : 'password'}
+                        value={confirmPassword}
+                        onChange={e => setConfirmPassword(e.target.value)}
+                        placeholder="Confirm Password"
+                        className={`w-full rounded-2xl border bg-slate-50 px-5 py-4 pr-12 text-sm font-semibold outline-none transition-all focus:bg-white ${
+                          confirmPassword && password !== confirmPassword
+                            ? 'border-rose-500'
+                            : confirmPassword
+                              ? 'border-emerald-500'
+                              : 'border-slate-200 focus:border-slate-900'
+                        }`}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirm(!showConfirm)}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      >
+                        {showConfirm ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
+                    </div>
+                    {confirmPassword && password !== confirmPassword && (
+                      <p className="text-[10px] font-black text-rose-500 uppercase italic flex items-center gap-1">
+                        <AlertTriangle size={12} />
+                        Passwords do not match
+                      </p>
+                    )}
+                  </>
+                )}
 
                 {passError && (
                   <p className="text-center text-xs font-black text-rose-500 uppercase italic flex items-center justify-center gap-2">
@@ -208,7 +313,7 @@ const ForgotPasswordPage: React.FC = () => {
 
                 <button
                   type="submit"
-                  disabled={isResetting || !password || !confirmPassword}
+                  disabled={isResetting || !password || password !== confirmPassword}
                   className="w-full rounded-3xl bg-emerald-600 py-5 text-[10px] font-black tracking-widest text-white uppercase italic shadow-xl transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-3"
                 >
                   {isResetting ? (

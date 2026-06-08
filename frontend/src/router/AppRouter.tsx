@@ -16,6 +16,7 @@ import DiscoveryPage from '../pages/Discovery/DiscoveryPage'
 import LoginPage from '../views/auth/LoginPage'
 import RegisterPage from '../views/auth/RegisterPage'
 import ForgotPasswordPage from '../views/auth/ForgotPasswordPage'
+import Test from '../test/Test'
 import CustomerLayout from '../layouts/CustomerLayout'
 import { useAuth } from '../context/AuthContext'
 import { getHomePathForRole } from '../utils/authRouting'
@@ -156,6 +157,7 @@ const AppRouter: React.FC = () => {
           )
         }
       />
+      <Route path="/test" element={<Test />} />
 
       {/* Customer Routes with Navbar */}
       <Route

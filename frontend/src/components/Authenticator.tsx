@@ -10,6 +10,7 @@ export interface AuthenticatorProps {
   targetId?: string
   onSuccess: (code: string) => void
   onCancel: () => void
+  autoSend?: boolean
 }
 
 interface RateLimitState {
@@ -28,6 +29,7 @@ const Authenticator: React.FC<AuthenticatorProps> = ({
   codeType,
   onSuccess,
   onCancel,
+  autoSend = true,
 }) => {
   const [digits, setDigits] = useState<string[]>(Array(6).fill(''))
   const [isLoading, setIsLoading] = useState(false)
@@ -73,12 +75,13 @@ const Authenticator: React.FC<AuthenticatorProps> = ({
 
       setDigits(Array(6).fill(''))
       inputRefs.current[0]?.focus()
-    } catch (err: any) {
-      const message = err?.response?.data?.message || 'Failed to send verification code.'
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { data?: { message?: string }; status?: number } }
+      const message = axiosErr?.response?.data?.message || 'Failed to send verification code.'
       setError(message)
 
-      if (err?.response?.status === 429) {
-        const lockedUntil = err?.response?.data?.locked_until
+      if (axiosErr?.response?.status === 429) {
+        const lockedUntil = (axiosErr?.response?.data as { locked_until?: number })?.locked_until
         if (lockedUntil) {
           setRateLimit(prev => ({
             ...prev,
@@ -93,8 +96,10 @@ const Authenticator: React.FC<AuthenticatorProps> = ({
   }, [codeType, email])
 
   useEffect(() => {
-    sendCode()
-  }, [sendCode])
+    if (autoSend) {
+      sendCode()
+    }
+  }, [sendCode, autoSend])
 
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>
@@ -202,14 +207,15 @@ const Authenticator: React.FC<AuthenticatorProps> = ({
           setTimeout(() => onSuccess(code), 1000)
         }
       }
-    } catch (err: any) {
-      const message = err?.response?.data?.message || 'Invalid code. Please try again.'
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { data?: { message?: string; locked?: boolean } } }
+      const message = axiosErr?.response?.data?.message || 'Invalid code. Please try again.'
       setError(message)
 
       setRateLimit(prev => {
         const newAttempts = prev.attempts + 1
 
-        if (err?.response?.data?.locked || newAttempts >= MAX_ATTEMPTS) {
+        if (axiosErr?.response?.data?.locked || newAttempts >= MAX_ATTEMPTS) {
           const lockEndTime = Date.now() + LOCKOUT_DURATION
           return {
             attempts: newAttempts,

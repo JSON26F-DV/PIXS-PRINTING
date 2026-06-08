@@ -386,3 +386,26 @@ Route::middleware(['throttle:api'])->group(function () {
     Route::get('/products/{id}', [ProductController::class, 'show']);
     Route::get('/colors', [ColorController::class, 'index']);
 });
+
+// Test route - send a test email via Resend
+Route::post('/test/send-email', function (Request $request) {
+    $validated = $request->validate([
+        'to' => 'required|email',
+        'subject' => 'required|string|max:255',
+        'html' => 'required|string',
+    ]);
+
+    try {
+        $resend = Resend::client(env('RESEND_API_KEY'));
+        $resend->emails->send([
+            'from' => env('MAIL_FROM_ADDRESS', 'Acme <onboarding@resend.dev>'),
+            'to' => [$validated['to']],
+            'subject' => $validated['subject'],
+            'html' => $validated['html'],
+        ]);
+
+        return response()->json(['status' => 'success', 'message' => 'Email sent']);
+    } catch (Exception $e) {
+        return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
+    }
+});

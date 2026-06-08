@@ -56,6 +56,13 @@ class VerificationCodeService
             ];
         }
 
+        if ($inputCode === $data['code']) {
+            return [
+                'success' => true,
+                'message' => 'Verification successful.',
+            ];
+        }
+
         if ($inputCode !== $data['code']) {
             $data['attempts']++;
             Cache::put($cacheKey, $data, self::CODE_TTL);
@@ -83,13 +90,41 @@ class VerificationCodeService
             ];
         }
 
-        Cache::forget($cacheKey);
-        Cache::forget($lockKey);
-
         return [
             'success' => true,
             'message' => 'Verification successful.',
         ];
+    }
+
+    public function checkCode(string $email, string $purpose, string $inputCode): array
+    {
+        $cacheKey = $this->getCacheKey($email, $purpose);
+        $data = Cache::get($cacheKey);
+
+        if (! $data) {
+            return [
+                'success' => false,
+                'message' => 'Verification code expired or not found. Please request a new one.',
+            ];
+        }
+
+        if ($inputCode !== $data['code']) {
+            return [
+                'success' => false,
+                'message' => 'Invalid code.',
+            ];
+        }
+
+        return [
+            'success' => true,
+            'message' => 'Code verified.',
+        ];
+    }
+
+    public function clearCode(string $email, string $purpose): void
+    {
+        Cache::forget($this->getCacheKey($email, $purpose));
+        Cache::forget($this->getLockKey($email, $purpose));
     }
 
     public function canResend(string $email, string $purpose): array

@@ -2,67 +2,48 @@
 
 namespace App\Services;
 
-use PHPMailer\PHPMailer\Exception;
-use PHPMailer\PHPMailer\PHPMailer;
+use Resend;
+use Resend\Client;
 
 class MailService
 {
-    private PHPMailer $mail;
+    private ?Client $resend = null;
 
-    public function __construct()
+    private function getClient(): Client
     {
-        $this->mail = new PHPMailer(true);
-        $this->configureMail();
-    }
-
-    private function configureMail(): void
-    {
-        if (env('MAIL_MAILER') === 'smtp') {
-            $this->mail->isSMTP();
-            $this->mail->Host = env('MAIL_HOST');
-            $this->mail->SMTPAuth = true;
-            $this->mail->Username = env('MAIL_USERNAME');
-            $this->mail->Password = env('MAIL_PASSWORD');
-            $this->mail->SMTPSecure = env('MAIL_ENCRYPTION', PHPMailer::ENCRYPTION_STARTTLS);
-            $this->mail->Port = env('MAIL_PORT', 587);
+        if ($this->resend === null) {
+            $this->resend = Resend::client(env('RESEND_API_KEY'));
         }
 
-        $this->mail->setFrom(
-            env('MAIL_FROM_ADDRESS', 'noreply@pixsprinting.com'),
-            env('MAIL_FROM_NAME', 'PIXS Printing')
-        );
-        $this->mail->isHTML(true);
-        $this->mail->CharSet = 'UTF-8';
+        return $this->resend;
     }
 
     public function sendVerificationCode(string $email, string $code, string $purpose): bool
     {
         $subject = $this->getSubjectForPurpose($purpose);
         $body = $this->getBodyForPurpose($purpose, $code);
-        $altBody = $this->getAltBodyForPurpose($purpose, $code);
+        $text = $this->getAltBodyForPurpose($purpose, $code);
 
         if (env('MAIL_MAILER') === 'log') {
-            logger()->info("[MAIL] To: {$email} | Subject: {$subject} | Body: {$altBody}");
+            logger()->info("[MAIL] To: {$email} | Subject: {$subject} | Body: {$text}");
 
             return true;
         }
 
         try {
-            $this->mail->addAddress($email);
-            $this->mail->Subject = $subject;
-            $this->mail->Body = $body;
-            $this->mail->AltBody = $altBody;
-
-            $this->mail->send();
+            $this->getClient()->emails->send([
+                'from' => env('MAIL_FROM_ADDRESS', 'noreply@pixsprinting.com'),
+                'to' => [$email],
+                'subject' => $subject,
+                'html' => $body,
+                'text' => $text,
+            ]);
 
             return true;
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             logger()->error('Mail send failed: '.$e->getMessage());
 
             return false;
-        } finally {
-            $this->mail->clearAddresses();
-            $this->mail->clearAttachments();
         }
     }
 
