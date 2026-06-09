@@ -6,7 +6,7 @@ import axiosInstance from '../lib/axiosInstance'
 
 export interface AuthenticatorProps {
   email: string
-  codeType: 'forgot_password' | 'delete_order' | 'delete_account'
+  codeType: 'forgot_password' | 'delete_order' | 'delete_account' | 'change_email' | 'change_password'
   targetId?: string
   onSuccess: (code: string) => void
   onCancel: () => void
@@ -61,6 +61,12 @@ const Authenticator: React.FC<AuthenticatorProps> = ({
           break
         case 'delete_account':
           endpoint = '/api/admin/verification/send-account-delete-code'
+          break
+        case 'change_email':
+          endpoint = '/api/auth/change-email/send-code'
+          break
+        case 'change_password':
+          endpoint = '/api/settings/change-password/send-code'
           break
       }
 
@@ -186,9 +192,18 @@ const Authenticator: React.FC<AuthenticatorProps> = ({
     try {
       const code = digits.join('')
 
-      if (codeType === 'forgot_password') {
+      if (codeType === 'forgot_password' || codeType === 'change_email') {
         const { data } = await axiosInstance.post('/api/auth/forgot-password/verify', {
           email,
+          code,
+        })
+
+        if (data.status === 'success') {
+          setIsSuccess(true)
+          setTimeout(() => onSuccess(code), 1000)
+        }
+      } else if (codeType === 'change_password') {
+        const { data } = await axiosInstance.post('/api/settings/change-password/verify', {
           code,
         })
 
@@ -275,7 +290,7 @@ const Authenticator: React.FC<AuthenticatorProps> = ({
         <div className="mb-4 flex items-center gap-3 justify-center">
           <div className="h-0.5 w-8 bg-blue-500" />
           <span className="text-[10px] font-black tracking-[4px] text-blue-500 uppercase italic">
-            {codeType === 'forgot_password' ? 'Password Reset' : codeType === 'delete_order' ? 'Order Deletion' : 'Account Deletion'}
+            {codeType === 'forgot_password' ? 'Password Reset' : codeType === 'delete_order' ? 'Order Deletion' : codeType === 'delete_account' ? 'Account Deletion' : 'Email Change'}
           </span>
           <div className="h-0.5 w-8 bg-blue-500" />
         </div>

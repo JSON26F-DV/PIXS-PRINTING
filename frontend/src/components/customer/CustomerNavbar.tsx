@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import {
   Search,
   MapPin,
@@ -53,7 +53,13 @@ const CustomerNavbar: React.FC = () => {
     : 'Select Address'
 
   const { getCartCount } = useCartStore()
-  const { unreadCount } = useNotificationStore()
+  const { unreadCount, fetchNotifications } = useNotificationStore()
+
+  useEffect(() => {
+    if (user?.isLoggedIn && user?.role === 'customer') {
+      fetchNotifications()
+    }
+  }, [user?.isLoggedIn, user?.role, fetchNotifications])
   const location = useLocation()
   const navigate = useNavigate()
   const isActive = (path: string) => location.pathname === path

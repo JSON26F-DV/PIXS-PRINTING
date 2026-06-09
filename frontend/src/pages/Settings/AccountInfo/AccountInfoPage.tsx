@@ -1,60 +1,42 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { useForm, useWatch } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
 import toast from 'react-hot-toast'
 import {
-  FiEye,
-  FiEyeOff,
-  FiLock,
-  FiMail,
-  FiUser,
-  FiCamera,
-  FiCheckCircle,
   FiPhone,
   FiPlus,
-  FiShield,
-  FiAlertCircle,
-  FiRefreshCw,
+  FiLock,
+  FiMail,
+  FiSend,
+  FiMessageCircle,
+  FiCheckCircle,
   FiX,
-  // FiBriefcase,
+  FiRefreshCw,
+  FiCamera,
+  FiEye,
+  FiEyeOff,
+  FiAlertTriangle,
 } from 'react-icons/fi'
 import { clsx } from 'clsx'
 import { m, AnimatePresence } from 'framer-motion'
 import Cropper, { type Area } from 'react-easy-crop'
 import getCroppedImg from './utils/cropImage'
-import AccountInputField from './components/AccountInputField'
 import PhoneInputGroup from './components/PhoneInputGroup'
 import BoxFallback from '../../../components/common/BoxFallback'
 import { useAccountInfo } from './hooks/useAccountInfo'
-import { useOTPVerification } from '../../../hooks/useOTPVerification'
-import {
-  calculatePasswordStrength,
-  getStrengthLabel,
-} from '../../../utils/passwordValidation'
 import { validateContact } from '../../../utils/contactValidation'
-import {
-  profileSchema,
-  passwordFormSchema,
-  type ProfileFormValues,
-  type PasswordFormValues,
-} from './utils/validation'
-
+import Authenticator from '../../../components/Authenticator'
 import { useAuth } from '../../../context/AuthContext'
 import axiosInstance from '../../../lib/axiosInstance'
 
 const AccountInfoPage: React.FC = () => {
   const {
     defaultAccount,
-    updateProfile,
-    updatePassword,
     uploadProfilePicture,
     storeContact,
     setDefaultContact,
     isLoading,
   } = useAccountInfo()
   const { user, isLoading: authLoading } = useAuth()
-  const otp = useOTPVerification()
   const location = useLocation()
   const navigate = useNavigate()
 
@@ -64,20 +46,20 @@ const AccountInfoPage: React.FC = () => {
     }
   }, [authLoading, user, navigate])
 
-  // ─── States ──────────────────────────────────────────────────────────────
+  // ─── Profile Picture States ──────────────────────────────────────────────
   const [profilePreview, setProfilePreview] = useState(
     defaultAccount.profilePicture,
   )
   const [hasImageError, setHasImageError] = useState(false)
-  
-  // ─── Cropping States ───────────────────────────────────────────────────
   const [tempImage, setTempImage] = useState<string | null>(null)
   const [isCropping, setIsCropping] = useState(false)
   const [crop, setCrop] = useState({ x: 0, y: 0 })
   const [zoom, setZoom] = useState(1)
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null)
   const [isUploading, setIsUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
+  // ─── Contact States ──────────────────────────────────────────────────────
   const [contacts, setContacts] = useState(defaultAccount.contacts)
   const [isAddingContact, setIsAddingContact] = useState(() => {
     const params = new URLSearchParams(location.search)
@@ -86,13 +68,26 @@ const AccountInfoPage: React.FC = () => {
   const [newContact, setNewContact] = useState('')
   const [contactError, setContactError] = useState('')
 
-  const [showNewPass, setShowNewPass] = useState(false)
-  const [showConfirmPass, setShowConfirmPass] = useState(false)
-  const [otpInput, setOtpInput] = useState('')
+  // ─── Email Change States ─────────────────────────────────────────────────
+  const [emailChangeStep, setEmailChangeStep] = useState<
+    'idle' | 'options' | 'verify' | 'new-email'
+  >('idle')
+  const [newEmail, setNewEmail] = useState('')
+  const [isUpdatingEmail, setIsUpdatingEmail] = useState(false)
 
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  // ─── Password Change States ───────────────────────────────────────────────
+  const [passwordChangeStep, setPasswordChangeStep] = useState<
+    'idle' | 'confirm' | 'verify' | 'reset' | 'success'
+  >('idle')
+  const [passwordChangeCooldown, setPasswordChangeCooldown] = useState(0)
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmNewPassword, setConfirmNewPassword] = useState('')
+  const [verifiedPasswordCode, setVerifiedPasswordCode] = useState('')
+  const [isChangingPassword, setIsChangingPassword] = useState(false)
+  const [passwordChangeError, setPasswordChangeError] = useState<string | null>(null)
+  const [showNewPassword, setShowNewPassword] = useState(false)
+  const [showConfirmNewPassword, setShowConfirmNewPassword] = useState(false)
 
-  // ─── Navigation Logic ───────────────────────────────────────────────────
   useEffect(() => {
     const params = new URLSearchParams(location.search)
     if (params.get('scroll') === 'contact-section') {
@@ -103,68 +98,36 @@ const AccountInfoPage: React.FC = () => {
     }
   }, [location])
 
-  // ─── Form Logic ──────────────────────────────────────────────────────────
-  const {
-    register: regProfile,
-    handleSubmit: handleProfileSubmit,
-    formState: { errors: profileErrors, isSubmitting: isSubmittingProfile },
-    reset: resetProfile,
-  } = useForm<ProfileFormValues>({
-    resolver: zodResolver(profileSchema),
-    defaultValues: {
-      first_name: defaultAccount.first_name,
-      last_name: defaultAccount.last_name,
-      email: defaultAccount.email,
-      company_name: defaultAccount.company_name || '',
-    },
-  })
-
-  // Sync form with loaded data
+  // ─── Sync contacts & preview ─────────────────────────────────────────────
   useEffect(() => {
     if (!isLoading) {
-      resetProfile({
-        first_name: defaultAccount.first_name,
-        last_name: defaultAccount.last_name,
-        email: defaultAccount.email,
-        company_name: defaultAccount.company_name || '',
-      })
-      setTimeout(() => {
-        setProfilePreview(defaultAccount.profilePicture)
-        setHasImageError(false)
-        setContacts(defaultAccount.contacts)
-      }, 0)
+      setProfilePreview(defaultAccount.profilePicture)
+      setHasImageError(false)
+      setContacts(defaultAccount.contacts)
     }
-  }, [isLoading, defaultAccount, resetProfile])
+  }, [isLoading, defaultAccount])
 
-  const {
-    register: regPass,
-    handleSubmit: handlePassSubmit,
-    control: controlPass,
-    formState: { errors: passErrors, isSubmitting: isSubmittingPass },
-    reset: resetPass,
-  } = useForm<PasswordFormValues>({
-    resolver: zodResolver(passwordFormSchema),
-    defaultValues: { newPassword: '', confirmPassword: '' },
-  })
+  // ─── Password Change Cooldown ────────────────────────────────────────────
+  useEffect(() => {
+    if (passwordChangeCooldown <= 0) return
+    const timer = setInterval(() => setPasswordChangeCooldown(prev => prev - 1), 1000)
+    return () => clearInterval(timer)
+  }, [passwordChangeCooldown])
 
-  const newPassValue =
-    useWatch({ control: controlPass, name: 'newPassword' }) || ''
-  const strength = calculatePasswordStrength(newPassValue)
-  const strengthInfo = getStrengthLabel(strength)
 
-  // ─── Handlers ────────────────────────────────────────────────────────────
+  // ─── Profile Picture Handlers ────────────────────────────────────────────
   const onCropComplete = (_: Area, croppedAreaPixels: Area) => {
     setCroppedAreaPixels(croppedAreaPixels)
   }
 
   const handleApplyCrop = async () => {
     if (!tempImage || !croppedAreaPixels) return
-
     setIsUploading(true)
     try {
       const croppedBlob = await getCroppedImg(tempImage, croppedAreaPixels)
-      const file = new File([croppedBlob], 'profile.jpg', { type: 'image/jpeg' })
-      
+      const file = new File([croppedBlob], 'profile.jpg', {
+        type: 'image/jpeg',
+      })
       const result = await uploadProfilePicture(file)
       if (result.success && result.url) {
         setProfilePreview(result.url)
@@ -172,8 +135,7 @@ const AccountInfoPage: React.FC = () => {
       } else {
         toast.error(result.error || 'Failed to upload profile picture')
       }
-    } catch (e) {
-      console.error(e)
+    } catch {
       toast.error('Error processing image')
     } finally {
       setIsUploading(false)
@@ -183,24 +145,21 @@ const AccountInfoPage: React.FC = () => {
   }
 
   const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp']
-  const MAX_FILE_SIZE = 3 * 1024 * 1024 // 3MB
+  const MAX_FILE_SIZE = 3 * 1024 * 1024
 
   const handleSelectFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-
     if (!ALLOWED_TYPES.includes(file.type)) {
       toast.error('Only JPG, JPEG, PNG & WEBP files are allowed')
       e.target.value = ''
       return
     }
-
     if (file.size > MAX_FILE_SIZE) {
       toast.error('File size must be 3MB or less')
       e.target.value = ''
       return
     }
-
     const reader = new FileReader()
     reader.onload = () => {
       setTempImage(reader.result as string)
@@ -209,11 +168,7 @@ const AccountInfoPage: React.FC = () => {
     reader.readAsDataURL(file)
   }
 
-  const onProfileUpdate = async (values: ProfileFormValues) => {
-    const result = await updateProfile(values)
-    if (result.success) toast.success('Profile updated successfully.')
-  }
-
+  // ─── Contact Handlers ────────────────────────────────────────────────────
   const handleSetDefaultContact = async (number: string) => {
     const backup = [...contacts]
     const updated = contacts.map((c) => ({
@@ -240,12 +195,9 @@ const AccountInfoPage: React.FC = () => {
       setContactError('This number is already registered.')
       return
     }
-
     setIsAddingContact(false)
     const backup = [...contacts]
     setContacts([...contacts, { number: newContact, is_default: false }])
-
-    // API Call
     storeContact(newContact).then((res: { success: boolean }) => {
       if (res.success) {
         setNewContact('')
@@ -258,20 +210,99 @@ const AccountInfoPage: React.FC = () => {
     })
   }
 
-  const handlePasswordResetComplete = async (values: PasswordFormValues) => {
-    const result = await updatePassword(values)
-    if (result.success) {
-      toast.success('Password changed successfully.')
-      resetPass()
-      otp.resetVerification()
-      setOtpInput('')
-      try {
-        await axiosInstance.post('/api/auth/password-changed-notification', {
-          email: user?.email,
-        })
-      } catch {
-        // Notification is best-effort
+  // ─── Email Change Handlers ───────────────────────────────────────────────
+  const handleEmailVerifySuccess = () => {
+    setEmailChangeStep('new-email')
+  }
+
+  const handleUpdateEmail = async () => {
+    if (!newEmail || !/\S+@\S+\.\S+/.test(newEmail)) {
+      toast.error('Please enter a valid email address')
+      return
+    }
+    setIsUpdatingEmail(true)
+    try {
+      await axiosInstance.patch('/api/customer/profile', { email: newEmail })
+      toast.success('Email updated successfully')
+      setEmailChangeStep('idle')
+      setNewEmail('')
+    } catch {
+      toast.error('Failed to update email')
+    } finally {
+      setIsUpdatingEmail(false)
+    }
+  }
+
+  // ─── Password Change Handlers ────────────────────────────────────────────
+  const passwordChecks = {
+    minLength: newPassword.length >= 8,
+    hasUpper: /[A-Z]/.test(newPassword),
+    hasNumber: /[0-9]/.test(newPassword),
+    hasSpecial: /[@$!%*?&#^()_\-+=.,]/.test(newPassword),
+  }
+  const passedCount = Object.values(passwordChecks).filter(Boolean).length
+  const passwordStrength =
+    passedCount <= 1 ? 'weak' : passedCount <= 3 ? 'medium' : 'strong'
+  const strengthColor =
+    passwordStrength === 'weak' ? 'bg-red-500' : passwordStrength === 'medium' ? 'bg-amber-500' : 'bg-emerald-500'
+  const strengthWidth = `${(passedCount / 4) * 100}%`
+
+  const handleSendPasswordCode = async () => {
+    try {
+      await axiosInstance.post('/api/settings/change-password/send-code')
+      setPasswordChangeStep('verify')
+      toast.success('Verification code sent to your email')
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { data?: { message?: string }; status?: number } }
+      if (axiosErr?.response?.status === 429) {
+        const remaining = (axiosErr?.response?.data as { cooldown_remaining?: number })?.cooldown_remaining || 60
+        setPasswordChangeCooldown(remaining)
+        toast.error(`Please wait ${remaining} seconds before requesting a new code`)
+      } else {
+        toast.error((axiosErr?.response?.data as { message?: string })?.message || 'Failed to send code')
       }
+    }
+  }
+
+  const handlePasswordVerifySuccess = (code: string) => {
+    setVerifiedPasswordCode(code)
+    setPasswordChangeStep('reset')
+  }
+
+  const handleConfirmPasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setPasswordChangeError(null)
+
+    if (newPassword.length < 8) {
+      setPasswordChangeError('Password must be at least 8 characters')
+      return
+    }
+    if (newPassword !== confirmNewPassword) {
+      setPasswordChangeError('Passwords do not match')
+      return
+    }
+
+    setIsChangingPassword(true)
+    try {
+      await axiosInstance.post('/api/settings/change-password/confirm', {
+        code: verifiedPasswordCode,
+        password: newPassword,
+        password_confirmation: confirmNewPassword,
+      })
+      setPasswordChangeStep('success')
+      setTimeout(() => {
+        setPasswordChangeStep('idle')
+        setNewPassword('')
+        setConfirmNewPassword('')
+        setVerifiedPasswordCode('')
+        toast.success('Password changed successfully')
+      }, 2000)
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { data?: { message?: string } } }
+      const message = axiosErr?.response?.data?.message || 'Failed to change password'
+      setPasswordChangeError(message)
+    } finally {
+      setIsChangingPassword(false)
     }
   }
 
@@ -291,36 +322,29 @@ const AccountInfoPage: React.FC = () => {
   }
 
   return (
-    <div className="AccountInfoPage animate-in fade-in slide-in-from-bottom-4 min-h-screen space-y-12 pb-20 duration-700">
-      {/* ─── Profile Information ────────────────────────────────────────────── */}
-      <section className="ProfileSection group relative overflow-hidden rounded-[44px] border border-slate-50 bg-white p-10 shadow-2xl shadow-slate-100">
-        <div className="mb-5 text-center">
-          <h1 className="text-4xl font-black tracking-tighter text-slate-900 uppercase italic">
-            {defaultAccount.company_name || 'Individual Profile'}
-          </h1>
-          <p className="mt-2 text-[10px] font-black tracking-[4px] text-slate-400 uppercase">
-            Registered Company / Shop
-          </p>
-        </div>
-        <div className="flex flex-col items-center gap-10 md:flex-row">
-          <div className="relative">
-            <div 
+    <div className="AccountInfoPage animate-in fade-in slide-in-from-bottom-4 min-h-screen pb-20 duration-700">
+      {/* ─── Profile Information (read-only) ──────────────────────────────── */}
+      <section className="space-y-6">
+        <div className="flex flex-col items-center gap-6 md:flex-row">
+          <div className="relative shrink-0">
+            <div
               onClick={() => fileInputRef.current?.click()}
-              className="relative h-40 w-40 overflow-hidden rounded-[56px] border-4 border-white bg-slate-900 shadow-2xl transition-transform duration-700 group-hover:scale-105 cursor-pointer"
+              className="relative h-24 w-24 overflow-hidden rounded-[28px] border-4 border-white bg-slate-900 shadow-xl transition-transform duration-700 hover:scale-105 cursor-pointer md:h-32 md:w-32"
             >
-              <BoxFallback 
+              <BoxFallback
                 className={clsx(
-                  "flex h-full w-full items-center justify-center bg-slate-900 transition-opacity duration-300",
-                  profilePreview && !hasImageError ? "absolute inset-0 z-0" : "relative z-10"
-                )} 
-                iconClassName="h-16 w-16 opacity-30 brightness-0 invert" 
+                  'flex h-full w-full items-center justify-center bg-slate-900 transition-opacity duration-300',
+                  profilePreview && !hasImageError
+                    ? 'absolute inset-0 z-0'
+                    : 'relative z-10',
+                )}
+                iconClassName="h-12 w-12 opacity-30 brightness-0 invert md:h-16 md:w-16"
               />
-              
               {profilePreview && !hasImageError && (
                 <img
                   src={
-                    profilePreview.startsWith('http') || 
-                    profilePreview.startsWith('blob:') || 
+                    profilePreview.startsWith('http') ||
+                    profilePreview.startsWith('blob:') ||
                     profilePreview.startsWith('data:')
                       ? profilePreview
                       : `/src/assets/profile/${profilePreview}`
@@ -331,10 +355,8 @@ const AccountInfoPage: React.FC = () => {
                   className="relative z-10 h-full w-full object-cover opacity-0 transition-opacity duration-500"
                 />
               )}
-              <div
-                className="absolute inset-0 z-20 flex items-center justify-center bg-slate-900/40 opacity-0 backdrop-blur-sm transition-all group-hover:opacity-100"
-              >
-                <FiCamera className="text-white" size={32} />
+              <div className="absolute inset-0 z-20 flex items-center justify-center bg-slate-900/40 opacity-0 backdrop-blur-sm transition-all hover:opacity-100">
+                <FiCamera className="text-white" size={20} />
               </div>
             </div>
             <input
@@ -346,129 +368,25 @@ const AccountInfoPage: React.FC = () => {
             />
           </div>
 
-          {/* ── Cropping Modal ── */}
-          <AnimatePresence>
-            {isCropping && tempImage && (
-              <div className="fixed inset-0 z-[600] flex items-center justify-center bg-slate-900/90 backdrop-blur-xl">
-                <m.div 
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.9 }}
-                  className="relative w-full max-w-2xl overflow-hidden rounded-[48px] bg-white p-10 shadow-2xl"
-                >
-                  <div className="mb-8 flex items-center justify-between">
-                    <div>
-                      <h3 className="text-2xl font-black tracking-tighter text-slate-900 uppercase italic">Edit Profile Picture</h3>
-                      <p className="text-[10px] font-black tracking-[4px] text-slate-400 uppercase">Crop and align your identity node</p>
-                    </div>
-                    <button onClick={() => setIsCropping(false)} className="text-slate-400 hover:text-slate-900">
-                      <FiX size={24} />
-                    </button>
-                  </div>
-
-                  <div className="relative h-[400px] w-full overflow-hidden rounded-[32px] bg-slate-100">
-                    <Cropper
-                      image={tempImage}
-                      crop={crop}
-                      zoom={zoom}
-                      aspect={1}
-                      onCropChange={setCrop}
-                      onCropComplete={onCropComplete}
-                      onZoomChange={setZoom}
-                      cropShape="round"
-                      showGrid={false}
-                    />
-                  </div>
-
-                  <div className="mt-10 space-y-8">
-                    <div className="space-y-4">
-                      <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-slate-400">
-                        <span>Zoom Level</span>
-                        <span>{Math.round(zoom * 100)}%</span>
-                      </div>
-                      <input
-                        type="range"
-                        value={zoom}
-                        min={1}
-                        max={3}
-                        step={0.1}
-                        aria-labelledby="Zoom"
-                        onChange={(e) => setZoom(Number(e.target.value))}
-                        className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-slate-100 accent-slate-900"
-                      />
-                    </div>
-
-                    <div className="flex gap-4">
-                      <button
-                        onClick={() => setIsCropping(false)}
-                        className="flex-1 rounded-2xl border border-slate-100 py-5 text-[10px] font-black uppercase tracking-[4px] text-slate-400 italic transition-all hover:bg-slate-50"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        onClick={handleApplyCrop}
-                        disabled={isUploading}
-                        className="flex-1 flex items-center justify-center gap-3 rounded-2xl bg-slate-900 py-5 text-[10px] font-black tracking-[4px] text-white uppercase italic shadow-xl transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50"
-                      >
-                        {isUploading ? <FiRefreshCw className="animate-spin" /> : <FiCheckCircle />}
-                        Apply & Save
-                      </button>
-                    </div>
-                  </div>
-                </m.div>
-              </div>
-            )}
-          </AnimatePresence>
-
-          <form
-            onSubmit={handleProfileSubmit(onProfileUpdate)}
-            className="flex-1 space-y-8"
-          >
-            <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
-              <AccountInputField
-                label="First Name"
-                icon={FiUser}
-                registration={regProfile('first_name')}
-                error={profileErrors.first_name}
-              />
-              <AccountInputField
-                label="Last Name"
-                icon={FiUser}
-                registration={regProfile('last_name')}
-                error={profileErrors.last_name}
-              />
-              <AccountInputField
-                label="Email Address"
-                icon={FiMail}
-                registration={regProfile('email')}
-                error={profileErrors.email}
-              />
-            </div>
-            <div className="flex justify-end">
-              <button
-                disabled={isSubmittingProfile}
-                className="flex items-center gap-3 rounded-[24px] bg-slate-900 px-12 py-5 text-[10px] font-black tracking-[4px] text-white uppercase italic transition-all hover:scale-105 active:scale-95 disabled:opacity-40"
-              >
-                {isSubmittingProfile ? (
-                  <FiRefreshCw className="animate-spin" />
-                ) : (
-                  <FiCheckCircle />
-                )}
-                Save Changes
-              </button>
-            </div>
-          </form>
+          <div className="flex-1 text-center md:text-left">
+            <h1 className="text-2xl font-black tracking-tighter text-slate-900 uppercase italic md:text-3xl">
+              {defaultAccount.first_name} {defaultAccount.last_name}
+            </h1>
+            <p className="mt-1 text-[10px] font-black tracking-[4px] text-slate-400 uppercase">
+              {defaultAccount.company_name || 'Individual Profile'}
+            </p>
+          </div>
         </div>
       </section>
 
-      {/* ─── Contact Management ──────────────────────────────────────────────── */}
-      <section
-        id="contact-section"
-        className="ContactNumbersSection space-y-10 rounded-[44px] border border-slate-50 bg-white p-10 shadow-xl"
-      >
-        <div className="flex items-center justify-between border-b border-slate-50 pb-8">
+      {/* ─── Divider ──────────────────────────────────────────────────────── */}
+      <div className="my-8 border-t border-slate-100" />
+
+      {/* ─── Contact Management ───────────────────────────────────────────── */}
+      <section id="contact-section" className="space-y-6">
+        <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-2xl font-black tracking-tighter text-slate-800 uppercase italic">
+            <h2 className="text-lg font-black tracking-tighter text-slate-800 uppercase italic">
               Contact Numbers
             </h2>
             <p className="text-[10px] font-black tracking-[4px] text-slate-400 uppercase">
@@ -478,303 +396,582 @@ const AccountInfoPage: React.FC = () => {
           <button
             type="button"
             onClick={() => setIsAddingContact(!isAddingContact)}
-            className="bg-pixs-mint flex items-center gap-2 rounded-2xl px-6 py-3 text-[10px] font-black tracking-widest text-slate-900 uppercase transition-all hover:shadow-lg active:scale-95"
+            className="bg-pixs-mint flex items-center gap-2 rounded-2xl px-4 py-3 text-[10px] font-black tracking-widest text-slate-900 uppercase transition-all hover:shadow-lg active:scale-95 md:px-6"
           >
-            <FiPlus size={16} /> Add Contact Number
+            <FiPlus size={16} />
+            <span className="hidden md:inline">Add Contact Number</span>
           </button>
         </div>
 
-        <div className="space-y-8">
-          <div className="space-y-4">
-            <label className="text-[10px] font-black tracking-[4px] text-slate-400 uppercase italic">
-              Primary Contact Number
-            </label>
-
-            <div className="flex flex-wrap gap-4">
-              {contacts.map((c, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => handleSetDefaultContact(c.number)}
+        <div className="space-y-4">
+          {contacts.map((c, i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={() => handleSetDefaultContact(c.number)}
+              className={clsx(
+                'flex w-full items-center gap-4 rounded-[24px] border-2 px-5 py-4 text-left transition-all',
+                c.is_default
+                  ? 'border-pixs-mint bg-pixs-mint/5 shadow-pixs-mint/10 shadow-lg'
+                  : 'border-transparent bg-white hover:border-slate-200',
+              )}
+            >
+              <div
+                className={clsx(
+                  'flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-colors',
+                  c.is_default
+                    ? 'bg-pixs-mint text-slate-900'
+                    : 'bg-slate-50 text-slate-300',
+                )}
+              >
+                {c.is_default ? (
+                  <FiCheckCircle size={20} />
+                ) : (
+                  <FiPhone size={18} />
+                )}
+              </div>
+              <div className="min-w-0">
+                <p
                   className={clsx(
-                    'group flex items-center gap-4 rounded-[24px] border-2 px-6 py-4 text-left transition-all',
-                    c.is_default
-                      ? 'border-pixs-mint bg-pixs-mint/5 shadow-pixs-mint/10 shadow-lg'
-                      : c.number.startsWith('0')
-                        ? 'border-transparent bg-white hover:border-slate-200'
-                        : 'border-slate-100 bg-white hover:border-slate-200',
+                    'text-sm font-black truncate',
+                    c.is_default ? 'text-slate-900' : 'text-slate-600',
                   )}
                 >
-                  <div
-                    className={clsx(
-                      'flex h-10 w-10 items-center justify-center rounded-full transition-colors',
-                      c.is_default
-                        ? 'bg-pixs-mint text-slate-900'
-                        : 'bg-slate-50 text-slate-300 group-hover:text-slate-400',
-                    )}
-                  >
-                    {c.is_default ? (
-                      <FiCheckCircle size={20} />
-                    ) : (
-                      <FiPhone size={18} />
-                    )}
-                  </div>
-                  <div>
-                    <p
-                      className={clsx(
-                        'text-sm font-black',
-                        c.is_default ? 'text-slate-900' : 'text-slate-600',
-                      )}
-                    >
-                      {c.number}
-                    </p>
-                    {c.is_default === true && (
-                      <span className="text-pixs-mint text-[8px] font-black tracking-widest uppercase">
-                        Active Primary
-                      </span>
-                    )}
-                  </div>
-                </button>
-              ))}
+                  {c.number}
+                </p>
+                {c.is_default && (
+                  <span className="text-pixs-mint text-[8px] font-black tracking-widest uppercase">
+                    Active Primary
+                  </span>
+                )}
+              </div>
+            </button>
+          ))}
+        </div>
+
+        {isAddingContact && (
+          <div className="animate-in zoom-in rounded-[32px] border border-dashed border-slate-200 bg-slate-50 p-6 duration-300">
+            <PhoneInputGroup
+              label="Mobile Number"
+              value={newContact}
+              onChange={(v) => setNewContact(v || '')}
+              error={contactError}
+            />
+            <div className="mt-4 flex gap-3">
+              <button
+                onClick={handleAddContact}
+                className="flex-1 rounded-2xl bg-slate-900 py-4 text-[10px] font-black tracking-widest text-white uppercase italic"
+              >
+                Add Number
+              </button>
+              <button
+                onClick={() => setIsAddingContact(false)}
+                className="rounded-2xl border border-slate-200 bg-white px-6 text-[10px] font-black tracking-widest text-slate-400 uppercase"
+              >
+                Cancel
+              </button>
             </div>
           </div>
+        )}
+      </section>
 
-          {isAddingContact && (
-            <div className="AddContactForm animate-in zoom-in rounded-[32px] border border-dashed border-slate-200 bg-slate-50 p-8 duration-300">
-              <PhoneInputGroup
-                label="Mobile Number"
-                value={newContact}
-                onChange={(v) => setNewContact(v || '')}
-                error={contactError}
-              />
-              <div className="mt-6 flex gap-4">
+      {/* ─── Divider ──────────────────────────────────────────────────────── */}
+      <div className="my-8 border-t border-slate-100" />
+
+      {/* ─── Security Section ─────────────────────────────────────────────── */}
+      <section className="space-y-6">
+        <div>
+          <h2 className="text-lg font-black tracking-tighter text-slate-800 uppercase italic">
+            Security & Credentials
+          </h2>
+          <p className="text-[10px] font-black tracking-[4px] text-slate-400 uppercase">
+            Manage your password and email address
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          {/* ── Change Password ── */}
+          <button
+            onClick={() => setPasswordChangeStep('confirm')}
+            className="flex items-center gap-4 rounded-[28px] border-2 border-transparent bg-slate-900 p-5 text-left text-white transition-all hover:scale-[1.02] active:scale-95 md:p-6"
+          >
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/10">
+              <FiLock size={22} />
+            </div>
+            <div>
+              <p className="text-sm font-black tracking-wider uppercase italic">
+                Change Password
+              </p>
+              <p className="text-[9px] font-bold tracking-widest text-slate-400 uppercase">
+                Verify via email code
+              </p>
+            </div>
+          </button>
+
+          {/* ── Change Email ── */}
+          <button
+            onClick={() =>
+              setEmailChangeStep(
+                emailChangeStep === 'idle' ? 'options' : 'idle',
+              )
+            }
+            className="flex items-center gap-4 rounded-[28px] border-2 border-slate-200 bg-white p-5 text-left transition-all hover:border-slate-900 active:scale-95 md:p-6"
+          >
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-slate-100">
+              <FiMail size={22} className="text-slate-600" />
+            </div>
+            <div>
+              <p className="text-sm font-black tracking-wider text-slate-900 uppercase italic">
+                Change Email
+              </p>
+              <p className="text-[9px] font-bold tracking-widest text-slate-400 uppercase truncate">
+                {defaultAccount.email}
+              </p>
+            </div>
+          </button>
+        </div>
+
+        {/* ── Email Change Options ── */}
+        <AnimatePresence>
+          {emailChangeStep === 'options' && (
+            <m.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="overflow-hidden"
+            >
+              <div className="rounded-[28px] border border-slate-100 bg-slate-50 p-6 space-y-4">
+                <p className="text-[10px] font-black tracking-[3px] text-slate-500 uppercase italic">
+                  Choose how to change your email
+                </p>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <button
+                    onClick={() => navigate('/chat')}
+                    className="flex items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 text-left transition-all hover:border-slate-900 active:scale-95"
+                  >
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-50">
+                      <FiMessageCircle size={20} className="text-amber-600" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-black tracking-wider text-slate-900 uppercase italic">
+                        Chat with Admin
+                      </p>
+                      <p className="text-[8px] font-bold tracking-widest text-slate-400 uppercase">
+                        No email access? Talk to support
+                      </p>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => setEmailChangeStep('verify')}
+                    className="flex items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 text-left transition-all hover:border-slate-900 active:scale-95"
+                  >
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50">
+                      <FiSend size={20} className="text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-black tracking-wider text-slate-900 uppercase italic">
+                        Verify via Email
+                      </p>
+                      <p className="text-[8px] font-bold tracking-widest text-slate-400 uppercase">
+                        Send code to current email
+                      </p>
+                    </div>
+                  </button>
+                </div>
                 <button
-                  onClick={handleAddContact}
-                  className="flex-1 rounded-2xl bg-slate-900 py-4 text-[10px] font-black tracking-widest text-white uppercase italic"
+                  onClick={() => setEmailChangeStep('idle')}
+                  className="w-full text-center text-[10px] font-black tracking-widest text-slate-400 uppercase italic hover:text-slate-600 transition-colors"
                 >
-                  Add Number
+                  Cancel
+                </button>
+              </div>
+            </m.div>
+          )}
+        </AnimatePresence>
+
+        {/* ── Authenticator ── */}
+        <AnimatePresence>
+          {emailChangeStep === 'verify' && (
+            <m.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+            >
+              <Authenticator
+                email={defaultAccount.email}
+                codeType="change_email"
+                onSuccess={handleEmailVerifySuccess}
+                onCancel={() => setEmailChangeStep('options')}
+                autoSend
+              />
+            </m.div>
+          )}
+        </AnimatePresence>
+
+        {/* ── New Email Input ── */}
+        <AnimatePresence>
+          {emailChangeStep === 'new-email' && (
+            <m.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+              className="rounded-[28px] border border-slate-100 bg-slate-50 p-6 space-y-4"
+            >
+              <p className="text-[10px] font-black tracking-[3px] text-slate-500 uppercase italic">
+                Enter your new email address
+              </p>
+              <div className="relative">
+                <FiMail
+                  size={16}
+                  className="absolute top-1/2 left-4 -translate-y-1/2 text-slate-400"
+                />
+                <input
+                  type="email"
+                  value={newEmail}
+                  onChange={(e) => setNewEmail(e.target.value)}
+                  placeholder="new@email.com"
+                  className="w-full rounded-2xl border border-slate-200 bg-white py-4 pr-4 pl-11 text-sm font-bold text-slate-800 italic outline-none transition-all focus:border-slate-900"
+                />
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={handleUpdateEmail}
+                  disabled={isUpdatingEmail}
+                  className="flex-1 rounded-2xl bg-slate-900 py-4 text-[10px] font-black tracking-widest text-white uppercase italic transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-40"
+                >
+                  {isUpdatingEmail ? (
+                    <FiRefreshCw className="mx-auto animate-spin" />
+                  ) : (
+                    'Update Email'
+                  )}
                 </button>
                 <button
-                  onClick={() => setIsAddingContact(false)}
+                  onClick={() => {
+                    setEmailChangeStep('idle')
+                    setNewEmail('')
+                  }}
                   className="rounded-2xl border border-slate-200 bg-white px-6 text-[10px] font-black tracking-widest text-slate-400 uppercase"
                 >
                   Cancel
                 </button>
               </div>
-            </div>
+            </m.div>
           )}
-        </div>
-      </section>
+        </AnimatePresence>
 
-      {/* ─── Password Security ───────────────────────────────────────────────── */}
-      <section className="PasswordSection relative overflow-hidden rounded-[44px] bg-slate-900 p-10 shadow-2xl shadow-slate-900/40">
-        <div className="mb-12 flex items-center gap-6 border-b border-white/5 pb-8">
-          <div className="flex h-16 w-16 items-center justify-center rounded-[28px] border border-white/10 bg-white/5">
-            <FiShield className="text-rose-500" size={32} />
-          </div>
-          <div>
-            <h2 className="text-3xl font-black tracking-tighter text-white uppercase italic">
-              Security & Password
-            </h2>
-            <p className="text-[10px] font-black tracking-[4px] text-slate-500 uppercase">
-              Update your account credentials
-            </p>
-          </div>
-        </div>
-
-        {/* Verification Flow */}
-        {otp.step === 'method' && (
-          <div className="VerificationMethodSection animate-in slide-in-from-left space-y-8 duration-500">
-            <p className="text-[10px] font-black tracking-[2px] text-slate-300 uppercase italic">
-              Verify your identity to change password
-            </p>
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-              <button
-                onClick={() => otp.sendCode('email')}
-                className="VerificationOption group hover:border-pixs-mint/40 rounded-[32px] border border-white/10 bg-white/5 p-8 text-left transition-all"
-              >
-                <FiMail className="text-pixs-mint mb-4" size={24} />
-                <h4 className="text-sm font-black tracking-widest text-white uppercase italic">
-                  Via Email
-                </h4>
-                <p className="mt-1 text-[9px] font-bold tracking-widest text-slate-500 uppercase">
-                  To {defaultAccount.email}
+        {/* ── Password Change: Confirmation ── */}
+        <AnimatePresence>
+          {passwordChangeStep === 'confirm' && (
+            <m.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+              className="rounded-[28px] border border-slate-100 bg-slate-50 p-6 space-y-4"
+            >
+              <div>
+                <p className="text-[10px] font-black tracking-[3px] text-slate-500 uppercase italic">
+                  Confirm Password Change
                 </p>
-              </button>
-
-              <div className="group relative">
-                <div className="hover:border-pixs-mint/40 rounded-[32px] border border-white/10 bg-white/5 p-8 transition-all">
-                  <FiPhone className="mb-4 text-amber-500" size={24} />
-                  <h4 className="text-sm font-black tracking-widest text-white uppercase italic">
-                    Via SMS
-                  </h4>
-                  <select
-                    className="mt-2 w-full cursor-pointer border-b border-white/10 bg-transparent pb-2 text-[10px] font-black tracking-widest text-slate-300 uppercase outline-none"
-                    onChange={() => otp.sendCode('sms')}
-                  >
-                    <option className="bg-slate-900" value="">
-                      Select phone number...
-                    </option>
-                    {contacts.map((c, i) => (
-                      <option className="bg-slate-900" key={i} value={c.number}>
-                        {c.number}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <p className="text-sm text-slate-600 mt-2">
+                  We'll send a verification code to:
+                </p>
+                <p className="text-sm font-bold text-slate-900 mt-1">{defaultAccount.email}</p>
               </div>
-            </div>
-          </div>
-        )}
+              <div className="flex gap-3">
+                <button
+                  onClick={handleSendPasswordCode}
+                  disabled={passwordChangeCooldown > 0}
+                  className="flex-1 rounded-2xl bg-slate-900 py-4 text-[10px] font-black tracking-widest text-white uppercase italic transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-40 flex items-center justify-center gap-2"
+                >
+                  {passwordChangeCooldown > 0 ? (
+                    `Wait ${passwordChangeCooldown}s`
+                  ) : (
+                    <>
+                      <FiSend size={14} />
+                      Send Code
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={() => setPasswordChangeStep('idle')}
+                  className="rounded-2xl border border-slate-200 bg-white px-6 text-[10px] font-black tracking-widest text-slate-400 uppercase"
+                >
+                  Cancel
+                </button>
+              </div>
+            </m.div>
+          )}
+        </AnimatePresence>
 
-        {otp.step === 'otp' && (
-          <div className="OTPInputSection animate-in zoom-in space-y-10 text-center duration-500">
-            <div className="space-y-4">
-              <h3 className="text-2xl font-black tracking-tighter text-white uppercase italic">
-                Enter Verification Code
-              </h3>
-              <p className="text-pixs-mint text-[10px] font-black tracking-[3px] uppercase">
-                Sent to your {otp.method?.toUpperCase()}
+        {/* ── Password Change: Authenticator ── */}
+        <AnimatePresence>
+          {passwordChangeStep === 'verify' && (
+            <m.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+            >
+              <Authenticator
+                email={defaultAccount.email}
+                codeType="change_password"
+                onSuccess={handlePasswordVerifySuccess}
+                onCancel={() => setPasswordChangeStep('confirm')}
+                autoSend
+              />
+            </m.div>
+          )}
+        </AnimatePresence>
+
+        {/* ── Password Change: Reset ── */}
+        <AnimatePresence>
+          {passwordChangeStep === 'reset' && (
+            <m.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+              className="rounded-[28px] border border-slate-100 bg-slate-50 p-6 space-y-4"
+            >
+              <div>
+                <h3 className="text-lg font-black tracking-tighter text-slate-900 uppercase italic">
+                  Set New Password
+                </h3>
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">
+                  Choose a strong password for your account
+                </p>
+              </div>
+
+              <form onSubmit={handleConfirmPasswordChange} className="space-y-4">
+                <div className="relative">
+                  <input
+                    type={showNewPassword ? 'text' : 'password'}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="New Password"
+                    className="w-full rounded-2xl border border-slate-200 bg-white px-5 py-4 pr-12 text-sm font-semibold text-slate-800 italic outline-none focus:border-slate-900 transition-all"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  >
+                    {showNewPassword ? <FiEyeOff size={18} /> : <FiEye size={18} />}
+                  </button>
+                </div>
+
+                {newPassword && (
+                  <>
+                    <div className="space-y-2">
+                      <div className="flex gap-4 text-[11px] font-bold flex-wrap">
+                        {[
+                          { label: '8+ characters', check: passwordChecks.minLength },
+                          { label: 'Uppercase letter', check: passwordChecks.hasUpper },
+                          { label: 'Number', check: passwordChecks.hasNumber },
+                          { label: 'Special character', check: passwordChecks.hasSpecial },
+                        ].map(({ label, check }) => (
+                          <span
+                            key={label}
+                            className={`flex items-center gap-1 ${check ? 'text-emerald-600' : 'text-slate-400'}`}
+                          >
+                            {check ? <FiCheckCircle size={12} /> : <FiX size={12} />}
+                            {label}
+                          </span>
+                        ))}
+                      </div>
+
+                      <div className="h-1.5 w-full rounded-full bg-slate-100 overflow-hidden">
+                        <m.div
+                          layout
+                          className={`h-full rounded-full ${strengthColor}`}
+                          style={{ width: strengthWidth }}
+                          transition={{ duration: 0.3 }}
+                        />
+                      </div>
+                      <p className={`text-[10px] font-black uppercase italic tracking-wider ${
+                        passwordStrength === 'weak' ? 'text-red-500' : passwordStrength === 'medium' ? 'text-amber-500' : 'text-emerald-500'
+                      }`}>
+                        {passwordStrength === 'weak' ? 'Weak' : passwordStrength === 'medium' ? 'Medium' : 'Strong'}
+                      </p>
+                    </div>
+
+                    <div className="relative">
+                      <input
+                        type={showConfirmNewPassword ? 'text' : 'password'}
+                        value={confirmNewPassword}
+                        onChange={(e) => setConfirmNewPassword(e.target.value)}
+                        placeholder="Confirm Password"
+                        className={`w-full rounded-2xl border bg-white px-5 py-4 pr-12 text-sm font-semibold italic outline-none transition-all focus:bg-white ${
+                          confirmNewPassword && newPassword !== confirmNewPassword
+                            ? 'border-rose-500'
+                            : confirmNewPassword
+                              ? 'border-emerald-500'
+                              : 'border-slate-200 focus:border-slate-900'
+                        }`}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmNewPassword(!showConfirmNewPassword)}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      >
+                        {showConfirmNewPassword ? <FiEyeOff size={18} /> : <FiEye size={18} />}
+                      </button>
+                    </div>
+                    {confirmNewPassword && newPassword !== confirmNewPassword && (
+                      <p className="text-[10px] font-black text-rose-500 uppercase italic flex items-center gap-1">
+                        <FiAlertTriangle size={12} />
+                        Passwords do not match
+                      </p>
+                    )}
+                  </>
+                )}
+
+                {passwordChangeError && (
+                  <p className="text-center text-xs font-black text-rose-500 uppercase italic flex items-center justify-center gap-2">
+                    <FiAlertTriangle size={14} />
+                    {passwordChangeError}
+                  </p>
+                )}
+
+                <div className="flex gap-3 pt-2">
+                  <button
+                    type="submit"
+                    disabled={isChangingPassword || !newPassword || newPassword !== confirmNewPassword}
+                    className="flex-1 rounded-2xl bg-emerald-600 py-4 text-[10px] font-black tracking-widest text-white uppercase italic shadow-xl transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-40 flex items-center justify-center gap-2"
+                  >
+                    {isChangingPassword ? (
+                      <>
+                        <FiRefreshCw size={14} className="animate-spin" />
+                        Changing...
+                      </>
+                    ) : (
+                      <>
+                        <FiCheckCircle size={14} />
+                        Change Password
+                      </>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPasswordChangeStep('confirm')
+                      setNewPassword('')
+                      setConfirmNewPassword('')
+                      setPasswordChangeError(null)
+                    }}
+                    className="rounded-2xl border border-slate-200 bg-white px-6 text-[10px] font-black tracking-widest text-slate-400 uppercase"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </m.div>
+          )}
+        </AnimatePresence>
+
+        {/* ── Password Change: Success ── */}
+        <AnimatePresence>
+          {passwordChangeStep === 'success' && (
+            <m.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="rounded-[28px] border border-slate-100 bg-slate-50 p-6 text-center"
+            >
+              <div className="mb-4 flex justify-center">
+                <FiCheckCircle size={64} className="text-emerald-500" />
+              </div>
+              <h2 className="text-lg font-black tracking-tighter text-slate-900 uppercase italic mb-2">
+                Password Changed Successfully
+              </h2>
+              <p className="text-sm text-slate-500">
+                Your password has been updated and you are still logged in
               </p>
-            </div>
+            </m.div>
+          )}
+        </AnimatePresence>
+      </section>
+      <AnimatePresence>
+        {isCropping && tempImage && (
+          <div className="fixed inset-0 z-[600] flex items-center justify-center bg-slate-900/90 backdrop-blur-xl">
+            <m.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="relative w-full max-w-2xl overflow-hidden rounded-[48px] bg-white p-10 shadow-2xl"
+            >
+              <div className="mb-8 flex items-center justify-between">
+                <div>
+                  <h3 className="text-2xl font-black tracking-tighter text-slate-900 uppercase italic">
+                    Edit Profile Picture
+                  </h3>
+                  <p className="text-[10px] font-black tracking-[4px] text-slate-400 uppercase">
+                    Crop and align your identity node
+                  </p>
+                </div>
+                <button
+                  onClick={() => setIsCropping(false)}
+                  className="text-slate-400 hover:text-slate-900"
+                >
+                  <FiX size={24} />
+                </button>
+              </div>
 
-            <div className="flex flex-col items-center gap-6">
-              <div className="focus-within:border-pixs-mint rounded-[32px] border-2 border-white/10 bg-white/5 p-2 transition-all">
-                <input
-                  type="text"
-                  maxLength={6}
-                  value={otpInput}
-                  onChange={(e) =>
-                    setOtpInput(e.target.value.replace(/\D/g, ''))
-                  }
-                  className="caret-pixs-mint w-64 bg-transparent text-center text-5xl font-black tracking-[12px] text-white outline-none"
-                  disabled={otp.isLocked}
-                  placeholder="000000"
+              <div className="relative h-[400px] w-full overflow-hidden rounded-[32px] bg-slate-100">
+                <Cropper
+                  image={tempImage}
+                  crop={crop}
+                  zoom={zoom}
+                  aspect={1}
+                  onCropChange={setCrop}
+                  onCropComplete={onCropComplete}
+                  onZoomChange={setZoom}
+                  cropShape="round"
+                  showGrid={false}
                 />
               </div>
 
-              {otp.isLocked ? (
-                <div className="flex items-center gap-3 text-rose-500 italic">
-                  <FiAlertCircle size={18} />
-                  <span className="text-[10px] font-black tracking-widest uppercase">
-                    Try again in 30 seconds
-                  </span>
+              <div className="mt-10 space-y-8">
+                <div className="space-y-4">
+                  <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    <span>Zoom Level</span>
+                    <span>{Math.round(zoom * 100)}%</span>
+                  </div>
+                  <input
+                    type="range"
+                    value={zoom}
+                    min={1}
+                    max={3}
+                    step={0.1}
+                    aria-labelledby="Zoom"
+                    onChange={(e) => setZoom(Number(e.target.value))}
+                    className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-slate-100 accent-slate-900"
+                  />
                 </div>
-              ) : (
-                <button
-                  onClick={() => otp.verifyOTP(otpInput)}
-                  className="bg-pixs-mint rounded-[24px] px-12 py-5 text-[10px] font-black tracking-[4px] text-slate-900 uppercase italic transition-all hover:scale-105 active:scale-95"
-                >
-                  Verify Identity
-                </button>
-              )}
-            </div>
+
+                <div className="flex gap-4">
+                  <button
+                    onClick={() => setIsCropping(false)}
+                    className="flex-1 rounded-2xl border border-slate-100 py-5 text-[10px] font-black uppercase tracking-[4px] text-slate-400 italic transition-all hover:bg-slate-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleApplyCrop}
+                    disabled={isUploading}
+                    className="flex-1 flex items-center justify-center gap-3 rounded-2xl bg-slate-900 py-5 text-[10px] font-black tracking-[4px] text-white uppercase italic shadow-xl transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50"
+                  >
+                    {isUploading ? (
+                      <FiRefreshCw className="animate-spin" />
+                    ) : (
+                      <FiCheckCircle />
+                    )}
+                    Apply & Save
+                  </button>
+                </div>
+              </div>
+            </m.div>
           </div>
         )}
-
-        {otp.step === 'verified' && (
-          <form
-            onSubmit={handlePassSubmit(handlePasswordResetComplete)}
-            className="animate-in slide-in-from-bottom-8 space-y-10 duration-700"
-          >
-            <div className="grid grid-cols-1 gap-10 md:grid-cols-2">
-              <div className="space-y-6">
-                <div className="relative">
-                  <FiLock
-                    size={16}
-                    className="absolute top-1/2 left-6 -translate-y-1/2 text-slate-600"
-                  />
-                  <input
-                    type={showNewPass ? 'text' : 'password'}
-                    {...regPass('newPassword')}
-                    placeholder="New Password"
-                    className="focus:border-pixs-mint w-full rounded-[28px] border border-white/10 bg-white/5 py-6 pr-16 pl-16 text-sm font-bold text-white italic transition-all outline-none"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowNewPass(!showNewPass)}
-                    className="absolute top-1/2 right-6 -translate-y-1/2 text-slate-600 hover:text-white"
-                  >
-                    {showNewPass ? <FiEyeOff size={18} /> : <FiEye size={18} />}
-                  </button>
-                </div>
-                {passErrors.newPassword && (
-                  <p className="px-4 text-[9px] font-black text-rose-500 uppercase italic">
-                    {passErrors.newPassword.message}
-                  </p>
-                )}
-
-                <div className="space-y-3 px-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[8px] font-black tracking-widest text-slate-500 uppercase">
-                      Security Strength
-                    </span>
-                    <span
-                      className={clsx(
-                        'text-[8px] font-black tracking-widest uppercase italic',
-                        strengthInfo.color,
-                      )}
-                    >
-                      {strengthInfo.label}
-                    </span>
-                  </div>
-                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/5">
-                    <div
-                      className={clsx(
-                        'h-full transition-all duration-700',
-                        strengthInfo.bar,
-                      )}
-                      style={{ width: `${strength}%` }}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-6">
-                <div className="relative">
-                  <FiLock
-                    size={16}
-                    className="absolute top-1/2 left-6 -translate-y-1/2 text-slate-600"
-                  />
-                  <input
-                    type={showConfirmPass ? 'text' : 'password'}
-                    {...regPass('confirmPassword')}
-                    onPaste={(e) => e.preventDefault()}
-                    placeholder="Confirm Password"
-                    className="focus:border-pixs-mint w-full rounded-[28px] border border-white/10 bg-white/5 py-6 pr-16 pl-16 text-sm font-bold text-white italic transition-all outline-none"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPass(!showConfirmPass)}
-                    className="absolute top-1/2 right-6 -translate-y-1/2 text-slate-600 hover:text-white"
-                  >
-                    {showConfirmPass ? (
-                      <FiEyeOff size={18} />
-                    ) : (
-                      <FiEye size={18} />
-                    )}
-                  </button>
-                </div>
-                {passErrors.confirmPassword && (
-                  <p className="px-4 text-[9px] font-black text-rose-500 uppercase italic">
-                    {passErrors.confirmPassword.message}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            <div className="flex justify-end border-t border-white/5 pt-6">
-              <button
-                type="submit"
-                disabled={isSubmittingPass}
-                className="rounded-[32px] bg-rose-500 px-16 py-6 text-sm font-black tracking-[6px] text-white uppercase italic shadow-2xl shadow-rose-900/50 transition-all hover:scale-105 active:scale-95 disabled:opacity-40"
-              >
-                {isSubmittingPass ? 'Saving...' : 'Update Password'}
-              </button>
-            </div>
-          </form>
-        )}
-      </section>
+      </AnimatePresence>
     </div>
   )
 }

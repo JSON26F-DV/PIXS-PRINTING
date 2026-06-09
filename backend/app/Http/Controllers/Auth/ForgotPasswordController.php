@@ -88,6 +88,38 @@ class ForgotPasswordController extends Controller
         ]);
     }
 
+    public function verifyChangePasswordCode(Request $request): JsonResponse
+    {
+        $request->validate([
+            'code' => 'required|string|size:6',
+        ]);
+
+        $user = $request->user();
+        if (! $user) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Unauthorized',
+            ], 401);
+        }
+
+        $email = strtolower($user->email);
+        $result = $this->verificationService->verifyCode($email, 'change_password', $request->code);
+
+        if (! $result['success']) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $result['message'],
+                'locked' => $result['locked'] ?? false,
+                'locked_until' => $result['locked_until'] ?? null,
+            ], $result['locked'] ? 429 : 400);
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Code verified successfully.',
+        ]);
+    }
+
     public function resetPassword(Request $request): JsonResponse
     {
         $request->validate([
@@ -126,6 +158,83 @@ class ForgotPasswordController extends Controller
         return response()->json([
             'status' => 'success',
             'message' => 'Password has been reset successfully.',
+        ]);
+    }
+
+    public function sendChangePasswordCode(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        if (! $user) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Unauthorized',
+            ], 401);
+        }
+
+        $email = strtolower($user->email);
+
+        $canResend = $this->verificationService->canResend($email, 'change_password');
+        if (! $canResend['can_resend']) {
+            return response()->json([
+                'status' => 'error',
+                'message' => "Please wait {$canResend['cooldown_remaining']} seconds before requesting a new code.",
+            ], 429);
+        }
+
+        $code = $this->verificationService->generateCode($email, 'change_password');
+
+        $sent = $this->mailService->sendVerificationCode($email, $code, 'change_password');
+
+        if (! $sent) {
+            $this->verificationService->clearCode($email, 'change_password');
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to send verification code. Please try again.',
+            ], 500);
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Verification code sent to your email.',
+        ]);
+    }
+
+    public function confirmChangePassword(Request $request): JsonResponse
+    {
+        $request->validate([
+            'code' => 'required|string|size:6',
+            'password' => 'required|string|min:8|confirmed',
+        ]);
+
+        $user = $request->user();
+        if (! $user) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Unauthorized',
+            ], 401);
+        }
+
+        $email = strtolower($user->email);
+
+        $result = $this->verificationService->checkCode($email, 'change_password', $request->code);
+        if (! $result['success']) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $result['message'],
+            ], 400);
+        }
+
+        $user->password = Hash::make($request->password);
+        $user->save();
+
+        $this->verificationService->clearCode($email, 'change_password');
+
+        $this->mailService->sendVerificationCode($email, '', 'password_changed');
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Password has been changed successfully.',
         ]);
     }
 }

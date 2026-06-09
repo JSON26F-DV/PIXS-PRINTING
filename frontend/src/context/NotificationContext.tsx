@@ -48,19 +48,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({
 
   useEffect(() => {
     if (!isLoggedIn) return
-
-    const timer = setTimeout(() => {
-      refreshNotifications()
-    }, 0)
-
-    const interval = setInterval(() => {
-      refreshNotifications()
-    }, 15000)
-
-    return () => {
-      clearTimeout(timer)
-      clearInterval(interval)
-    }
+    refreshNotifications()
   }, [isLoggedIn, refreshNotifications])
 
   // Derive effective notifications — if user is logged out, always return empty

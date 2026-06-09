@@ -376,6 +376,9 @@ Route::middleware(['auth:sanctum', 'role:customer', 'throttle:api'])->prefix('ca
 Route::middleware(['auth:sanctum', 'role:customer', 'throttle:sensitive'])->prefix('settings')->group(function () {
     Route::post('/profile-picture', [CustomerController::class, 'updateProfilePicture']);
     Route::patch('/password', [CustomerController::class, 'updatePassword']);
+    Route::post('/change-password/send-code', [ForgotPasswordController::class, 'sendChangePasswordCode']);
+    Route::post('/change-password/verify', [ForgotPasswordController::class, 'verifyChangePasswordCode']);
+    Route::post('/change-password/confirm', [ForgotPasswordController::class, 'confirmChangePassword']);
 });
 
 Route::middleware(['throttle:api'])->group(function () {
