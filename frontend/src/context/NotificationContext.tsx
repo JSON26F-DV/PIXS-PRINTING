@@ -48,6 +48,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({
 
   useEffect(() => {
     if (!isLoggedIn) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     refreshNotifications()
   }, [isLoggedIn, refreshNotifications])
 

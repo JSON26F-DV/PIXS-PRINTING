@@ -33,7 +33,7 @@ const AccountInfoPage: React.FC = () => {
     updateProfile,
     isLoading,
   } = useAccountInfo()
-  const { user, isLoading: authLoading } = useAuth()
+  const { user, isLoading: authLoading, logout } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
 
@@ -235,25 +235,14 @@ const AccountInfoPage: React.FC = () => {
   const handleConfirmChangePassword = async () => {
     const email = defaultAccount.email
     setShowPasswordModal(false)
-    
-    // Clear session credentials synchronously to prevent routing race conditions
-    const token = localStorage.getItem('pixs_token')
-    localStorage.removeItem('pixs_token')
-    localStorage.removeItem('pixs_user')
-    
-    // Silence backend invalidation in the background using native fetch
-    if (token) {
-      fetch('/api/auth/logout', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/json',
-        },
-      }).catch(() => {})
-    }
-    
-    // Hard redirect to clear context state and render public forgot-password route
-    window.location.href = `/forgot-password?email=${encodeURIComponent(email)}`
+
+    // Use proper logout from AuthContext
+    await logout()
+
+    // CRITICAL: Use setTimeout to override logout's internal navigate('/login')
+    setTimeout(() => {
+      navigate(`/forgot-password?email=${encodeURIComponent(email)}`)
+    }, 100)
   }
 
   if (

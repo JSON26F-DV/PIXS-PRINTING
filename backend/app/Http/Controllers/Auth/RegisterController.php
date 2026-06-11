@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\Customer;
+use App\Models\CustomerAddress;
 use App\Models\DeletedAccount;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
@@ -59,6 +60,13 @@ class RegisterController extends Controller
             'age' => ['nullable', 'integer', 'min:1', 'max:120'],
             'gender' => ['nullable', 'in:male,female,other'],
             'company_name' => ['nullable', 'string', 'max:255'],
+            'phone' => ['required', 'string', 'regex:/^(\+63|0)\s?9(\s?\d){9}$/'],
+            'street' => ['required', 'string', 'min:3', 'max:255'],
+            'region' => ['required', 'string', 'max:100'],
+            'province' => ['required', 'string', 'max:100'],
+            'city' => ['required', 'string', 'max:100'],
+            'barangay' => ['required', 'string', 'max:100'],
+            'postal_code' => ['nullable', 'string', 'max:10'],
             // Role is never accepted from the client — always customer for self-registration.
             'role' => ['prohibited'],
         ]);
@@ -92,7 +100,7 @@ class RegisterController extends Controller
             $nextNum = $lastId ? ((int) substr($lastId, 5)) + 1 : 1;
             $newId = 'CUST-'.str_pad($nextNum, 3, '0', STR_PAD_LEFT);
 
-            return Customer::create([
+            $cust = Customer::create([
                 'id' => $newId,
                 'first_name' => $request->first_name,
                 'last_name' => $request->last_name,
@@ -105,6 +113,29 @@ class RegisterController extends Controller
                 'status' => 'active',
                 'date_created' => now(),
             ]);
+
+            // Save contact number
+            $cust->contacts()->create([
+                'number' => $request->phone,
+                'is_default' => true,
+            ]);
+
+            // Save address
+            $newAddrId = CustomerAddress::generateNextId();
+            $cust->addresses()->create([
+                'id' => $newAddrId,
+                'adress_label' => 'Home',
+                'contact_number' => $request->phone,
+                'street' => $request->street,
+                'region' => $request->region,
+                'province' => $request->province,
+                'city' => $request->city,
+                'barangay' => $request->barangay,
+                'postal_code' => $request->postal_code,
+                'is_default' => true,
+            ]);
+
+            return $cust;
         });
 
         RateLimiter::clear($rateLimitKey);
@@ -141,7 +172,10 @@ class RegisterController extends Controller
             return response()->json(['message' => 'Invalid provider'], 400);
         }
 
-        return Socialite::driver($provider)->stateless()->redirect();
+        /** @var \Laravel\Socialite\Two\AbstractProvider $driver */
+        $driver = Socialite::driver($provider);
+
+        return $driver->stateless()->redirect();
     }
 
     /**
@@ -154,7 +188,9 @@ class RegisterController extends Controller
         }
 
         try {
-            $socialUser = Socialite::driver($provider)->stateless()->user();
+            /** @var \Laravel\Socialite\Two\AbstractProvider $driver */
+            $driver = Socialite::driver($provider);
+            $socialUser = $driver->stateless()->user();
         } catch (\Exception $e) {
             return redirect(config('app.frontend_url').'/login?error=oauth_failed');
         }

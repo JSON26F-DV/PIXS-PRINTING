@@ -90,6 +90,17 @@ export interface RegisterFormData {
   age?: number
   gender?: 'male' | 'female' | 'other'
   company_name?: string
+  phone: string
+  street: string
+  region: string
+  province: string
+  city: string
+  barangay: string
+  postal_code?: string
+  regionCode?: string
+  provinceCode?: string
+  municipalityCode?: string
+  barangayCode?: string
 }
 
 interface AuthContextType {
@@ -304,6 +315,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         email: formData.email.trim().toLowerCase(),
         password: formData.password,
         password_confirmation: formData.password_confirmation,
+        phone: formData.phone,
+        street: formData.street,
+        region: formData.region,
+        province: formData.province,
+        city: formData.city,
+        barangay: formData.barangay,
       }
       if (formData.age != null && formData.age > 0) {
         payload.age = formData.age
@@ -313,6 +330,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       }
       if (formData.company_name?.trim()) {
         payload.company_name = formData.company_name.trim()
+      }
+      if (formData.postal_code) {
+        payload.postal_code = formData.postal_code
+      }
+      if (formData.regionCode) {
+        payload.regionCode = formData.regionCode
+      }
+      if (formData.provinceCode) {
+        payload.provinceCode = formData.provinceCode
+      }
+      if (formData.municipalityCode) {
+        payload.municipalityCode = formData.municipalityCode
+      }
+      if (formData.barangayCode) {
+        payload.barangayCode = formData.barangayCode
       }
 
       const res = await axiosInstance.post<AuthSuccessPayload>(

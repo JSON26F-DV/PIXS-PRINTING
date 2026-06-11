@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { FiPlus } from 'react-icons/fi'
+import { FiPlus, FiEdit2, FiTrash2, FiCheck } from 'react-icons/fi'
 import type { SingleValue } from 'react-select'
 import Select from 'react-select'
 import axiosInstance from '../../../lib/axiosInstance'
@@ -83,7 +83,7 @@ const AddressBookSection: React.FC = () => {
     resolver: zodResolver(formSchema),
     mode: 'onChange',
     defaultValues: {
-      address_name: '',
+      address_name: 'Home',
       phone: '',
       street: '',
       postal_code: '',
@@ -142,9 +142,10 @@ const AddressBookSection: React.FC = () => {
 
   const openAddForm = useCallback(() => {
     setEditingAddress(null)
+    const defaultContact = defaultAccount.contacts.find((c) => c.is_default)?.number || ''
     reset({
-      address_name: '',
-      phone: '',
+      address_name: 'Home',
+      phone: defaultContact,
       street: '',
       postal_code: '',
     })
@@ -157,7 +158,7 @@ const AddressBookSection: React.FC = () => {
     setTimeout(() => {
       formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
     }, 100)
-  }, [reset])
+  }, [reset, defaultAccount.contacts])
 
   useEffect(() => {
     const editId = searchParams.get('edit')
@@ -315,7 +316,7 @@ const AddressBookSection: React.FC = () => {
   }
 
   return (
-    <section className="SettingsAddressBook space-y-6">
+    <section className="SettingsAddressBook space-y-6 pb-24 md:pb-0">
       <div className="flex items-center justify-between">
         <div className="space-y-1">
           <h2 className="text-2xl font-black tracking-tighter text-slate-900 uppercase italic">
@@ -327,11 +328,11 @@ const AddressBookSection: React.FC = () => {
         </div>
         <button
           type="button"
-          className="AddAddressButton rounded-3xl border border-white/10 bg-slate-900 px-5 py-3 text-[10px] font-black tracking-[4px] text-white uppercase italic shadow-2xl transition-all hover:scale-105 active:scale-95"
+          className="AddAddressButton flex items-center gap-2 rounded-3xl border border-white/10 bg-slate-900 px-5 py-3 text-[10px] font-black tracking-[4px] text-white uppercase italic shadow-2xl transition-all hover:scale-105 active:scale-95"
           onClick={openAddForm}
         >
-          <FiPlus className="mr-1 inline" size={14} />
-          Add Address
+          <FiPlus size={14} />
+          <span className="hidden md:inline">Add Address</span>
         </button>
       </div>
 
@@ -567,25 +568,28 @@ const AddressBookSection: React.FC = () => {
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
-                  className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-[10px] font-black tracking-widest text-slate-600 uppercase italic transition-all hover:border-slate-900"
+                  className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-[10px] font-black tracking-widest text-slate-600 uppercase italic transition-all hover:border-slate-900"
                   onClick={() => openEditForm(address)}
                 >
-                  Edit
+                  <FiEdit2 size={14} />
+                  <span className="hidden md:inline">Edit</span>
                 </button>
                 <button
                   type="button"
-                  className="rounded-xl border border-rose-100 bg-rose-50 px-3 py-1.5 text-[10px] font-black tracking-widest text-rose-600 uppercase italic transition-all hover:bg-rose-100"
+                  className="flex items-center justify-center gap-2 rounded-xl border border-rose-100 bg-rose-50 px-3 py-1.5 text-[10px] font-black tracking-widest text-rose-600 uppercase italic transition-all hover:bg-rose-100"
                   onClick={() => handleDelete(address.id)}
                 >
-                  Delete
+                  <FiTrash2 size={14} />
+                  <span className="hidden md:inline">Delete</span>
                 </button>
                 {!address.is_default && (
                   <button
                     type="button"
-                    className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-[10px] font-black tracking-widest text-slate-900 uppercase italic transition-all hover:bg-slate-50"
+                    className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-[10px] font-black tracking-widest text-slate-900 uppercase italic transition-all hover:bg-slate-50"
                     onClick={() => handleSetDefault(address.id)}
                   >
-                    Set Default
+                    <FiCheck size={14} />
+                    <span className="hidden md:inline">Set Default</span>
                   </button>
                 )}
               </div>

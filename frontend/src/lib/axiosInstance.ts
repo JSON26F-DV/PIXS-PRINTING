@@ -76,7 +76,7 @@ axiosInstance.interceptors.request.use((config) => {
   // Block request if we're in rate-limit cooldown
   if (isRateLimited) {
     const err = new Error('Too many requests. Please wait a moment and try again.')
-    ;(err as any).isRateLimited = true
+    ;(err as Error & { isRateLimited: boolean }).isRateLimited = true
     return Promise.reject(err)
   }
 

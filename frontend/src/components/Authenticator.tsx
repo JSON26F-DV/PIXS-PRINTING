@@ -52,9 +52,12 @@ const Authenticator: React.FC<AuthenticatorProps> = ({
     try {
       let endpoint = ''
 
+      let payload: Record<string, any> = {}
+
       switch (codeType) {
         case 'forgot_password':
           endpoint = '/api/auth/forgot-password/send-code'
+          payload = { email }
           break
         case 'delete_order':
           endpoint = '/api/admin/verification/send-order-delete-code'
@@ -70,9 +73,27 @@ const Authenticator: React.FC<AuthenticatorProps> = ({
           break
       }
 
-      const payload = codeType === 'forgot_password' ? { email } : {}
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          ...(localStorage.getItem('pixs_token') && codeType !== 'forgot_password' ? {
+            'Authorization': `Bearer ${localStorage.getItem('pixs_token')}`
+          } : {})
+        },
+        body: Object.keys(payload).length > 0 ? JSON.stringify(payload) : undefined
+      })
 
-      await axiosInstance.post(endpoint, payload)
+      if (!res.ok) {
+        let errData
+        try {
+          errData = await res.json()
+        } catch {
+          errData = {}
+        }
+        throw { response: { data: errData, status: res.status } }
+      }
 
       setRateLimit(prev => ({
         ...prev,
@@ -192,35 +213,41 @@ const Authenticator: React.FC<AuthenticatorProps> = ({
     try {
       const code = digits.join('')
 
+      let endpoint = ''
+      let payload: Record<string, any> = {}
+
       if (codeType === 'forgot_password' || codeType === 'change_email') {
-        const { data } = await axiosInstance.post('/api/auth/forgot-password/verify', {
-          email,
-          code,
-        })
-
-        if (data.status === 'success') {
-          setIsSuccess(true)
-          setTimeout(() => onSuccess(code), 1000)
-        }
+        endpoint = '/api/auth/forgot-password/verify'
+        payload = { email, code }
       } else if (codeType === 'change_password') {
-        const { data } = await axiosInstance.post('/api/settings/change-password/verify', {
-          code,
-        })
-
-        if (data.status === 'success') {
-          setIsSuccess(true)
-          setTimeout(() => onSuccess(code), 1000)
-        }
+        endpoint = '/api/settings/change-password/verify'
+        payload = { code }
       } else {
-        const { data } = await axiosInstance.post('/api/admin/verification/verify-code', {
-          code_type: codeType,
-          code,
-        })
+        endpoint = '/api/admin/verification/verify-code'
+        payload = { code_type: codeType, code }
+      }
 
-        if (data.status === 'success') {
-          setIsSuccess(true)
-          setTimeout(() => onSuccess(code), 1000)
-        }
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          ...(localStorage.getItem('pixs_token') && codeType !== 'forgot_password' ? {
+            'Authorization': `Bearer ${localStorage.getItem('pixs_token')}`
+          } : {})
+        },
+        body: JSON.stringify(payload)
+      })
+
+      const data = await res.json().catch(() => ({}))
+
+      if (!res.ok) {
+        throw { response: { data, status: res.status } }
+      }
+
+      if (data.status === 'success') {
+        setIsSuccess(true)
+        setTimeout(() => onSuccess(code), 1000)
       }
     } catch (err: unknown) {
       const axiosErr = err as { response?: { data?: { message?: string; locked?: boolean } } }

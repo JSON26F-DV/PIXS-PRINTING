@@ -18,7 +18,6 @@ export interface AccountInfo {
   profilePicture?: string
   default_contact?: string
   addresses?: unknown[]
-  payment_methods?: unknown[]
   discounts?: unknown[]
   age?: number | null
   gender?: string | null
@@ -50,7 +49,6 @@ export const useAccountInfo = () => {
           profilePicture: data.profile_picture || '',
           default_contact: data.default_contact || '',
           addresses: data.addresses || [],
-          payment_methods: data.payment_methods || [],
           discounts: data.discounts || [],
           age: data.age,
           gender: data.gender,

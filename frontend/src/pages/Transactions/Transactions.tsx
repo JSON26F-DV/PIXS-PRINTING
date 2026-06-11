@@ -60,9 +60,9 @@ export interface IOrderData {
     barangay: string
   }
   payment_method: {
-    id: string
-    type: string
-    masked_number: string
+    id: string  // Xendit payment ID
+    type: string  // 'gcash', 'card', 'bank_transfer', etc.
+    provider?: string  // Optional: 'xendit'
   }
   products: {
     product_id: string

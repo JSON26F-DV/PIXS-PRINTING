@@ -9,6 +9,7 @@ import {
   CheckCircle2,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { m, AnimatePresence } from 'framer-motion'
 import {
   getColors,
   getProductById,
@@ -494,7 +495,7 @@ const AddToCartPage: React.FC = () => {
           </div>
         ) : (
           // h-full so children can take remaining space; overflow-hidden prevents leaking
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_360px] pb-28 lg:pb-32">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_360px] pb-48 lg:pb-32">
 
             {/* LEFT: Product List */}
             <section className="CartProductList space-y-4">
@@ -543,25 +544,43 @@ const AddToCartPage: React.FC = () => {
                       </div>
                     )}
 
-                    <div className="flex flex-col gap-4 pl-8 md:flex-row md:items-start">
-                      <CartProductImage
-                        src={`/images/products/${item.productImage}`}
-                        alt={item.productName}
-                      />
+                    <div className="flex flex-col md:flex-row gap-4 pl-8 md:items-start">
+                      {/* Top Part: Image + Title/Variant on Mobile */}
+                      <div className="flex flex-row gap-4 items-center md:items-start">
+                        <CartProductImage
+                          src={`/images/products/${item.productImage}`}
+                          alt={item.productName}
+                        />
+                        <div className="md:hidden flex-1 min-w-0">
+                          <h3 className="CartProductTitle text-base font-black tracking-tight text-slate-900 uppercase italic truncate">
+                            {item.productName}
+                          </h3>
+                          {item.variant && (
+                            <p className="CartProductVariant text-[10px] font-black tracking-widest text-slate-500 uppercase">
+                              {item.variant.size} | {item.variant.width} x {item.variant.height}
+                            </p>
+                          )}
+                        </div>
+                      </div>
 
-                      <div className="flex-1 space-y-4">
-                        <div className="flex items-start justify-between gap-4">
-                          <div>
-                            <h3 className="CartProductTitle text-lg font-black tracking-tight text-slate-900 uppercase italic">
-                              {item.productName}
-                            </h3>
-                            {item.variant && (
-                              <p className="CartProductVariant text-xs font-black tracking-widest text-slate-500 uppercase">
-                                {item.variant.size} | {item.variant.width} x{' '}
-                                {item.variant.height}
-                              </p>
-                            )}
-                            <p className="mt-2 text-sm text-slate-600">
+                      {/* Bottom Part on Mobile, Right Column on Desktop */}
+                      <div className="flex-1 space-y-4 min-w-0">
+                        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-2 md:gap-4">
+                          <div className="min-w-0">
+                            {/* Desktop Title & Variant */}
+                            <div className="hidden md:block">
+                              <h3 className="CartProductTitle text-lg font-black tracking-tight text-slate-900 uppercase italic">
+                                {item.productName}
+                              </h3>
+                              {item.variant && (
+                                <p className="CartProductVariant text-xs font-black tracking-widest text-slate-500 uppercase">
+                                  {item.variant.size} | {item.variant.width} x{' '}
+                                  {item.variant.height}
+                                </p>
+                              )}
+                            </div>
+                            
+                            <p className="mt-1 md:mt-2 text-xs md:text-sm text-slate-600 line-clamp-2 md:line-clamp-none">
                               {shortDescription}
                             </p>
                           </div>
@@ -571,173 +590,184 @@ const AddToCartPage: React.FC = () => {
                               e.stopPropagation()
                               removeItem(item.id)
                             }}
-                            className="CartProductRemoveButton relative z-30 inline-flex items-center gap-1 rounded-xl border border-rose-100 bg-rose-50 px-3 py-2 text-xs font-black tracking-wider text-rose-600 uppercase transition hover:bg-rose-100"
+                            className="CartProductRemoveButton absolute top-4 right-4 z-30 flex h-8 w-8 items-center justify-center rounded-xl bg-rose-50 text-rose-600 transition hover:bg-rose-100 md:relative md:top-0 md:right-0 md:h-auto md:w-auto md:px-3 md:py-2 md:text-xs md:font-black md:tracking-wider md:uppercase md:gap-1 md:border md:border-rose-100"
                           >
                             <Trash2 size={14} />
-                            Remove
+                            <span className="hidden md:inline">Remove</span>
                           </button>
                         </div>
 
-
-                        {/* Variant Selector */}
-                        {productMeta?.variants && (
-                          <div className="CartProductVariantSelector" onClick={(e) => e.stopPropagation()}>
-                             <VariantSelector
-                                variants={productMeta.variants}
-                                selectedVariantId={item.variant.id}
-                                onSelect={(vId) => handleVariantChange(item.id, vId)}
-                                minThreshold={productMeta.min_threshold ?? 5}
-                                minOrder={item.minOrder}
-                                variantCompatibilityMap={getVariantCompatibilityMap(item)}
-                             />
-                          </div>
-                        )}
-
-                        {/* Color Picker */}
-                        {Boolean(productMeta?.is_need_color) && (
-                          <div className="CartProductColorPicker space-y-2">
-                            <div className="flex items-center justify-between">
-                              <label className="text-[10px] font-black tracking-widest text-slate-500 uppercase">
-                                Master Color Sequence{' '}
-                                {item.plate &&
-                                  `(${item.colors.length}/${item.plate.channels} Channels)`}
-                              </label>
-                              {item.colors.length < (item.plate?.channels || 1) && (
-                                <span className="text-[10px] font-black tracking-widest text-rose-500 uppercase animate-pulse">
-                                  * Color required
-                                </span>
+                        <AnimatePresence>
+                          {isSelected && (
+                            <m.div
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: 'auto', opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              transition={{ duration: 0.3, ease: 'easeInOut' }}
+                              className="overflow-hidden space-y-4"
+                            >
+                              {/* Variant Selector */}
+                              {productMeta?.variants && (
+                                <div className="CartProductVariantSelector pt-2" onClick={(e) => e.stopPropagation()}>
+                                  <VariantSelector
+                                      variants={productMeta.variants}
+                                      selectedVariantId={item.variant.id}
+                                      onSelect={(vId) => handleVariantChange(item.id, vId)}
+                                      minThreshold={productMeta.min_threshold ?? 5}
+                                      minOrder={item.minOrder}
+                                      variantCompatibilityMap={getVariantCompatibilityMap(item)}
+                                  />
+                                </div>
                               )}
-                            </div>
-                            <div className="flex flex-wrap gap-2">
-                              {colors.map((color) => {
-                                const index = item.colors.findIndex((c) => c.id === color.id)
-                                const selected = index !== -1
-                                const label = selected
-                                  ? index === 0
-                                    ? 'Primary'
-                                    : index === 1
-                                      ? 'Secondary'
-                                      : 'Accent'
-                                  : null
 
-                                return (
+                              {/* Color Picker */}
+                              {Boolean(productMeta?.is_need_color) && (
+                                <div className="CartProductColorPicker space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <label className="text-[10px] font-black tracking-widest text-slate-500 uppercase">
+                                      Master Color Sequence{' '}
+                                      {item.plate &&
+                                        `(${item.colors.length}/${item.plate.channels} Channels)`}
+                                    </label>
+                                    {item.colors.length < (item.plate?.channels || 1) && (
+                                      <span className="text-[10px] font-black tracking-widest text-rose-500 uppercase animate-pulse">
+                                        * Color required
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="flex flex-wrap gap-2">
+                                    {colors.map((color) => {
+                                      const index = item.colors.findIndex((c) => c.id === color.id)
+                                      const selected = index !== -1
+                                      const label = selected
+                                        ? index === 0
+                                          ? 'Primary'
+                                          : index === 1
+                                            ? 'Secondary'
+                                            : 'Accent'
+                                        : null
+
+                                      return (
+                                        <button
+                                          key={`${item.id}-${color.id}`}
+                                          onClick={(e) => {
+                                            e.stopPropagation()
+                                            handleColorChange(item, color.id)
+                                          }}
+                                          className={`relative rounded-full border px-3 py-1.5 text-[10px] font-black tracking-wider uppercase transition ${
+                                            selected
+                                              ? 'border-slate-900 bg-slate-900 text-white'
+                                              : 'border-slate-200 bg-white text-slate-600 hover:border-slate-400'
+                                          }`}
+                                        >
+                                          <div className="flex items-center gap-2">
+                                            <div
+                                              className="h-2.5 w-2.5 rounded-full border border-slate-200"
+                                              style={{ backgroundColor: color.hex }}
+                                            />
+                                            {color.name}
+                                            {label && (
+                                              <span className="text-pixs-mint ml-1 text-[8px] italic">
+                                                {label}
+                                              </span>
+                                            )}
+                                          </div>
+                                        </button>
+                                      )
+                                    })}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Quantity */}
+                              <div className="CartProductQuantity flex flex-col items-start gap-2">
+                                <div className="flex items-center gap-2">
                                   <button
-                                    key={`${item.id}-${color.id}`}
                                     onClick={(e) => {
                                       e.stopPropagation()
-                                      handleColorChange(item, color.id)
+                                      handleQuantityChange(item.id, item.quantity - 1)
                                     }}
-                                    className={`relative rounded-full border px-3 py-1.5 text-[10px] font-black tracking-wider uppercase transition ${
-                                      selected
-                                        ? 'border-slate-900 bg-slate-900 text-white'
-                                        : 'border-slate-200 bg-white text-slate-600 hover:border-slate-400'
-                                    }`}
+                                    className="rounded-xl border border-slate-200 bg-white p-2 text-slate-700 transition hover:bg-slate-100"
                                   >
-                                    <div className="flex items-center gap-2">
-                                      <div
-                                        className="h-2.5 w-2.5 rounded-full border border-slate-200"
-                                        style={{ backgroundColor: color.hex }}
-                                      />
-                                      {color.name}
-                                      {label && (
-                                        <span className="text-pixs-mint ml-1 text-[8px] italic">
-                                          {label}
-                                        </span>
-                                      )}
-                                    </div>
+                                    <Minus size={14} />
                                   </button>
-                                )
-                              })}
-                            </div>
-                          </div>
-                        )}
+                                  <input
+                                    type="number"
+                                    min={0}
+                                    value={item.quantity || ''}
+                                    onClick={(e) => e.stopPropagation()}
+                                    onChange={(event) =>
+                                      handleQuantityChange(item.id, parseInt(event.target.value))
+                                    }
+                                    className={`w-20 rounded-xl border px-3 py-2 text-center text-sm font-black text-slate-900 outline-none ${item.quantity < item.minOrder ? 'bg-rose-50 text-rose-500 border-rose-200' : 'bg-white border-slate-200'}`}
+                                  />
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      handleQuantityChange(item.id, item.quantity + 1)
+                                    }}
+                                    className="rounded-xl border border-slate-200 bg-white p-2 text-slate-700 transition hover:bg-slate-100"
+                                  >
+                                    <Plus size={14} />
+                                  </button>
+                                  <span className="text-[10px] font-bold text-slate-400 ml-2">
+                                    min: {item.minOrder}
+                                  </span>
+                                </div>
+                                {item.quantity < item.minOrder && (
+                                  <p className="text-[10px] text-rose-500 font-bold uppercase animate-pulse">Minimum {item.minOrder} units</p>
+                                )}
+                              </div>
 
-                        {/* Quantity */}
-                        <div className="CartProductQuantity flex flex-col items-start gap-2">
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                handleQuantityChange(item.id, item.quantity - 1)
-                              }}
-                              className="rounded-xl border border-slate-200 bg-white p-2 text-slate-700 transition hover:bg-slate-100"
-                            >
-                              <Minus size={14} />
-                            </button>
-                            <input
-                              type="number"
-                              min={0}
-                              value={item.quantity || ''}
-                              onClick={(e) => e.stopPropagation()}
-                              onChange={(event) =>
-                                handleQuantityChange(item.id, parseInt(event.target.value))
-                              }
-                              className={`w-20 rounded-xl border px-3 py-2 text-center text-sm font-black text-slate-900 outline-none ${item.quantity < item.minOrder ? 'bg-rose-50 text-rose-500 border-rose-200' : 'bg-white border-slate-200'}`}
-                            />
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                handleQuantityChange(item.id, item.quantity + 1)
-                              }}
-                              className="rounded-xl border border-slate-200 bg-white p-2 text-slate-700 transition hover:bg-slate-100"
-                            >
-                              <Plus size={14} />
-                            </button>
-                            <span className="text-[10px] font-bold text-slate-400 ml-2">
-                              min: {item.minOrder}
-                            </span>
-                          </div>
-                          {item.quantity < item.minOrder && (
-                             <p className="text-[10px] text-rose-500 font-bold uppercase animate-pulse">Minimum {item.minOrder} units</p>
+                              {/* Price Summary */}
+                              <div className="grid grid-cols-2 gap-3 rounded-[24px] bg-slate-50 p-4 md:grid-cols-3">
+                                <div>
+                                  <p className="text-[10px] font-black tracking-widest text-slate-400 uppercase">
+                                    Price / Unit
+                                  </p>
+                                  <p className="font-mono text-sm font-black text-slate-900 italic">
+                                    PHP {item.variant.unitPrice.toFixed(2)}
+                                  </p>
+                                </div>
+                                <div>
+                                  <p className="text-[10px] font-black tracking-widest text-slate-400 uppercase">
+                                    Subtotal
+                                  </p>
+                                  <p className="font-mono text-sm font-black text-slate-900 italic">
+                                    PHP {item.totalCartPrice.toFixed(2)}
+                                  </p>
+                                </div>
+                              </div>
+
+                              {/* Plate Info */}
+                              {item.plate && (
+                                <div className="mt-2 border-t border-slate-100 pt-4">
+                                  <p className="flex items-center gap-2 text-sm font-black tracking-tight text-slate-900 italic">
+                                    🖨 {item.plate.name}
+                                  </p>
+                                  <p className="mt-1 text-[10px] font-black tracking-widest text-slate-400 uppercase">
+                                    {item.plate.type === 'Flatscreen'
+                                      ? 'Flat'
+                                      : item.plate.type === 'Cylindrical'
+                                        ? 'Center'
+                                        : 'Front'}{' '}
+                                    | {item.plate.channels} channels
+                                  </p>
+                                  <p className="mt-2 text-xs font-black italic">
+                                    Printing Price: ₱
+                                    {(item.plate.printPricePerUnit || 0).toFixed(2)}/unit
+                                  </p>
+                                  <p className="mt-1 text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                                    Printing Subtotal: ₱
+                                    {(
+                                      (item.plate.printPricePerUnit || 0) * item.quantity
+                                    ).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                  </p>
+                                </div>
+                              )}
+                            </m.div>
                           )}
-                        </div>
-
-                        {/* Price Summary */}
-                        <div className="grid grid-cols-2 gap-3 rounded-[24px] bg-slate-50 p-4 md:grid-cols-3">
-                          <div>
-                            <p className="text-[10px] font-black tracking-widest text-slate-400 uppercase">
-                              Price / Unit
-                            </p>
-                            <p className="font-mono text-sm font-black text-slate-900 italic">
-                              PHP {item.variant.unitPrice.toFixed(2)}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-[10px] font-black tracking-widest text-slate-400 uppercase">
-                              Subtotal
-                            </p>
-                            <p className="font-mono text-sm font-black text-slate-900 italic">
-                              PHP {item.totalCartPrice.toFixed(2)}
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* Plate Info */}
-                        {item.plate && (
-                          <div className="mt-2 border-t border-slate-100 pt-4">
-                            <p className="flex items-center gap-2 text-sm font-black tracking-tight text-slate-900 italic">
-                              🖨 {item.plate.name}
-                            </p>
-                            <p className="mt-1 text-[10px] font-black tracking-widest text-slate-400 uppercase">
-                              {item.plate.type === 'Flatscreen'
-                                ? 'Flat'
-                                : item.plate.type === 'Cylindrical'
-                                  ? 'Center'
-                                  : 'Front'}{' '}
-                              | {item.plate.channels} channels
-                            </p>
-                            <p className="mt-2 text-xs font-black italic">
-                              Printing Price: ₱
-                              {(item.plate.printPricePerUnit || 0).toFixed(2)}/unit
-                            </p>
-                            <p className="mt-1 text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                              Printing Subtotal: ₱
-                              {(
-                                (item.plate.printPricePerUnit || 0) * item.quantity
-                              ).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                            </p>
-                          </div>
-                        )}
+                        </AnimatePresence>
                       </div>
                     </div>
                   </article>

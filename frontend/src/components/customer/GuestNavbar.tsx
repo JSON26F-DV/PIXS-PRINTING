@@ -58,7 +58,7 @@ const GuestNavbar: React.FC = () => {
                 Deliver to <MapPin size={10} className="text-pixs-mint" />
               </span>
               <p className="mt-1 max-w-[140px] truncate text-xs leading-none font-bold text-slate-900 italic">
-                Guest Mode
+                Guest...
               </p>
             </button>
           </div>
@@ -141,7 +141,7 @@ const GuestNavbar: React.FC = () => {
                   <ChevronDown size={10} className="opacity-70" />
                 </span>
                 <p className="location-text max-w-[55vw] truncate overflow-hidden text-sm leading-none font-black tracking-tighter whitespace-nowrap text-slate-900 italic">
-                  Guest Mode
+                  Guest
                 </p>
               </div>
             </button>

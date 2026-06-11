@@ -1,7 +1,17 @@
-import React, { useState } from 'react'
+import React, { useState, useMemo, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import type { RegisterFormData } from '../../hooks/useAuth'
+import type { SingleValue, StylesConfig } from 'react-select'
+import Select from 'react-select'
+import {
+  getAllRegions,
+  getBarangaysByMunicipality,
+  getMunicipalitiesByProvince,
+  getProvincesByRegion,
+} from '@aivangogh/ph-address'
+import PhoneInput from 'react-phone-number-input'
+import 'react-phone-number-input/style.css'
 import toast, { Toaster } from 'react-hot-toast'
 import { m, AnimatePresence } from 'framer-motion'
 import { clsx } from 'clsx'
@@ -22,7 +32,113 @@ const RegisterPage: React.FC = () => {
     age: undefined,
     gender: undefined,
     company_name: '',
+    phone: '',
+    street: '',
+    region: '',
+    province: '',
+    city: '',
+    barangay: '',
+    postal_code: '',
+    regionCode: '',
+    provinceCode: '',
+    municipalityCode: '',
+    barangayCode: '',
   })
+
+  const [phone, setPhone] = useState('')
+  const [regionCode, setRegionCode] = useState('')
+  const [provinceCode, setProvinceCode] = useState('')
+  const [municipalityCode, setMunicipalityCode] = useState('')
+  const [barangayCode, setBarangayCode] = useState('')
+  const [street, setStreet] = useState('')
+  const [postalCode, setPostalCode] = useState('')
+
+  type SelectOption = { value: string; label: string }
+
+  const regionOptions = useMemo<SelectOption[]>(
+    () => getAllRegions().map((r) => ({ value: r.psgcCode, label: r.name })),
+    [],
+  )
+  const provinceOptions = useMemo<SelectOption[]>(() => {
+    if (!regionCode) return []
+    return getProvincesByRegion(regionCode).map((p) => ({
+      value: p.psgcCode,
+      label: p.name,
+    }))
+  }, [regionCode])
+  const cityOptions = useMemo<SelectOption[]>(() => {
+    if (!provinceCode) return []
+    return getMunicipalitiesByProvince(provinceCode).map((m) => ({
+      value: m.psgcCode,
+      label: m.name,
+    }))
+  }, [provinceCode])
+  const barangayOptions = useMemo<SelectOption[]>(() => {
+    if (!municipalityCode) return []
+    return getBarangaysByMunicipality(municipalityCode).map((b) => ({
+      value: b.psgcCode,
+      label: b.name,
+    }))
+  }, [municipalityCode])
+
+  const onDropdownRegion = useCallback((opt: SingleValue<SelectOption>) => {
+    setRegionCode(opt?.value ?? '')
+    setProvinceCode('')
+    setMunicipalityCode('')
+    setBarangayCode('')
+  }, [])
+  const onDropdownProvince = useCallback((opt: SingleValue<SelectOption>) => {
+    setProvinceCode(opt?.value ?? '')
+    setMunicipalityCode('')
+    setBarangayCode('')
+  }, [])
+  const onDropdownCity = useCallback((opt: SingleValue<SelectOption>) => {
+    setMunicipalityCode(opt?.value ?? '')
+    setBarangayCode('')
+  }, [])
+  const onDropdownBarangay = useCallback((opt: SingleValue<SelectOption>) => {
+    setBarangayCode(opt?.value ?? '')
+  }, [])
+
+  const selectStyles: StylesConfig<SelectOption, false> = {
+    control: (provided) => ({
+      ...provided,
+      border: 'none',
+      boxShadow: 'none',
+      backgroundColor: 'transparent',
+      padding: 0,
+      minHeight: 'auto',
+    }),
+    valueContainer: (provided) => ({
+      ...provided,
+      padding: '2px 0',
+    }),
+    input: (provided) => ({
+      ...provided,
+      margin: 0,
+      padding: 0,
+      color: '#0f172a',
+      fontWeight: '500',
+    }),
+    singleValue: (provided) => ({
+      ...provided,
+      color: '#0f172a',
+      fontWeight: '500',
+    }),
+    placeholder: (provided) => ({
+      ...provided,
+      color: '#94a3b8',
+      fontWeight: '500',
+    }),
+    dropdownIndicator: (provided) => ({
+      ...provided,
+      padding: '2px',
+      color: '#94a3b8',
+    }),
+    indicatorSeparator: () => ({
+      display: 'none',
+    }),
+  }
 
   const [submitError, setSubmitError] = useState<string | null>(null)
 
@@ -52,6 +168,25 @@ const RegisterPage: React.FC = () => {
         toast.error('Please enter a valid email address.')
         return
       }
+    } else if (step === 3) {
+      if (!phone) {
+        toast.error('Contact Number is required.')
+        return
+      }
+      const phoneRegex = /^(\+63|0)\s?9(\s?\d){9}$/
+      if (!phoneRegex.test(phone)) {
+        toast.error('Enter a valid PH phone (e.g. 09181112233 or +63 918 111 2233).')
+        return
+      }
+    } else if (step === 4) {
+      if (!regionCode || !provinceCode || !municipalityCode || !barangayCode) {
+        toast.error('Please complete all address dropdown selections.')
+        return
+      }
+      if (!street.trim()) {
+        toast.error('Street / House No. / Landmark is required.')
+        return
+      }
     }
     setStep((s) => s + 1)
   }
@@ -72,7 +207,41 @@ const RegisterPage: React.FC = () => {
     try {
       setSubmitError(null)
       toast.loading('Registering account...', { id: 'register' })
-      await register(formData)
+      
+      const regions = getAllRegions()
+      const regionName = regionCode
+        ? (regions.find((r) => r.psgcCode === regionCode)?.name ?? '')
+        : ''
+      const provinceDetails = provinceCode
+        ? getProvincesByRegion(regionCode).find(
+            (p) => p.psgcCode === provinceCode,
+          )
+        : null
+      const cityDetails = municipalityCode
+        ? getMunicipalitiesByProvince(provinceCode).find(
+            (m) => m.psgcCode === municipalityCode,
+          )
+        : null
+      const barangayDetails = barangayCode
+        ? getBarangaysByMunicipality(municipalityCode).find(
+            (b) => b.psgcCode === barangayCode,
+          )
+        : null
+
+      await register({
+        ...formData,
+        phone,
+        street,
+        region: regionName,
+        province: provinceDetails?.name || '',
+        city: cityDetails?.name || '',
+        barangay: barangayDetails?.name || '',
+        postal_code: postalCode,
+        regionCode,
+        provinceCode,
+        municipalityCode,
+        barangayCode,
+      })
       toast.success('Registration successful!', { id: 'register' })
       navigate('/login')
     } catch {
@@ -83,6 +252,10 @@ const RegisterPage: React.FC = () => {
         setStep(2)
       } else if (fieldErrors?.first_name || fieldErrors?.last_name) {
         setStep(1)
+      } else if (fieldErrors?.phone) {
+        setStep(3)
+      } else if (fieldErrors?.street || fieldErrors?.region || fieldErrors?.province || fieldErrors?.city || fieldErrors?.barangay) {
+        setStep(4)
       }
     }
   }
@@ -124,7 +297,9 @@ const RegisterPage: React.FC = () => {
             <p className="text-base md:text-lg text-slate-600 font-medium">
               {step === 1 && "Enter your name"}
               {step === 2 && "Basic information"}
-              {step === 3 && "Set your passwords"}
+              {step === 3 && "Contact number"}
+              {step === 4 && "Address details"}
+              {step === 5 && "Set your password"}
             </p>
 
             {/* Only visible on desktop, moved to the bottom of the left column */}
@@ -269,6 +444,121 @@ const RegisterPage: React.FC = () => {
                       className="space-y-4 pt-2"
                     >
                       <div className="relative border border-slate-300 rounded-xl px-4 py-2 focus-within:border-[#1a73e8] focus-within:ring-1 focus-within:ring-[#1a73e8] transition-all bg-white">
+                        <label className="text-xs font-medium text-slate-500">Contact Number</label>
+                        <PhoneInput
+                          international
+                          defaultCountry="PH"
+                          value={phone}
+                          onChange={(v) => setPhone(v || '')}
+                          className="PhoneInputControl w-full text-sm font-medium text-slate-900 outline-none mt-1 py-1"
+                        />
+                      </div>
+                    </m.div>
+                  )}
+
+                  {step === 4 && (
+                    <m.div
+                      key="step4"
+                      custom={1}
+                      variants={variants}
+                      initial="initial"
+                      animate="animate"
+                      exit="exit"
+                      transition={{ duration: 0.3 }}
+                      className="space-y-4 pt-2"
+                    >
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="relative border border-slate-300 rounded-xl px-4 py-2 focus-within:border-[#1a73e8] focus-within:ring-1 focus-within:ring-[#1a73e8] transition-all bg-white">
+                          <label className="text-xs font-medium text-slate-500">Region</label>
+                          <Select
+                            options={regionOptions}
+                            value={regionOptions.find((o) => o.value === regionCode) ?? null}
+                            onChange={onDropdownRegion}
+                            menuPosition="fixed"
+                            placeholder="Select region"
+                            styles={selectStyles}
+                            className="text-sm"
+                          />
+                        </div>
+
+                        <div className="relative border border-slate-300 rounded-xl px-4 py-2 focus-within:border-[#1a73e8] focus-within:ring-1 focus-within:ring-[#1a73e8] transition-all bg-white">
+                          <label className="text-xs font-medium text-slate-500">Province</label>
+                          <Select
+                            options={provinceOptions}
+                            value={provinceOptions.find((o) => o.value === provinceCode) ?? null}
+                            onChange={onDropdownProvince}
+                            menuPosition="fixed"
+                            placeholder="Select province"
+                            isDisabled={!regionCode}
+                            styles={selectStyles}
+                            className="text-sm"
+                          />
+                        </div>
+
+                        <div className="relative border border-slate-300 rounded-xl px-4 py-2 focus-within:border-[#1a73e8] focus-within:ring-1 focus-within:ring-[#1a73e8] transition-all bg-white">
+                          <label className="text-xs font-medium text-slate-500">City / Municipality</label>
+                          <Select
+                            options={cityOptions}
+                            value={cityOptions.find((o) => o.value === municipalityCode) ?? null}
+                            onChange={onDropdownCity}
+                            menuPosition="fixed"
+                            placeholder="Select city"
+                            isDisabled={!provinceCode}
+                            styles={selectStyles}
+                            className="text-sm"
+                          />
+                        </div>
+
+                        <div className="relative border border-slate-300 rounded-xl px-4 py-2 focus-within:border-[#1a73e8] focus-within:ring-1 focus-within:ring-[#1a73e8] transition-all bg-white">
+                          <label className="text-xs font-medium text-slate-500">Barangay</label>
+                          <Select
+                            options={barangayOptions}
+                            value={barangayOptions.find((o) => o.value === barangayCode) ?? null}
+                            onChange={onDropdownBarangay}
+                            menuPosition="fixed"
+                            placeholder="Select barangay"
+                            isDisabled={!municipalityCode}
+                            styles={selectStyles}
+                            className="text-sm"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="relative border border-slate-300 rounded-xl px-4 py-2 focus-within:border-[#1a73e8] focus-within:ring-1 focus-within:ring-[#1a73e8] transition-all bg-white">
+                        <label className="text-xs font-medium text-slate-500">Street / House No. / Landmark</label>
+                        <textarea
+                          className="w-full bg-transparent text-sm font-medium text-slate-900 outline-none mt-1 py-1 min-h-[60px] resize-none"
+                          placeholder="Enter street name, building, house number..."
+                          value={street}
+                          onChange={(e) => setStreet(e.target.value)}
+                        />
+                      </div>
+
+                      <div className="relative border border-slate-300 rounded-xl px-4 py-2 focus-within:border-[#1a73e8] focus-within:ring-1 focus-within:ring-[#1a73e8] transition-all bg-white sm:w-1/2">
+                        <label className="text-xs font-medium text-slate-500">Postal Code (Optional)</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. 1000"
+                          className="w-full bg-transparent text-sm font-medium text-slate-900 outline-none mt-1 py-1"
+                          value={postalCode}
+                          onChange={(e) => setPostalCode(e.target.value)}
+                        />
+                      </div>
+                    </m.div>
+                  )}
+
+                  {step === 5 && (
+                    <m.div
+                      key="step5"
+                      custom={1}
+                      variants={variants}
+                      initial="initial"
+                      animate="animate"
+                      exit="exit"
+                      transition={{ duration: 0.3 }}
+                      className="space-y-4 pt-2"
+                    >
+                      <div className="relative border border-slate-300 rounded-xl px-4 py-2 focus-within:border-[#1a73e8] focus-within:ring-1 focus-within:ring-[#1a73e8] transition-all bg-white">
                         <label className="text-xs font-medium text-slate-500">Password</label>
                         <input
                           name="password"
@@ -297,8 +587,8 @@ const RegisterPage: React.FC = () => {
               </div>
 
               {/* Progress Bar (Dots style or simple line, Google uses subtle indicator or we can just keep the line) */}
-              <div className="flex gap-1.5 mt-8 mb-4 max-w-[80px]">
-                {[1, 2, 3].map((i) => (
+              <div className="flex gap-1.5 mt-8 mb-4 max-w-[120px]">
+                {[1, 2, 3, 4, 5].map((i) => (
                   <div 
                     key={i} 
                     className={clsx(
@@ -324,7 +614,7 @@ const RegisterPage: React.FC = () => {
                 <div />
               )}
               
-              {step < 3 ? (
+              {step < 5 ? (
                 <button
                   type="button"
                   onClick={nextStep}

@@ -5,12 +5,20 @@ import { CheckCircle2, Loader2, XCircle } from 'lucide-react'
 const PaymentSuccess: React.FC = () => {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const [status, setStatus] = useState<'loading' | 'success' | 'failed'>('loading')
+  const externalId = searchParams.get('external_id')
+  
+  const [status, setStatus] = useState<'loading' | 'success' | 'failed'>(() =>
+    externalId ? 'loading' : 'failed'
+  )
+  const [prevExternalId, setPrevExternalId] = useState<string | null>(externalId)
+
+  if (externalId !== prevExternalId) {
+    setPrevExternalId(externalId)
+    setStatus(externalId ? 'loading' : 'failed')
+  }
 
   useEffect(() => {
-    const externalId = searchParams.get('external_id')
     if (!externalId) {
-      setStatus('failed')
       return
     }
 
@@ -19,7 +27,7 @@ const PaymentSuccess: React.FC = () => {
     }, 2000)
 
     return () => clearTimeout(timer)
-  }, [searchParams])
+  }, [externalId])
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-50 p-8">

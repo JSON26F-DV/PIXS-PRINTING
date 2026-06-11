@@ -2,7 +2,7 @@ const EMAIL_FORMAT =
   /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/
 
 /** Characters commonly used in XSS / injection probes in the email field. */
-const SUSPICIOUS_EMAIL_CHARS = /[<>"';\\]|(\-\-)|(\/\*)|(\bscript\b)/i
+const SUSPICIOUS_EMAIL_CHARS = /[<>"';\\]|(--)|(\/\*)|(\bscript\b)/i
 
 export interface LoginFormValues {
   email: string

@@ -113,7 +113,9 @@ const OrderReceiptModal: React.FC<ReceiptModalProps> = ({
                     <div className="text-pixs-mint"><CreditCard size={16} /></div>
                     <div>
                       <p className="text-xs font-black text-slate-900 uppercase italic">{payment_method?.type}</p>
-                      <p className="text-[9px] font-bold text-slate-400">{payment_method?.masked_number}</p>
+                      {payment_method?.provider && (
+                        <p className="text-[9px] font-bold text-slate-400 uppercase">{payment_method.provider}</p>
+                      )}
                     </div>
                   </div>
                 </div>

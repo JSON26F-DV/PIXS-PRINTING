@@ -152,7 +152,7 @@ class AdminAccountController extends Controller
 
     public function showCustomer($id): JsonResponse
     {
-        $customer = Customer::with(['addresses', 'contacts', 'paymentMethods'])->find($id);
+        $customer = Customer::with(['addresses', 'contacts'])->find($id);
 
         if (! $customer) {
             return response()->json(['message' => 'Customer not found'], 404);
@@ -187,7 +187,6 @@ class AdminAccountController extends Controller
             'profile_picture' => 'nullable|string',
             'addresses' => 'array',
             'contacts' => 'array',
-            'paymentMethods' => 'array',
         ]);
 
         DB::beginTransaction();
@@ -215,18 +214,11 @@ class AdminAccountController extends Controller
                 }
             }
 
-            if (isset($validated['paymentMethods'])) {
-                $customer->paymentMethods()->delete();
-                foreach ($validated['paymentMethods'] as $pm) {
-                    $customer->paymentMethods()->create($pm);
-                }
-            }
-
             DB::commit();
 
             AuditService::log($isNew ? 'create' : 'update', 'customer', $id);
 
-            return response()->json(['status' => 'success', 'data' => $customer->load(['addresses', 'contacts', 'paymentMethods'])]);
+            return response()->json(['status' => 'success', 'data' => $customer->load(['addresses', 'contacts'])]);
         } catch (\Exception $e) {
             DB::rollBack();
 
@@ -283,7 +275,6 @@ class AdminAccountController extends Controller
             } else {
                 $target->addresses()->delete();
                 $target->contacts()->delete();
-                $target->paymentMethods()->delete();
                 $target->discounts()->delete();
 
                 // Get order IDs to clean up related data in other tables

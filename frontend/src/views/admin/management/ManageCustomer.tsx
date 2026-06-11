@@ -9,7 +9,6 @@ import {
   User,
   MapPin,
   Phone,
-  CreditCard,
   Camera,
   X,
   RefreshCw,
@@ -59,14 +58,6 @@ interface CustomerForm {
     number: string
     is_default: boolean
   }[]
-  paymentMethods: {
-    id?: string
-    type: string
-    bank_name: string
-    provider: string
-    masked_number: string
-    is_default: boolean
-  }[]
 }
 
 const resolveAddressCodes = (addr: {
@@ -99,9 +90,25 @@ const resolveAddressCodes = (addr: {
   }
 }
 
-const getChangesList = (initial: any, current: any, isEmployee: boolean) => {
+interface ChangeForm {
+  first_name?: string
+  last_name?: string
+  email?: string
+  role?: string
+  status?: string
+  password?: string
+  daily_rate?: number
+  ot_rate?: number
+  company_name?: string
+  age?: number | null
+  gender?: string
+  contacts?: { number: string; is_default: boolean }[]
+  addresses?: { street: string; barangay: string; city: string; is_default: boolean }[]
+}
+
+const getChangesList = (initial: ChangeForm | null, current: ChangeForm | null, isEmployee: boolean) => {
   const changes: string[] = []
-  if (!initial) return changes
+  if (!initial || !current) return changes
 
   if (initial.first_name !== current.first_name) {
     changes.push(`First Name: "${initial.first_name}" → "${current.first_name}"`)
@@ -147,7 +154,7 @@ const getChangesList = (initial: any, current: any, isEmployee: boolean) => {
     changes.push(`Contacts Count: ${initialContacts.length} → ${currentContacts.length}`)
   } else {
     let numChanged = false
-    currentContacts.forEach((c: any, i: number) => {
+    currentContacts.forEach((c: { number: string; is_default: boolean }, i: number) => {
       if (initialContacts[i] && (initialContacts[i].number !== c.number || initialContacts[i].is_default !== c.is_default)) {
         numChanged = true
       }
@@ -161,7 +168,7 @@ const getChangesList = (initial: any, current: any, isEmployee: boolean) => {
     changes.push(`Addresses Count: ${initialAddresses.length} → ${currentAddresses.length}`)
   } else {
     let addrChanged = false
-    currentAddresses.forEach((a: any, i: number) => {
+    currentAddresses.forEach((a: { street: string; barangay: string; city: string; is_default: boolean }, i: number) => {
       if (initialAddresses[i] && (
         initialAddresses[i].street !== a.street ||
         initialAddresses[i].barangay !== a.barangay ||
@@ -174,23 +181,7 @@ const getChangesList = (initial: any, current: any, isEmployee: boolean) => {
     if (addrChanged) changes.push(`Address details or defaults updated`)
   }
 
-  const initialPMs = initial.paymentMethods || initial.payment_methods || []
-  const currentPMs = current.paymentMethods || []
-  if (initialPMs.length !== currentPMs.length) {
-    changes.push(`Payment Methods Count: ${initialPMs.length} → ${currentPMs.length}`)
-  } else {
-    let pmChanged = false
-    currentPMs.forEach((p: any, i: number) => {
-      if (initialPMs[i] && (
-        initialPMs[i].type !== p.type ||
-        initialPMs[i].masked_number !== p.masked_number ||
-        initialPMs[i].is_default !== p.is_default
-      )) {
-        pmChanged = true
-      }
-    })
-    if (pmChanged) changes.push(`Payment method details or defaults updated`)
-  }
+
 
   return changes
 }
@@ -242,15 +233,13 @@ const ManageCustomer = () => {
       company_name: '',
       profile_picture: '',
       addresses: [],
-      contacts: [],
-      paymentMethods: []
+      contacts: []
     }
   })
 
   // Watch fields to reactively render single defaults
   const watchContacts = watch('contacts') || []
   const watchAddresses = watch('addresses') || []
-  const watchPaymentMethods = watch('paymentMethods') || []
 
   const { fields: addressFields, append: appendAddress, remove: removeAddress } = useFieldArray({
     control,
@@ -260,11 +249,6 @@ const ManageCustomer = () => {
   const { fields: contactFields, append: appendContact, remove: removeContact } = useFieldArray({
     control,
     name: 'contacts'
-  })
-
-  const { fields: pmFields, append: appendPM, remove: removePM } = useFieldArray({
-    control,
-    name: 'paymentMethods'
   })
 
   // Region options are static and memoized
@@ -287,11 +271,7 @@ const ManageCustomer = () => {
       if (data.status === 'success') {
         const customerData = data.data
 
-        // Fix payment methods naming mismatch
-        if (customerData.payment_methods) {
-          customerData.paymentMethods = customerData.payment_methods
-          delete customerData.payment_methods
-        }
+
 
         // Save clone of original API data for comparison diff
         setInitialData(JSON.parse(JSON.stringify(customerData)))
@@ -631,74 +611,7 @@ const ManageCustomer = () => {
           </div>
         </section>
 
-        {/* Payment Methods */}
-        <section className="rounded-[32px] border border-slate-100 bg-white p-4 md:p-8 shadow-2xl shadow-slate-200/40">
-          <div className="mb-4 md:mb-6 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="rounded-xl bg-amber-50 p-2 text-amber-600">
-                <CreditCard size={20} />
-              </div>
-              <h2 className="text-base md:text-lg font-black tracking-tight text-slate-900 uppercase italic">Payment Methods</h2>
-            </div>
-            <button
-              type="button"
-              onClick={() => appendPM({ type: '', bank_name: '', provider: '', masked_number: '', is_default: false })}
-              className="flex items-center justify-center gap-2 rounded-xl bg-slate-100 px-3 py-2 md:px-4 md:py-2 text-xs font-bold text-slate-600 transition-colors hover:bg-slate-200"
-            >
-              <Plus size={16} />
-              <span className="hidden md:inline">Add Payment Method</span>
-            </button>
-          </div>
 
-          <div className="space-y-3 md:space-y-4">
-            {pmFields.map((field, index) => (
-              <div key={field.id} className="relative grid gap-3 md:gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 md:p-6 md:grid-cols-2">
-                <button type="button" onClick={() => removePM(index)} className="absolute right-3 top-3 md:right-4 md:top-4 rounded-lg p-1.5 md:p-2 text-rose-500 hover:bg-rose-50 z-10">
-                  <Trash2 size={16} />
-                </button>
-                <div className="md:col-span-2 flex items-center gap-2 mb-1 md:mb-2">
-                  <input
-                    type="radio"
-                    name="payment_methods_default_radio"
-                    checked={watchPaymentMethods[index]?.is_default === true}
-                    onChange={() => {
-                      pmFields.forEach((_, idx) => {
-                        setValue(`paymentMethods.${idx}.is_default`, idx === index)
-                      })
-                    }}
-                    className="h-4 w-4 md:h-5 md:w-5 border-slate-300 accent-slate-900 cursor-pointer"
-                  />
-                  <span className="text-[9px] md:text-xs font-bold text-slate-500">Set as Default Payment</span>
-                </div>
-                <div>
-                  <label className="mb-1 block text-[9px] md:text-[10px] font-black tracking-[1px] text-slate-400 uppercase">Type</label>
-                  <div className="relative">
-                    <select {...register(`paymentMethods.${index}.type`)} className="appearance-none w-full rounded-xl border border-slate-200 bg-white px-3 py-2 pr-8 text-sm font-bold text-slate-900 focus:outline-none">
-                      <option value="">Select Type</option>
-                      <option value="bank">Bank Transfer</option>
-                      <option value="ewallet">E-Wallet</option>
-                      <option value="credit_card">Credit Card</option>
-                      <option value="cod">Cash on Delivery (COD)</option>
-                    </select>
-                    <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400" />
-                  </div>
-                </div>
-                <div>
-                  <label className="mb-1 block text-[9px] md:text-[10px] font-black tracking-[1px] text-slate-400 uppercase">Provider (e.g., Visa)</label>
-                  <input {...register(`paymentMethods.${index}.provider`)} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-900 focus:outline-none" />
-                </div>
-                <div>
-                  <label className="mb-1 block text-[9px] md:text-[10px] font-black tracking-[1px] text-slate-400 uppercase">Bank Name</label>
-                  <input {...register(`paymentMethods.${index}.bank_name`)} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-900 focus:outline-none" />
-                </div>
-                <div>
-                  <label className="mb-1 block text-[9px] md:text-[10px] font-black tracking-[1px] text-slate-400 uppercase">Masked Number (e.g., **** 1234)</label>
-                  <input {...register(`paymentMethods.${index}.masked_number`)} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-900 focus:outline-none" />
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
 
         {/* Addresses */}
         <section className="rounded-[32px] border border-slate-100 bg-white p-4 md:p-8 shadow-2xl shadow-slate-200/40">
@@ -1014,7 +927,6 @@ const ManageCustomer = () => {
                       <li>Gender: {formDataToSubmit.gender || 'N/A'}</li>
                       <li>Contacts: {formDataToSubmit.contacts?.length || 0} registered</li>
                       <li>Addresses: {formDataToSubmit.addresses?.length || 0} registered</li>
-                      <li>Payment Methods: {formDataToSubmit.paymentMethods?.length || 0} registered</li>
                     </ul>
                   </div>
                 )}
