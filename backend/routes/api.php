@@ -43,8 +43,12 @@ Route::get('/delivery-methods', [DeliveryMethodController::class, 'index']);
 
 // Xendit Webhooks
 Route::post('/xendit/invoice-webhook', function (Request $request) {
+    logger('Xendit Webhook Hit: ', $request->all());
+    logger('Header token: ' . $request->header('x-callback-token'));
+    
     $token = $request->header('x-callback-token');
     if ($token !== config('xendivel.webhook_verification_token')) {
+        logger('Webhook Unauthorized. Expected: ' . config('xendivel.webhook_verification_token') . ' but got ' . $token);
         return response()->json(['message' => 'Unauthorized'], 401);
     }
 
@@ -180,6 +184,7 @@ Route::middleware(['auth:sanctum', 'role:customer', 'throttle:api'])->prefix('cu
     Route::post('/orders', [OrderController::class, 'store']);
     Route::patch('/orders/{id}', [OrderController::class, 'update']);
     Route::post('/xendit/checkout', [OrderController::class, 'xenditCheckout']);
+    Route::post('/xendit/verify', [OrderController::class, 'verifyXenditPayment']);
 
     // Discounts
     Route::get('/discounts/mine', [DiscountController::class, 'mine']);

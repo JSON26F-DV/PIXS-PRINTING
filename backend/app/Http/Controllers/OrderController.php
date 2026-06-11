@@ -444,13 +444,68 @@ class OrderController extends Controller
     }
 
     /**
+     * Verify Xendit payment from the frontend redirect (useful for local dev without webhooks).
+     */
+    public function verifyXenditPayment(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'external_id' => 'required|string',
+        ]);
+
+        $externalId = $validated['external_id'];
+
+        // If order already exists, it means webhook beat us to it, which is fine
+        if (Order::where('id', $externalId)->exists() || Order::whereRaw("JSON_UNQUOTE(JSON_EXTRACT(id, '$')) = ?", [$externalId])->exists()) {
+            return response()->json(['status' => 'success', 'message' => 'Order already created.']);
+        }
+
+        try {
+            $xenditRes = XenditApi::api('get', 'v2/invoices', ['external_id' => $externalId]);
+
+            $invoices = json_decode($xenditRes->body());
+            
+            if (empty($invoices)) {
+                return response()->json(['status' => 'failed', 'message' => 'Invoice not found'], 404);
+            }
+
+            $invoice = $invoices[0];
+            $status = $invoice->status;
+
+            if ($status === 'PAID' || $status === 'SETTLED') {
+                $pendingData = Cache::get("pending_order_{$externalId}");
+
+                if ($pendingData) {
+                    $order = self::createOrderFromPendingData($pendingData);
+
+                    if ($order) {
+                        Cache::forget("pending_order_{$externalId}");
+                        logger("Order {$order->id} created via manual verify (external_id: {$externalId}).");
+                        return response()->json(['status' => 'success', 'order_id' => $order->id]);
+                    }
+                    
+                    return response()->json(['status' => 'failed', 'message' => 'Failed to create order from pending data.'], 500);
+                }
+                
+                // Maybe it was already processed
+                return response()->json(['status' => 'success', 'message' => 'Payment verified but no pending data found (maybe already processed).']);
+            }
+
+            return response()->json(['status' => 'pending', 'message' => 'Payment not yet completed.']);
+        } catch (\Throwable $e) {
+            Log::error("verifyXenditPayment failed for external_id: {$externalId}: " . $e->getMessage(), [
+                'exception' => $e
+            ]);
+            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
      * Create an order from pending checkout data (called by Xendit webhook on successful payment).
      */
     public static function createOrderFromPendingData(array $pendingData): ?Order
     {
-        $customerId = $pendingData['customer_id'];
-        $cartItemIds = $pendingData['cart_item_ids'];
-        $paymentMethod = $pendingData['payment_method'];
+        $customerId = $pendingData['customer_id'] ?? null;
+        $cartItemIds = $pendingData['cart_item_ids'] ?? [];
 
         $customer = Customer::find($customerId);
         if (! $customer) {
@@ -493,7 +548,6 @@ class OrderController extends Controller
                     'id' => $orderId,
                     'customer_id' => $customerId,
                     'address_id' => $pendingData['address_id'],
-                    'payment_method_id' => null,
                     'payment_code_id' => null,
                     'delivery_method_id' => $pendingData['delivery_method_id'],
                     'production_notes' => $pendingData['production_notes'] ?? null,
@@ -782,7 +836,6 @@ class OrderController extends Controller
                     'id' => $orderId,
                     'customer_id' => $user->id,
                     'address_id' => $validated['address_id'],
-                    'payment_method_id' => null,
                     'payment_code_id' => $payCode ? $payCode->id : null,
                     'delivery_method_id' => $validated['delivery_method_id'],
                     'production_notes' => $validated['production_notes'] ?? null,

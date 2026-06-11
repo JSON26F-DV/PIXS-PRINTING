@@ -22,11 +22,44 @@ const PaymentSuccess: React.FC = () => {
       return
     }
 
-    const timer = setTimeout(() => {
-      setStatus('success')
-    }, 2000)
+    let isMounted = true
 
-    return () => clearTimeout(timer)
+    const verifyPayment = async () => {
+      try {
+        // We use fetch directly here, or we could use axios
+        const res = await fetch('/api/customer/xendit/verify', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('pixs_token') || ''}`,
+          },
+          body: JSON.stringify({ external_id: externalId })
+        })
+
+        if (!isMounted) return
+
+        if (res.ok) {
+          const data = await res.json()
+          if (data.status === 'success') {
+            setStatus('success')
+            return
+          }
+        }
+        
+        setStatus('failed')
+      } catch (err) {
+        if (!isMounted) return
+        console.error('Verification error:', err)
+        setStatus('failed')
+      }
+    }
+
+    verifyPayment()
+
+    return () => {
+      isMounted = false
+    }
   }, [externalId])
 
   return (

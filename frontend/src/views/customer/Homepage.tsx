@@ -354,7 +354,7 @@ const Homepage: React.FC = () => {
                   {[
                     { name: 'Cups', img: '/src/assets/icons/cups.png' },
                     { name: 'Screenplate', img: '/src/assets/icons/screenplate.png' },
-                    { name: 'Packages', img: '/src/assets/icons/package.png' },
+                    { name: 'Meal', img: '/src/assets/icons/meal.png' },
                     { name: 'Machine', img: '/src/assets/icons/machine.png' },
                   ].map((cat) => (
                     <button
@@ -378,7 +378,7 @@ const Homepage: React.FC = () => {
 
                 <div className="md:hidden h-[119px] rounded-[16px] overflow-hidden">
                   <img
-                    src="/src/assets/hero-milktea.png"
+                    src="/src/assets/hero/mobileheroessection.png"
                     alt=""
                     className="h-full w-full object-cover"
                   />

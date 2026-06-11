@@ -18,7 +18,6 @@ class Order extends Model
         'id',
         'customer_id',
         'address_id',
-        'payment_method_id', // Now stores Xendit payment ID (e.g., XENDIT_PAYMENT_ID or payment method type like 'gcash', 'card')
         'payment_code_id',
         'total_amount',
         'discount_id',
