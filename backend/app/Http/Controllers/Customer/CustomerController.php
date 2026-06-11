@@ -9,7 +9,6 @@ use App\Models\MarketingPromotion;
 use App\Services\AuditService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
 class CustomerController extends Controller
@@ -289,24 +288,5 @@ class CustomerController extends Controller
             'message' => 'Profile picture updated',
             'url' => $filename,
         ]);
-    }
-
-    /**
-     * Update customer password.
-     */
-    public function updatePassword(Request $request): JsonResponse
-    {
-        $request->validate([
-            'password' => 'required|string|min:8|confirmed',
-        ]);
-
-        $customer = $request->user();
-        $customer->update([
-            'password' => Hash::make($request->password),
-        ]);
-
-        AuditService::log('password_change', 'customer', $customer->id);
-
-        return response()->json(['message' => 'Password updated successfully']);
     }
 }

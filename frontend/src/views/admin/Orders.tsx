@@ -649,7 +649,7 @@ const Orders: React.FC = () => {
 
   return (
     <div className={cn(
-      "orders-page animate-in fade-in mx-auto flex max-w-[1700px] flex-col gap-8 px-4 pb-16 duration-500 lg:px-10",
+      "orders-page animate-in fade-in mx-auto flex max-w-[1700px] flex-col gap-8 px-4 pb-16 duration-500 lg:px-10 overflow-x-hidden",
       isLoading && "opacity-50 pointer-events-none"
     )}>
       {isLoading && (

@@ -84,8 +84,9 @@ const ProductCard: React.FC<ProductCardProps> = ({
         >
           <Heart
             size={18}
+            strokeWidth={2.5}
             className={
-              isFavorite ? 'fill-rose-500 text-rose-500' : 'text-slate-200'
+              isFavorite ? 'fill-rose-500 text-rose-500' : 'text-slate-400'
             }
           />
         </button>

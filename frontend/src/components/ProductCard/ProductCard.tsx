@@ -102,8 +102,9 @@ const ProductCard: React.FC<ProductCardProps> = ({
         >
           <Heart
             size={20}
+            strokeWidth={2.5}
             className={clsx(
-              isFav ? 'fill-rose-500 text-rose-500' : 'text-slate-200',
+              isFav ? 'fill-rose-500 text-rose-500' : 'text-slate-400',
             )}
           />
         </button>

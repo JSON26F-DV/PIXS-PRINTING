@@ -51,7 +51,6 @@ class MailService
     {
         return match ($purpose) {
             'forgot_password' => 'PIXS Printing - Password Reset Code',
-            'change_password' => 'PIXS Printing - Password Change Code',
             'delete_order' => 'PIXS Printing - Order Deletion Verification',
             'delete_account' => 'PIXS Printing - Account Deletion Verification',
             'password_changed' => 'PIXS Printing - Password Changed',
@@ -65,7 +64,6 @@ class MailService
 
         return match ($purpose) {
             'forgot_password' => $this->getForgotPasswordTemplate($code, $styles),
-            'change_password' => $this->getChangePasswordTemplate($code, $styles),
             'delete_order' => $this->getDeleteOrderTemplate($code, $styles),
             'delete_account' => $this->getDeleteAccountTemplate($code, $styles),
             'password_changed' => $this->getPasswordChangedTemplate($styles),
@@ -98,25 +96,6 @@ class MailService
                     </div>
                     <h2 style='{$s['title']}'>Password Reset Request</h2>
                     <p style='{$s['subtitle']}'>We received a request to reset your password. Use the code below:</p>
-                    <div style='{$s['code']}'>{$code}</div>
-                    <p style='color: #64748b; font-size: 14px;'>This code expires in 10 minutes. If you didn't request this, please ignore this email.</p>
-                    <div style='{$s['warning']}'>Never share this code with anyone. Our team will never ask for your verification code.</div>
-                </div>
-                <p style='{$s['footer']}'>".date('Y').' PIXS Printing. All rights reserved.</p>
-            </div>
-        ';
-    }
-
-    private function getChangePasswordTemplate(string $code, array $s): string
-    {
-        return "
-            <div style='{$s['container']}'>
-                <div style='{$s['card']}'>
-                    <div style='{$s['header']}'>
-                        <div style='{$s['logo']}'>PIXS Printing</div>
-                    </div>
-                    <h2 style='{$s['title']}'>Password Change Request</h2>
-                    <p style='{$s['subtitle']}'>We received a request to change your password. Use the code below:</p>
                     <div style='{$s['code']}'>{$code}</div>
                     <p style='color: #64748b; font-size: 14px;'>This code expires in 10 minutes. If you didn't request this, please ignore this email.</p>
                     <div style='{$s['warning']}'>Never share this code with anyone. Our team will never ask for your verification code.</div>
@@ -190,7 +169,6 @@ class MailService
     {
         return match ($purpose) {
             'forgot_password' => "Your password reset code is: {$code}\n\nThis code expires in 10 minutes. If you didn't request this, please ignore this email.",
-            'change_password' => "Your password change code is: {$code}\n\nThis code expires in 10 minutes. If you didn't request this, please ignore this email.",
             'delete_order' => "Your order deletion verification code is: {$code}\n\nThis action is irreversible.",
             'delete_account' => "Your account deletion verification code is: {$code}\n\nThis action is irreversible.",
             'password_changed' => 'Your password was changed on '.now()->format('F j, Y g:i A').".\n\nIf you did not make this change, please contact support immediately.",

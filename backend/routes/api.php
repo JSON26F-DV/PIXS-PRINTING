@@ -14,7 +14,6 @@ use App\Http\Controllers\Admin\AdminVerificationController;
 use App\Http\Controllers\Admin\RefundController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Auth\ForgotPasswordController;
-use App\Http\Controllers\Auth\PasswordChangeNotificationController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CategoryController;
@@ -120,7 +119,6 @@ Route::prefix('auth')->group(function () {
 Route::middleware(['auth:sanctum', 'throttle:api'])->prefix('auth')->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
     Route::post('/logout', [AuthController::class, 'logout']);
-    Route::post('/password-changed-notification', [PasswordChangeNotificationController::class, 'sendNotification']);
 });
 
 // User Profile Routes
@@ -375,10 +373,6 @@ Route::middleware(['auth:sanctum', 'role:customer', 'throttle:api'])->prefix('ca
 // Settings Utility Routes (sensitive operations)
 Route::middleware(['auth:sanctum', 'role:customer', 'throttle:sensitive'])->prefix('settings')->group(function () {
     Route::post('/profile-picture', [CustomerController::class, 'updateProfilePicture']);
-    Route::patch('/password', [CustomerController::class, 'updatePassword']);
-    Route::post('/change-password/send-code', [ForgotPasswordController::class, 'sendChangePasswordCode']);
-    Route::post('/change-password/verify', [ForgotPasswordController::class, 'verifyChangePasswordCode']);
-    Route::post('/change-password/confirm', [ForgotPasswordController::class, 'confirmChangePassword']);
 });
 
 Route::middleware(['throttle:api'])->group(function () {

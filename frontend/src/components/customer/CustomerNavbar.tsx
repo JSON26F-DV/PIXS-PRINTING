@@ -13,6 +13,11 @@ import {
   Circle,
   ChevronDown,
   Package,
+  ArrowLeft,
+  ShieldCheck,
+  Check,
+  CreditCard,
+  type LucideIcon,
 } from 'lucide-react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
@@ -24,6 +29,7 @@ import { useCartStore } from '../../store/useCartStore'
 import { useNotificationStore } from '../../store/useNotificationStore'
 import BoxFallback from '../common/BoxFallback'
 import { clsx } from 'clsx'
+import { getProductById } from '../../api/products.api'
 
 const CustomerNavbar: React.FC = () => {
   const { user } = useAuth()
@@ -63,6 +69,29 @@ const CustomerNavbar: React.FC = () => {
   const location = useLocation()
   const navigate = useNavigate()
   const isActive = (path: string) => location.pathname === path
+
+  const [productCategoryLabel, setProductCategoryLabel] = useState<string>('')
+
+  useEffect(() => {
+    const match = location.pathname.match(/^\/product\/([^/]+)/)
+    if (match) {
+      const id = match[1]
+      getProductById(id)
+        .then((res) => {
+          if (res && res.data) {
+            setProductCategoryLabel(res.data.category_label || '')
+          }
+        })
+        .catch((err) => {
+          console.error('Failed to fetch category label in navbar:', err)
+        })
+    } else {
+      const handle = setTimeout(() => {
+        setProductCategoryLabel('')
+      }, 0)
+      return () => clearTimeout(handle)
+    }
+  }, [location.pathname])
 
   const plateStatus = 'Ready'
   const cartItemCount = getCartCount()
@@ -245,83 +274,178 @@ const CustomerNavbar: React.FC = () => {
       {/*  MOBILE NAVBAR                             */}
       {/* ─────────────────────────────────────────── */}
       <div className="md:hidden">
-        {/* 🔝 TOP BAR — Foodpanda-style */}
-        {location.pathname === '/homepage' && (
-          <div className="mobile-navbar-top fixed top-0 right-0 left-0 z-50 flex flex-col bg-white/90 shadow-[0_10px_40px_rgba(0,0,0,0.03)] backdrop-blur-3xl">
-            <div className="flex h-16 items-center justify-between px-4">
-              {/* 📍 Left — Location Block */}
-              <button
-                onClick={handleAddressClick}
-                className="location-wrapper mr-4 flex flex-1 items-center gap-3 overflow-hidden transition-opacity duration-150 active:opacity-70"
-              >
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] bg-slate-900 shadow-lg shadow-slate-200">
-                  <MapPin
-                    size={16}
-                    className="text-pixs-mint"
-                    strokeWidth={3}
-                  />
-                </div>
-                <div className="flex flex-col items-start overflow-hidden leading-tight">
-                  <span className="mb-1 flex items-center gap-1 text-[8px] leading-none font-black tracking-[3px] text-slate-400 uppercase italic">
-                    Arrival Node{' '}
-                    <ChevronDown size={10} className="opacity-70" />
-                  </span>
-                  <p className="location-text max-w-[55vw] truncate overflow-hidden text-sm leading-none font-black tracking-tighter whitespace-nowrap text-slate-900 italic">
-                    {addressText}
-                  </p>
-                </div>
-              </button>
+        {/* 🔝 TOP BAR */}
+        {(() => {
+          const isProductPage = location.pathname.startsWith('/product/')
+          const isCartPage = location.pathname === '/cart'
+          const isTransactionsPage = location.pathname === '/transactions'
+          const isOrdersPage = location.pathname === '/order'
+          const isScreenplatePage = location.pathname === '/screenplate'
+          const isHomepage = location.pathname === '/homepage' || location.pathname === '/'
 
-              <div className="flex items-center gap-2">
-                {/* 🔔 Alert Icon — Mobile Top */}
-                <button
-                  onClick={() => setIsNotificationModalOpen(true)}
-                  className="alert-button relative flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] border border-slate-100 bg-slate-50 transition-all duration-150 hover:bg-slate-100 active:scale-95"
-                >
-                  <Bell size={20} className="text-slate-900" strokeWidth={2.5} />
-                  {unreadCount > 0 && (
-                    <span className="bg-pixs-mint absolute -top-1.5 -right-1.5 flex h-5 min-w-[18px] items-center justify-center rounded-full border border-slate-900/5 px-1 text-[9px] font-black text-slate-900 italic shadow-lg">
-                      {unreadCount > 9 ? '9+' : unreadCount}
+          if (isHomepage) {
+            return (
+              <div className="mobile-navbar-top fixed top-0 left-0 right-0 z-40 flex flex-col bg-pixs-mint shadow-[0_10px_40px_rgba(0,0,0,0.03)] backdrop-blur-3xl w-full">
+                <div className="flex h-16 items-center justify-between px-4">
+                  {/* 📍 Left — Location Block */}
+                  <button
+                    onClick={handleAddressClick}
+                    className="location-wrapper mr-4 flex flex-1 items-center gap-3 overflow-hidden transition-opacity duration-150 active:opacity-70"
+                  >
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] bg-slate-900 shadow-lg shadow-slate-200">
+                      <MapPin
+                        size={16}
+                        className="text-pixs-mint"
+                        strokeWidth={3}
+                      />
+                    </div>
+                    <div className="flex flex-col items-start overflow-hidden leading-tight">
+                      <span className="mb-1 flex items-center gap-1 text-[9px] leading-none text-white tracking-[3px] text-slate-400 uppercase italic">
+                        Location {' '}
+                        <ChevronDown size={10} className="opacity-70" />
+                      </span>
+                      <p className="location-text max-w-[55vw] truncate overflow-hidden text-white text-sm leading-none font-black tracking-tighter whitespace-nowrap text-slate-900 italic">
+                        {addressText}...
+                      </p>
+                    </div>
+                  </button>
+
+                  <div className="flex items-center gap-2">
+                    {/* 🔔 Alert Icon — Mobile Top */}
+                    <button
+                      onClick={() => setIsNotificationModalOpen(true)}
+                      className="alert-button relative flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] bg-pixs-mint transition-all duration-150 active:scale-95"
+                    >
+                      <Bell size={20} className="text-white" strokeWidth={2.5} />
+                      {unreadCount > 0 && (
+                        <span className="bg-white absolute -top-1.5 -right-1.5 flex h-5 min-w-[18px] items-center justify-center rounded-full px-1 text-[9px] font-black text-pixs-mint italic shadow-lg">
+                          {unreadCount > 9 ? '9+' : unreadCount}
+                        </span>
+                      )}
+                    </button>
+
+                    {/* 🛒 Right — Cart Icon */}
+                    <Link
+                      to="/cart"
+                      className="cart-button relative flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] bg-pixs-mint transition-all duration-150 active:scale-95"
+                    >
+                      <ShoppingCart
+                        size={20}
+                        className="text-white"
+                        strokeWidth={2.5}
+                      />
+                      {cartItemCount > 0 && (
+                        <span className="bg-white absolute -top-1.5 -right-1.5 flex h-5 min-w-[18px] items-center justify-center rounded-full px-1 text-[9px] font-black text-pixs-mint italic shadow-lg">
+                          {cartItemCount > 99 ? '99+' : cartItemCount}
+                        </span>
+                      )}
+                    </Link>
+                  </div>
+                </div>
+
+                {/* 🔍 Search Bar */}
+                <div className="px-4 pb-4">
+                  <button
+                    onClick={() => navigate('/discovery')}
+                    className="hover:border-pixs-mint flex h-12 w-full items-center gap-4 rounded-[16px] border-2 border-slate-100 bg-white px-5 shadow-inner transition-transform active:scale-[0.98]"
+                  >
+                    <Search size={18} className="text-slate-300" strokeWidth={3} />
+                    <span className="flex-1 bg-transparent text-left text-[10px] font-black tracking-[4px] text-slate-900 uppercase italic opacity-30">
+                      Search Data Matrix...
                     </span>
-                  )}
+                  </button>
+                </div>
+              </div>
+            )
+          }
+
+          if (isProductPage || isCartPage || isTransactionsPage || isOrdersPage || isScreenplatePage) {
+            let centerText = ''
+            let CenterIcon: LucideIcon = ShoppingBag
+            let rightElement: React.ReactNode = null
+
+            if (isProductPage) {
+              centerText = productCategoryLabel || 'Product'
+              CenterIcon = ShoppingBag
+              rightElement = (
+                <button
+                  onClick={() => window.dispatchEvent(new CustomEvent('pixs-add-to-cart'))}
+                  className="flex h-11 w-11 items-center justify-end text-slate-800 transition-transform active:scale-95"
+                >
+                  <ShoppingCart size={24} strokeWidth={2.5} />
+                </button>
+              )
+            } else if (isCartPage) {
+              centerText = 'Add To Cart'
+              CenterIcon = ShoppingCart
+              rightElement = (
+                <button
+                  onClick={() => window.dispatchEvent(new CustomEvent('pixs-checkout'))}
+                  className="flex h-11 w-11 items-center justify-end text-slate-800 transition-transform active:scale-95"
+                >
+                  <Check size={24} strokeWidth={2.5} />
+                </button>
+              )
+            } else if (isTransactionsPage) {
+              centerText = 'Checkout'
+              CenterIcon = ShieldCheck
+              rightElement = (
+                <button
+                  onClick={() => window.dispatchEvent(new CustomEvent('pixs-purchase'))}
+                  className="flex h-11 w-11 items-center justify-end text-slate-800 transition-transform active:scale-95"
+                >
+                  <CreditCard size={24} strokeWidth={2.5} />
+                </button>
+              )
+            } else if (isOrdersPage) {
+              centerText = 'Orders'
+              CenterIcon = Package
+              rightElement = null
+            } else if (isScreenplatePage) {
+              centerText = 'Screenplate'
+              CenterIcon = Printer
+              rightElement = (
+                <button
+                  onClick={() => window.dispatchEvent(new CustomEvent('pixs-screenplate-pay'))}
+                  className="flex h-11 w-11 items-center justify-end text-slate-800 transition-transform active:scale-95"
+                >
+                  <Check size={24} strokeWidth={2.5} />
+                </button>
+              )
+            }
+
+            return (
+              <div className="mobile-navbar-top relative z-40 flex h-16 items-center justify-between bg-transparent px-4 w-full">
+                {/* Left: Back Button */}
+                <button
+                  onClick={() => navigate(-1)}
+                  className="flex h-11 w-11 items-center justify-start text-slate-800 transition-transform active:scale-95"
+                >
+                  <ArrowLeft size={24} strokeWidth={2.5} />
                 </button>
 
-                {/* 🛒 Right — Cart Icon */}
-                <Link
-                  to="/cart"
-                  className="cart-button relative flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] border border-slate-100 bg-slate-50 transition-all duration-150 hover:bg-slate-100 active:scale-95"
-                >
-                  <ShoppingCart
-                    size={20}
-                    className="text-slate-900"
-                    strokeWidth={2.5}
-                  />
-                  {cartItemCount > 0 && (
-                    <span className="bg-pixs-mint absolute -top-1.5 -right-1.5 flex h-5 min-w-[18px] items-center justify-center rounded-full border border-slate-900/5 px-1 text-[9px] font-black text-slate-900 italic shadow-lg">
-                      {cartItemCount > 99 ? '99+' : cartItemCount}
-                    </span>
-                  )}
-                </Link>
-              </div>
-            </div>
+                {/* Center: Badge */}
+                <div className="flex w-[192px] h-10 items-center justify-center gap-2 rounded-[43px] bg-[#DCF5E1] px-3 font-bold text-slate-800 shadow-sm">
+                  <CenterIcon size={16} className="shrink-0 text-emerald-600" />
+                  <span className="truncate text-xs font-bold uppercase tracking-wider">
+                    {centerText}
+                  </span>
+                </div>
 
-            {/* 🔍 Search Bar */}
-            <div className="px-4 pb-4">
-              <button
-                onClick={() => navigate('/discovery')}
-                className="hover:border-pixs-mint flex h-12 w-full items-center gap-4 rounded-[16px] border-2 border-slate-100 bg-white px-5 shadow-inner transition-transform active:scale-[0.98]"
-              >
-                <Search size={18} className="text-slate-300" strokeWidth={3} />
-                <span className="flex-1 bg-transparent text-left text-[10px] font-black tracking-[4px] text-slate-900 uppercase italic opacity-30">
-                  Search Data Matrix...
-                </span>
-              </button>
-            </div>
-          </div>
-        )}
+                {/* Right: Action/Icon */}
+                <div className="flex h-11 w-11 items-center justify-end">
+                  {rightElement}
+                </div>
+              </div>
+            )
+          }
+
+          return null
+        })()}
 
         {/* 🔻 BOTTOM NAV */}
-        <div className="mobile-navbar-bottom pb-safe fixed right-0 bottom-0 left-0 z-50 flex h-20 items-center justify-around rounded-t-[32px] border-t border-slate-100 bg-white/90 px-2 shadow-[0_-10px_40px_rgba(0,0,0,0.03)] backdrop-blur-3xl">
+        <div className="mobile-navbar-bottom pb-safe fixed right-0 bottom-0 left-0 z-40 flex h-20 items-center justify-around rounded-t-[32px] border-t border-slate-100 bg-white px-2 shadow-[0_-10px_40px_rgba(0,0,0,0.03)]">
+          {/* Option 1: Home */}
           <Link
             to="/homepage"
             className="nav-item flex w-16 flex-col items-center gap-1.5 px-3 py-2 transition-all duration-150 active:scale-90"
@@ -330,34 +454,64 @@ const CustomerNavbar: React.FC = () => {
               size={22}
               strokeWidth={isActive('/homepage') ? 3 : 2}
               className={
-                isActive('/homepage') ? 'text-slate-900' : 'text-slate-300'
+                isActive('/homepage') ? 'text-slate-900' : 'text-slate-400'
               }
             />
             <span
-              className={`text-[8px] leading-none font-black tracking-[2px] uppercase italic ${isActive('/homepage') ? 'text-slate-900' : 'text-slate-300 opacity-60'}`}
+              className={`text-[8px] leading-none font-black tracking-[2px] uppercase italic ${isActive('/homepage') ? 'text-slate-900' : 'text-slate-400'}`}
             >
               Home
             </span>
           </Link>
 
-          <Link
-            to="/screenplate"
-            className="nav-item flex w-16 flex-col items-center gap-1.5 px-3 py-2 transition-all duration-150 active:scale-90"
-          >
-            <Printer
-              size={22}
-              strokeWidth={isActive('/screenplate') ? 3 : 2}
-              className={
-                isActive('/screenplate') ? 'text-slate-900' : 'text-slate-300'
-              }
-            />
-            <span
-              className={`text-[8px] leading-none font-black tracking-[2px] uppercase italic ${isActive('/screenplate') ? 'text-slate-900' : 'text-slate-300 opacity-60'}`}
+          {/* Option 2: Cart / Discover (dynamic) */}
+          {!(location.pathname.startsWith('/product/') || location.pathname === '/cart' || location.pathname === '/transactions') ? (
+            <Link
+              to="/discovery"
+              className="nav-item flex w-16 flex-col items-center gap-1.5 px-3 py-2 transition-all duration-150 active:scale-90"
             >
-              Plate
-            </span>
-          </Link>
+              <Search
+                size={22}
+                strokeWidth={isActive('/discovery') ? 3 : 2}
+                className={
+                  isActive('/discovery') ? 'text-slate-900' : 'text-slate-400'
+                }
+              />
+              <span
+                className={`text-[8px] leading-none font-black tracking-[2px] uppercase italic ${isActive('/discovery') ? 'text-slate-900' : 'text-slate-400'}`}
+              >
+                Discover
+              </span>
+            </Link>
+          ) : (
+            <Link
+              to="/cart"
+              className="nav-item flex w-16 flex-col items-center gap-1.5 px-3 py-2 transition-all duration-150 active:scale-90"
+            >
+              <div className="relative">
+                <ShoppingCart
+                  size={22}
+                  strokeWidth={isActive('/cart') ? 3 : 2}
+                  className={
+                    isActive('/cart') ? 'text-slate-900' : 'text-slate-400'
+                  }
+                />
+                {cartItemCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-rose-500 px-1 text-[8px] font-black text-white italic">
+                    {cartItemCount}
+                  </span>
+                )}
+              </div>
+              <span
+                className={`text-[8px] leading-none font-black tracking-[2px] uppercase italic ${isActive('/cart') ? 'text-slate-900' : 'text-slate-400'}`}
+              >
+                Cart
+              </span>
+            </Link>
+          )}
 
+
+          {/* Option 3: Chat */}
           <Link
             to="/chat"
             className="nav-item flex w-16 flex-col items-center gap-1.5 px-3 py-2 transition-all duration-150 active:scale-90"
@@ -366,16 +520,17 @@ const CustomerNavbar: React.FC = () => {
               size={22}
               strokeWidth={isActive('/chat') ? 3 : 2}
               className={
-                isActive('/chat') ? 'text-slate-900' : 'text-slate-300'
+                isActive('/chat') ? 'text-slate-900' : 'text-slate-400'
               }
             />
             <span
-              className={`text-[8px] leading-none font-black tracking-[2px] uppercase italic ${isActive('/chat') ? 'text-slate-900' : 'text-slate-300 opacity-60'}`}
+              className={`text-[8px] leading-none font-black tracking-[2px] uppercase italic ${isActive('/chat') ? 'text-slate-900' : 'text-slate-400'}`}
             >
               Chat
             </span>
           </Link>
 
+          {/* Option 4: Orders */}
           <Link
             to="/order"
             className="nav-item nav-orders-button flex w-16 flex-col items-center gap-1.5 px-3 py-2 transition-all duration-150 active:scale-90"
@@ -384,22 +539,26 @@ const CustomerNavbar: React.FC = () => {
               size={22}
               strokeWidth={isActive('/order') ? 3 : 2}
               className={
-                isActive('/order') ? 'text-slate-900' : 'text-slate-300'
+                isActive('/order') ? 'text-slate-900' : 'text-slate-400'
               }
             />
             <span
-              className={`text-[8px] leading-none font-black tracking-[2px] uppercase italic ${isActive('/order') ? 'text-slate-900' : 'text-slate-300 opacity-60'}`}
+              className={`text-[8px] leading-none font-black tracking-[2px] uppercase italic ${isActive('/order') ? 'text-slate-900' : 'text-slate-400'}`}
             >
               Orders
             </span>
           </Link>
 
+          {/* Option 5: Profile */}
           <Link
             to="/settings"
             className="nav-item flex w-16 flex-col items-center gap-1.5 px-3 py-2 transition-all duration-150 active:scale-90"
           >
             {user?.name ? (
-              <div className="relative h-6 w-6 shrink-0 overflow-hidden rounded-full bg-slate-100 shadow-lg">
+              <div className={clsx(
+                "relative h-6 w-6 shrink-0 overflow-hidden rounded-full shadow-lg border",
+                isActive('/settings') ? 'border-slate-900' : 'border-slate-200'
+              )}>
                 {user.profile_picture ? (
                   <img
                     src={user.profile_picture.startsWith('http') ? user.profile_picture : `/src/assets/profile/${user.profile_picture}`}
@@ -422,12 +581,12 @@ const CustomerNavbar: React.FC = () => {
                 size={22}
                 strokeWidth={isActive('/settings') ? 3 : 2}
                 className={
-                  isActive('/settings') ? 'text-slate-900' : 'text-slate-300'
+                  isActive('/settings') ? 'text-slate-900' : 'text-slate-400'
                 }
               />
             )}
             <span
-              className={`text-[8px] leading-none font-black tracking-[2px] uppercase italic ${isActive('/settings') ? 'text-slate-900' : 'text-slate-300 opacity-60'}`}
+              className={`text-[8px] leading-none font-black tracking-[2px] uppercase italic ${isActive('/settings') ? 'text-slate-900' : 'text-slate-400'}`}
             >
               Profile
             </span>

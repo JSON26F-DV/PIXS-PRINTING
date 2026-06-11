@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react'
+import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import {
   FiUploadCloud,
   FiSearch,
@@ -438,7 +438,7 @@ const ScreenplatePage: React.FC = () => {
   }
 
   // Step 1: open modal for review
-  const handlePayClick = () => {
+  const handlePayClick = useCallback(() => {
     if (!isValid) {
       if ('vibrate' in navigator) {
         navigator.vibrate([200])
@@ -460,7 +460,17 @@ const ScreenplatePage: React.FC = () => {
       return
     }
     setReviewOpen(true)
-  }
+  }, [isValid])
+
+  useEffect(() => {
+    const handlePayEvent = () => {
+      handlePayClick()
+    }
+    window.addEventListener('pixs-screenplate-pay', handlePayEvent)
+    return () => {
+      window.removeEventListener('pixs-screenplate-pay', handlePayEvent)
+    }
+  }, [isValid, handlePayClick])
 
   // Step 2: actual submission from modal
   const handleConfirmSubmit = async () => {

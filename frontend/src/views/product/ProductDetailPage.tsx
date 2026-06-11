@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useLayoutEffect } from 'react'
+import React, { useEffect, useState, useLayoutEffect, useCallback } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { ArrowLeft, PackageCheck } from 'lucide-react'
 
@@ -89,7 +89,7 @@ const ProductDetailInner: React.FC<{
     return () => ctx.revert()
   }, [])
 
-  const handleAddToCart = async () => {
+  const handleAddToCart = useCallback(async () => {
     if (!computed.canAddToCart) {
       toast.error('Please complete all required selections (Variant, Color, and Screenplate).')
       return
@@ -118,12 +118,12 @@ const ProductDetailInner: React.FC<{
         unit_price: variant.price,
         plate_price: computed.selectedVariant && computed.selectedPlate
           ? (() => {
-              const cp = computed.selectedPlate.compatibility.find(
-                (c: { product_id: string }) => c.product_id === product.id
-              );
-              return cp?.print_price_per_unit?.[computed.selectedVariant.variant_id] ?? 
-                     cp?.print_price_per_unit?.['ALL'] ?? 0;
-            })()
+               const cp = computed.selectedPlate.compatibility.find(
+                 (c: { product_id: string }) => c.product_id === product.id
+               );
+               return cp?.print_price_per_unit?.[computed.selectedVariant.variant_id] ?? 
+                      cp?.print_price_per_unit?.['ALL'] ?? 0;
+             })()
           : 0,
         total_cart_price: computed.priceBreakdown.total,
         colors: computed.selectedColors.map((c, index) => ({
@@ -148,7 +148,17 @@ const ProductDetailInner: React.FC<{
       console.error('Failed to add to cart:', error)
       toast.error('Failed to add product to cart. Please try again.')
     }
-  }
+  }, [computed, product, state])
+
+  useEffect(() => {
+    const handleCartEvent = () => {
+      handleAddToCart()
+    }
+    window.addEventListener('pixs-add-to-cart', handleCartEvent)
+    return () => {
+      window.removeEventListener('pixs-add-to-cart', handleCartEvent)
+    }
+  }, [handleAddToCart])
 
   const handleBuyNow = async () => {
     if (!computed.canAddToCart) {
@@ -220,7 +230,7 @@ const ProductDetailInner: React.FC<{
       <ToastContainer position="bottom-right" theme="dark" hideProgressBar />
 
       {/* Persistent Breadcrumb Architecture */}
-      <div className="fixed top-0 lg:top-20 w-screen z-30 border-b border-slate-50 bg-white/60 px-6 py-5 backdrop-blur-3xl md:px-16">
+      <div className="fixed top-0 lg:top-20 w-screen z-30 hidden border-b border-slate-50 bg-white/60 px-6 py-5 backdrop-blur-3xl md:flex md:px-16">
         <div className="mx-auto flex max-w-[1400px] items-center justify-between">
           <div className="flex items-center gap-4">
             <button

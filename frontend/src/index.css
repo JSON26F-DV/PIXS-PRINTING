@@ -17,7 +17,10 @@
     margin: 0;
     padding: 0;
     overflow-x: hidden;
+    overflow-y: overlay;
     touch-action: pan-y;
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;     /* Firefox */
   }
 
   #root {
@@ -107,24 +110,9 @@
 
 
 
-/* Global Industrial Scrollbar Interface */
+/* Global Industrial Scrollbar Interface - Hidden */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: rgba(148, 163, 184, 0.2);
-  border-radius: 10px;
-  transition: background 0.3s ease;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(117, 238, 165, 0.5); /* PIXS Mint Accent */
+  display: none;
 }
 
 /* Specific Hub Override for Chat Terminals */

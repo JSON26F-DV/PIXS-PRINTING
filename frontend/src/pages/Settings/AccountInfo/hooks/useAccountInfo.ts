@@ -1,7 +1,7 @@
 import { useMemo, useState, useEffect } from 'react'
 import axiosInstance from '../../../../lib/axiosInstance'
 import { useAuth } from '../../../../context/AuthContext'
-import type { ProfileFormValues, PasswordFormValues } from '../utils/validation'
+import type { ProfileFormValues } from '../utils/validation'
 
 export interface IContactNode {
   number: string
@@ -92,21 +92,6 @@ export const useAccountInfo = () => {
     }
   }
 
-  const updatePassword = async (
-    values: PasswordFormValues,
-  ): Promise<{ success: boolean }> => {
-    try {
-      await axiosInstance.patch('/api/settings/password', {
-        password: values.newPassword,
-        password_confirmation: values.confirmPassword,
-      })
-      return { success: true }
-    } catch (err) {
-      console.error(err)
-      return { success: false }
-    }
-  }
-
   const uploadProfilePicture = async (
     file: File,
   ): Promise<{ success: boolean; url?: string; error?: string }> => {
@@ -174,7 +159,6 @@ export const useAccountInfo = () => {
   return {
     defaultAccount,
     updateProfile,
-    updatePassword,
     uploadProfilePicture,
     storeContact,
     setDefaultContact,

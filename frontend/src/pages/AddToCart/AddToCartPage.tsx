@@ -249,7 +249,7 @@ const AddToCartPage: React.FC = () => {
   )
 
   // ─── Checkout: flush all pending to backend then navigate ─────────────────
-  const handleCheckout = async () => {
+  const handleCheckout = useCallback(async () => {
     if (selectedItems.length === 0) {
       toast.error('Please select at least one product.')
       return
@@ -320,7 +320,26 @@ const AddToCartPage: React.FC = () => {
       console.error('Checkout error:', err)
       toast.error('Systems encountered an error during checkout. Please try again.')
     }
-  }
+  }, [
+    selectedItems,
+    hasMissingColor,
+    hasLowQuantityItem,
+    hasIncompatibleVariant,
+    hasInsufficientStockVariant,
+    mergedItems,
+    syncCart,
+    navigate,
+  ])
+
+  useEffect(() => {
+    const handleCheckoutEvent = () => {
+      handleCheckout()
+    }
+    window.addEventListener('pixs-checkout', handleCheckoutEvent)
+    return () => {
+      window.removeEventListener('pixs-checkout', handleCheckoutEvent)
+    }
+  }, [handleCheckout])
 
   // ─── Quantity ─────────────────────────────────────────────────────────────
   const handleQuantityChange = (itemId: string, nextQtyRaw: number) => {
@@ -411,7 +430,7 @@ const AddToCartPage: React.FC = () => {
     <div className="AddToCartPage flex flex-col bg-slate-50 mt-7 lg:mt-0">
 
       {/* ── Sticky Header ── */}
-      <div className="shrink-0 w-full z-30 border-b border-slate-100 bg-white/60 px-6 py-5 backdrop-blur-3xl md:px-16 lg:mt-20">
+      <div className="shrink-0 w-full z-30 hidden border-b border-slate-100 bg-white/60 px-6 py-5 backdrop-blur-3xl md:block md:px-16 lg:mt-20">
         <div className="mx-auto flex max-w-[1400px] items-center justify-between">
           <button
             onClick={() => navigate('/')}

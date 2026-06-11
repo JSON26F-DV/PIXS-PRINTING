@@ -2,7 +2,6 @@ import React, { useEffect, useState, useCallback } from 'react'
 import {
   Bell,
   Check,
-  Trash2,
   Mail,
   MailOpen,
   Inbox,

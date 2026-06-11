@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import {
   ShieldCheck,
@@ -223,7 +223,104 @@ const Transactions: React.FC = () => {
     checkout_url?: string | null
   }
 
-  const handlePurchase = async () => {
+  const handleOrderCreated = useCallback(async (response: CreateOrderResponse) => {
+    const currentCartRaw = localStorage.getItem('pixs_cart_v1')
+    if (currentCartRaw) {
+      try {
+        const currentCart: CartItem[] = JSON.parse(currentCartRaw)
+        const purchasedIds = checkoutItems.map((i) => i.id)
+        const remainingCart = currentCart.filter((i) => !purchasedIds.includes(i.id))
+        localStorage.setItem('pixs_cart_v1', JSON.stringify(remainingCart))
+        window.dispatchEvent(new Event('storage'))
+      } catch {
+        // silently ignore parse errors
+      }
+    }
+
+    localStorage.removeItem('pixs_checkout_node')
+    localStorage.removeItem('pixs_buy_now_v1')
+
+    const orderId = response?.id || 'ORD-NEW'
+    const orderTotal = response?.total_amount || 0
+    const checkoutUrl = response?.checkout_url
+
+    setLastOrderId(orderId)
+    setLastOrderTotal(orderTotal)
+
+    if ('vibrate' in navigator) {
+      navigator.vibrate([100, 50, 100, 50, 200])
+    }
+
+    // Construct message for admin
+    try {
+      const messageBody = `review your shipping address ${orderId}`
+      const formData = new FormData()
+      formData.append('message', messageBody)
+      formData.append('receiver_id', '1')
+      formData.append('receiver_type', 'employee')
+      formData.append('message_type', 'order')
+      formData.append('type_id', orderId)
+
+      await axiosInstance.post('/api/messages/send', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      })
+    } catch (msgErr) {
+      console.error('Failed to send order message to admin:', msgErr)
+    }
+
+    if (checkoutUrl) {
+      toast.success('Order placed! Redirecting to GCash...')
+      setTimeout(() => {
+        window.location.href = checkoutUrl
+      }, 1500)
+      return
+    }
+
+    setIsSuccessModalOpen(true)
+    toast.success('Order placed successfully!')
+    fetchNotifications()
+
+    setTimeout(() => {
+      navigate('/orders')
+    }, 3000)
+  }, [checkoutItems, fetchNotifications, navigate])
+
+  const handleOrderError = useCallback((err: unknown) => {
+    console.error('Purchase Error:', err)
+
+    const axiosErr = err as { response?: { status?: number; data?: { message?: string; error_code?: string; stock_errors?: { product_name: string; requested: number; available: number }[] } } }
+    const backendData = axiosErr.response?.data
+
+    if (backendData?.error_code === 'PAYMENT_CODE_ALREADY_USED') {
+      setCodeAlertMessage('THIS PAYMENT CODE HAS ALREADY BEEN USED. CODES ARE ONE-TIME USE ONLY.')
+      setIsCodeAlertOpen(true)
+      return
+    }
+
+    if (axiosErr.response?.status === 404 && backendData?.message?.toLowerCase().includes('payment code')) {
+      setCodeAlertMessage('THE PAYMENT CODE IS INVALID. PLEASE VERIFY THE SPELLING.')
+      setIsCodeAlertOpen(true)
+      return
+    }
+
+    if (backendData?.message === 'INSUFFICIENT_STOCK' && backendData?.stock_errors) {
+      setStockAlertItems(
+        backendData.stock_errors.map((item) => ({
+          name: item.product_name,
+          requested: item.requested,
+          available: item.available,
+        }))
+      )
+      setIsStockAlertOpen(true)
+      return
+    }
+
+    const msg = backendData?.message || 'Failed to place order.'
+    toast.error(msg)
+    fetchNotifications()
+  }, [fetchNotifications])
+
+  const handlePurchase = useCallback(async () => {
     if (!isFormValid) {
       toast.error('Please complete all sections to proceed.')
       return
@@ -326,109 +423,35 @@ const Transactions: React.FC = () => {
     } finally {
       setIsProcessing(false)
     }
-  }
+  }, [
+    isFormValid,
+    addresses,
+    selectedAddressId,
+    deliveryData,
+    selectedDeliveryId,
+    checkoutItems,
+    selectedPaymentId,
+    paymentCode,
+    notes,
+    selectedDiscount,
+    handleOrderCreated,
+    handleOrderError,
+  ])
 
-  const handleOrderCreated = async (response: CreateOrderResponse) => {
-    const currentCartRaw = localStorage.getItem('pixs_cart_v1')
-    if (currentCartRaw) {
-      try {
-        const currentCart: CartItem[] = JSON.parse(currentCartRaw)
-        const purchasedIds = checkoutItems.map((i) => i.id)
-        const remainingCart = currentCart.filter((i) => !purchasedIds.includes(i.id))
-        localStorage.setItem('pixs_cart_v1', JSON.stringify(remainingCart))
-        window.dispatchEvent(new Event('storage'))
-      } catch {
-        // silently ignore parse errors
-      }
+  useEffect(() => {
+    const handlePurchaseEvent = () => {
+      handlePurchase()
     }
-
-    localStorage.removeItem('pixs_checkout_node')
-    localStorage.removeItem('pixs_buy_now_v1')
-
-    const orderId = response?.id || 'ORD-NEW'
-    const orderTotal = response?.total_amount || 0
-    const checkoutUrl = response?.checkout_url
-
-    setLastOrderId(orderId)
-    setLastOrderTotal(orderTotal)
-
-    if ('vibrate' in navigator) {
-      navigator.vibrate([100, 50, 100, 50, 200])
+    window.addEventListener('pixs-purchase', handlePurchaseEvent)
+    return () => {
+      window.removeEventListener('pixs-purchase', handlePurchaseEvent)
     }
-
-    // Construct message for admin
-    try {
-      const messageBody = `review your shipping address ${orderId}`
-      const formData = new FormData()
-      formData.append('message', messageBody)
-      formData.append('receiver_id', '1')
-      formData.append('receiver_type', 'employee')
-      formData.append('message_type', 'order')
-      formData.append('type_id', orderId)
-
-      await axiosInstance.post('/api/messages/send', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      })
-    } catch (msgErr) {
-      console.error('Failed to send order message to admin:', msgErr)
-    }
-
-    if (checkoutUrl) {
-      toast.success('Order placed! Redirecting to GCash...')
-      setTimeout(() => {
-        window.location.href = checkoutUrl
-      }, 1500)
-      return
-    }
-
-    setIsSuccessModalOpen(true)
-    toast.success('Order placed successfully!')
-    fetchNotifications()
-
-    setTimeout(() => {
-      navigate('/orders')
-    }, 3000)
-  }
-
-  const handleOrderError = (err: unknown) => {
-    console.error('Purchase Error:', err)
-
-    const axiosErr = err as { response?: { status?: number; data?: { message?: string; error_code?: string; stock_errors?: { product_name: string; requested: number; available: number }[] } } }
-    const backendData = axiosErr.response?.data
-
-    if (backendData?.error_code === 'PAYMENT_CODE_ALREADY_USED') {
-      setCodeAlertMessage('THIS PAYMENT CODE HAS ALREADY BEEN USED. CODES ARE ONE-TIME USE ONLY.')
-      setIsCodeAlertOpen(true)
-      return
-    }
-
-    if (axiosErr.response?.status === 404 && backendData?.message?.toLowerCase().includes('payment code')) {
-      setCodeAlertMessage('THE PAYMENT CODE IS INVALID. PLEASE VERIFY THE SPELLING.')
-      setIsCodeAlertOpen(true)
-      return
-    }
-
-    if (backendData?.message === 'INSUFFICIENT_STOCK' && backendData?.stock_errors) {
-      setStockAlertItems(
-        backendData.stock_errors.map((item) => ({
-          name: item.product_name,
-          requested: item.requested,
-          available: item.available,
-        }))
-      )
-      setIsStockAlertOpen(true)
-      return
-    }
-
-    const msg = backendData?.message || 'Failed to place order.'
-    toast.error(msg)
-    fetchNotifications()
-  }
+  }, [handlePurchase])
 
   return (
     <div className="TransactionsPage min-h-screen bg-slate-50 pt-8 pb-32 mt-7 md:mt-20">
       <div className="TransactionsContainer mx-auto max-w-[1400px] px-6 lg:px-16">
-        <div className="mb-8">
+        <div className="mb-8 hidden md:block">
           <button
             onClick={() => setIsAbortModalOpen(true)}
             className="flex items-center gap-2 text-[10px] font-black tracking-[4px] text-slate-400 border border-slate-200 bg-white px-5 py-2 rounded-full uppercase italic transition-colors hover:text-slate-900"

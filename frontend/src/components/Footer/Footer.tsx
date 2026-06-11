@@ -12,7 +12,7 @@ import { FiFacebook, FiInstagram, FiTwitter, FiLinkedin } from 'react-icons/fi'
 
 const Footer: React.FC = () => {
   return (
-    <footer className="Footer border-t border-slate-100 bg-slate-50 pt-16 pb-8 w-screen">
+    <footer className="Footer border-t border-slate-100 bg-slate-50 pt-16 pb-8 w-screen z-2">
       <div className="FooterContainer mx-auto max-w-[1440px] px-6">
         <div className="FooterTop FooterGrid mb-16 grid grid-cols-1 gap-12 md:grid-cols-2 lg:grid-cols-4">
           {/* 1. Brand Section */}

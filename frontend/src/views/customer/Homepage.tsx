@@ -9,9 +9,6 @@ import {
   Package,
   Star,
   ShoppingBag,
-  Home,
-  Search,
-  User,
 } from 'lucide-react'
 
 import { useAuth } from '../../context/AuthContext'
@@ -35,6 +32,7 @@ import Pagination from '../../components/Pagination/Pagination'
 import Footer from '../../components/Footer/Footer'
 import FilterDropdown from '../../components/FilterDropdown/FilterDropdown'
 import PaymentResultModal from '../../components/Transactions/PaymentResultModal'
+import MobileHeroSection from '../../components/MobileHeroSection/MobileHeroSection'
 
 
 
@@ -150,7 +148,7 @@ const Homepage: React.FC = () => {
   })
 
   const [currentPage, setCurrentPage] = useState(1)
-  const itemsPerPage = isMobile ? 10 : 20
+  const itemsPerPage = 20
 
 
   // Data fetching
@@ -255,66 +253,80 @@ const Homepage: React.FC = () => {
   )
 
   return (
-    <div className="flex min-h-screen flex-col items-center bg-white mt-0 md:mt-20 pb-20 md:pb-0">
-      {/* Hero Section - Matching OrderPage Spaciousness */}
-      <section
-        className="relative w-full overflow-hidden pb-10"
-        aria-label="Featured Services"
-      >
-        {/* Decorative Blurred Circle from OrderPage */}
-        <div className="bg-pixs-mint/10 absolute top-0 right-0 -mt-20 -mr-20 h-96 w-96 rounded-full blur-[100px]" />
-
-        <div className="relative mx-auto max-w-[1873px] px-6 pt-32 pb-6 md:px-16 md:pt-8">
-          <div className="w-full overflow-hidden rounded-[30px] shadow-2xl md:rounded-[64px]">
-            <HeroCarousel
-              slides={HERO_SLIDES}
-              onCTA={() => {
-                const el = document.getElementById('marketplace')
-                if (el)
-                  el.scrollIntoView({ behavior: 'smooth', block: 'start' })
-              }}
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* Categories Row (Production Line) */}
-      <section
-        className="mx-auto w-full max-w-[1873px] px-4 md:px-16"
-        aria-label="Product Categories"
-      >
-        <div className="mb-6 flex items-end justify-between md:mb-12">
-          <div>
-            <h3 className="mb-2 text-2xl leading-none font-black tracking-tighter text-slate-900 uppercase italic md:mb-4 md:text-6xl">
-              Production Line
-            </h3>
-            <p className="text-[10px] font-bold tracking-[3px] text-slate-400 uppercase md:text-sm md:tracking-[4px]">
-              Select your substrate matrix
-            </p>
-          </div>
-        </div>
-        <QuickCategoryRow
-          categories={quickCategories}
-          isLoading={catLoading}
-          onCategoryClick={handleCategoryIdSelect}
-          onMoreClick={() => navigate('/discovery')}
+    <div className="flex min-h-screen flex-col w-full overflow-x-hidden items-center bg-white mt-0 md:mt-20 pb-20 md:pb-0">
+      {/* Mobile Hero Section */}
+      {isMobile && (
+        <MobileHeroSection
+          onCTA={() => {
+            const el = document.getElementById('marketplace')
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+          }}
         />
-      </section>
+      )}
+
+      {/* Hero Section - Matching OrderPage Spaciousness (Desktop Only) */}
+      {!isMobile && (
+        <section
+          className="relative w-full overflow-hidden pb-10"
+          aria-label="Featured Services"
+        >
+          {/* Decorative Blurred Circle from OrderPage */}
+          <div className="bg-pixs-mint/10 absolute top-0 right-0 -mt-20 -mr-20 h-96 w-96 rounded-full blur-[100px]" />
+
+          <div className="relative mx-auto max-w-[1873px] px-6 pt-32 pb-6 md:px-16 md:pt-8">
+            <div className="w-full overflow-hidden rounded-[30px] shadow-2xl md:rounded-[64px]">
+              <HeroCarousel
+                slides={HERO_SLIDES}
+                onCTA={() => {
+                  const el = document.getElementById('marketplace')
+                  if (el)
+                    el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                }}
+              />
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Categories Row (Production Line) - Desktop Only */}
+      {!isMobile && (
+        <section
+          className="mx-auto w-full max-w-[1873px] px-4 md:px-16"
+          aria-label="Product Categories"
+        >
+          <div className="mb-6 flex items-end justify-between md:mb-12">
+            <div>
+              <h3 className="mb-2 text-2xl leading-none font-black tracking-tighter text-slate-900 uppercase italic md:mb-4 md:text-6xl">
+                Production Line
+              </h3>
+              <p className="text-[10px] font-bold tracking-[3px] text-slate-400 uppercase md:text-sm md:tracking-[4px]">
+                Select your substrate matrix
+              </p>
+            </div>
+          </div>
+          <QuickCategoryRow
+            categories={quickCategories}
+            isLoading={catLoading}
+            onCategoryClick={handleCategoryIdSelect}
+            onMoreClick={() => navigate('/discovery')}
+          />
+        </section>
+      )}
 
       {/* Product Marketplace Section */}
-      <div className="relative w-full">
+      <div className="relative w-full mt-[300px] md:mt-0 z-10 rounded-tl-[29px] rounded-tr-[29px] bg-white">
         <div className="fuzzy-overlay pointer-events-none absolute inset-0 opacity-[0.03]" />
 
         <section
           id="marketplace"
           ref={productGridRef}
-          className="relative bg-slate-50/50 px-4 py-12 md:px-16 md:py-32"
+          className="relative bg-slate-50/50 px-4 py-12 rounded-tl-[29px] rounded-tr-[29px] md:px-16 md:py-32"
           aria-label="Product Marketplace"
         >
           <div className="mx-auto max-w-[1873px]">
             <div className="mb-12 flex flex-col gap-6 md:mb-20 md:gap-10">
               <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
-                <div>
+                <div className="hidden md:block">
                   <h2 className="mb-2 text-3xl leading-none font-black tracking-tighter text-slate-900 uppercase italic md:mb-4 md:text-8xl">
                     The{' '}
                     <span className="text-slate-400 opacity-50">
@@ -325,24 +337,92 @@ const Homepage: React.FC = () => {
                     Access the industrial registry
                   </p>
                 </div>
+
+                {/* Mobile Categories */}
+                <div className="flex flex-wrap gap-3 md:hidden">
+                  {[
+                    { name: 'Cups', img: '/src/assets/icons/cups.png' },
+                    { name: 'Screenplate', img: '/src/assets/icons/screenplate.png' },
+                    { name: 'Packages', img: '/src/assets/icons/package.png' },
+                    { name: 'Machine', img: '/src/assets/icons/machine.png' },
+                  ].map((cat) => (
+                    <button
+                      key={cat.name}
+                      onClick={() => navigate('/discovery')}
+                      className="flex flex-1 flex-col items-center gap-2 active:scale-95 transition-transform min-w-[80px]"
+                    >
+                      <div className="h-20 w-full overflow-hidden rounded-2xl">
+                        <img
+                          src={cat.img}
+                          alt={cat.name}
+                          className="h-full w-full object-cover"
+                        />
+                      </div>
+                      <span className="text-[10px] font-black tracking-[2px] text-slate-900 uppercase">
+                        {cat.name}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+
+                <div className="md:hidden h-[119px] rounded-[16px] overflow-hidden">
+                  <img
+                    src="/src/assets/hero-milktea.png"
+                    alt=""
+                    className="h-full w-full object-cover"
+                  />
+                </div>
               </div>
 
-              {/* Filter Toggle Button (Mobile/Tablet Only) */}
+              {/* Mobile Inline Filters */}
               <div className="xl:hidden">
-                <button
-                  onClick={() => setShowFilters(!showFilters)}
-                  className="flex items-center gap-2 rounded-2xl bg-slate-900 px-8 py-3.5 text-[10px] font-black tracking-widest text-white uppercase shadow-xl shadow-slate-200 transition-all active:scale-95"
-                >
-                  <Activity
-                    size={14}
-                    className={
-                      showFilters
-                        ? 'rotate-180 transition-transform'
-                        : 'transition-transform'
-                    }
-                  />
-                  <span>{showFilters ? 'Hide Filters' : 'Filters'}</span>
-                </button>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <FilterDropdown
+                      label="All"
+                      icon={Package}
+                      options={['All', ...categories.map((c) => c.label)]}
+                      value={
+                        categories.find((c) => c.id === filters.category)
+                          ?.label || 'All'
+                      }
+                      onChange={handleCategoryChange}
+                    />
+                    <button
+                      onClick={() => {
+                        setFilters((prev) => ({
+                          ...prev,
+                          favoritesOnly: !prev.favoritesOnly,
+                        }))
+                        setCurrentPage(1)
+                      }}
+                      className={`flex items-center gap-2 rounded-2xl border px-4 py-3.5 text-[10px] font-black tracking-widest uppercase transition-all ${
+                        filters.favoritesOnly
+                          ? 'border-rose-500 bg-rose-50 text-rose-500 shadow-xl shadow-rose-200/50'
+                          : 'border-slate-100 bg-white text-slate-400 hover:border-slate-200'
+                      }`}
+                    >
+                      <Heart
+                        size={14}
+                        className={filters.favoritesOnly ? 'fill-rose-500' : ''}
+                      />
+                    </button>
+                  </div>
+                  <button
+                    onClick={() => setShowFilters(!showFilters)}
+                    className="flex shrink-0 items-center gap-2 rounded-2xl bg-slate-900 px-5 py-3.5 text-[10px] font-black tracking-widest text-white uppercase shadow-xl shadow-slate-200 transition-all active:scale-95"
+                  >
+                    <Activity
+                      size={14}
+                      className={
+                        showFilters
+                          ? 'rotate-180 transition-transform'
+                          : 'transition-transform'
+                      }
+                    />
+                    <span>{showFilters ? 'Hide' : 'Filters'}</span>
+                  </button>
+                </div>
               </div>
 
               {/* Filter Bar */}
@@ -357,16 +437,18 @@ const Homepage: React.FC = () => {
                   >
                     <div className="flex w-full flex-wrap items-center gap-3 xl:w-auto">
                       {/* Category Filter Dropdown */}
-                      <FilterDropdown
-                        label="Divisions"
-                        icon={Package}
-                        options={['All', ...categories.map((c) => c.label)]}
-                        value={
-                          categories.find((c) => c.id === filters.category)
-                            ?.label || 'All'
-                        }
-                        onChange={handleCategoryChange}
-                      />
+                      <div className="hidden xl:block">
+                        <FilterDropdown
+                          label="Divisions"
+                          icon={Package}
+                          options={['All', ...categories.map((c) => c.label)]}
+                          value={
+                            categories.find((c) => c.id === filters.category)
+                              ?.label || 'All'
+                          }
+                          onChange={handleCategoryChange}
+                        />
+                      </div>
 
                       {/* Rating Filter Dropdown */}
                       <FilterDropdown
@@ -427,7 +509,7 @@ const Homepage: React.FC = () => {
                           }))
                           setCurrentPage(1)
                         }}
-                        className={`flex items-center gap-2.5 rounded-2xl border px-5 py-3.5 text-[10px] font-black tracking-widest uppercase transition-all ${
+                        className={`hidden xl:flex items-center gap-2.5 rounded-2xl border px-5 py-3.5 text-[10px] font-black tracking-widest uppercase transition-all ${
                           filters.favoritesOnly
                             ? 'border-rose-500 bg-rose-50 text-rose-500 shadow-xl shadow-rose-200/50'
                             : 'border-slate-100 bg-white text-slate-400 hover:border-slate-200'
@@ -533,27 +615,7 @@ const Homepage: React.FC = () => {
         </section>
       </div>
 
-      {/* Mobile Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 px-4 py-3 md:hidden z-50">
-        <div className="flex justify-around items-center">
-          <button className="flex flex-col items-center gap-1 p-2 active:scale-95 transition-transform">
-            <Home size={20} className="text-emerald-500" />
-            <span className="text-[9px] font-bold text-emerald-500">Home</span>
-          </button>
-          <button onClick={() => navigate('/discovery')} className="flex flex-col items-center gap-1 p-2 active:scale-95 transition-transform">
-            <Search size={20} className="text-slate-400" />
-            <span className="text-[9px] font-bold text-slate-400">Discover</span>
-          </button>
-          <button className="flex flex-col items-center gap-1 p-2 active:scale-95 transition-transform">
-            <ShoppingBag size={20} className="text-slate-400" />
-            <span className="text-[9px] font-bold text-slate-400">Orders</span>
-          </button>
-          <button onClick={() => navigate('/account')} className="flex flex-col items-center gap-1 p-2 active:scale-95 transition-transform">
-            <User size={20} className="text-slate-400" />
-            <span className="text-[9px] font-bold text-slate-400">Account</span>
-          </button>
-        </div>
-      </div>
+
 
       <Footer />
 

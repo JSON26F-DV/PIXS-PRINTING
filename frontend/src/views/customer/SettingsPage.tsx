@@ -212,39 +212,53 @@ const SettingsPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 pt-0 md:pt-20">
-      {/* Sticky Top Bar */}
-      <div className="sticky top-0 z-30 border-b border-slate-100 bg-white/90 backdrop-blur-md lg:top-20">
+      {/* Desktop Breadcrumb Bar */}
+      <div className="hidden lg:block sticky top-20 z-30 border-b border-slate-100 bg-white/90 backdrop-blur-md">
         <div className="mx-auto flex h-14 max-w-[1440px] items-center justify-between gap-4 px-4 md:px-8">
-          {/* Back Button */}
           <button
             onClick={() => navigate('/')}
             className="SettingsBackButton flex items-center gap-2 rounded-xl border border-slate-100 bg-white px-4 py-2 text-[10px] font-black tracking-widest text-slate-600 uppercase shadow-sm transition-all hover:border-slate-200 hover:text-slate-900 active:scale-95"
           >
             <FiArrowLeft size={14} />
-            <span className="hidden sm:inline">Back to Marketplace</span>
-            {/* <span className="sm:hidden"></span> */}
+            <span>Back to Marketplace</span>
           </button>
-
-          {/* Breadcrumb */}
           <div className="flex items-center gap-2">
-            <span className="hidden text-[10px] font-black tracking-widest text-slate-300 uppercase sm:block">
+            <span className="text-[10px] font-black tracking-widest text-slate-300 uppercase">
               Settings
             </span>
-            <span className="hidden text-slate-200 sm:block">/</span>
+            <span className="text-slate-200">/</span>
             <span className="text-[10px] font-black tracking-widest text-slate-700 uppercase italic">
               {activeItem.label}
             </span>
           </div>
-
-          {/* Mobile Menu Toggle */}
-          <button
-            onClick={() => setMobileNavOpen((prev) => !prev)}
-            className="flex items-center gap-2 rounded-xl border border-slate-100 bg-white px-4 py-2 text-[10px] font-black tracking-widest text-slate-600 uppercase shadow-sm transition-all hover:border-slate-200 active:scale-90 lg:hidden"
-          >
-            {mobileNavOpen ? <FiX size={16} /> : <FiMenu size={16} />}
-            <span className="hidden sm:inline">Menu</span>
-          </button>
         </div>
+      </div>
+
+      {/* Mobile Top Navbar */}
+      <div className="lg:hidden relative z-40 flex h-16 w-full items-center justify-between bg-transparent px-4">
+        {/* Left: Back Button */}
+        <button
+          onClick={() => navigate(-1)}
+          className="flex h-11 w-11 items-center justify-start text-slate-800 transition-transform active:scale-95"
+        >
+          <FiArrowLeft size={24} />
+        </button>
+
+        {/* Center: Badge */}
+        <div className="flex w-[192px] h-10 items-center justify-center gap-2 rounded-[43px] bg-[#DCF5E1] px-3 font-bold text-slate-800 shadow-sm">
+          <activeItem.icon size={16} className="shrink-0 text-emerald-600" />
+          <span className="truncate text-xs font-bold uppercase tracking-wider">
+            {activeItem.label}
+          </span>
+        </div>
+
+        {/* Right: Burger Menu Toggle */}
+        <button
+          onClick={() => setMobileNavOpen((prev) => !prev)}
+          className="flex h-11 w-11 items-center justify-end text-slate-800 transition-transform active:scale-95"
+        >
+          {mobileNavOpen ? <FiX size={24} /> : <FiMenu size={24} />}
+        </button>
       </div>
 
       {/* Mobile Nav Drawer */}
@@ -256,14 +270,14 @@ const SettingsPage: React.FC = () => {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setMobileNavOpen(false)}
-              className="fixed inset-0 z-[110] bg-slate-900/50 backdrop-blur-sm lg:hidden"
+              className="fixed inset-0 z-[100] bg-slate-900/50 backdrop-blur-sm lg:hidden"
             />
             <m.div
               initial={{ x: '-100%' }}
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-              className="fixed top-0 bottom-0 left-0 z-[111] w-[300px] overflow-y-auto bg-slate-50 p-5 shadow-2xl lg:hidden"
+              className="fixed top-0 bottom-0 left-0 z-[110] w-[300px] overflow-y-auto bg-slate-50 p-5 shadow-2xl lg:hidden"
             >
               <div className="mb-6 flex items-center justify-between">
                 <div className="flex items-center gap-2">
