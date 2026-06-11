@@ -222,6 +222,10 @@ class ProductController extends Controller
                 });
             }
 
+            if ($request->filled('category_id')) {
+                $query->where('category_id', $request->category_id);
+            }
+
             $perPage = (int) $request->input('per_page', 20);
             $perPage = max(1, min(100, $perPage));
             $products = $query->paginate($perPage);

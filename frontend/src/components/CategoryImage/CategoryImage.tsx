@@ -80,6 +80,18 @@ const CategoryImage: React.FC<CategoryImageProps> = ({
     setImageState('error')
   }, [src])
 
+  const imageUrl = React.useMemo(() => {
+    if (!src) return null
+    if (
+      src.startsWith('http') ||
+      src.startsWith('data:') ||
+      src.startsWith('/')
+    ) {
+      return src
+    }
+    return `/images/categories/${src}`
+  }, [src])
+
   return (
     <div className="relative h-full w-full overflow-hidden">
       {/* LOTTIE SKELETON */}
@@ -92,10 +104,10 @@ const CategoryImage: React.FC<CategoryImageProps> = ({
       )}
 
       {/* REAL IMAGE */}
-      {src && imageState !== 'error' && (
+      {imageUrl && imageState !== 'error' && (
         <img
-          key={src}
-          src={src}
+          key={imageUrl}
+          src={imageUrl}
           alt={alt}
           loading="lazy"
           decoding="async"

@@ -20,9 +20,9 @@ import { useCustomerScreenplates } from '../../hooks/useCustomerScreenplates'
 // import { useDiscovery } from '../../context/DiscoveryContext'
 import { useDebounce } from '../../hooks/useDebounce'
 
-import hero1 from '../../assets/hero/hero-1.jpg'
-import hero2 from '../../assets/hero/hero-2.jpg'
-import hero3 from '../../assets/hero/hero-3.jpg'
+import hero1 from '../../assets/hero/hero-1.png'
+import hero2 from '../../assets/hero/hero-2.png'
+import hero3 from '../../assets/hero/hero-3.png'
 
 // Components
 import HeroCarousel from '../../components/HeroCarousel/HeroCarousel'
@@ -194,7 +194,18 @@ const Homepage: React.FC = () => {
   }, [products, filters.favoritesOnly, favoriteIds])
 
   // Derived data
-  const quickCategories = useMemo(() => categories.slice(0, 4), [categories])
+  const quickCategories = useMemo(() => {
+    const desiredOrder = ['Paper Cup', 'Paper Bowl', 'Lid', 'Meal Box']
+    const sorted: typeof categories = []
+    
+    desiredOrder.forEach((label) => {
+      const cat = categories.find((c) => c.label.toLowerCase() === label.toLowerCase())
+      if (cat) sorted.push(cat)
+    })
+    
+    const remaining = categories.filter((c) => !sorted.some((s) => s.id === c.id))
+    return [...sorted, ...remaining].slice(0, 4)
+  }, [categories])
 
   // Handlers
   const handleCategoryChange = useCallback(

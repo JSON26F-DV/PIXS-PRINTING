@@ -8,6 +8,20 @@ interface CategoryCardProps {
 }
 
 const CategoryCard: React.FC<CategoryCardProps> = ({ category, isMore }) => {
+  const imageUrl = React.useMemo(() => {
+    if (!category.image) {
+      return 'https://images.unsplash.com/photo-1562654501-a0ccc0af3ff1?q=80&w=1000&auto=format&fit=crop'
+    }
+    if (
+      category.image.startsWith('http') ||
+      category.image.startsWith('data:') ||
+      category.image.startsWith('/')
+    ) {
+      return category.image
+    }
+    return `/images/categories/${category.image}`
+  }, [category.image])
+
   if (isMore) {
     return (
       <div className="hover:bg-pixs-mint hover:border-pixs-mint group relative flex h-full cursor-pointer flex-col items-center justify-center rounded-[20px] border border-slate-900 bg-slate-900 transition-all active:scale-[0.95] lg:rounded-[40px] min-h-[160px] md:min-h-[240px] lg:min-h-[288px]">
@@ -22,10 +36,7 @@ const CategoryCard: React.FC<CategoryCardProps> = ({ category, isMore }) => {
     <div
       className="group relative h-full cursor-pointer overflow-hidden rounded-[20px] lg:rounded-[40px] min-h-[160px] md:min-h-[240px] lg:min-h-[288px]"
       style={{
-        backgroundImage: `url(${
-          category.image ||
-          'https://images.unsplash.com/photo-1562654501-a0ccc0af3ff1?q=80&w=1000&auto=format&fit=crop'
-        })`,
+        backgroundImage: `url(${imageUrl})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
       }}
