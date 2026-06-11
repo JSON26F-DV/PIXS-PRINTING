@@ -14,6 +14,14 @@ const ForgotPasswordPage: React.FC = () => {
   const [cooldown, setCooldown] = useState(0)
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const emailParam = params.get('email')
+    if (emailParam) {
+      setEmail(emailParam)
+    }
+  }, [])
+
+  useEffect(() => {
     if (cooldown <= 0) return
     const timer = setInterval(() => setCooldown(prev => prev - 1), 1000)
     return () => clearInterval(timer)

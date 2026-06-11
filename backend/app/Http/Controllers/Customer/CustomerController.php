@@ -39,6 +39,8 @@ class CustomerController extends Controller
             'gender' => $customer->gender,
             'company_name' => $customer->company_name,
             'status' => $customer->status,
+            'total_orders_value' => (float) $customer->total_orders_value,
+            'orders' => (int) $customer->orders,
             'contacts' => $customer->contacts,
             'addresses' => $customer->addresses,
             'discounts' => $customer->discounts,

@@ -20,6 +20,11 @@ export interface AccountInfo {
   addresses?: unknown[]
   payment_methods?: unknown[]
   discounts?: unknown[]
+  age?: number | null
+  gender?: string | null
+  status?: string
+  total_orders_value?: number
+  orders?: number
 }
 
 export const useAccountInfo = () => {
@@ -47,6 +52,11 @@ export const useAccountInfo = () => {
           addresses: data.addresses || [],
           payment_methods: data.payment_methods || [],
           discounts: data.discounts || [],
+          age: data.age,
+          gender: data.gender,
+          status: data.status,
+          total_orders_value: data.total_orders_value,
+          orders: data.orders,
         })
       } catch (err) {
         console.error('Failed to fetch account info:', err)
@@ -71,11 +81,16 @@ export const useAccountInfo = () => {
       contacts: [],
       profilePicture: user.profile_picture || '',
       default_contact: '',
+      age: user.age || null,
+      gender: user.gender || null,
+      status: user.status || 'active',
+      total_orders_value: (user as unknown as Record<string, unknown>).total_orders_value as number || 0,
+      orders: (user as unknown as Record<string, unknown>).orders as number || 0,
     }
   }, [account, user])
 
   const updateProfile = async (
-    values: ProfileFormValues,
+    values: ProfileFormValues & { age?: number | null; gender?: string | null },
   ): Promise<{ success: boolean }> => {
     try {
       await axiosInstance.patch('/api/customer/profile', {
@@ -83,6 +98,8 @@ export const useAccountInfo = () => {
         last_name: values.last_name,
         email: values.email,
         company_name: values.company_name,
+        age: values.age,
+        gender: values.gender,
       })
       setAccount((prev) => (prev ? { ...prev, ...values } : null))
       return { success: true }

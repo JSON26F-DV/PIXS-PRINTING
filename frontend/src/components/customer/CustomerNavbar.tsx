@@ -444,7 +444,7 @@ const CustomerNavbar: React.FC = () => {
         })()}
 
         {/* 🔻 BOTTOM NAV */}
-        <div className="mobile-navbar-bottom pb-safe fixed right-0 bottom-0 left-0 z-40 flex h-20 items-center justify-around rounded-t-[32px] border-t border-slate-100 bg-white px-2 shadow-[0_-10px_40px_rgba(0,0,0,0.03)]">
+        <div className="mobile-navbar-bottom pb-safe fixed right-0 bottom-0 left-0 z-50 flex h-20 items-center justify-around rounded-t-[32px] border-t border-slate-100 bg-white px-2 shadow-[0_-10px_40px_rgba(0,0,0,0.03)]">
           {/* Option 1: Home */}
           <Link
             to="/homepage"

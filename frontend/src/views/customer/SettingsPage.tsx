@@ -345,20 +345,11 @@ const SettingsPage: React.FC = () => {
                 exit={{ opacity: 0, y: -8 }}
                 transition={{ duration: 0.25, ease: 'easeOut' }}
               >
-                {/* AccountInfoPage has its own layout wrapper; strip outer padding for it */}
-                {activeSection === 'account' ? (
-                  <div className="overflow-hidden rounded-[24px] border border-slate-100 bg-white shadow-sm">
-                    <Suspense fallback={<SectionLoader />}>
-                      {SECTION_MAP[activeSection] || null}
-                    </Suspense>
-                  </div>
-                ) : (
-                  <div className="rounded-[24px] border border-slate-100 bg-white p-5 shadow-sm md:p-8">
-                    <Suspense fallback={<SectionLoader />}>
-                      {SECTION_MAP[activeSection] || null}
-                    </Suspense>
-                  </div>
-                )}
+                <div className="rounded-[24px] border border-slate-100 bg-white p-5 shadow-sm md:p-8">
+                  <Suspense fallback={<SectionLoader />}>
+                    {SECTION_MAP[activeSection] || null}
+                  </Suspense>
+                </div>
               </m.div>
             </AnimatePresence>
           </main>

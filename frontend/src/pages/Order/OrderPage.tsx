@@ -333,7 +333,7 @@ const OrderPage: React.FC = () => {
       {/* Main Content */}
       <div className="order-content-container mx-auto max-w-7xl space-y-12 px-6 pb-32 md:px-16">
         {/* Search & Filters */}
-        <div className="sticky top-[80px] z-[40] -mx-4 flex flex-col items-center gap-6 rounded-b-3xl border-b border-transparent bg-white/90 px-6 py-6 shadow-sm backdrop-blur-xl lg:top-[100px] lg:rounded-[40px] lg:border lg:bg-white/80 lg:shadow-none">
+        <div className="sticky top-0 z-[40] -mx-4 flex flex-col items-center gap-6 rounded-b-3xl border-b border-transparent bg-white/90 px-6 py-6 shadow-sm backdrop-blur-xl lg:top-[100px] lg:rounded-[40px] lg:border lg:bg-white/80 lg:shadow-none">
           {/* Search Input */}
           <div className="group relative w-full flex-1">
             <Search
