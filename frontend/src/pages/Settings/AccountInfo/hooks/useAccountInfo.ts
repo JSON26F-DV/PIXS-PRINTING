@@ -34,7 +34,7 @@ export const useAccountInfo = () => {
   useEffect(() => {
     const fetchUserData = async () => {
       try {
-        const response = await axiosInstance.get('/api/customer/profile')
+        const response = await axiosInstance.get('/api/user/profile')
         const data = response.data
         setAccount({
           id: data.id,
@@ -91,7 +91,7 @@ export const useAccountInfo = () => {
     values: ProfileFormValues & { age?: number | null; gender?: string | null },
   ): Promise<{ success: boolean }> => {
     try {
-      await axiosInstance.patch('/api/customer/profile', {
+      await axiosInstance.patch('/api/user/profile', {
         first_name: values.first_name,
         last_name: values.last_name,
         email: values.email,
@@ -114,7 +114,7 @@ export const useAccountInfo = () => {
       const formData = new FormData()
       formData.append('profile_picture', file)
       const response = await axiosInstance.post(
-        '/api/settings/profile-picture',
+        '/api/user/profile-picture',
         formData,
         {
           headers: { 'Content-Type': 'multipart/form-data' },
@@ -135,7 +135,7 @@ export const useAccountInfo = () => {
     number: string,
   ): Promise<{ success: boolean }> => {
     try {
-      await axiosInstance.post('/api/customer/contacts', { number })
+      await axiosInstance.post('/api/user/contacts', { number })
       setAccount((prev) => {
         if (!prev) return prev
         const isFirst = prev.contacts.length === 0
@@ -154,7 +154,7 @@ export const useAccountInfo = () => {
   ): Promise<{ success: boolean }> => {
     try {
       await axiosInstance.post(
-        `/api/customer/contacts/${encodeURIComponent(number)}/default`,
+        `/api/user/contacts/${encodeURIComponent(number)}/default`,
       )
       setAccount((prev) => {
         if (!prev) return prev

@@ -10,7 +10,6 @@ import {
 
 export type SectionKey =
   | 'account'
-
   | 'address'
   | 'awards'
   | 'help'
@@ -31,7 +30,6 @@ export const NAV_ITEMS: NavItem[] = [
     icon: FiUser,
     description: 'Name, email, phone, password',
   },
-
   {
     key: 'address',
     label: 'Address Book',

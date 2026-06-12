@@ -30,6 +30,8 @@ export interface AuditLogFilters {
   start_date?: string
   end_date?: string
   search?: string
+  ip_address?: string
+  status?: string
   page?: number
   per_page?: number
 }

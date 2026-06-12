@@ -38,6 +38,10 @@ export const deleteAuditLog = async (id: string): Promise<void> => {
   await axiosInstance.delete(`/api/admin/audit-logs/${id}`)
 }
 
+export const deleteAllAuditLogs = async (): Promise<void> => {
+  await axiosInstance.delete(`/api/admin/audit-logs/all`)
+}
+
 export const bulkDeleteAuditLogs = async (ids: string[]): Promise<void> => {
   await axiosInstance.post(`/api/admin/audit-logs/bulk-delete`, { ids })
 }

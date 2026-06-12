@@ -16,13 +16,22 @@ import {
   Shield,
   Trash2,
   Edit2,
+  ShieldAlert,
 } from 'lucide-react'
 import { Toaster, toast } from 'react-hot-toast'
 import debounce from 'lodash/debounce'
 
 import StatCard from '../../components/StatCard'
 import Pagination from '../../components/Pagination/Pagination'
-import { getAuditLogs, getAuditLogStats, deleteAuditLog, bulkDeleteAuditLogs, updateAuditLog } from '../../api/audit-log.api'
+import {
+  getAuditLogs,
+  getAuditLogStats,
+  deleteAuditLog,
+  bulkDeleteAuditLogs,
+  updateAuditLog,
+  deleteAllAuditLogs,
+} from '../../api/audit-log.api'
+import { blockFromAudit } from '../../api/blocked-ip.api'
 import type { AuditLog, AuditLogStats, AuditLogFilters } from '../../types/audit-log.types'
 
 const getActionBadgeProps = (action: string) => {
@@ -41,6 +50,11 @@ const getActionBadgeProps = (action: string) => {
       return {
         bg: 'border-rose-100 bg-rose-50 text-rose-700',
         dot: 'bg-rose-500',
+      }
+    case 'error':
+      return {
+        bg: 'border-rose-200 bg-rose-100 text-rose-800',
+        dot: 'bg-rose-600',
       }
     case 'login':
       return {
@@ -120,6 +134,8 @@ const AuditLogView: React.FC = () => {
     start_date: '',
     end_date: '',
     search: '',
+    ip_address: '',
+    status: '',
   })
 
   // Local UI States
@@ -205,6 +221,8 @@ const AuditLogView: React.FC = () => {
   }
 
   // Reset Filters
+  const [isDeletingAll, setIsDeletingAll] = useState(false)
+
   const handleResetFilters = () => {
     setSearchTerm('')
     setFilters({
@@ -216,8 +234,50 @@ const AuditLogView: React.FC = () => {
       start_date: '',
       end_date: '',
       search: '',
+      ip_address: '',
+      status: '',
     })
     toast.success('Filters cleared')
+  }
+
+  const handleDeleteAll = async () => {
+    if (
+      !window.confirm(
+        'CRITICAL ACTION: Are you sure you want to PERMANENTLY DELETE ALL audit logs? This action cannot be reversed.'
+      )
+    ) {
+      return
+    }
+
+    try {
+      setIsDeletingAll(true)
+      await deleteAllAuditLogs()
+      toast.success('All audit logs have been purged.')
+      fetchLogs(filters)
+      fetchStats()
+    } catch (err) {
+      console.error(err)
+      toast.error('Purge operation failed.')
+    } finally {
+      setIsDeletingAll(false)
+    }
+  }
+
+  const handleQuickBlock = async (ip: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    const reason = window.prompt(`Reason for blocking ${ip}:`, 'Suspicious activity from audit log')
+    if (reason === null) return
+
+    const duration = window.prompt(`Duration (1h, 24h, 7d, or permanent):`, '24h')
+    if (duration === null) return
+
+    try {
+      await blockFromAudit(ip, { reason, duration })
+      toast.success(`IP ${ip} has been blocked.`)
+    } catch (err) {
+      console.error(err)
+      toast.error('Failed to block IP.')
+    }
   }
 
   // Row expand toggle
@@ -393,6 +453,23 @@ const AuditLogView: React.FC = () => {
               {isDeleting ? 'Deleting...' : `Delete Selected (${selectedRows.length})`}
             </button>
           )}
+          <button
+            onClick={handleDeleteAll}
+            disabled={isDeletingAll}
+            className="flex items-center gap-2 rounded-3xl border border-rose-100 bg-rose-500 px-6 py-3 text-[11px] font-black tracking-[3px] text-white uppercase italic transition-all hover:-translate-y-1 hover:bg-rose-600 disabled:opacity-40 disabled:hover:translate-y-0 shadow-lg shadow-rose-200"
+          >
+            {isDeletingAll ? (
+              <>
+                <RefreshCw size={14} className="animate-spin" />
+                Purging...
+              </>
+            ) : (
+              <>
+                <Trash2 size={14} />
+                Purge All Logs
+              </>
+            )}
+          </button>
         </div>
       </header>
 
@@ -478,7 +555,7 @@ const AuditLogView: React.FC = () => {
         {/* Expandable Dropdowns Sub-panel */}
         {(isFiltersExpanded || window.innerWidth >= 768) && (
           <div
-            className={`grid grid-cols-1 gap-4 border-t border-slate-100 pt-4 md:grid-cols-3 lg:grid-cols-5 ${
+            className={`grid grid-cols-1 gap-4 border-t border-slate-100 pt-4 md:grid-cols-3 lg:grid-cols-7 ${
               !isFiltersExpanded && 'hidden md:grid'
             }`}
           >
@@ -498,7 +575,38 @@ const AuditLogView: React.FC = () => {
                 <option value="delete">Delete</option>
                 <option value="login">Login</option>
                 <option value="logout">Logout</option>
+                <option value="error">Error</option>
               </select>
+            </div>
+
+            {/* Status Filter */}
+            <div className="flex flex-col gap-1">
+              <label className="text-[9px] font-black tracking-widest text-slate-400 uppercase ml-2">
+                Log Status
+              </label>
+              <select
+                className="cursor-pointer appearance-none rounded-[20px] border border-slate-100 bg-slate-50 px-6 py-4 pr-10 text-[10px] font-black tracking-widest text-slate-600 uppercase italic transition-colors hover:bg-slate-100 focus:outline-none"
+                value={filters.status || ''}
+                onChange={(e) => handleFilterChange('status', e.target.value)}
+              >
+                <option value="">Status: All</option>
+                <option value="success">Success Only</option>
+                <option value="error">Errors Only</option>
+              </select>
+            </div>
+
+            {/* IP Address Filter */}
+            <div className="flex flex-col gap-1">
+              <label className="text-[9px] font-black tracking-widest text-slate-400 uppercase ml-2">
+                IP Address
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. 192.168.1.1"
+                className="w-full rounded-[20px] border border-slate-100 bg-slate-50 px-6 py-3.5 text-[10px] font-bold text-slate-600 focus:outline-none"
+                value={filters.ip_address || ''}
+                onChange={(e) => handleFilterChange('ip_address', e.target.value)}
+              />
             </div>
 
             {/* User Type Dropdown */}
@@ -701,6 +809,13 @@ const AuditLogView: React.FC = () => {
                         {/* Actions */}
                         <td className="px-6 py-5 text-center">
                           <div className="flex items-center justify-center gap-2">
+                            <button
+                              onClick={(e) => handleQuickBlock(log.ip_address, e)}
+                              className="rounded-full p-2 text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-600"
+                              title="Block IP Address"
+                            >
+                              <ShieldAlert size={14} />
+                            </button>
                             <button
                               onClick={(e) => startEditing(log, e)}
                               className="rounded-full p-2 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600"

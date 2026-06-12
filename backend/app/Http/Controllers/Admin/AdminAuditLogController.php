@@ -39,6 +39,26 @@ class AdminAuditLogController extends Controller
             $query->whereDate('created_at', '<=', $request->end_date);
         }
 
+        if ($request->filled('ip_address')) {
+            $query->where('ip_address', 'like', "%{$request->ip_address}%");
+        }
+
+        if ($request->filled('status')) {
+            if ($request->status === 'error') {
+                $query->where(function ($q) {
+                    $q->where('details', 'like', '%"status":"error"%')
+                        ->orWhere('details', 'like', '%"error":%')
+                        ->orWhere('action', 'error');
+                });
+            } elseif ($request->status === 'success') {
+                $query->where(function ($q) {
+                    $q->where('details', 'not like', '%"status":"error"%')
+                        ->where('details', 'not like', '%"error":%')
+                        ->where('action', '!=', 'error');
+                });
+            }
+        }
+
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
@@ -217,6 +237,16 @@ class AdminAuditLogController extends Controller
         return response()->json([
             'status' => 'success',
             'message' => 'Audit log deleted successfully',
+        ]);
+    }
+
+    public function destroyAll()
+    {
+        AuditLog::truncate();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'All audit logs deleted successfully',
         ]);
     }
 

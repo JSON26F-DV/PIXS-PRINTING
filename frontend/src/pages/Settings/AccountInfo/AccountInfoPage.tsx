@@ -38,7 +38,7 @@ const AccountInfoPage: React.FC = () => {
   const navigate = useNavigate()
 
   useEffect(() => {
-    if (!authLoading && (!user?.isLoggedIn || user?.role !== 'customer')) {
+    if (!authLoading && !user?.isLoggedIn) {
       navigate('/')
     }
   }, [authLoading, user, navigate])
@@ -248,8 +248,7 @@ const AccountInfoPage: React.FC = () => {
   if (
     isLoading ||
     authLoading ||
-    !user?.isLoggedIn ||
-    user?.role !== 'customer'
+    !user?.isLoggedIn
   ) {
     return (
       <div className="flex h-screen items-center justify-center bg-white">
@@ -268,35 +267,37 @@ const AccountInfoPage: React.FC = () => {
   return (
     <div className="AccountInfoPage animate-in fade-in slide-in-from-bottom-4 min-h-screen pb-20 duration-700 space-y-6">
       {/* ─── Business Analytics Stats (Responsive Grid) ───────────────────────── */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div className="flex items-center gap-4 rounded-[20px] border border-slate-100 bg-white p-5 shadow-sm transition-all hover:border-slate-200">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-pixs-mint">
-            <FiTrendingUp size={16} />
+      {user.role === 'customer' && (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="flex items-center gap-4 rounded-[20px] border border-slate-100 bg-white p-5 shadow-sm transition-all hover:border-slate-200">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-pixs-mint">
+              <FiTrendingUp size={16} />
+            </div>
+            <div>
+              <p className="text-[10px] font-bold tracking-widest text-slate-400 uppercase">
+                Total Spend Value
+              </p>
+              <p className="text-lg font-black tracking-tight text-slate-800 italic">
+                {formattedTotalValue}
+              </p>
+            </div>
           </div>
-          <div>
-            <p className="text-[10px] font-bold tracking-widest text-slate-400 uppercase">
-              Total Spend Value
-            </p>
-            <p className="text-lg font-black tracking-tight text-slate-800 italic">
-              {formattedTotalValue}
-            </p>
-          </div>
-        </div>
 
-        <div className="flex items-center gap-4 rounded-[20px] border border-slate-100 bg-white p-5 shadow-sm transition-all hover:border-slate-200">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-pixs-mint">
-            <FiAward size={16} />
-          </div>
-          <div>
-            <p className="text-[10px] font-bold tracking-widest text-slate-400 uppercase">
-              Total Orders Completed
-            </p>
-            <p className="text-lg font-black tracking-tight text-slate-800 italic">
-              {defaultAccount.orders || 0}
-            </p>
+          <div className="flex items-center gap-4 rounded-[20px] border border-slate-100 bg-white p-5 shadow-sm transition-all hover:border-slate-200">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-pixs-mint">
+              <FiAward size={16} />
+            </div>
+            <div>
+              <p className="text-[10px] font-bold tracking-widest text-slate-400 uppercase">
+                Total Orders Completed
+              </p>
+              <p className="text-lg font-black tracking-tight text-slate-800 italic">
+                {defaultAccount.orders || 0}
+              </p>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* ─── Profile Details Card ───────────────────────────────────────────── */}
       <div className="space-y-6 rounded-[20px] border border-slate-100 bg-white p-5 shadow-sm">

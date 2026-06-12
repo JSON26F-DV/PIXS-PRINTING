@@ -242,14 +242,14 @@ const AddressBookSection: React.FC = () => {
     try {
       if (editingAddress) {
         toast.loading('Updating address...', { id: 'save-address' })
-        await axiosInstance.put(
-          `/api/customer/addresses/${editingAddress.id}`,
+        await axiosInstance.patch(
+          `/api/user/addresses/${editingAddress.id}`,
           payload,
         )
         toast.success('Address updated.', { id: 'save-address' })
       } else {
         toast.loading('Saving address...', { id: 'save-address' })
-        await axiosInstance.post('/api/customer/addresses', payload)
+        await axiosInstance.post('/api/user/addresses', payload)
         toast.success('Address saved.', { id: 'save-address' })
       }
       fetchAddresses()

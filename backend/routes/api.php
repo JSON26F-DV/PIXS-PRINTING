@@ -11,6 +11,7 @@ use App\Http\Controllers\Admin\AdminScreenplateController;
 use App\Http\Controllers\Admin\AdminScreenplateRequestController;
 use App\Http\Controllers\Admin\AdminStockAnalyticsController;
 use App\Http\Controllers\Admin\AdminVerificationController;
+use App\Http\Controllers\Admin\BlockedIpController;
 use App\Http\Controllers\Admin\RefundController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Auth\ForgotPasswordController;
@@ -39,16 +40,19 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
 
 // Public Data Routes
-Route::get('/delivery-methods', [DeliveryMethodController::class, 'index']);
+Route::middleware(['block.ip'])->group(function () {
+    Route::get('/delivery-methods', [DeliveryMethodController::class, 'index']);
+});
 
 // Xendit Webhooks
 Route::post('/xendit/invoice-webhook', function (Request $request) {
     logger('Xendit Webhook Hit: ', $request->all());
-    logger('Header token: ' . $request->header('x-callback-token'));
-    
+    logger('Header token: '.$request->header('x-callback-token'));
+
     $token = $request->header('x-callback-token');
     if ($token !== config('xendivel.webhook_verification_token')) {
-        logger('Webhook Unauthorized. Expected: ' . config('xendivel.webhook_verification_token') . ' but got ' . $token);
+        logger('Webhook Unauthorized. Expected: '.config('xendivel.webhook_verification_token').' but got '.$token);
+
         return response()->json(['message' => 'Unauthorized'], 401);
     }
 
@@ -101,7 +105,7 @@ Route::post('/xendit/invoice-webhook', function (Request $request) {
 });
 
 // Public Auth Routes (rate limited)
-Route::middleware('throttle:auth')->prefix('auth')->group(function () {
+Route::middleware(['block.ip', 'throttle:auth'])->prefix('auth')->group(function () {
     Route::post('/login', [AuthController::class, 'login'])->name('login');
     Route::post('/register', [RegisterController::class, 'register']);
 
@@ -113,7 +117,7 @@ Route::middleware('throttle:auth')->prefix('auth')->group(function () {
 });
 
 // Forgot Password Routes (limited rate)
-Route::prefix('auth')->group(function () {
+Route::middleware(['block.ip'])->prefix('auth')->group(function () {
     Route::post('/forgot-password/send-code', [ForgotPasswordController::class, 'sendCode'])->middleware('throttle:6,1');
     Route::post('/forgot-password/verify', [ForgotPasswordController::class, 'verifyCode'])->middleware('throttle:10,1');
     Route::post('/forgot-password/reset', [ForgotPasswordController::class, 'resetPassword'])->middleware('throttle:5,1');
@@ -128,10 +132,21 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->prefix('auth')->group(funct
 // User Profile Routes
 Route::middleware(['auth:sanctum', 'throttle:api'])->prefix('user')->group(function () {
     Route::get('/profile', [UserController::class, 'profile']);
+    Route::patch('/profile', [UserController::class, 'updateProfile']);
+    Route::post('/profile-picture', [UserController::class, 'updateProfilePicture']);
+    Route::post('/contacts', [UserController::class, 'storeContact']);
+    Route::post('/contacts/{number}/default', [UserController::class, 'setDefaultContact']);
+
+    // Unified Addresses
+    Route::get('/addresses', [UserController::class, 'addresses']);
+    Route::post('/addresses', [UserController::class, 'storeAddress']);
+    Route::patch('/addresses/{id}', [UserController::class, 'updateAddress']);
+    Route::delete('/addresses/{id}', [UserController::class, 'deleteAddress']);
+    Route::post('/addresses/{id}/default', [UserController::class, 'setDefaultAddress']);
 });
 
 // Customer Protected Routes
-Route::middleware(['auth:sanctum', 'role:customer', 'throttle:api'])->prefix('customer')->group(function () {
+Route::middleware(['auth:sanctum', 'block.ip', 'role:customer', 'throttle:api'])->prefix('customer')->group(function () {
     Route::get('/profile', [CustomerController::class, 'profile']);
     Route::patch('/profile', [CustomerController::class, 'updateProfile']);
 
@@ -192,7 +207,7 @@ Route::middleware(['auth:sanctum', 'role:customer', 'throttle:api'])->prefix('cu
 });
 
 // Admin Routes
-Route::middleware(['auth:sanctum', 'throttle:api'])->prefix('admin')->group(function () {
+Route::middleware(['auth:sanctum', 'block.ip', 'throttle:api'])->prefix('admin')->group(function () {
     // Accounts
     Route::get('/accounts', [AdminAccountController::class, 'index'])->middleware('role:admin');
     Route::get('/accounts/employee/{id}', [AdminAccountController::class, 'showEmployee'])->middleware('role:admin');
@@ -240,10 +255,18 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->prefix('admin')->group(func
     // Audit Logs
     Route::get('/audit-logs', [AdminAuditLogController::class, 'index'])->middleware('role:admin');
     Route::get('/audit-logs/stats', [AdminAuditLogController::class, 'stats'])->middleware('role:admin');
+    Route::delete('/audit-logs/all', [AdminAuditLogController::class, 'destroyAll'])->middleware('role:admin');
     Route::post('/audit-logs/bulk-delete', [AdminAuditLogController::class, 'bulkDestroy'])->middleware('role:admin');
     Route::get('/audit-logs/{id}', [AdminAuditLogController::class, 'show'])->middleware('role:admin');
     Route::put('/audit-logs/{id}', [AdminAuditLogController::class, 'update'])->middleware('role:admin');
     Route::delete('/audit-logs/{id}', [AdminAuditLogController::class, 'destroy'])->middleware('role:admin');
+
+    // Blocked IPs
+    Route::get('/blocked-ips', [BlockedIpController::class, 'index'])->middleware('role:admin');
+    Route::post('/blocked-ips', [BlockedIpController::class, 'store'])->middleware('role:admin');
+    Route::delete('/blocked-ips/all', [BlockedIpController::class, 'unblockAll'])->middleware('role:admin');
+    Route::delete('/blocked-ips/{id}', [BlockedIpController::class, 'destroy'])->middleware('role:admin');
+    Route::post('/blocked-ips/block-from-audit/{ip}', [BlockedIpController::class, 'blockFromAudit'])->middleware('role:admin');
 
     // Order Management
     Route::get('/orders', [AdminOrderController::class, 'index'])->middleware('role:admin,staff,technician,inventory');
@@ -380,7 +403,7 @@ Route::middleware(['auth:sanctum', 'role:customer', 'throttle:sensitive'])->pref
     Route::post('/profile-picture', [CustomerController::class, 'updateProfilePicture']);
 });
 
-Route::middleware(['throttle:api'])->group(function () {
+Route::middleware(['block.ip', 'throttle:api'])->group(function () {
     Route::get('/categories', [CategoryController::class, 'index']);
     Route::get('/products', [ProductController::class, 'index'])->middleware('throttle:search');
     Route::get('/products/search', [ProductController::class, 'search'])->middleware(['auth:sanctum', 'throttle:search']);

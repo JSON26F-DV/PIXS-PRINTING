@@ -9,6 +9,14 @@ import {
   Package,
   Star,
   ShoppingBag,
+  CupSoda,
+  Coffee,
+  Disc,
+  Soup,
+  Box,
+  Cpu,
+  Shapes,
+  Wrench,
 } from 'lucide-react'
 
 import { useAuth } from '../../context/AuthContext'
@@ -32,7 +40,7 @@ import Pagination from '../../components/Pagination/Pagination'
 import Footer from '../../components/Footer/Footer'
 import FilterDropdown from '../../components/FilterDropdown/FilterDropdown'
 import PaymentResultModal from '../../components/Transactions/PaymentResultModal'
-import MobileHeroSection from '../../components/MobileHeroSection/MobileHeroSection'
+
 
 
 
@@ -76,6 +84,34 @@ const STATUS_OPTIONS = [
   { label: 'In Stock', value: 'IN_STOCK' },
   { label: 'Out of Stock', value: 'OUT_OF_STOCK' },
 ] as const
+
+const getCategoryIcon = (label: string) => {
+  const cleanLabel = label.toLowerCase()
+  if (cleanLabel.includes('milktea') || cleanLabel.includes('milk tea')) return CupSoda
+  if (cleanLabel.includes('paper cup') || cleanLabel.includes('cup')) return Coffee
+  if (cleanLabel.includes('lid')) return Disc
+  if (cleanLabel.includes('bowl')) return Soup
+  if (cleanLabel.includes('meal') || cleanLabel.includes('box')) return Box
+  if (cleanLabel.includes('machine')) return Cpu
+  if (cleanLabel.includes('mold')) return Shapes
+  if (cleanLabel.includes('accessories')) return Wrench
+  if (cleanLabel.includes('screenplate') || cleanLabel.includes('screen plate')) return Printer
+  return Package
+}
+
+const getCategoryIconColor = (label: string) => {
+  const cleanLabel = label.toLowerCase()
+  if (cleanLabel.includes('milktea') || cleanLabel.includes('milk tea')) return 'text-emerald-500'
+  if (cleanLabel.includes('paper cup') || cleanLabel.includes('cup')) return 'text-amber-500'
+  if (cleanLabel.includes('lid')) return 'text-indigo-500'
+  if (cleanLabel.includes('bowl')) return 'text-rose-500'
+  if (cleanLabel.includes('meal') || cleanLabel.includes('box')) return 'text-orange-500'
+  if (cleanLabel.includes('machine')) return 'text-cyan-500'
+  if (cleanLabel.includes('mold')) return 'text-purple-500'
+  if (cleanLabel.includes('accessories')) return 'text-violet-500'
+  if (cleanLabel.includes('screenplate') || cleanLabel.includes('screen plate')) return 'text-blue-500'
+  return 'text-slate-500'
+}
 
 // ── Component ───────────────────────────────────────────────────────────────
 
@@ -265,15 +301,7 @@ const Homepage: React.FC = () => {
 
   return (
     <div className="flex min-h-screen flex-col w-full overflow-x-hidden items-center bg-white mt-0 md:mt-20 pb-20 md:pb-0">
-      {/* Mobile Hero Section */}
-      {isMobile && (
-        <MobileHeroSection
-          onCTA={() => {
-            const el = document.getElementById('marketplace')
-            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
-          }}
-        />
-      )}
+
 
       {/* Hero Section - Matching OrderPage Spaciousness (Desktop Only) */}
       {!isMobile && (
@@ -325,7 +353,7 @@ const Homepage: React.FC = () => {
       )}
 
       {/* Product Marketplace Section */}
-      <div className="relative w-full mt-[300px] md:mt-0 z-10 rounded-tl-[29px] rounded-tr-[29px] bg-white">
+      <div className="relative w-full mt-[100px] md:mt-0 z-10 rounded-tl-[29px] rounded-tr-[29px] bg-white">
         <div className="fuzzy-overlay pointer-events-none absolute inset-0 opacity-[0.03]" />
 
         <section
@@ -350,30 +378,45 @@ const Homepage: React.FC = () => {
                 </div>
 
                 {/* Mobile Categories */}
-                <div className="flex flex-wrap gap-3 md:hidden">
-                  {[
-                    { name: 'Cups', img: '/src/assets/icons/cups.png' },
-                    { name: 'Screenplate', img: '/src/assets/icons/screenplate.png' },
-                    { name: 'Meal', img: '/src/assets/icons/meal.png' },
-                    { name: 'Machine', img: '/src/assets/icons/machine.png' },
-                  ].map((cat) => (
-                    <button
-                      key={cat.name}
-                      onClick={() => navigate('/discovery')}
-                      className="flex flex-1 flex-col items-center gap-2 active:scale-95 transition-transform min-w-[80px]"
-                    >
-                      <div className="h-20 w-full overflow-hidden rounded-2xl">
-                        <img
-                          src={cat.img}
-                          alt={cat.name}
-                          className="h-full w-full object-cover"
-                        />
-                      </div>
-                      <span className="text-[10px] font-black tracking-[2px] text-slate-900 uppercase">
-                        {cat.name}
-                      </span>
-                    </button>
-                  ))}
+                <div className="flex flex-col gap-3 md:hidden w-full">
+                  <div>
+                    <h3 className="mb-1 text-xl leading-none font-black tracking-tighter text-slate-900 uppercase italic">
+                      Production Line
+                    </h3>
+                    <p className="text-[9px] font-bold tracking-[2px] text-slate-400 uppercase">
+                      Select your substrate matrix
+                    </p>
+                  </div>
+                  <div className="flex overflow-x-auto gap-2 pb-2 no-scrollbar w-full -mx-4 px-4 snap-x snap-mandatory">
+                    {catLoading ? (
+                      Array.from({ length: 8 }).map((_, i) => (
+                        <div
+                          key={i}
+                          className="flex shrink-0 items-center gap-2 rounded-full border border-slate-200 bg-transparent px-4 py-2 animate-pulse h-[36px] min-w-[120px]"
+                        >
+                          <div className="h-4 w-4 rounded-full bg-slate-100 shrink-0" />
+                          <div className="h-3 bg-slate-100 rounded w-16" />
+                        </div>
+                      ))
+                    ) : (
+                      categories.map((cat) => {
+                        const IconComponent = getCategoryIcon(cat.label)
+                        const iconColorClass = getCategoryIconColor(cat.label)
+                        return (
+                          <button
+                            key={cat.id}
+                            onClick={() => handleCategoryIdSelect(cat.id)}
+                            className="flex shrink-0 snap-start items-center gap-2 rounded-full border border-slate-200 bg-transparent px-4 py-2 text-left active:scale-95 transition-all hover:bg-slate-50 hover:border-slate-300"
+                          >
+                            <IconComponent size={16} className={`stroke-[2.5] ${iconColorClass}`} />
+                            <span className="text-[10px] font-black tracking-wider text-slate-950 uppercase">
+                              {cat.label}
+                            </span>
+                          </button>
+                        )
+                      })
+                    )}
+                  </div>
                 </div>
 
                 <div className="md:hidden h-[119px] rounded-[16px] overflow-hidden">

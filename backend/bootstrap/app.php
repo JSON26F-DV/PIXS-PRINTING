@@ -1,6 +1,7 @@
 <?php
 
 use App\Exceptions\Handler;
+use App\Http\Middleware\BlockBlockedIps;
 use App\Http\Middleware\CheckOwnership;
 use App\Http\Middleware\CheckRole;
 use App\Http\Middleware\ErrorLoggingMiddleware;
@@ -31,6 +32,7 @@ $app = Application::configure(basePath: dirname(__DIR__))
             'role' => CheckRole::class,
             'ownership' => CheckOwnership::class,
             'error.log' => ErrorLoggingMiddleware::class,
+            'block.ip' => BlockBlockedIps::class,
         ]);
         $middleware->append(ErrorLoggingMiddleware::class);
     })

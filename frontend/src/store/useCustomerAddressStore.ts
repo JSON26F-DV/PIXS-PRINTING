@@ -30,7 +30,7 @@ export const useCustomerAddressStore = create<CustomerAddressStore>((set) => ({
   fetchAddresses: async () => {
     set({ isLoading: true, error: null })
     try {
-      const response = await axiosInstance.get('/api/customer/addresses')
+      const response = await axiosInstance.get('/api/user/addresses')
       const data = response.data.data
       const normalizedData = (data || []).map((a: CustomerAddress) => ({
         ...a,
@@ -49,7 +49,7 @@ export const useCustomerAddressStore = create<CustomerAddressStore>((set) => ({
 
   setDefaultAddress: async (id) => {
     try {
-      await axiosInstance.post(`/api/customer/addresses/${id}/default`)
+      await axiosInstance.post(`/api/user/addresses/${id}/default`)
       set((state) => ({
         defaultAddressId: id,
         addresses: state.addresses.map((a) => ({
@@ -65,7 +65,7 @@ export const useCustomerAddressStore = create<CustomerAddressStore>((set) => ({
   addAddress: async (address) => {
     try {
       const response = await axiosInstance.post(
-        '/api/customer/addresses',
+        '/api/user/addresses',
         address,
       )
       const newAddress = response.data.data
@@ -84,7 +84,7 @@ export const useCustomerAddressStore = create<CustomerAddressStore>((set) => ({
   updateAddress: async (id, updated) => {
     try {
       const response = await axiosInstance.patch(
-        `/api/customer/addresses/${id}`,
+        `/api/user/addresses/${id}`,
         updated,
       )
       const updatedAddress = response.data.data
@@ -104,7 +104,7 @@ export const useCustomerAddressStore = create<CustomerAddressStore>((set) => ({
 
   removeAddress: async (id) => {
     try {
-      await axiosInstance.delete(`/api/customer/addresses/${id}`)
+      await axiosInstance.delete(`/api/user/addresses/${id}`)
       set((state) => {
         const remaining = state.addresses.filter((a) => a.id !== id)
         const newDefault = state.addresses.find((a) => a.id === id)?.is_default

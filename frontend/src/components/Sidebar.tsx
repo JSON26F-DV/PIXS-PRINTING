@@ -1,12 +1,16 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   LayoutDashboard,
   PackageOpen,
   ScrollText,
   Users,
+  User,
+  MapPin,
   LogOut,
   ChevronRight,
   ChevronLeft,
+  ChevronDown,
+  ChevronUp,
   Settings,
   MessageSquare,
   CalendarCheck,
@@ -18,13 +22,13 @@ import {
   Receipt,
   FileText,
   Bell,
+  ShieldAlert,
   type LucideIcon,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
-import type { RoleType } from '../context/auth.types'
 import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import AdminLogoutModal from './admin/AdminLogoutModal'
 import toast from 'react-hot-toast'
 
@@ -94,17 +98,24 @@ const Sidebar: React.FC<SidebarProps> = ({
   activeTab,
   setActiveTab,
 }) => {
-  const { user, login, logout } = useAuth()
+  const { user, logout } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const [showLogoutModal, setShowLogoutModal] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
+  const [isSettingsExpanded, setIsSettingsExpanded] = useState(false)
+
+  // Auto-expand settings if we are on a settings route
+  useEffect(() => {
+    if (location.pathname.includes('/setting') || location.pathname.includes('/settings')) {
+      setIsSettingsExpanded(true)
+    }
+  }, [location.pathname])
 
   if (!user) return null
 
   const handleLogoutConfirm = () => {
     setIsLoggingOut(true)
-
-    // Quick logout per user request
     logout()
     setIsLoggingOut(false)
     setShowLogoutModal(false)
@@ -129,6 +140,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       { id: 'generatecode', label: 'Payment Codes', icon: QrCode },
       { id: 'message', label: 'Enterprise Messaging', icon: MessageSquare },
       { id: 'auditlog', label: 'Audit Log', icon: FileText },
+      { id: 'blocked-ips', label: 'Blocked IPs', icon: ShieldAlert },
       { id: 'notifications', label: 'Notifications CRUD', icon: Bell },
       { id: 'setting', label: 'Settings', icon: Settings },
     ],
@@ -150,13 +162,18 @@ const Sidebar: React.FC<SidebarProps> = ({
     ],
   }
 
-  const roleKey =
-    user.role === 'technician' ? 'staff' : user.role
+  const SETTINGS_CHILDREN = [
+    { id: 'account', label: 'Account Info', icon: User },
+    { id: 'address', label: 'Address Book', icon: MapPin },
+    { id: 'policies', label: 'Policies', icon: FileText },
+    { id: 'logout-confirm', label: 'Logout', icon: LogOut },
+  ]
+
+  const roleKey = user.role === 'technician' ? 'staff' : user.role
   const items = navItems[roleKey as keyof typeof navItems] || []
 
   return (
     <>
-      {/* Mobile Overlay */}
       {isMobileOpen && (
         <div
           className="fixed inset-0 z-40 bg-black/50 lg:hidden"
@@ -164,7 +181,6 @@ const Sidebar: React.FC<SidebarProps> = ({
         />
       )}
 
-      {/* Sidebar Container */}
       <aside
         className={cn(
           'group fixed inset-y-0 left-0 z-50 flex flex-col border-r border-slate-200 bg-white transition-all duration-300 lg:static',
@@ -172,7 +188,6 @@ const Sidebar: React.FC<SidebarProps> = ({
           isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
         )}
       >
-        {/* Toggle Button (Desktop) */}
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
           className="hover:border-pixs-mint absolute top-10 -right-3 z-50 hidden rounded-full border border-slate-200 bg-white p-1 shadow-sm transition-colors lg:flex"
@@ -184,7 +199,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           )}
         </button>
 
-        <div className={cn('p-6', isCollapsed && 'px-4')}>
+        <div className={cn('flex-1 overflow-y-auto p-6 custom-scrollbar', isCollapsed && 'px-4')}>
           <div className="mb-10 flex items-center gap-3 overflow-hidden">
             <div className="bg-pixs-mint flex h-9 w-9 min-w-[36px] flex-shrink-0 items-center justify-center rounded-[12px] text-lg font-black text-slate-900 shadow-sm">
               P
@@ -202,48 +217,89 @@ const Sidebar: React.FC<SidebarProps> = ({
                 Main Menu
               </p>
             )}
-            {items.map((item) => (
-              <SidebarItem
-                key={item.id}
-                {...item}
-                active={activeTab === item.id}
-                collapsed={isCollapsed}
-                onClick={() => {
-                  setActiveTab(item.id)
-                  const base =
-                    user.role === 'staff' || user.role === 'technician'
-                      ? '/staff'
-                      : user.role === 'inventory'
-                        ? '/inventory'
-                        : user.role === 'admin'
-                          ? '/admin'
-                          : `/${user.role}`
-                  // Map roles to their primary view if necessary, otherwise use item.id
-                  const path = item.id
+            {items.map((item) => {
+              if (item.id === 'setting' && !isCollapsed) {
+                const isActive = activeTab === 'setting' || location.pathname.includes('/setting') || location.pathname.includes('/settings')
+                return (
+                  <div key={item.id} className="space-y-1">
+                    <button
+                      onClick={() => setIsSettingsExpanded(!isSettingsExpanded)}
+                      className={cn(
+                        'flex w-full items-center justify-between rounded-xl px-4 py-3 transition-all',
+                        isActive
+                          ? 'bg-[#75EEA5]/10 font-bold text-emerald-700'
+                          : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
+                      )}
+                    >
+                      <div className="flex items-center gap-3">
+                        <item.icon size={20} className={isActive ? 'text-emerald-600' : 'text-slate-400'} />
+                        <span className="text-sm">{item.label}</span>
+                      </div>
+                      {isSettingsExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                    </button>
 
-                  navigate(`${base}/${path}`)
-                  if (isMobileOpen) setIsMobileOpen(false)
-                }}
-              />
-            ))}
+                    {isSettingsExpanded && (
+                      <div className="ml-4 space-y-1">
+                        {SETTINGS_CHILDREN.map((child) => {
+                          const isChildActive = location.pathname.endsWith(child.id) || (child.id === 'account' && location.pathname.endsWith('/setting'))
+                          return (
+                            <button
+                              key={child.id}
+                              onClick={() => {
+                                if (child.id === 'logout-confirm') {
+                                  setShowLogoutModal(true)
+                                } else {
+                                  setActiveTab('setting')
+                                  const base =
+                                    user.role === 'staff' || user.role === 'technician'
+                                      ? '/staff'
+                                      : user.role === 'inventory'
+                                        ? '/inventory'
+                                        : '/admin'
+                                  navigate(`${base}/setting/${child.id}`)
+                                }
+                              }}
+                              className={cn(
+                                'flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-left transition-all',
+                                isChildActive
+                                  ? 'bg-slate-900 text-white shadow-lg'
+                                  : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
+                              )}
+                            >
+                              <child.icon size={14} className={isChildActive ? 'text-pixs-mint' : 'text-slate-400'} />
+                              <span className="text-[11px] font-bold uppercase tracking-widest">{child.label}</span>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )
+              }
+
+              return (
+                <SidebarItem
+                  key={item.id}
+                  {...item}
+                  active={activeTab === item.id}
+                  collapsed={isCollapsed}
+                  onClick={() => {
+                    setActiveTab(item.id)
+                    const base =
+                      user.role === 'staff' || user.role === 'technician'
+                        ? '/staff'
+                        : user.role === 'inventory'
+                          ? '/inventory'
+                          : user.role === 'admin'
+                            ? '/admin'
+                            : `/${user.role}`
+                    navigate(`${base}/${item.id}`)
+                    if (isMobileOpen) setIsMobileOpen(false)
+                  }}
+                />
+              )
+            })}
           </nav>
-        </div>
-
-        <div className="mt-auto border-t border-slate-100 p-4 text-[10px] text-slate-400 italic">
-          {!isCollapsed && 'Role Switcher (Dev)'}
-          <select
-            className="focus:border-pixs-mint mt-1 w-full rounded border border-slate-200 bg-slate-50 p-1 text-[10px] font-bold uppercase focus:outline-none"
-            value={user.role}
-            onChange={(e) =>
-              login({ ...user, role: e.target.value as RoleType })
-            }
-          >
-            <option value="admin">Admin</option>
-            <option value="staff">Staff</option>
-            <option value="technician">Technician</option>
-            <option value="inventory">Inventory</option>
-            <option value="customer">Customer</option>
-          </select>
         </div>
 
         <div className="border-t border-slate-100 p-4">

@@ -39,10 +39,11 @@ import Payroll from '../views/admin/payroll/Payroll'
 import Orders from '../views/admin/Orders'
 import ManageOrder from '../views/admin/management/ManageOrder'
 import MarketingPromotions from '../views/admin/MarketingPromotions'
-import AdminSettings from '../views/admin/Settings/AdminSettings'
+import EmployeeSettings from '../views/admin/Settings/EmployeeSettings'
 import PayCode from '../views/admin/PayCode'
 import RefundPage from '../views/admin/Refund'
 import AuditLog from '../views/admin/AuditLog'
+import BlockedIps from '../views/admin/BlockedIps'
 import Notifications from '../views/admin/Notifications'
 // import DisputeView from '../views/admin/DisputeView';
 // Staff Views
@@ -222,11 +223,13 @@ const AppRouter: React.FC = () => {
         <Route path="orders" element={<Orders />} />
         <Route path="orders/manage" element={<ManageOrder />} />
         <Route path="orders/manage/:customerId" element={<ManageOrder />} />
-        <Route path="setting" element={<AdminSettings />} />
+        <Route path="setting" element={<EmployeeSettings />} />
+        <Route path="setting/:section" element={<EmployeeSettings />} />
         <Route path="marketing" element={<MarketingPromotions />} />
         <Route path="generatecode" element={<PayCode />} />
         <Route path="refund" element={<RefundPage />} />
         <Route path="auditlog" element={<AuditLog />} />
+        <Route path="blocked-ips" element={<BlockedIps />} />
         <Route path="notifications" element={<Notifications />} />
       </Route>
 
@@ -245,7 +248,8 @@ const AppRouter: React.FC = () => {
         <Route path="orders" element={<Orders />} />
         <Route path="attendance" element={<Attendance />} />
         <Route path="chat" element={<MessengerPage />} />
-        <Route path="setting" element={<AdminSettings />} />
+        <Route path="setting" element={<EmployeeSettings />} />
+        <Route path="setting/:section" element={<EmployeeSettings />} />
       </Route>
 
       {/* Inventory Routes */}
@@ -264,7 +268,8 @@ const AppRouter: React.FC = () => {
         <Route path="stock/manage/:product_id" element={<ManageStock />} />
         <Route path="attendance" element={<Attendance />} />
         <Route path="chat" element={<MessengerPage />} />
-        <Route path="setting" element={<AdminSettings />} />
+        <Route path="setting" element={<EmployeeSettings />} />
+        <Route path="setting/:section" element={<EmployeeSettings />} />
       </Route>
 
       {/* Fallback */}
