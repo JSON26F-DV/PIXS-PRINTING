@@ -15,6 +15,7 @@ import 'react-phone-number-input/style.css'
 import toast, { Toaster } from 'react-hot-toast'
 import { m, AnimatePresence } from 'framer-motion'
 import { clsx } from 'clsx'
+import { Eye, EyeOff } from 'lucide-react'
 import AuthNavbar from '../../components/auth/AuthNavbar'
 import Footer from '../../components/Footer/Footer'
 
@@ -23,6 +24,8 @@ const RegisterPage: React.FC = () => {
   const navigate = useNavigate()
   
   const [step, setStep] = useState(1)
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [formData, setFormData] = useState<RegisterFormData>({
     first_name: '',
     last_name: '',
@@ -168,6 +171,18 @@ const RegisterPage: React.FC = () => {
         toast.error('Please enter a valid email address.')
         return
       }
+      if (formData.age === undefined || isNaN(formData.age)) {
+        toast.error('Age is required.')
+        return
+      }
+      if (formData.age < 1 || formData.age > 120) {
+        toast.error('Please enter a valid age between 1 and 120.')
+        return
+      }
+      if (!formData.gender) {
+        toast.error('Gender is required.')
+        return
+      }
     } else if (step === 3) {
       if (!phone) {
         toast.error('Contact Number is required.')
@@ -283,7 +298,7 @@ const RegisterPage: React.FC = () => {
           
           {/* Left Column (Labels, Title) */}
           <div className="w-full md:w-5/12 p-8 md:p-14 flex flex-col justify-start relative">
-            <div className="mb-4">
+            <div className="mb-4 hidden md:block">
                {/* PIXS Mint Logo / G-like logo area */}
                <div className="bg-pixs-mint flex h-12 w-12 items-center justify-center rounded-2xl text-2xl font-black text-slate-900 shadow-lg shadow-pixs-mint/20 mb-6">
                  P
@@ -403,31 +418,30 @@ const RegisterPage: React.FC = () => {
                         />
                       </div>
 
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="relative border border-slate-300 rounded-xl px-4 py-2 focus-within:border-[#1a73e8] focus-within:ring-1 focus-within:ring-[#1a73e8] transition-all bg-white">
-                          <label className="text-xs font-medium text-slate-500">Age</label>
-                          <input
-                            name="age"
-                            type="number"
-                            className="w-full bg-transparent text-sm font-medium text-slate-900 outline-none mt-1 py-1"
-                            value={formData.age || ''}
-                            onChange={handleChange}
-                          />
-                        </div>
-                        <div className="relative border border-slate-300 rounded-xl px-4 py-2 focus-within:border-[#1a73e8] focus-within:ring-1 focus-within:ring-[#1a73e8] transition-all bg-white">
-                          <label className="text-xs font-medium text-slate-500 flex justify-between w-full">Gender</label>
-                          <select
-                            name="gender"
-                            className="w-full bg-transparent text-sm font-medium text-slate-900 outline-none mt-1 py-1 cursor-pointer appearance-none"
-                            value={formData.gender || ''}
-                            onChange={handleChange}
-                          >
-                            <option value="">Select</option>
-                            <option value="male">Male</option>
-                            <option value="female">Female</option>
-                            <option value="other">Other</option>
-                          </select>
-                        </div>
+                      <div className="relative border border-slate-300 rounded-xl px-4 py-2 focus-within:border-[#1a73e8] focus-within:ring-1 focus-within:ring-[#1a73e8] transition-all bg-white">
+                        <label className="text-xs font-medium text-slate-500">Age</label>
+                        <input
+                          name="age"
+                          type="number"
+                          className="w-full bg-transparent text-sm font-medium text-slate-900 outline-none mt-1 py-1"
+                          value={formData.age || ''}
+                          onChange={handleChange}
+                        />
+                      </div>
+
+                      <div className="relative border border-slate-300 rounded-xl px-4 py-2 focus-within:border-[#1a73e8] focus-within:ring-1 focus-within:ring-[#1a73e8] transition-all bg-white">
+                        <label className="text-xs font-medium text-slate-500 flex justify-between w-full">Gender</label>
+                        <select
+                          name="gender"
+                          className="w-full bg-transparent text-sm font-medium text-slate-900 outline-none mt-1 py-1 cursor-pointer appearance-none"
+                          value={formData.gender || ''}
+                          onChange={handleChange}
+                        >
+                          <option value="">Select</option>
+                          <option value="male">Male</option>
+                          <option value="female">Female</option>
+                          <option value="other">Other</option>
+                        </select>
                       </div>
                     </m.div>
                   )}
@@ -560,26 +574,46 @@ const RegisterPage: React.FC = () => {
                     >
                       <div className="relative border border-slate-300 rounded-xl px-4 py-2 focus-within:border-[#1a73e8] focus-within:ring-1 focus-within:ring-[#1a73e8] transition-all bg-white">
                         <label className="text-xs font-medium text-slate-500">Password</label>
-                        <input
-                          name="password"
-                          type="password"
-                          required
-                          className="w-full bg-transparent text-sm font-medium text-slate-900 outline-none mt-1 py-1"
-                          value={formData.password}
-                          onChange={handleChange}
-                        />
+                        <div className="flex items-center justify-between">
+                          <input
+                            name="password"
+                            type={showPassword ? 'text' : 'password'}
+                            required
+                            className="w-full bg-transparent text-sm font-medium text-slate-900 outline-none mt-1 py-1 pr-10"
+                            value={formData.password}
+                            onChange={handleChange}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="text-slate-400 hover:text-slate-600 focus:outline-none ml-2"
+                            aria-label={showPassword ? "Hide password" : "Show password"}
+                          >
+                            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                          </button>
+                        </div>
                       </div>
 
                       <div className="relative border border-slate-300 rounded-xl px-4 py-2 focus-within:border-[#1a73e8] focus-within:ring-1 focus-within:ring-[#1a73e8] transition-all bg-white">
                         <label className="text-xs font-medium text-slate-500">Confirm Password</label>
-                        <input
-                          name="password_confirmation"
-                          type="password"
-                          required
-                          className="w-full bg-transparent text-sm font-medium text-slate-900 outline-none mt-1 py-1"
-                          value={formData.password_confirmation}
-                          onChange={handleChange}
-                        />
+                        <div className="flex items-center justify-between">
+                          <input
+                            name="password_confirmation"
+                            type={showConfirmPassword ? 'text' : 'password'}
+                            required
+                            className="w-full bg-transparent text-sm font-medium text-slate-900 outline-none mt-1 py-1 pr-10"
+                            value={formData.password_confirmation}
+                            onChange={handleChange}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                            className="text-slate-400 hover:text-slate-600 focus:outline-none ml-2"
+                            aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
+                          >
+                            {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                          </button>
+                        </div>
                       </div>
                     </m.div>
                   )}

@@ -13,6 +13,7 @@ import {
   FiTrendingUp,
   FiAward,
   FiLock,
+  FiTrash2,
 } from 'react-icons/fi'
 import { clsx } from 'clsx'
 import { m, AnimatePresence } from 'framer-motion'
@@ -30,6 +31,7 @@ const AccountInfoPage: React.FC = () => {
     uploadProfilePicture,
     storeContact,
     setDefaultContact,
+    deleteContact,
     updateProfile,
     isLoading,
   } = useAccountInfo()
@@ -172,6 +174,24 @@ const AccountInfoPage: React.FC = () => {
     } else {
       setContacts(backup)
       toast.error('Failed to update primary contact.')
+    }
+  }
+
+  const handleDeleteContact = async (number: string) => {
+    const backup = [...contacts]
+    const wasDefault = contacts.find((c) => c.number === number)?.is_default
+    const remaining = contacts.filter((c) => c.number !== number)
+    const updated = remaining.map((c, i) => ({
+      ...c,
+      is_default: wasDefault && i === 0 ? true : c.is_default,
+    }))
+    setContacts(updated)
+    const result = await deleteContact(number)
+    if (result.success) {
+      toast.success('Contact number deleted.')
+    } else {
+      setContacts(backup)
+      toast.error('Failed to delete contact.')
     }
   }
 
@@ -633,47 +653,60 @@ const AccountInfoPage: React.FC = () => {
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {contacts.map((c, i) => (
-            <button
+            <div
               key={i}
-              type="button"
-              onClick={() => handleSetDefaultContact(c.number)}
               className={clsx(
-                'flex w-full items-center gap-4 rounded-[16px] border px-4 py-3.5 text-left transition-all hover:scale-[1.01]',
+                'flex w-full items-center justify-between rounded-[16px] border px-4 py-3.5 transition-all',
                 c.is_default
                   ? 'border-pixs-mint bg-pixs-mint/5 shadow-pixs-mint/5 shadow-sm'
                   : 'border-slate-100 bg-white hover:border-slate-200',
               )}
             >
-              <div
-                className={clsx(
-                  'flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-colors',
-                  c.is_default
-                    ? 'bg-pixs-mint text-slate-900'
-                    : 'bg-slate-50 text-slate-300',
-                )}
+              <button
+                type="button"
+                onClick={() => handleSetDefaultContact(c.number)}
+                className="flex flex-1 items-center gap-4 text-left outline-none"
               >
-                {c.is_default ? (
-                  <FiCheckCircle size={18} />
-                ) : (
-                  <FiPhone size={16} />
-                )}
-              </div>
-              <div className="min-w-0">
-                <p
+                <div
                   className={clsx(
-                    'text-sm font-black truncate',
-                    c.is_default ? 'text-slate-900' : 'text-slate-600',
+                    'flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-colors',
+                    c.is_default
+                      ? 'bg-pixs-mint text-slate-900'
+                      : 'bg-slate-50 text-slate-300',
                   )}
                 >
-                  {c.number}
-                </p>
-                {c.is_default && (
-                  <span className="text-pixs-mint text-[8px] font-black tracking-widest uppercase">
-                    Active Primary
-                  </span>
-                )}
-              </div>
-            </button>
+                  {c.is_default ? (
+                    <FiCheckCircle size={18} />
+                  ) : (
+                    <FiPhone size={16} />
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <p
+                    className={clsx(
+                      'text-sm font-black truncate',
+                      c.is_default ? 'text-slate-900' : 'text-slate-600',
+                    )}
+                  >
+                    {c.number}
+                  </p>
+                  {c.is_default && (
+                    <span className="text-pixs-mint text-[8px] font-black tracking-widest uppercase">
+                      Active Primary
+                    </span>
+                  )}
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleDeleteContact(c.number)}
+                className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-rose-500 transition-colors"
+                title="Delete Contact"
+              >
+                <FiTrash2 size={16} />
+              </button>
+            </div>
           ))}
         </div>
 

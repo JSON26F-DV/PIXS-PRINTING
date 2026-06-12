@@ -239,15 +239,36 @@ class CustomerController extends Controller
         ]);
     }
 
-    /**
-     * Set default contact.
-     */
     public function setDefaultContact(Request $request, string $number): JsonResponse
     {
         $request->user()->contacts()->update(['is_default' => false]);
         $request->user()->contacts()->where('number', $number)->update(['is_default' => true]);
 
         return response()->json(['message' => 'Default contact updated']);
+    }
+
+    /**
+     * Delete contact.
+     */
+    public function deleteContact(Request $request, string $number): JsonResponse
+    {
+        $user = $request->user();
+        $contact = $user->contacts()->where('number', $number)->first();
+        if (!$contact) {
+            return response()->json(['message' => 'Contact not found'], 404);
+        }
+
+        $wasDefault = $contact->is_default;
+        $contact->delete();
+
+        if ($wasDefault) {
+            $next = $user->contacts()->first();
+            if ($next) {
+                $next->update(['is_default' => true]);
+            }
+        }
+
+        return response()->json(['message' => 'Contact deleted successfully']);
     }
 
     /**

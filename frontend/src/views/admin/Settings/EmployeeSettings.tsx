@@ -1,9 +1,7 @@
-import React, { useState, lazy, Suspense } from 'react'
+import React, { lazy, Suspense } from 'react'
 import { useLocation } from 'react-router-dom'
 import { m, AnimatePresence } from 'framer-motion'
 import { FiUser, FiMapPin, FiFileText, FiLogOut, FiSettings } from 'react-icons/fi'
-import { useAuth } from '../../../context/AuthContext'
-import BoxFallback from '../../../components/common/BoxFallback'
 
 // Use same lazy imports as customer SettingsPage
 const AccountInfoPage = lazy(
@@ -72,7 +70,6 @@ const SectionLoader = () => (
 
 const EmployeeSettings: React.FC = () => {
   const location = useLocation()
-  const { user } = useAuth()
 
   // Determine active section from URL or state, default to 'account'
   const pathParts = location.pathname.split('/')

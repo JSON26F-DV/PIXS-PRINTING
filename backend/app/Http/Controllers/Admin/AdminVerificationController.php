@@ -21,12 +21,23 @@ class AdminVerificationController extends Controller
         $user = Auth::user();
         $adminEmail = $user->email;
 
-        $canResend = $this->verificationService->canResend($adminEmail, 'delete_order');
-        if (! $canResend['can_resend']) {
+        if ($this->verificationService->wasRecentlySent($adminEmail, 'delete_order', 5)) {
             return response()->json([
-                'status' => 'error',
-                'message' => "Please wait {$canResend['cooldown_remaining']} seconds.",
-            ], 429);
+                'status' => 'success',
+                'message' => 'Verification code sent to admin email.',
+            ]);
+        }
+
+        $isResend = $request->input('is_resend', false);
+
+        if ($isResend) {
+            $canResend = $this->verificationService->canResend($adminEmail, 'delete_order');
+            if (! $canResend['can_resend']) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => "Please wait {$canResend['cooldown_remaining']} seconds.",
+                ], 429);
+            }
         }
 
         $code = $this->verificationService->generateCode($adminEmail, 'delete_order');
@@ -50,16 +61,36 @@ class AdminVerificationController extends Controller
         $user = Auth::user();
         $adminEmail = $user->email;
 
-        $canResend = $this->verificationService->canResend($adminEmail, 'delete_account');
-        if (! $canResend['can_resend']) {
+        if ($this->verificationService->wasRecentlySent($adminEmail, 'delete_account', 5)) {
             return response()->json([
-                'status' => 'error',
-                'message' => "Please wait {$canResend['cooldown_remaining']} seconds.",
-            ], 429);
+                'status' => 'success',
+                'message' => 'Verification code sent to admin email.',
+            ]);
+        }
+
+        $isResend = $request->input('is_resend', false);
+
+        if ($isResend) {
+            $canResend = $this->verificationService->canResend($adminEmail, 'delete_account');
+            if (! $canResend['can_resend']) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => "Please wait {$canResend['cooldown_remaining']} seconds.",
+                ], 429);
+            }
+        }
+
+        $targetId = $request->input('target_id');
+        $targetUser = null;
+        if ($targetId) {
+            $targetUser = \App\Models\Employee::find($targetId);
+            if (! $targetUser) {
+                $targetUser = \App\Models\Customer::find($targetId);
+            }
         }
 
         $code = $this->verificationService->generateCode($adminEmail, 'delete_account');
-        $sent = $this->mailService->sendVerificationCode($adminEmail, $code, 'delete_account');
+        $sent = $this->mailService->sendVerificationCode($adminEmail, $code, 'delete_account', $targetUser);
 
         if (! $sent) {
             return response()->json([

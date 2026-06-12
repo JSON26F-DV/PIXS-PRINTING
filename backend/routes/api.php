@@ -136,6 +136,7 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->prefix('user')->group(funct
     Route::post('/profile-picture', [UserController::class, 'updateProfilePicture']);
     Route::post('/contacts', [UserController::class, 'storeContact']);
     Route::post('/contacts/{number}/default', [UserController::class, 'setDefaultContact']);
+    Route::delete('/contacts/{number}', [UserController::class, 'deleteContact']);
 
     // Unified Addresses
     Route::get('/addresses', [UserController::class, 'addresses']);
@@ -153,6 +154,7 @@ Route::middleware(['auth:sanctum', 'block.ip', 'role:customer', 'throttle:api'])
     // Contacts
     Route::post('/contacts', [CustomerController::class, 'storeContact']);
     Route::post('/contacts/{number}/default', [CustomerController::class, 'setDefaultContact']);
+    Route::delete('/contacts/{number}', [CustomerController::class, 'deleteContact']);
 
     // Addresses
     Route::get('/addresses', [CustomerController::class, 'addresses']);

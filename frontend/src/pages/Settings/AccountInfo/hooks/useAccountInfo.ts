@@ -171,12 +171,37 @@ export const useAccountInfo = () => {
     }
   }
 
+  const deleteContact = async (
+    number: string,
+  ): Promise<{ success: boolean }> => {
+    try {
+      await axiosInstance.delete(
+        `/api/user/contacts/${encodeURIComponent(number)}`,
+      )
+      setAccount((prev) => {
+        if (!prev) return prev
+        const wasDefault = prev.contacts.find((c) => c.number === number)?.is_default
+        const remaining = prev.contacts.filter((c) => c.number !== number)
+        const updated = remaining.map((c, i) => ({
+          ...c,
+          is_default: wasDefault && i === 0 ? true : c.is_default,
+        }))
+        return { ...prev, contacts: updated }
+      })
+      return { success: true }
+    } catch (err) {
+      console.error(err)
+      return { success: false }
+    }
+  }
+
   return {
     defaultAccount,
     updateProfile,
     uploadProfilePicture,
     storeContact,
     setDefaultContact,
+    deleteContact,
     isLoading,
   }
 }

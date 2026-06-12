@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import toast, { Toaster } from 'react-hot-toast'
 import { m, AnimatePresence } from 'framer-motion'
+import { Eye, EyeOff } from 'lucide-react'
 import AuthNavbar from '../../components/auth/AuthNavbar'
 import Footer from '../../components/Footer/Footer'
 
@@ -10,6 +11,7 @@ const LoginPage: React.FC = () => {
   const { login, loading: isLoading, error: authError, fieldErrors, clearAuthErrors } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
 
   const clearErrors = () => {
@@ -59,7 +61,7 @@ const LoginPage: React.FC = () => {
           
           {/* Left Column (Labels, Title) */}
           <div className="w-full md:w-5/12 p-8 md:p-14 flex flex-col justify-start relative">
-            <div className="mb-4">
+            <div className="mb-4 hidden md:block">
                {/* PIXS Mint Logo */}
                <div className="bg-pixs-mint flex h-12 w-12 items-center justify-center rounded-2xl text-2xl font-black text-slate-900 shadow-lg shadow-pixs-mint/20 mb-6">
                  P
@@ -128,17 +130,27 @@ const LoginPage: React.FC = () => {
                   
                   <div className="relative border border-slate-300 rounded-xl px-4 py-2 focus-within:border-[#1a73e8] focus-within:ring-1 focus-within:ring-[#1a73e8] transition-all bg-white">
                     <label className="text-xs font-medium text-slate-500">Password</label>
-                    <input
-                      name="password"
-                      type="password"
-                      required
-                      className="w-full bg-transparent text-sm font-medium text-slate-900 outline-none mt-1 py-1"
-                      value={password}
-                      onChange={(e) => {
-                        setPassword(e.target.value)
-                        clearErrors()
-                      }}
-                    />
+                    <div className="flex items-center justify-between">
+                      <input
+                        name="password"
+                        type={showPassword ? 'text' : 'password'}
+                        required
+                        className="w-full bg-transparent text-sm font-medium text-slate-900 outline-none mt-1 py-1 pr-10"
+                        value={password}
+                        onChange={(e) => {
+                          setPassword(e.target.value)
+                          clearErrors()
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="text-slate-400 hover:text-slate-600 focus:outline-none ml-2"
+                        aria-label={showPassword ? "Hide password" : "Show password"}
+                      >
+                        {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
+                    </div>
                   </div>
 
                   <div className="pt-2">

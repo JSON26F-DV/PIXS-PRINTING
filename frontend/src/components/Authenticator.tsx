@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { clsx } from 'clsx'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Mail, ShieldAlert, Clock, CheckCircle2, X, AlertTriangle, RefreshCw } from 'lucide-react'
-import axiosInstance from '../lib/axiosInstance'
 
 export interface AuthenticatorProps {
   email: string
@@ -11,6 +10,7 @@ export interface AuthenticatorProps {
   onSuccess: (code: string) => void
   onCancel: () => void
   autoSend?: boolean
+  variant?: 'modal' | 'inline'
 }
 
 interface RateLimitState {
@@ -27,9 +27,11 @@ const RESEND_COOLDOWN = 60 * 1000
 const Authenticator: React.FC<AuthenticatorProps> = ({
   email,
   codeType,
+  targetId,
   onSuccess,
   onCancel,
   autoSend = true,
+  variant = 'modal',
 }) => {
   const [digits, setDigits] = useState<string[]>(Array(6).fill(''))
   const [isLoading, setIsLoading] = useState(false)
@@ -45,14 +47,14 @@ const Authenticator: React.FC<AuthenticatorProps> = ({
 
   const inputRefs = useRef<(HTMLInputElement | null)[]>([])
 
-  const sendCode = useCallback(async () => {
+  const sendCode = useCallback(async (isResend = false) => {
     setIsSending(true)
     setError(null)
 
     try {
       let endpoint = ''
 
-      let payload: Record<string, any> = {}
+      let payload: Record<string, unknown> = {}
 
       switch (codeType) {
         case 'forgot_password':
@@ -61,9 +63,11 @@ const Authenticator: React.FC<AuthenticatorProps> = ({
           break
         case 'delete_order':
           endpoint = '/api/admin/verification/send-order-delete-code'
+          payload = { is_resend: isResend }
           break
         case 'delete_account':
           endpoint = '/api/admin/verification/send-account-delete-code'
+          payload = { target_id: targetId, is_resend: isResend }
           break
         case 'change_email':
           endpoint = '/api/auth/change-email/send-code'
@@ -95,10 +99,12 @@ const Authenticator: React.FC<AuthenticatorProps> = ({
         throw { response: { data: errData, status: res.status } }
       }
 
-      setRateLimit(prev => ({
-        ...prev,
-        resendCooldown: Date.now() + RESEND_COOLDOWN,
-      }))
+      if (isResend) {
+        setRateLimit(prev => ({
+          ...prev,
+          resendCooldown: Date.now() + RESEND_COOLDOWN,
+        }))
+      }
 
       setDigits(Array(6).fill(''))
       inputRefs.current[0]?.focus()
@@ -120,11 +126,11 @@ const Authenticator: React.FC<AuthenticatorProps> = ({
     } finally {
       setIsSending(false)
     }
-  }, [codeType, email])
+  }, [codeType, email, targetId])
 
   useEffect(() => {
     if (autoSend) {
-      sendCode()
+      sendCode(false)
     }
   }, [sendCode, autoSend])
 
@@ -214,7 +220,7 @@ const Authenticator: React.FC<AuthenticatorProps> = ({
       const code = digits.join('')
 
       let endpoint = ''
-      let payload: Record<string, any> = {}
+      let payload: Record<string, unknown> = {}
 
       if (codeType === 'forgot_password' || codeType === 'change_email') {
         endpoint = '/api/auth/forgot-password/verify'
@@ -284,7 +290,7 @@ const Authenticator: React.FC<AuthenticatorProps> = ({
     }))
     setError(null)
     setDigits(Array(6).fill(''))
-    sendCode()
+    sendCode(true)
   }
 
   const getResendCooldownSeconds = () => {
@@ -301,36 +307,43 @@ const Authenticator: React.FC<AuthenticatorProps> = ({
 
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.9, y: 20 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.9, y: 20 }}
-      className="relative w-full max-w-md overflow-hidden rounded-[40px] bg-white p-8 shadow-2xl md:p-12"
+      initial={variant === 'inline' ? { opacity: 0, y: 10 } : { opacity: 0, scale: 0.9, y: 20 }}
+      animate={variant === 'inline' ? { opacity: 1, y: 0 } : { opacity: 1, scale: 1, y: 0 }}
+      exit={variant === 'inline' ? { opacity: 0, y: -10 } : { opacity: 0, scale: 0.9, y: 20 }}
+      className={clsx(
+        "relative w-full overflow-hidden transition-all duration-300",
+        variant === 'inline' ? "p-0" : "max-w-md rounded-[40px] bg-white p-8 shadow-2xl md:p-12"
+      )}
     >
-      <button
-        onClick={onCancel}
-        className="absolute top-4 right-4 rounded-full p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
-      >
-        <X size={20} />
-      </button>
+      {variant !== 'inline' && (
+        <button
+          onClick={onCancel}
+          className="absolute top-4 right-4 rounded-full p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
+        >
+          <X size={20} />
+        </button>
+      )}
 
-      <div className="mb-6 text-center">
-        <div className="mb-4 flex items-center gap-3 justify-center">
-          <div className="h-0.5 w-8 bg-blue-500" />
-          <span className="text-[10px] font-black tracking-[4px] text-blue-500 uppercase italic">
-            {codeType === 'forgot_password' ? 'Password Reset' : codeType === 'delete_order' ? 'Order Deletion' : codeType === 'delete_account' ? 'Account Deletion' : 'Email Change'}
-          </span>
-          <div className="h-0.5 w-8 bg-blue-500" />
+      {variant !== 'inline' && (
+        <div className="mb-6 text-center">
+          <div className="mb-4 flex items-center gap-3 justify-center">
+            <div className="h-0.5 w-8 bg-blue-500" />
+            <span className="text-[10px] font-black tracking-[4px] text-blue-500 uppercase italic">
+              {codeType === 'forgot_password' ? 'Password Reset' : codeType === 'delete_order' ? 'Order Deletion' : codeType === 'delete_account' ? 'Account Deletion' : 'Email Change'}
+            </span>
+            <div className="h-0.5 w-8 bg-blue-500" />
+          </div>
+          <h2 className="text-xl sm:text-2xl font-black tracking-tighter text-slate-900 uppercase italic">
+            Verify Identity
+          </h2>
+          <p className="mt-2 text-xs font-bold text-slate-500 uppercase italic flex items-center justify-center gap-2">
+            <Mail size={14} />
+            Code sent to {email}
+          </p>
         </div>
-        <h2 className="text-xl sm:text-2xl font-black tracking-tighter text-slate-900 uppercase italic">
-          Verify Identity
-        </h2>
-        <p className="mt-2 text-xs font-bold text-slate-500 uppercase italic flex items-center justify-center gap-2">
-          <Mail size={14} />
-          Code sent to {email}
-        </p>
-      </div>
+      )}
 
-      <div className="mb-6 flex justify-center gap-3">
+      <div className="mb-6 flex items-center justify-center gap-1.5 sm:gap-3 w-full max-w-sm sm:max-w-md mx-auto">
         {digits.map((digit, index) => (
           <input
             key={index}
@@ -344,7 +357,7 @@ const Authenticator: React.FC<AuthenticatorProps> = ({
             onPaste={index === 0 ? handlePaste : undefined}
             disabled={rateLimit.isLocked || isLoading || isSuccess}
             className={clsx(
-              'h-14 w-12 rounded-2xl text-center text-2xl font-black outline-none transition-all border-2',
+              'h-12 w-10 sm:h-14 sm:w-12 rounded-xl sm:rounded-2xl text-center text-xl sm:text-2xl font-black outline-none transition-all border-2',
               isSuccess
                 ? 'border-emerald-500 bg-emerald-50 text-emerald-600'
                 : error
@@ -365,7 +378,7 @@ const Authenticator: React.FC<AuthenticatorProps> = ({
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="mb-4 text-center text-xs font-black text-rose-500 uppercase italic flex items-center justify-center gap-2"
+            className="mb-4 text-xs font-black text-rose-500 uppercase italic flex items-center justify-center gap-2"
           >
             <AlertTriangle size={14} />
             {error}
@@ -402,25 +415,51 @@ const Authenticator: React.FC<AuthenticatorProps> = ({
               animate={{ width: `${((LOCKOUT_DURATION - getLockRemainingSeconds() * 1000) / LOCKOUT_DURATION) * 100}%` }}
             />
           </div>
+          {variant === 'inline' && (
+            <div className="mt-8 flex justify-between">
+              <button
+                type="button"
+                onClick={onCancel}
+                className="px-6 py-2 text-sm font-bold text-[#1a73e8] hover:bg-[#1a73e8]/10 rounded-full transition-colors active:scale-95"
+              >
+                Back
+              </button>
+            </div>
+          )}
         </div>
       ) : (
-        <button
-          onClick={handleVerify}
-          disabled={isLoading || digits.some(d => d === '')}
-          className="w-full rounded-3xl bg-slate-900 py-5 text-[10px] font-black tracking-widest text-white uppercase italic shadow-xl transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-3"
-        >
-          {isLoading ? (
-            <>
-              <RefreshCw size={16} className="animate-spin" />
-              Verifying...
-            </>
-          ) : (
-            'Verify Code'
+        <div className={clsx(variant === 'inline' ? "mt-8 flex items-center justify-between" : "")}>
+          {variant === 'inline' && (
+            <button
+              type="button"
+              onClick={onCancel}
+              className="px-6 py-2 text-sm font-bold text-[#1a73e8] hover:bg-[#1a73e8]/10 rounded-full transition-colors active:scale-95"
+            >
+              Back
+            </button>
           )}
-        </button>
+          <button
+            onClick={handleVerify}
+            disabled={isLoading || digits.some(d => d === '')}
+            className={clsx(
+              variant === 'inline'
+                ? "px-6 py-2.5 text-sm font-bold text-white bg-[#1a73e8] hover:bg-[#1557b0] rounded-full transition-colors shadow-sm active:scale-95 disabled:opacity-50"
+                : "w-full rounded-3xl bg-slate-900 py-5 text-[10px] font-black tracking-widest text-white uppercase italic shadow-xl transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+            )}
+          >
+            {isLoading ? (
+              <>
+                <RefreshCw size={16} className="animate-spin" />
+                Verifying...
+              </>
+            ) : (
+              'Verify Code'
+            )}
+          </button>
+        </div>
       )}
 
-      <div className="mt-6 text-center">
+      <div className="mt-6 text-center flex items-center justify-center">
         {getResendCooldownSeconds() > 0 ? (
           <p className="text-[10px] font-bold text-slate-400">
             Resend available in{' '}
@@ -430,7 +469,12 @@ const Authenticator: React.FC<AuthenticatorProps> = ({
           <button
             onClick={handleResend}
             disabled={isSending}
-            className="text-[10px] font-black tracking-widest text-blue-500 uppercase italic hover:text-blue-700 transition-colors disabled:opacity-40"
+            className={clsx(
+              "font-bold transition-colors disabled:opacity-40",
+              variant === 'inline'
+                ? "text-sm text-[#1a73e8] hover:text-[#1557b0] hover:underline"
+                : "text-[10px] font-black tracking-widest text-blue-500 uppercase italic hover:text-blue-700"
+            )}
           >
             {isSending ? 'Sending...' : 'Resend Code'}
           </button>

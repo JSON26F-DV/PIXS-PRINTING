@@ -36,6 +36,13 @@ class ForgotPasswordController extends Controller
             ]);
         }
 
+        if ($this->verificationService->wasRecentlySent($email, 'forgot_password', 5)) {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Verification code sent to your email.',
+            ]);
+        }
+
         $canResend = $this->verificationService->canResend($email, 'forgot_password');
         if (! $canResend['can_resend']) {
             return response()->json([

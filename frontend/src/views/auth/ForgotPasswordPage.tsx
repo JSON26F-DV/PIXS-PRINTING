@@ -3,9 +3,23 @@ import { useNavigate, Link } from 'react-router-dom'
 import { m, AnimatePresence } from 'framer-motion'
 import { toast, Toaster } from 'react-hot-toast'
 import ReCAPTCHA from 'react-google-recaptcha'
+import { Eye, EyeOff } from 'lucide-react'
 import AuthNavbar from '../../components/auth/AuthNavbar'
 import Footer from '../../components/Footer/Footer'
 import Authenticator from '../../components/Authenticator'
+
+const getPasswordStrength = (pass: string) => {
+  if (!pass) return { score: 0, text: '', color: 'bg-slate-200' }
+  let score = 0
+  if (pass.length >= 8) score++
+  if (/[A-Z]/.test(pass)) score++
+  if (/[0-9]/.test(pass)) score++
+  if (/[^A-Za-z0-9]/.test(pass)) score++
+
+  if (score <= 1) return { score, text: 'Weak', color: 'bg-rose-500' }
+  if (score <= 3) return { score, text: 'Medium', color: 'bg-amber-500' }
+  return { score, text: 'Strong', color: 'bg-emerald-500' }
+}
 
 const RECAPTCHA_SITE_KEY = import.meta.env.VITE_RECAPTCHA_SITE_KEY || '6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI'
 
@@ -36,6 +50,8 @@ const ForgotPasswordPage: React.FC = () => {
   const [verifiedCode, setVerifiedCode] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [isResetting, setIsResetting] = useState(false)
   const [passError, setPassError] = useState<string | null>(null)
 
@@ -104,8 +120,9 @@ const ForgotPasswordPage: React.FC = () => {
     e.preventDefault()
     setPassError(null)
 
-    if (password.length < 8) {
-      setPassError('Password must be at least 8 characters')
+    const strength = getPasswordStrength(password)
+    if (strength.score < 4) {
+      setPassError('Password must meet all complexity requirements: at least 8 characters, one uppercase letter, one number, and one special sign.')
       return
     }
     if (password !== confirmPassword) {
@@ -165,7 +182,7 @@ const ForgotPasswordPage: React.FC = () => {
           
           {/* Left Column (Labels, Title) */}
           <div className="w-full md:w-5/12 p-8 md:p-14 flex flex-col justify-start relative">
-            <div className="mb-4">
+            <div className="mb-4 hidden md:block">
                {/* PIXS Mint Logo */}
                <div className="bg-pixs-mint flex h-12 w-12 items-center justify-center rounded-2xl text-2xl font-black text-slate-900 shadow-lg shadow-pixs-mint/20 mb-6">
                  P
@@ -263,6 +280,7 @@ const ForgotPasswordPage: React.FC = () => {
                       onSuccess={handleVerifySuccess}
                       onCancel={() => setStep('email')}
                       autoSend={false}
+                      variant="inline"
                     />
                   </m.div>
                 )}
@@ -281,27 +299,87 @@ const ForgotPasswordPage: React.FC = () => {
                         {passError}
                       </div>
                     )}
-
                     <div className="relative border border-slate-300 rounded-xl px-4 py-2 focus-within:border-[#1a73e8] focus-within:ring-1 focus-within:ring-[#1a73e8] transition-all bg-white">
                       <label className="text-xs font-medium text-slate-500">New Password</label>
-                      <input
-                        type="password"
-                        value={password}
-                        onChange={e => setPassword(e.target.value)}
-                        required
-                        className="w-full bg-transparent text-sm font-medium text-slate-900 outline-none mt-1 py-1"
-                      />
+                      <div className="flex items-center justify-between">
+                        <input
+                          type={showPassword ? 'text' : 'password'}
+                          value={password}
+                          onChange={e => setPassword(e.target.value)}
+                          required
+                          className="w-full bg-transparent text-sm font-medium text-slate-900 outline-none mt-1 py-1 pr-10"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="text-slate-400 hover:text-slate-600 focus:outline-none ml-2"
+                          aria-label={showPassword ? "Hide password" : "Show password"}
+                        >
+                          {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                        </button>
+                      </div>
                     </div>
+
+                    {/* Password Strength Indicator */}
+                    {password && (() => {
+                      const strength = getPasswordStrength(password)
+                      return (
+                        <div className="space-y-2 py-1">
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="font-medium text-slate-500">Password strength:</span>
+                            <span className={
+                              strength.score <= 1 ? "text-rose-500 font-bold" :
+                              strength.score <= 3 ? "text-amber-500 font-bold" : "text-emerald-500 font-bold"
+                            }>{strength.text}</span>
+                          </div>
+                          <div className="flex gap-1.5 h-1.5">
+                            <div className={`flex-1 rounded-full transition-all duration-300 ${strength.score >= 1 ? strength.color : "bg-slate-200"}`} />
+                            <div className={`flex-1 rounded-full transition-all duration-300 ${strength.score >= 2 ? strength.color : "bg-slate-200"}`} />
+                            <div className={`flex-1 rounded-full transition-all duration-300 ${strength.score >= 4 ? strength.color : "bg-slate-200"}`} />
+                          </div>
+                          
+                          {/* Requirement Checkpoints */}
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 pt-1 text-[11px] text-slate-500">
+                            <div className="flex items-center gap-1.5">
+                              <span className={password.length >= 8 ? "text-emerald-500 font-bold" : "text-slate-400"}>✓</span>
+                              <span>Min. 8 characters</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <span className={/[A-Z]/.test(password) ? "text-emerald-500 font-bold" : "text-slate-400"}>✓</span>
+                              <span>One uppercase letter</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <span className={/[0-9]/.test(password) ? "text-emerald-500 font-bold" : "text-slate-400"}>✓</span>
+                              <span>One number</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <span className={/[^A-Za-z0-9]/.test(password) ? "text-emerald-500 font-bold" : "text-slate-400"}>✓</span>
+                              <span>One special sign</span>
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })()}
 
                     <div className="relative border border-slate-300 rounded-xl px-4 py-2 focus-within:border-[#1a73e8] focus-within:ring-1 focus-within:ring-[#1a73e8] transition-all bg-white">
                       <label className="text-xs font-medium text-slate-500">Confirm New Password</label>
-                      <input
-                        type="password"
-                        value={confirmPassword}
-                        onChange={e => setConfirmPassword(e.target.value)}
-                        required
-                        className="w-full bg-transparent text-sm font-medium text-slate-900 outline-none mt-1 py-1"
-                      />
+                      <div className="flex items-center justify-between">
+                        <input
+                          type={showConfirmPassword ? 'text' : 'password'}
+                          value={confirmPassword}
+                          onChange={e => setConfirmPassword(e.target.value)}
+                          required
+                          className="w-full bg-transparent text-sm font-medium text-slate-900 outline-none mt-1 py-1 pr-10"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          className="text-slate-400 hover:text-slate-600 focus:outline-none ml-2"
+                          aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
+                        >
+                          {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                        </button>
+                      </div>
                     </div>
 
                     <div className="flex items-center justify-between mt-8">

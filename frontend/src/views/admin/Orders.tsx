@@ -485,26 +485,22 @@ const Orders: React.FC = () => {
     }
   }
 
-  const handleDeleteOrder = async () => {
-    if (!deletePassword.trim()) {
-      setDeleteError('Password is required to delete an order')
-      return
-    }
+  const handleDeleteOrder = async (orderId: string) => {
     try {
-      await axiosInstance.delete(`/api/admin/orders/${deleteModal.orderId}`, {
+      await axiosInstance.delete(`/api/admin/orders/${orderId}`, {
         data: { password: deletePassword }
       })
       refresh()
-      const deletedOrderId = deleteModal.orderId
       setDeleteModal({ isOpen: false, orderId: '' })
       setDeletePassword('')
       setDeleteError(null)
-      setDeleteSuccessModal({ isOpen: true, orderId: deletedOrderId })
+      setDeleteSuccessModal({ isOpen: true, orderId })
     } catch (err: unknown) {
       console.error('Failed to delete order', err)
       const error = err as { response?: { data?: { message?: string } } }
       const errorMsg = error.response?.data?.message || 'Failed to delete order'
       setDeleteError(errorMsg)
+      toast.error(errorMsg)
     }
   }
 
@@ -1277,11 +1273,7 @@ const Orders: React.FC = () => {
                             <button 
                               onClick={(e) => {
                                 e.stopPropagation()
-                                if (user?.email) {
-                                  setAuthenticatorModal({ isOpen: true, orderId: order.order_id })
-                                } else {
-                                  toast.error('Admin email not configured for verification')
-                                }
+                                setDeleteModal({ isOpen: true, orderId: order.order_id })
                               }}
                               className="rounded p-1 text-rose-400 hover:bg-rose-50"
                             >
@@ -1475,11 +1467,7 @@ const Orders: React.FC = () => {
                               {user?.role === 'admin' ? (
                                 <button 
                                   onClick={() => {
-                                    if (user?.email) {
-                                      setAuthenticatorModal({ isOpen: true, orderId: order.order_id })
-                                    } else {
-                                      toast.error('Admin email not configured for verification')
-                                    }
+                                    setDeleteModal({ isOpen: true, orderId: order.order_id })
                                   }}
                                   className="orders-action-btn rounded-xl p-3 text-rose-400 transition-all hover:bg-rose-50 hover:text-rose-600"
                                   title="Delete Order"
@@ -2440,7 +2428,18 @@ const Orders: React.FC = () => {
                 ) : null
               })()}
 
-              <form onSubmit={(e) => { e.preventDefault(); handleDeleteOrder(); }}>
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                if (!deletePassword.trim()) {
+                  setDeleteError('Password is required to delete an order')
+                  return
+                }
+                if (!user?.email) {
+                  toast.error('Admin email not configured for verification')
+                  return
+                }
+                setAuthenticatorModal({ isOpen: true, orderId: deleteModal.orderId })
+              }}>
                 {/* Password check input */}
                 <div className="mb-8 text-left">
                   <label className="mb-2 block text-[9px] font-black tracking-[3px] text-slate-400 uppercase">
@@ -2499,7 +2498,7 @@ const Orders: React.FC = () => {
               targetId={authenticatorModal.orderId}
               onSuccess={() => {
                 setAuthenticatorModal({ isOpen: false, orderId: '' })
-                setDeleteModal({ isOpen: true, orderId: authenticatorModal.orderId })
+                handleDeleteOrder(authenticatorModal.orderId)
               }}
               onCancel={() => setAuthenticatorModal({ isOpen: false, orderId: '' })}
             />

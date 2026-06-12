@@ -145,6 +145,20 @@ class VerificationCodeService
         ];
     }
 
+    public function wasRecentlySent(string $email, string $purpose, int $seconds = 5): bool
+    {
+        $cacheKey = $this->getCacheKey($email, $purpose);
+        $data = Cache::get($cacheKey);
+
+        if (! $data) {
+            return false;
+        }
+
+        $elapsed = time() - $data['created_at'];
+
+        return $elapsed < $seconds;
+    }
+
     private function generateRandomCode(): string
     {
         return str_pad((string) random_int(0, 999999), self::CODE_LENGTH, '0', STR_PAD_LEFT);

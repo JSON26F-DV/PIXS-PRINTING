@@ -287,4 +287,25 @@ class UserController extends Controller
 
         return response()->json(['message' => 'Default contact updated']);
     }
+
+    public function deleteContact(Request $request, string $number): JsonResponse
+    {
+        $user = $request->user();
+        $contact = $user->contacts()->where('number', $number)->first();
+        if (!$contact) {
+            return response()->json(['message' => 'Contact not found'], 404);
+        }
+
+        $wasDefault = $contact->is_default;
+        $contact->delete();
+
+        if ($wasDefault) {
+            $next = $user->contacts()->first();
+            if ($next) {
+                $next->update(['is_default' => true]);
+            }
+        }
+
+        return response()->json(['message' => 'Contact deleted successfully']);
+    }
 }

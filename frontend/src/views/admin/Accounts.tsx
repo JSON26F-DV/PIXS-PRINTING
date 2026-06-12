@@ -585,15 +585,8 @@ const Accounts: React.FC = () => {
                         </Link>
                         <button
                           onClick={() => {
-                            const userObj = users.find(u => u.id === user.id)
-                            if (userObj?.email) {
-                              setAuthenticatorModal({
-                                isOpen: true,
-                                accountId: user.id,
-                                accountEmail: userObj.email,
-                              })
-                            } else {
-                              toast.error('Account email not found')
+                            if (user.id) {
+                              setShowDeleteConfirm(user.id)
                             }
                           }}
                           className="rounded-2xl p-2.5 bg-slate-50 text-slate-600 hover:bg-rose-500 hover:text-white transition-all active:scale-90"
@@ -742,14 +735,8 @@ const Accounts: React.FC = () => {
                               </Link>
                               <button
                                 onClick={() => {
-                                  if (user.email) {
-                                    setAuthenticatorModal({
-                                      isOpen: true,
-                                      accountId: user.id,
-                                      accountEmail: user.email,
-                                    })
-                                  } else {
-                                    toast.error('Account email not found')
+                                  if (user.id) {
+                                    setShowDeleteConfirm(user.id)
                                   }
                                 }}
                                 className="rounded-2xl p-3 text-slate-400 shadow-sm transition-all hover:bg-rose-500 hover:text-white active:scale-95"
@@ -828,9 +815,24 @@ const Accounts: React.FC = () => {
               email={authenticatorModal.accountEmail}
               codeType="delete_account"
               targetId={authenticatorModal.accountId}
-              onSuccess={() => {
+              onSuccess={async () => {
                 setAuthenticatorModal({ isOpen: false, accountId: '', accountEmail: '' })
-                setShowDeleteConfirm(authenticatorModal.accountId)
+                
+                try {
+                  await axiosInstance.delete(`/api/accounts/${authenticatorModal.accountId}/soft-delete`, {
+                    data: { password: adminPassword, reason: deleteReason }
+                  })
+                  toast.success('Account moved to deleted accounts')
+                  setShowDeleteConfirm(null)
+                  setDeleteReason('')
+                  setAdminPassword('')
+                  setPasswordError(null)
+                  fetchAccounts()
+                } catch (err) {
+                  const axiosError = err as { response?: { data?: { message?: string } } }
+                  setPasswordError(axiosError.response?.data?.message || 'Failed to delete account')
+                  toast.error(axiosError.response?.data?.message || 'Failed to delete account')
+                }
               }}
               onCancel={() => setAuthenticatorModal({ isOpen: false, accountId: '', accountEmail: '' })}
             />
@@ -944,26 +946,21 @@ const Accounts: React.FC = () => {
                 ) : null
               })()}
 
-              <form onSubmit={async (e) => {
+              <form onSubmit={(e) => {
                 e.preventDefault()
                 if (!adminPassword.trim()) {
                   setPasswordError('Password is required')
                   return
                 }
-                try {
-                  await axiosInstance.delete(`/api/accounts/${showDeleteConfirm}/soft-delete`, {
-                    data: { password: adminPassword, reason: deleteReason }
-                  })
-                  toast.success('Account moved to deleted accounts')
-                  setShowDeleteConfirm(null)
-                  setDeleteReason('')
-                  setAdminPassword('')
-                  setPasswordError(null)
-                  fetchAccounts()
-                } catch (err) {
-                  const axiosError = err as { response?: { data?: { message?: string } } }
-                  setPasswordError(axiosError.response?.data?.message || 'Failed to delete account')
+                if (!deleteReason.trim()) {
+                  toast.error('Reason for deletion is required')
+                  return
                 }
+                setAuthenticatorModal({
+                  isOpen: true,
+                  accountId: showDeleteConfirm,
+                  accountEmail: currentUser?.email || '',
+                })
               }}>
                 <div className="mb-4 text-left">
                   <label className="mb-2 block text-[9px] font-black tracking-[3px] text-slate-400 uppercase">

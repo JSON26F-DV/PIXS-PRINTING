@@ -18,11 +18,11 @@ class MailService
         return $this->resend;
     }
 
-    public function sendVerificationCode(string $email, string $code, string $purpose): bool
+    public function sendVerificationCode(string $email, string $code, string $purpose, mixed $target = null): bool
     {
         $subject = $this->getSubjectForPurpose($purpose);
-        $body = $this->getBodyForPurpose($purpose, $code);
-        $text = $this->getAltBodyForPurpose($purpose, $code);
+        $body = $this->getBodyForPurpose($purpose, $code, $target);
+        $text = $this->getAltBodyForPurpose($purpose, $code, $target);
 
         if (env('MAIL_MAILER') === 'log') {
             logger()->info("[MAIL] To: {$email} | Subject: {$subject} | Body: {$text}");
@@ -58,14 +58,14 @@ class MailService
         };
     }
 
-    private function getBodyForPurpose(string $purpose, string $code): string
+    private function getBodyForPurpose(string $purpose, string $code, mixed $target = null): string
     {
         $styles = $this->getEmailStyles();
 
         return match ($purpose) {
             'forgot_password' => $this->getForgotPasswordTemplate($code, $styles),
             'delete_order' => $this->getDeleteOrderTemplate($code, $styles),
-            'delete_account' => $this->getDeleteAccountTemplate($code, $styles),
+            'delete_account' => $this->getDeleteAccountTemplate($code, $styles, $target),
             'password_changed' => $this->getPasswordChangedTemplate($styles),
             default => "<div style='{$styles['container']}'><p style='{$styles['code']}'>{$code}</p></div>",
         };
@@ -123,8 +123,28 @@ class MailService
         ';
     }
 
-    private function getDeleteAccountTemplate(string $code, array $s): string
+    private function getDeleteAccountTemplate(string $code, array $s, mixed $target = null): string
     {
+        $targetInfoHtml = '';
+        if ($target) {
+            $name = ($target->first_name ?? '') . ' ' . ($target->last_name ?? '');
+            $email = $target->email ?? 'N/A';
+            $role = $target->role ?? 'customer';
+            $type = ($target instanceof \App\Models\Employee) ? 'Employee' : 'Customer';
+            $company = $target->company_name ?? 'N/A';
+            
+            $targetInfoHtml = "
+                <div style='background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin: 24px 0; text-align: left;'>
+                    <h3 style='font-size: 14px; font-weight: bold; color: #475569; margin-top: 0; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 1px;'>Account to be Deleted</h3>
+                    <p style='margin: 6px 0; font-size: 14px; color: #1e293b;'><strong>Name:</strong> {$name}</p>
+                    <p style='margin: 6px 0; font-size: 14px; color: #1e293b;'><strong>Email:</strong> {$email}</p>
+                    <p style='margin: 6px 0; font-size: 14px; color: #1e293b;'><strong>Role:</strong> {$role}</p>
+                    <p style='margin: 6px 0; font-size: 14px; color: #1e293b;'><strong>Type:</strong> {$type}</p>
+                    <p style='margin: 6px 0; font-size: 14px; color: #1e293b;'><strong>Company:</strong> {$company}</p>
+                </div>
+            ";
+        }
+
         return "
             <div style='{$s['container']}'>
                 <div style='{$s['card']}'>
@@ -132,7 +152,8 @@ class MailService
                         <div style='{$s['logo']}'>PIXS Printing</div>
                     </div>
                     <h2 style='{$s['title']}'>Account Deletion Verification</h2>
-                    <p style='{$s['subtitle']}'>A request was made to delete an account. Enter this code to confirm:</p>
+                    <p style='{$s['subtitle']}'>A request was made to delete the following account. Enter this code to confirm:</p>
+                    {$targetInfoHtml}
                     <div style='{$s['code']}'>{$code}</div>
                     <div style='{$s['warning']}'>This action is irreversible. The account and all associated data will be permanently deleted.</div>
                 </div>
@@ -165,12 +186,12 @@ class MailService
         ';
     }
 
-    private function getAltBodyForPurpose(string $purpose, string $code): string
+    private function getAltBodyForPurpose(string $purpose, string $code, mixed $target = null): string
     {
         return match ($purpose) {
             'forgot_password' => "Your password reset code is: {$code}\n\nThis code expires in 10 minutes. If you didn't request this, please ignore this email.",
             'delete_order' => "Your order deletion verification code is: {$code}\n\nThis action is irreversible.",
-            'delete_account' => "Your account deletion verification code is: {$code}\n\nThis action is irreversible.",
+            'delete_account' => "Your account deletion verification code is: {$code}\n\nThis action is irreversible." . ($target ? "\n\nAccount to be deleted:\nName: " . ($target->first_name ?? '') . " " . ($target->last_name ?? '') . "\nEmail: " . ($target->email ?? 'N/A') . "\nRole: " . ($target->role ?? 'customer') : ""),
             'password_changed' => 'Your password was changed on '.now()->format('F j, Y g:i A').".\n\nIf you did not make this change, please contact support immediately.",
             default => "Your verification code is: {$code}",
         };
