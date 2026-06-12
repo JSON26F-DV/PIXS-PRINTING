@@ -285,7 +285,7 @@ const CustomerNavbar: React.FC = () => {
 
           if (isHomepage) {
             return (
-              <div className="mobile-navbar-top fixed top-0 left-0 right-0 z-40 flex flex-col bg-pixs-mint shadow-[0_10px_40px_rgba(0,0,0,0.03)] backdrop-blur-3xl w-full">
+              <div className="mobile-navbar-top fixed top-0 left-0 right-0 z-40 flex flex-col bg-white shadow-[0_10px_40px_rgba(0,0,0,0.03)] backdrop-blur-3xl w-full">
                 <div className="flex h-16 items-center justify-between px-4">
                   {/* 📍 Left — Location Block */}
                   <button
@@ -300,11 +300,11 @@ const CustomerNavbar: React.FC = () => {
                       />
                     </div>
                     <div className="flex flex-col items-start overflow-hidden leading-tight">
-                      <span className="mb-1 flex items-center gap-1 text-[9px] leading-none text-white tracking-[3px] text-slate-400 uppercase italic">
+                      <span className="mb-1 flex items-center gap-1 text-[9px] leading-none text-black tracking-[3px] text-slate-400 uppercase italic">
                         Location {' '}
                         <ChevronDown size={10} className="opacity-70" />
                       </span>
-                      <p className="location-text max-w-[55vw] truncate overflow-hidden text-white text-sm leading-none font-black tracking-tighter whitespace-nowrap text-slate-900 italic">
+                      <p className="location-text max-w-[55vw] truncate overflow-hidden text-black text-sm leading-none font-black tracking-tighter whitespace-nowrap text-slate-900 italic">
                         {addressText}...
                       </p>
                     </div>
@@ -314,11 +314,11 @@ const CustomerNavbar: React.FC = () => {
                     {/* 🔔 Alert Icon — Mobile Top */}
                     <button
                       onClick={() => setIsNotificationModalOpen(true)}
-                      className="alert-button relative flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] bg-pixs-mint transition-all duration-150 active:scale-95"
+                      className="alert-button relative flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] bg-white transition-all duration-150 active:scale-95"
                     >
-                      <Bell size={20} className="text-white" strokeWidth={2.5} />
+                      <Bell size={20} className="text-black" strokeWidth={2.5} />
                       {unreadCount > 0 && (
-                        <span className="bg-white absolute -top-1.5 -right-1.5 flex h-5 min-w-[18px] items-center justify-center rounded-full px-1 text-[9px] font-black text-pixs-mint italic shadow-lg">
+                        <span className="bg-black absolute -top-1.5 -right-1.5 flex h-5 min-w-[18px] items-center justify-center rounded-full px-1 text-[9px] font-black text-white italic shadow-lg">
                           {unreadCount > 9 ? '9+' : unreadCount}
                         </span>
                       )}
@@ -327,11 +327,11 @@ const CustomerNavbar: React.FC = () => {
                     {/* 🛒 Right — Cart Icon */}
                     <Link
                       to="/cart"
-                      className="cart-button relative flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] bg-pixs-mint transition-all duration-150 active:scale-95"
+                      className="cart-button relative flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] bg-white transition-all duration-150 active:scale-95"
                     >
                       <ShoppingCart
                         size={20}
-                        className="text-white"
+                        className="text-black"
                         strokeWidth={2.5}
                       />
                       {cartItemCount > 0 && (
@@ -351,7 +351,7 @@ const CustomerNavbar: React.FC = () => {
                   >
                     <Search size={18} className="text-slate-300" strokeWidth={3} />
                     <span className="flex-1 bg-transparent text-left text-[10px] font-black tracking-[4px] text-slate-900 uppercase italic opacity-30">
-                      Search Data Matrix...
+                      Search...
                     </span>
                   </button>
                 </div>

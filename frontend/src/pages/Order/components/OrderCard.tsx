@@ -64,39 +64,41 @@ export interface Order {
 const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
   const s = status.toUpperCase()
   let classes = ''
-  let icon = <Clock size={12} />
+  const iconClass = "h-5 w-5 sm:h-3 sm:w-3"
+  let icon = <Clock className={iconClass} />
 
   switch (s) {
     case 'PENDING':
       classes = 'badge-pending bg-yellow-50 text-yellow-600 border-yellow-100'
-      icon = <Clock size={12} />
+      icon = <Clock className={iconClass} />
       break
     case 'PROCESSING':
       classes = 'badge-processing bg-blue-50 text-blue-600 border-blue-100'
-      icon = <RotateCcw size={12} className="animate-spin-slow" />
+      icon = <RotateCcw className={`${iconClass} animate-spin-slow`} />
       break
     case 'SHIPPED':
       classes = 'badge-shipped bg-purple-50 text-purple-600 border-purple-100'
-      icon = <Truck size={12} />
+      icon = <Truck className={iconClass} />
       break
     case 'DELIVERED':
       classes = 'badge-delivered bg-green-50 text-green-600 border-green-100'
-      icon = <CheckCircle2 size={12} />
+      icon = <CheckCircle2 className={iconClass} />
       break
     case 'CANCELLED':
       classes = 'badge-cancelled bg-red-50 text-red-600 border-red-100'
-      icon = <AlertCircle size={12} />
+      icon = <AlertCircle className={iconClass} />
       break
     default:
       classes = 'bg-slate-50 text-slate-600 border-slate-100'
+      icon = <Clock className={iconClass} />
   }
 
   return (
     <div
-      className={`flex items-center gap-1.5 rounded-full border px-3 py-1 text-[10px] font-black tracking-widest uppercase italic ${classes}`}
+      className={`flex items-center justify-center gap-2 rounded-2xl sm:rounded-full p-2.5 sm:px-4 sm:py-2 text-[10px] font-black tracking-widest uppercase italic ${classes} border-none`}
     >
       {icon}
-      {status}
+      <span className="hidden sm:inline">{status}</span>
     </div>
   )
 }
@@ -238,7 +240,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({
             </div>
           </div>
         </div>
-        <div className="absolute top-6 right-6 md:static">
+        <div className="absolute top-4 right-4 sm:static">
           <StatusBadge status={order.status} />
         </div>
       </div>
@@ -266,10 +268,9 @@ export const OrderCard: React.FC<OrderCardProps> = ({
                     </h4>
                     {product.variant && (
                       <p className="OrderProductVariant text-[10px] font-black tracking-widest text-slate-500 uppercase md:text-xs">
-                        {product.variant.size}
-                        {product.variant.width && product.variant.height && (
-                          <> | {product.variant.width} x {product.variant.height}</>
-                        )}
+                        Size: {product.variant.size}
+                        {product.variant.width && <> | Width: {product.variant.width}</>}
+                        {product.variant.height && <> | Height: {product.variant.height}</>}
                       </p>
                     )}
                     {product.short_description && (

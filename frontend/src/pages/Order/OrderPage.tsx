@@ -172,6 +172,7 @@ const OrderPage: React.FC = () => {
   }>({ isOpen: false, orderId: '' })
 
   useEffect(() => {
+    window.scrollTo(0, 0)
     let mounted = true
     
     // Fetch Orders

@@ -58,10 +58,10 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
       <div
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
-        className="group hover:shadow-pixs-mint/5 relative aspect-[4/5] cursor-zoom-in overflow-hidden rounded-[48px] border border-slate-100 bg-white p-4 shadow-2xl shadow-slate-200/50 transition-all duration-700 md:aspect-[3/4]"
+        className="group hover:shadow-pixs-mint/5 relative aspect-square cursor-zoom-in overflow-hidden rounded-3xl md:rounded-[48px] border border-slate-100 bg-white p-2 md:p-4 shadow-2xl shadow-slate-200/50 transition-all duration-700 md:aspect-[3/4]"
         onClick={() => onImageClick?.(activeIndex)}
       >
-        <div className="relative h-full w-full overflow-hidden rounded-[40px] bg-slate-50">
+        <div className="relative h-full w-full overflow-hidden rounded-2xl md:rounded-[40px] bg-slate-50">
           {images[activeIndex] && !imageErrors[activeIndex] ? (
             <img
               src={images[activeIndex]}
@@ -111,13 +111,13 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
       </div>
 
       {/* Grid Identification Sequence */}
-      <div className="custom-scrollbar flex gap-4 overflow-x-auto pb-4">
+      <div className="grid grid-cols-4 gap-2.5 md:flex md:gap-4 md:overflow-x-auto md:pb-4">
         {images.map((img, idx) => (
           <button
             key={idx}
             onClick={() => setActiveIndex(idx)}
             className={clsx(
-              'relative aspect-square min-w-[80px] overflow-hidden rounded-3xl border-2 p-1.5 transition-all md:min-w-[100px]',
+              'relative aspect-square w-full overflow-hidden rounded-2xl border transition-all md:min-w-[100px] md:rounded-3xl md:p-1.5 md:border-2',
               activeIndex === idx
                 ? 'border-pixs-mint shadow-pixs-mint/10 scale-105 bg-white shadow-xl'
                 : 'border-slate-50 bg-slate-50 hover:border-slate-200 hover:bg-white',
@@ -127,11 +127,11 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
               <img
                 src={img}
                 alt={`${productName} thumbnail ${idx + 1}`}
-                className="h-full w-full rounded-2xl object-cover"
+                className="h-full w-full rounded-xl md:rounded-2xl object-cover"
                 onError={() => handleImageError(idx)}
               />
             ) : (
-              <BoxFallback className="flex h-full w-full items-center justify-center rounded-2xl bg-slate-100" />
+              <BoxFallback className="flex h-full w-full items-center justify-center rounded-xl md:rounded-2xl bg-slate-100" />
             )}
           </button>
         ))}

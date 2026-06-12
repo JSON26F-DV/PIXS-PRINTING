@@ -226,12 +226,12 @@ const ProductDetailInner: React.FC<{
   }
 
   return (
-    <div className="min-h-screen bg-white pb-15">
+    <div className="min-h-screen bg-white pb-32 md:pb-15">
       <ToastContainer position="bottom-right" theme="dark" hideProgressBar />
 
       {/* Persistent Breadcrumb Architecture */}
-      <div className="fixed top-0 lg:top-20 w-screen z-30 hidden border-b border-slate-50 bg-white/60 px-6 py-5 backdrop-blur-3xl md:flex md:px-16">
-        <div className="mx-auto flex max-w-[1400px] items-center justify-between">
+      <div className="fixed top-0 lg:top-20 left-0 right-0 z-30 hidden border-b border-slate-50 bg-white/60 px-6 py-5 backdrop-blur-3xl md:flex md:px-16">
+        <div className="mx-auto flex w-full max-w-[1400px] items-center justify-between">
           <div className="flex items-center gap-4">
             <button
               onClick={() => navigate(-1)}
@@ -276,10 +276,10 @@ const ProductDetailInner: React.FC<{
       </div>
 
       {/* Master Content Logic Area */}
-      <div className="mx-auto max-w-[1400px] px-6 pt-5 md:px-12 mt-15 lg:mt-40">
-        <div className="grid grid-cols-1 items-start gap-20 lg:grid-cols-2 xl:gap-32">
+      <div className="mx-auto max-w-[1400px] px-4 pt-2 md:px-12 mt-4 md:mt-15 lg:mt-40">
+        <div className="grid grid-cols-1 items-start gap-10 lg:grid-cols-2 lg:gap-20 xl:gap-32">
           {/* ── Left Projection Space: Image Gallery ──────────────────────────── */}
-          <div className="stagger-item lg:sticky top-56 lg:top-0">
+          <div className="stagger-item lg:sticky top-56 lg:top-0 space-y-6">
             <ImageGallery
               mainImage={mainImageUrl}
               gallery={normalizedGallery}
@@ -289,12 +289,37 @@ const ProductDetailInner: React.FC<{
                 setIsGalleryOpen(true)
               }}
             />
+
+            {/* Mobile-only Product Header */}
+            <div className="block lg:hidden space-y-4">
+              <div className="flex items-center gap-3">
+                <span className="rounded-lg bg-slate-900 px-3 py-1.5 text-[9px] font-black tracking-widest text-white uppercase">
+                  SKU · {product.id}
+                </span>
+                <div className={clsx('flex items-center gap-1.5', stockStatus.color)}>
+                  <div className={clsx('h-1.5 w-1.5 animate-pulse rounded-full', stockStatus.dot)} />
+                  <span className="text-[9px] font-black tracking-widest uppercase">
+                    {stockStatus.label}
+                  </span>
+                </div>
+              </div>
+              <h1 className="text-3xl leading-none font-black tracking-tighter text-slate-900 uppercase italic">
+                {product.name}
+              </h1>
+              <p className="text-sm font-bold text-slate-500">
+                {product.long_description}
+              </p>
+              <ProductInfoCard
+                product={product}
+                selectedVariant={computed.selectedVariant}
+              />
+            </div>
           </div>
 
           {/* ── Right Control Space: Order Configuration ──────────────────────── */}
           <div className="space-y-12">
             {/* Semantic Identity Identification */}
-            <div className="stagger-item">
+            <div className="stagger-item hidden lg:block">
               <div className="mb-4 flex items-center gap-3">
                 <span className="rounded-lg bg-slate-900 px-3 py-1.5 text-[9px] font-black tracking-widest text-white uppercase">
                   SKU · {product.id}

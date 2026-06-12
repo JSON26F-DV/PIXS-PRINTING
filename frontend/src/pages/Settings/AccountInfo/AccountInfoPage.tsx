@@ -266,32 +266,44 @@ const AccountInfoPage: React.FC = () => {
 
   return (
     <div className="AccountInfoPage animate-in fade-in slide-in-from-bottom-4 min-h-screen pb-20 duration-700 space-y-6">
+      {/* ─── Page Header / Company Title ──────────────────────────────────────── */}
+      {defaultAccount.company_name && (
+        <div className="mb-4 stagger-item pl-2">
+          <span className="text-pixs-mint text-[10px] font-black tracking-[4px] uppercase italic">
+            Enterprise Profile -------
+          </span>
+          <h1 className="text-4xl font-black tracking-tighter text-slate-900 uppercase italic md:text-5xl mt-1">
+            {defaultAccount.company_name}
+          </h1>
+        </div>
+      )}
+
       {/* ─── Business Analytics Stats (Responsive Grid) ───────────────────────── */}
       {user.role === 'customer' && (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="flex items-center gap-4 rounded-[20px] border border-slate-100 bg-white p-5 shadow-sm transition-all hover:border-slate-200">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-pixs-mint">
-              <FiTrendingUp size={16} />
+        <div className="grid grid-cols-2 gap-3 sm:gap-4">
+          <div className="flex items-center gap-3 sm:gap-4 rounded-[20px] border border-slate-100 bg-white p-3.5 sm:p-5 shadow-sm transition-all hover:border-slate-200">
+            <div className="flex h-8 w-8 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-xl sm:rounded-2xl bg-slate-900 text-pixs-mint">
+              <FiTrendingUp className="h-4 w-4 sm:h-5 sm:w-5" />
             </div>
             <div>
-              <p className="text-[10px] font-bold tracking-widest text-slate-400 uppercase">
+              <p className="text-[8px] sm:text-[10px] font-bold tracking-wider sm:tracking-widest text-slate-400 uppercase">
                 Total Spend Value
               </p>
-              <p className="text-lg font-black tracking-tight text-slate-800 italic">
+              <p className="text-sm sm:text-lg font-black tracking-tight text-slate-800 italic">
                 {formattedTotalValue}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-4 rounded-[20px] border border-slate-100 bg-white p-5 shadow-sm transition-all hover:border-slate-200">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-pixs-mint">
-              <FiAward size={16} />
+          <div className="flex items-center gap-3 sm:gap-4 rounded-[20px] border border-slate-100 bg-white p-3.5 sm:p-5 shadow-sm transition-all hover:border-slate-200">
+            <div className="flex h-8 w-8 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-xl sm:rounded-2xl bg-slate-900 text-pixs-mint">
+              <FiAward className="h-4 w-4 sm:h-5 sm:w-5" />
             </div>
             <div>
-              <p className="text-[10px] font-bold tracking-widest text-slate-400 uppercase">
+              <p className="text-[8px] sm:text-[10px] font-bold tracking-wider sm:tracking-widest text-slate-400 uppercase">
                 Total Orders Completed
               </p>
-              <p className="text-lg font-black tracking-tight text-slate-800 italic">
+              <p className="text-sm sm:text-lg font-black tracking-tight text-slate-800 italic">
                 {defaultAccount.orders || 0}
               </p>
             </div>
@@ -315,49 +327,6 @@ const AccountInfoPage: React.FC = () => {
                 Personal identity configurations
               </p>
             </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            {!isEditing ? (
-              <button
-                type="button"
-                onClick={() => setIsEditing(true)}
-                className="flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-[10px] font-black tracking-widest text-white uppercase shadow-lg transition-all hover:scale-105 active:scale-95"
-              >
-                <FiEdit size={12} />
-                <span>Edit Profile</span>
-              </button>
-            ) : (
-              <>
-                <button
-                  type="button"
-                  onClick={handleUpdateProfile}
-                  disabled={isSaving}
-                  className="flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-[10px] font-black tracking-widest text-white uppercase shadow-lg transition-all hover:scale-105 active:scale-95 disabled:opacity-50"
-                >
-                  {isSaving ? <FiRefreshCw className="animate-spin" /> : <FiCheckCircle size={12} />}
-                  <span>Save</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsEditing(false)
-                    setEditForm({
-                      first_name: defaultAccount.first_name || '',
-                      last_name: defaultAccount.last_name || '',
-                      age: defaultAccount.age !== undefined && defaultAccount.age !== null ? String(defaultAccount.age) : '',
-                      gender: defaultAccount.gender || '',
-                      company_name: defaultAccount.company_name || '',
-                    })
-                  }}
-                  disabled={isSaving}
-                  className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-[10px] font-black tracking-widest text-slate-400 uppercase transition-all hover:scale-105 active:scale-95"
-                >
-                  <FiX size={12} />
-                  <span>Cancel</span>
-                </button>
-              </>
-            )}
           </div>
         </div>
 
@@ -421,13 +390,17 @@ const AccountInfoPage: React.FC = () => {
                 First Name
               </label>
               {isEditing ? (
-                <input
-                  type="text"
-                  value={editForm.first_name}
-                  onChange={(e) => setEditForm({ ...editForm, first_name: e.target.value })}
-                  placeholder="First name"
-                  className="focus:border-pixs-mint w-full rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-800 italic placeholder-slate-300 transition-colors focus:outline-none"
-                />
+                <div className="space-y-1">
+                  <input
+                    type="text"
+                    value={editForm.first_name}
+                    disabled
+                    className="cursor-not-allowed w-full rounded-xl border border-slate-100 bg-slate-100/50 px-4 py-3 text-sm font-bold text-slate-400 italic focus:outline-none"
+                  />
+                  <p className="text-[9px] font-medium text-slate-400">
+                    Ask admin to change name
+                  </p>
+                </div>
               ) : (
                 <div className="rounded-xl border border-slate-100 bg-slate-50/50 px-4 py-3 text-sm font-bold text-slate-700 italic">
                   {defaultAccount.first_name || '—'}
@@ -441,13 +414,17 @@ const AccountInfoPage: React.FC = () => {
                 Last Name
               </label>
               {isEditing ? (
-                <input
-                  type="text"
-                  value={editForm.last_name}
-                  onChange={(e) => setEditForm({ ...editForm, last_name: e.target.value })}
-                  placeholder="Last name"
-                  className="focus:border-pixs-mint w-full rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-800 italic placeholder-slate-300 transition-colors focus:outline-none"
-                />
+                <div className="space-y-1">
+                  <input
+                    type="text"
+                    value={editForm.last_name}
+                    disabled
+                    className="cursor-not-allowed w-full rounded-xl border border-slate-100 bg-slate-100/50 px-4 py-3 text-sm font-bold text-slate-400 italic focus:outline-none"
+                  />
+                  <p className="text-[9px] font-medium text-slate-400">
+                    Ask admin to change name
+                  </p>
+                </div>
               ) : (
                 <div className="rounded-xl border border-slate-100 bg-slate-50/50 px-4 py-3 text-sm font-bold text-slate-700 italic">
                   {defaultAccount.last_name || '—'}
@@ -466,7 +443,7 @@ const AccountInfoPage: React.FC = () => {
             </div>
 
             {/* Account Status */}
-            <div className="space-y-1">
+            <div className="space-y-1 hidden">
               <label className="text-[10px] font-black tracking-widest text-slate-400 uppercase italic">
                 Account Status
               </label>
@@ -530,7 +507,7 @@ const AccountInfoPage: React.FC = () => {
             </div>
 
             {/* Company Name */}
-            <div className="space-y-1 sm:col-span-2">
+            <div className="space-y-1 sm:col-span-2 hidden">
               <label className="text-[10px] font-black tracking-widest text-slate-400 uppercase italic">
                 Company Name
               </label>
@@ -550,11 +527,55 @@ const AccountInfoPage: React.FC = () => {
             </div>
           </form>
         </div>
+
+        {/* Action Buttons Section at the bottom of inputs */}
+        <div className="flex justify-end gap-2 border-t border-slate-50 pt-4 mt-4">
+          {!isEditing ? (
+            <button
+              type="button"
+              onClick={() => setIsEditing(true)}
+              className="flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-[10px] font-black tracking-widest text-white uppercase shadow-lg transition-all hover:scale-105 active:scale-95"
+            >
+              <FiEdit size={12} />
+              <span>Edit Profile</span>
+            </button>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={handleUpdateProfile}
+                disabled={isSaving}
+                className="flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-[10px] font-black tracking-widest text-white uppercase shadow-lg transition-all hover:scale-105 active:scale-95 disabled:opacity-50"
+              >
+                {isSaving ? <FiRefreshCw className="animate-spin" /> : <FiCheckCircle size={12} />}
+                <span>Save</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsEditing(false)
+                  setEditForm({
+                    first_name: defaultAccount.first_name || '',
+                    last_name: defaultAccount.last_name || '',
+                    age: defaultAccount.age !== undefined && defaultAccount.age !== null ? String(defaultAccount.age) : '',
+                    gender: defaultAccount.gender || '',
+                    company_name: defaultAccount.company_name || '',
+                  })
+                }}
+                disabled={isSaving}
+                className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-[10px] font-black tracking-widest text-slate-400 uppercase transition-all hover:scale-105 active:scale-95"
+              >
+                <FiX size={12} />
+                <span>Cancel</span>
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       {/* ─── Security Credentials Card ───────────────────────────────────────── */}
       <div className="space-y-4 rounded-[20px] border border-slate-100 bg-white p-5 shadow-sm transition-all hover:border-slate-200">
-        <div className="flex items-center justify-between flex-wrap gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-pixs-mint">
               <FiLock size={16} />
@@ -568,19 +589,21 @@ const AccountInfoPage: React.FC = () => {
               </p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={() => setShowPasswordModal(true)}
-            className="flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-[10px] font-black tracking-widest text-white uppercase shadow-lg transition-all hover:scale-105 active:scale-95"
-          >
-            <span>Change Password</span>
-          </button>
+          <div className="flex justify-end w-full sm:w-auto mt-2 sm:mt-0">
+            <button
+              type="button"
+              onClick={() => setShowPasswordModal(true)}
+              className="flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-[10px] font-black tracking-widest text-white uppercase shadow-lg transition-all hover:scale-105 active:scale-95"
+            >
+              <span>Change Password</span>
+            </button>
+          </div>
         </div>
       </div>
 
       {/* ─── Contact Management Section ───────────────────────────────────────── */}
       <div className="space-y-4 rounded-[20px] border border-slate-100 bg-white p-5 shadow-sm transition-all hover:border-slate-200">
-        <div className="flex items-center justify-between flex-wrap gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-pixs-mint">
               <FiPhone size={16} />
@@ -594,14 +617,16 @@ const AccountInfoPage: React.FC = () => {
               </p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={() => setIsAddingContact(!isAddingContact)}
-            className="flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-[10px] font-black tracking-widest text-white uppercase shadow-lg transition-all hover:scale-105 active:scale-95"
-          >
-            <FiPlus size={14} />
-            <span>Add Number</span>
-          </button>
+          <div className="flex justify-end w-full sm:w-auto mt-2 sm:mt-0">
+            <button
+              type="button"
+              onClick={() => setIsAddingContact(!isAddingContact)}
+              className="flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-[10px] font-black tracking-widest text-white uppercase shadow-lg transition-all hover:scale-105 active:scale-95"
+            >
+              <FiPlus size={14} />
+              <span>Add Number</span>
+            </button>
+          </div>
         </div>
 
         <div className="border-t border-slate-50 my-2" />
