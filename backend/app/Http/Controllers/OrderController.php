@@ -463,7 +463,7 @@ class OrderController extends Controller
             $xenditRes = XenditApi::api('get', 'v2/invoices', ['external_id' => $externalId]);
 
             $invoices = json_decode($xenditRes->body());
-            
+
             if (empty($invoices)) {
                 return response()->json(['status' => 'failed', 'message' => 'Invoice not found'], 404);
             }
@@ -480,21 +480,23 @@ class OrderController extends Controller
                     if ($order) {
                         Cache::forget("pending_order_{$externalId}");
                         logger("Order {$order->id} created via manual verify (external_id: {$externalId}).");
+
                         return response()->json(['status' => 'success', 'order_id' => $order->id]);
                     }
-                    
+
                     return response()->json(['status' => 'failed', 'message' => 'Failed to create order from pending data.'], 500);
                 }
-                
+
                 // Maybe it was already processed
                 return response()->json(['status' => 'success', 'message' => 'Payment verified but no pending data found (maybe already processed).']);
             }
 
             return response()->json(['status' => 'pending', 'message' => 'Payment not yet completed.']);
         } catch (\Throwable $e) {
-            Log::error("verifyXenditPayment failed for external_id: {$externalId}: " . $e->getMessage(), [
-                'exception' => $e
+            Log::error("verifyXenditPayment failed for external_id: {$externalId}: ".$e->getMessage(), [
+                'exception' => $e,
             ]);
+
             return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
         }
     }

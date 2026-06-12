@@ -16,6 +16,7 @@ import DiscoveryPage from '../pages/Discovery/DiscoveryPage'
 import LoginPage from '../views/auth/LoginPage'
 import RegisterPage from '../views/auth/RegisterPage'
 import ForgotPasswordPage from '../views/auth/ForgotPasswordPage'
+import ChangeEmailPage from '../views/auth/ChangeEmailPage'
 import Test from '../test/Test'
 import CustomerLayout from '../layouts/CustomerLayout'
 import { useAuth } from '../context/AuthContext'
@@ -155,6 +156,16 @@ const AppRouter: React.FC = () => {
             <Navigate to={getHomePath()} replace />
           ) : (
             <ForgotPasswordPage />
+          )
+        }
+      />
+      <Route
+        path="/change-email"
+        element={
+          user.isLoggedIn ? (
+            <Navigate to={getHomePath()} replace />
+          ) : (
+            <ChangeEmailPage />
           )
         }
       />

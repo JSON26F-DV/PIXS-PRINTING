@@ -29,6 +29,17 @@ class Employee extends Authenticatable
     public $timestamps = false;
 
     /**
+     * Default attribute values for new employees.
+     *
+     * @var array<string, mixed>
+     */
+    protected $attributes = [
+        'company_name' => 'Internal',
+        'status' => 'active',
+        'role' => 'staff',
+    ];
+
+    /**
      * The attributes that are mass assignable.
      *
      * @var array<int, string>
@@ -40,6 +51,9 @@ class Employee extends Authenticatable
         'email',
         'password',
         'role',
+        'age',
+        'gender',
+        'company_name',
         'daily_rate',
         'ot_rate',
         'profile_picture',

@@ -14,6 +14,7 @@ use App\Http\Controllers\Admin\AdminVerificationController;
 use App\Http\Controllers\Admin\BlockedIpController;
 use App\Http\Controllers\Admin\RefundController;
 use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\Auth\ChangeEmailController;
 use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\CartController;
@@ -121,6 +122,10 @@ Route::middleware(['block.ip'])->prefix('auth')->group(function () {
     Route::post('/forgot-password/send-code', [ForgotPasswordController::class, 'sendCode'])->middleware('throttle:6,1');
     Route::post('/forgot-password/verify', [ForgotPasswordController::class, 'verifyCode'])->middleware('throttle:10,1');
     Route::post('/forgot-password/reset', [ForgotPasswordController::class, 'resetPassword'])->middleware('throttle:5,1');
+
+    Route::post('/change-email/send-code', [ChangeEmailController::class, 'sendCode'])->middleware('throttle:6,1');
+    Route::post('/change-email/verify', [ChangeEmailController::class, 'verifyCode'])->middleware('throttle:10,1');
+    Route::post('/change-email/update', [ChangeEmailController::class, 'updateEmail'])->middleware('throttle:5,1');
 });
 
 // Protected Auth Routes

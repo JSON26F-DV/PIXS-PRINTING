@@ -14,6 +14,7 @@ import {
   FiAward,
   FiLock,
   FiTrash2,
+  FiMail,
 } from 'react-icons/fi'
 import { clsx } from 'clsx'
 import { m, AnimatePresence } from 'framer-motion'
@@ -80,6 +81,7 @@ const AccountInfoPage: React.FC = () => {
 
   // ─── Security States ─────────────────────────────────────────────────────
   const [showPasswordModal, setShowPasswordModal] = useState(false)
+  const [showEmailModal, setShowEmailModal] = useState(false)
 
   useEffect(() => {
     const params = new URLSearchParams(location.search)
@@ -262,6 +264,19 @@ const AccountInfoPage: React.FC = () => {
     // CRITICAL: Use setTimeout to override logout's internal navigate('/login')
     setTimeout(() => {
       navigate(`/forgot-password?email=${encodeURIComponent(email)}`)
+    }, 100)
+  }
+
+  const handleConfirmChangeEmail = async () => {
+    const email = defaultAccount.email
+    setShowEmailModal(false)
+
+    // Use proper logout from AuthContext
+    await logout()
+
+    // CRITICAL: Use setTimeout to override logout's internal navigate('/login')
+    setTimeout(() => {
+      navigate(`/change-email?email=${encodeURIComponent(email)}`)
     }, 100)
   }
 
@@ -609,7 +624,14 @@ const AccountInfoPage: React.FC = () => {
               </p>
             </div>
           </div>
-          <div className="flex justify-end w-full sm:w-auto mt-2 sm:mt-0">
+          <div className="flex justify-end w-full sm:w-auto mt-2 sm:mt-0 gap-2">
+            <button
+              type="button"
+              onClick={() => setShowEmailModal(true)}
+              className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-[10px] font-black tracking-widest text-slate-700 uppercase shadow-sm transition-all hover:scale-105 active:scale-95 hover:bg-slate-50"
+            >
+              <span>Change Email</span>
+            </button>
             <button
               type="button"
               onClick={() => setShowPasswordModal(true)}
@@ -866,6 +888,57 @@ const AccountInfoPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={handleConfirmChangePassword}
+                  className="flex-1 rounded-xl bg-slate-900 py-3 text-[10px] font-black tracking-[2px] text-white uppercase italic shadow-lg transition-all hover:scale-[1.02] active:scale-95"
+                >
+                  Yes, Change
+                </button>
+              </div>
+            </m.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ─── Change Email Confirmation Modal ──────────────────────────────────── */}
+      <AnimatePresence>
+        {showEmailModal && (
+          <div className="fixed inset-0 z-[600] flex items-center justify-center bg-slate-900/90 backdrop-blur-xl p-4 animate-in fade-in duration-300">
+            <m.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="relative w-full max-w-md overflow-hidden rounded-[20px] bg-white p-6 md:p-8 shadow-2xl space-y-6"
+            >
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-pixs-mint">
+                  <FiMail size={18} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black tracking-tighter text-slate-900 uppercase italic">
+                    Change Email Address
+                  </h3>
+                  <p className="text-[10px] font-bold tracking-widest text-slate-400 uppercase">
+                    Identity Session Alignment
+                  </p>
+                </div>
+              </div>
+
+              <div className="border-t border-slate-50 my-2" />
+
+              <p className="text-xs font-bold text-slate-500 leading-relaxed">
+                Are you sure you want to change your email address? This will terminate your current active session and redirect you to the email update terminal.
+              </p>
+
+              <div className="flex gap-4">
+                <button
+                  type="button"
+                  onClick={() => setShowEmailModal(false)}
+                  className="flex-1 rounded-xl border border-slate-200 py-3 text-[10px] font-black uppercase tracking-[2px] text-slate-400 italic transition-all hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmChangeEmail}
                   className="flex-1 rounded-xl bg-slate-900 py-3 text-[10px] font-black tracking-[2px] text-white uppercase italic shadow-lg transition-all hover:scale-[1.02] active:scale-95"
                 >
                   Yes, Change

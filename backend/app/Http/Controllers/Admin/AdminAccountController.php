@@ -92,9 +92,17 @@ class AdminAccountController extends Controller
         $validated = $request->validate([
             'first_name' => 'required|string|max:255',
             'last_name' => 'required|string|max:255',
-            'email' => ['required', 'email', $isNew ? 'unique:employees,email' : Rule::unique('employees')->ignore($employee->id)],
+            'email' => [
+                'required',
+                'email',
+                $isNew ? 'unique:employees,email' : Rule::unique('employees')->ignore($employee->id),
+                'unique:customers,email',
+            ],
             'role' => 'required|string',
             'status' => 'required|string',
+            'age' => 'nullable|integer|min:1|max:120',
+            'gender' => 'nullable|string|in:male,female,other',
+            'company_name' => 'nullable|string|max:255',
             'daily_rate' => 'nullable|numeric',
             'ot_rate' => 'nullable|numeric',
             'profile_picture' => 'nullable|string',
@@ -178,7 +186,12 @@ class AdminAccountController extends Controller
         $validated = $request->validate([
             'first_name' => 'required|string|max:255',
             'last_name' => 'required|string|max:255',
-            'email' => ['required', 'email', $isNew ? 'unique:customers,email' : Rule::unique('customers')->ignore($customer->id)],
+            'email' => [
+                'required',
+                'email',
+                $isNew ? 'unique:customers,email' : Rule::unique('customers')->ignore($customer->id),
+                'unique:employees,email',
+            ],
             'role' => 'required|string',
             'status' => 'required|string',
             'age' => 'nullable|integer',

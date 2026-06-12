@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Customer;
+use App\Models\Employee;
 use App\Services\MailService;
 use App\Services\VerificationCodeService;
 use Illuminate\Http\JsonResponse;
@@ -83,9 +85,9 @@ class AdminVerificationController extends Controller
         $targetId = $request->input('target_id');
         $targetUser = null;
         if ($targetId) {
-            $targetUser = \App\Models\Employee::find($targetId);
+            $targetUser = Employee::find($targetId);
             if (! $targetUser) {
-                $targetUser = \App\Models\Customer::find($targetId);
+                $targetUser = Customer::find($targetId);
             }
         }
 

@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Validation\Rules\Password;
 use Laravel\Socialite\Facades\Socialite;
+use Laravel\Socialite\Two\AbstractProvider;
 
 class RegisterController extends Controller
 {
@@ -172,7 +173,7 @@ class RegisterController extends Controller
             return response()->json(['message' => 'Invalid provider'], 400);
         }
 
-        /** @var \Laravel\Socialite\Two\AbstractProvider $driver */
+        /** @var AbstractProvider $driver */
         $driver = Socialite::driver($provider);
 
         return $driver->stateless()->redirect();
@@ -188,7 +189,7 @@ class RegisterController extends Controller
         }
 
         try {
-            /** @var \Laravel\Socialite\Two\AbstractProvider $driver */
+            /** @var AbstractProvider $driver */
             $driver = Socialite::driver($provider);
             $socialUser = $driver->stateless()->user();
         } catch (\Exception $e) {

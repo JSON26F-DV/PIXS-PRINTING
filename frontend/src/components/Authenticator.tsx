@@ -222,8 +222,11 @@ const Authenticator: React.FC<AuthenticatorProps> = ({
       let endpoint = ''
       let payload: Record<string, unknown> = {}
 
-      if (codeType === 'forgot_password' || codeType === 'change_email') {
+      if (codeType === 'forgot_password') {
         endpoint = '/api/auth/forgot-password/verify'
+        payload = { email, code }
+      } else if (codeType === 'change_email') {
+        endpoint = '/api/auth/change-email/verify'
         payload = { email, code }
       } else if (codeType === 'change_password') {
         endpoint = '/api/settings/change-password/verify'

@@ -12,8 +12,10 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('refunds', function (Blueprint $table) {
-            // Drop foreign key constraint referencing customer_payment_methods
-            $table->dropForeign('refunds_payment_id_foreign');
+            if (config('database.default') !== 'sqlite') {
+                // Drop foreign key constraint referencing customer_payment_methods
+                $table->dropForeign('refunds_payment_id_foreign');
+            }
         });
 
         Schema::dropIfExists('customer_payment_methods');

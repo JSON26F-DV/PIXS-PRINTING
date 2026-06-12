@@ -292,7 +292,7 @@ class UserController extends Controller
     {
         $user = $request->user();
         $contact = $user->contacts()->where('number', $number)->first();
-        if (!$contact) {
+        if (! $contact) {
             return response()->json(['message' => 'Contact not found'], 404);
         }
 
