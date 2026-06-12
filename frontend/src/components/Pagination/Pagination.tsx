@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { ChevronLeft, ChevronRight, Search } from 'lucide-react'
 
 interface PaginationProps {
@@ -13,11 +13,12 @@ const Pagination: React.FC<PaginationProps> = ({
   onChange,
 }) => {
   const [jumpPage, setJumpPage] = useState('')
+  const [prevPage, setPrevPage] = useState(currentPage)
 
-  // Sync jumpPage with currentPage when it changes externally
-  useEffect(() => {
+  if (currentPage !== prevPage) {
+    setPrevPage(currentPage)
     setJumpPage('')
-  }, [currentPage])
+  }
 
   const handleJump = (e: React.FormEvent) => {
     e.preventDefault()

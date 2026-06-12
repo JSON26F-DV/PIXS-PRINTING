@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import {
   LayoutDashboard,
   PackageOpen,
@@ -103,14 +103,17 @@ const Sidebar: React.FC<SidebarProps> = ({
   const location = useLocation()
   const [showLogoutModal, setShowLogoutModal] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
-  const [isSettingsExpanded, setIsSettingsExpanded] = useState(false)
+  const [isSettingsExpanded, setIsSettingsExpanded] = useState(() =>
+    location.pathname.includes('/setting') || location.pathname.includes('/settings')
+  )
+  const [prevPath, setPrevPath] = useState(location.pathname)
 
-  // Auto-expand settings if we are on a settings route
-  useEffect(() => {
+  if (location.pathname !== prevPath) {
+    setPrevPath(location.pathname)
     if (location.pathname.includes('/setting') || location.pathname.includes('/settings')) {
       setIsSettingsExpanded(true)
     }
-  }, [location.pathname])
+  }
 
   if (!user) return null
 

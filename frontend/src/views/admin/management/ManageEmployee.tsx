@@ -98,9 +98,27 @@ const resolveAddressCodes = (addr: {
   }
 }
 
-const getChangesList = (initial: any, current: any, isEmployee: boolean) => {
+interface DiffTarget {
+  first_name?: string
+  last_name?: string
+  email?: string
+  role?: string
+  status?: string
+  password?: string
+  daily_rate?: number | null
+  ot_rate?: number | null
+  company_name?: string
+  age?: number | string
+  gender?: string
+  contacts?: { number: string; is_default: boolean }[]
+  addresses?: { street?: string; barangay?: string; city?: string; is_default: boolean }[]
+  paymentMethods?: { type?: string; bank_name?: string; provider?: string; masked_number?: string; is_default: boolean }[]
+  payment_methods?: { type?: string; bank_name?: string; provider?: string; masked_number?: string; is_default: boolean }[]
+}
+
+const getChangesList = (initial: DiffTarget | null, current: DiffTarget | null, isEmployee: boolean) => {
   const changes: string[] = []
-  if (!initial) return changes
+  if (!initial || !current) return changes
 
   if (initial.first_name !== current.first_name) {
     changes.push(`First Name: "${initial.first_name}" → "${current.first_name}"`)
@@ -147,7 +165,7 @@ const getChangesList = (initial: any, current: any, isEmployee: boolean) => {
     changes.push(`Contacts Count: ${initialContacts.length} → ${currentContacts.length}`)
   } else {
     let numChanged = false
-    currentContacts.forEach((c: any, i: number) => {
+    currentContacts.forEach((c, i: number) => {
       if (initialContacts[i] && (initialContacts[i].number !== c.number || initialContacts[i].is_default !== c.is_default)) {
         numChanged = true
       }
@@ -161,7 +179,7 @@ const getChangesList = (initial: any, current: any, isEmployee: boolean) => {
     changes.push(`Addresses Count: ${initialAddresses.length} → ${currentAddresses.length}`)
   } else {
     let addrChanged = false
-    currentAddresses.forEach((a: any, i: number) => {
+    currentAddresses.forEach((a, i: number) => {
       if (initialAddresses[i] && (
         initialAddresses[i].street !== a.street ||
         initialAddresses[i].barangay !== a.barangay ||
@@ -180,7 +198,7 @@ const getChangesList = (initial: any, current: any, isEmployee: boolean) => {
     changes.push(`Payment Methods Count: ${initialPMs.length} → ${currentPMs.length}`)
   } else {
     let pmChanged = false
-    currentPMs.forEach((p: any, i: number) => {
+    currentPMs.forEach((p, i: number) => {
       if (initialPMs[i] && (
         initialPMs[i].type !== p.type ||
         initialPMs[i].masked_number !== p.masked_number ||

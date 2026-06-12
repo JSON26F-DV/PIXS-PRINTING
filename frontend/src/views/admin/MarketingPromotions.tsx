@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react'
+import React, { useState, useMemo, useEffect, useCallback } from 'react'
 import {
   TicketPercent,
   Plus,
@@ -34,6 +34,7 @@ import {
   CartesianGrid,
 } from 'recharts'
 import { useForm, useWatch } from 'react-hook-form'
+import type { Resolver } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import { format, isBefore, parseISO, addDays } from 'date-fns'
@@ -42,11 +43,6 @@ import { twMerge } from 'tailwind-merge'
 import toast from 'react-hot-toast'
 import { v4 as uuidv4 } from 'uuid'
 import axiosInstance from '../../lib/axiosInstance'
-
-// Data Sources (as defaults / fallbacks)
-import rawUsersData from '../../data/users.json'
-import rawProducts from '../../data/products.json'
-import rawOrders from '../../data/order.json'
 
 // Utility for class merging
 function cn(...inputs: ClassValue[]) {
@@ -70,6 +66,25 @@ interface Promotion {
   conditions?: {
     minimum_quantity?: number
   }
+}
+
+interface ProductNode {
+  id: string
+  name: string
+  [key: string]: unknown
+}
+
+interface DiscountNode {
+  id: string | number
+  title?: string
+  expires_at?: string
+  already_used?: boolean
+  product_id?: string
+  type?: string
+  value: string | number
+  customer_id?: string
+  code?: string
+  min_spend?: string | number
 }
 
 interface OrderRecord {
@@ -125,15 +140,9 @@ type PromoFormData = z.infer<typeof promoSchema>
 
 const MarketingPromotions: React.FC = () => {
   const [promos, setPromos] = useState<Promotion[]>([])
-  const [customers, setCustomers] = useState<UserNode[]>(() => {
-    return (rawUsersData.customers || []).map((c: Record<string, unknown>) => ({
-      id: c.id as string,
-      name: (c.name as string) || `${c.first_name} ${c.last_name}`,
-      email: c.email as string,
-      role: 'customer',
-    }))
-  })
-  const [products, setProducts] = useState<any[]>(rawProducts)
+  const [customers, setCustomers] = useState<UserNode[]>([])
+  const [products, setProducts] = useState<ProductNode[]>([])
+  const [orders, setOrders] = useState<OrderRecord[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false)
@@ -144,7 +153,7 @@ const MarketingPromotions: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('')
 
   // Map Database record to Promotion
-  const mapDiscountToPromotion = (discount: Record<string, any>): Promotion => {
+  const mapDiscountToPromotion = (discount: DiscountNode): Promotion => {
     const expiresAt = discount.expires_at;
     const now = new Date();
     const isExpired = expiresAt && isBefore(parseISO(expiresAt), now);
@@ -164,10 +173,10 @@ const MarketingPromotions: React.FC = () => {
     }
 
     return {
-      id: discount.id,
+      id: String(discount.id),
       title: discount.title || `Campaign ${discount.code || discount.id}`,
       discount_type: discountType,
-      discount_value: parseFloat(discount.value),
+      discount_value: parseFloat(String(discount.value)),
       target_type: discount.customer_id ? 'specific_user' : (discount.code ? 'code' : 'all_users'),
       assigned_user_id: discount.customer_id || undefined,
       product_id: discount.product_id || undefined,
@@ -176,19 +185,20 @@ const MarketingPromotions: React.FC = () => {
       used_count: discount.already_used ? 1 : 0,
       expires_at: expiresAt || format(addDays(now, 30), "yyyy-MM-dd'T'HH:mm"),
       status: status,
-      conditions: discount.min_spend > 0 ? { minimum_quantity: Math.round(parseFloat(discount.min_spend)) } : undefined
+      conditions: Number(discount.min_spend) > 0 ? { minimum_quantity: Math.round(Number(discount.min_spend)) } : undefined
     };
   }
 
   // --- FETCH DATA FROM BACKEND ---
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setIsLoading(true)
 
-      const [discountsResult, custsResult, prodsResult] = await Promise.allSettled([
+      const [discountsResult, custsResult, prodsResult, ordersResult] = await Promise.allSettled([
         axiosInstance.get('/api/admin/discounts'),
         axiosInstance.get('/api/admin/customers'),
         axiosInstance.get('/api/products'),
+        axiosInstance.get('/api/admin/orders'),
       ])
 
       if (discountsResult.status === 'fulfilled') {
@@ -208,7 +218,7 @@ const MarketingPromotions: React.FC = () => {
         }))
         setCustomers(formattedCustomers)
       } else {
-        console.warn('Failed to fetch customers from database, using defaults:', custsResult.status === 'rejected' ? custsResult.reason : 'Unknown error')
+        console.warn('Failed to fetch customers:', custsResult.status === 'rejected' ? custsResult.reason : 'Unknown error')
       }
 
       if (prodsResult.status === 'fulfilled') {
@@ -217,7 +227,16 @@ const MarketingPromotions: React.FC = () => {
           setProducts(prodData)
         }
       } else {
-        console.warn('Failed to fetch products from database, using defaults:', prodsResult.reason ?? 'Unknown error')
+        console.warn('Failed to fetch products:', prodsResult.status === 'rejected' ? prodsResult.reason : 'Unknown error')
+      }
+
+      if (ordersResult.status === 'fulfilled') {
+        const ordersData = ordersResult.value.data.data || ordersResult.value.data
+        if (Array.isArray(ordersData)) {
+          setOrders(ordersData)
+        }
+      } else {
+        console.warn('Failed to fetch orders:', ordersResult.status === 'rejected' ? ordersResult.reason : 'Unknown error')
       }
     } catch (error) {
       console.error('Error connecting to database:', error)
@@ -225,11 +244,11 @@ const MarketingPromotions: React.FC = () => {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [])
 
   useEffect(() => {
     loadData()
-  }, [])
+  }, [loadData])
 
   // --- FORM SETUP ---
   const {
@@ -240,7 +259,7 @@ const MarketingPromotions: React.FC = () => {
     control,
     formState: { errors },
   } = useForm<PromoFormData>({
-    resolver: zodResolver(promoSchema) as any,
+    resolver: zodResolver(promoSchema) as unknown as Resolver<PromoFormData>,
     defaultValues: {
       discount_type: 'percentage',
       target_type: 'all_users',
@@ -291,13 +310,13 @@ const MarketingPromotions: React.FC = () => {
     }).length
 
     const usedToday = promos.filter((p) => p.status === 'used').length
-    const totalDiscount = (rawOrders as OrderRecord[]).reduce(
+    const totalDiscount = orders.reduce(
       (acc, o) => acc + (o.discount?.total_discount_amount || 0),
       0,
     )
 
     return { active, expiringSoon, usedToday, totalDiscount }
-  }, [promos])
+  }, [promos, orders])
 
   // --- ANALYTICS ---
   const analyticsData = useMemo(() => {
@@ -366,7 +385,7 @@ const MarketingPromotions: React.FC = () => {
       loadData() // Refresh list from DB
     } catch (err: unknown) {
       console.error("Submission failed:", err)
-      const errorMsg = (err as any).response?.data?.message || "Failed to save promotion"
+      const errorMsg = (err as { response?: { data?: { message?: string } } }).response?.data?.message || "Failed to save promotion"
       toast.error(errorMsg)
     }
   }
@@ -632,7 +651,7 @@ const MarketingPromotions: React.FC = () => {
                       const targetUser = allUsers.find(
                         (u) => u.id === promo.assigned_user_id,
                       )
-                      const targetProd = products.find((p: any) => p.id === promo.product_id)
+                      const targetProd = products.find((p) => p.id === promo.product_id)
                       const usagePercent = promo.max_uses > 0 ? (promo.used_count / promo.max_uses) * 100 : 0
 
                       return (
@@ -1207,7 +1226,7 @@ const MarketingPromotions: React.FC = () => {
             </div>
 
             <form
-              onSubmit={handleSubmit(onFormSubmit as any)}
+              onSubmit={handleSubmit(onFormSubmit)}
               className="custom-scrollbar space-y-6 overflow-y-auto bg-white p-6"
             >
               {/* Section 1: General Details */}
@@ -1313,7 +1332,7 @@ const MarketingPromotions: React.FC = () => {
                         <option value="">Select Product...</option>
                         {products.map((p) => (
                           <option key={p.id} value={p.id}>
-                            {p.name} (₱{parseFloat(p.base_price || 0)})
+                            {p.name} (₱{parseFloat(String(p.base_price || 0))})
                           </option>
                         ))}
                       </select>
