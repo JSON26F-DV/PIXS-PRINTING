@@ -251,22 +251,6 @@ const Transactions: React.FC = () => {
       navigator.vibrate([100, 50, 100, 50, 200])
     }
 
-    // Construct message for admin
-    try {
-      const messageBody = `review your shipping address ${orderId}`
-      const formData = new FormData()
-      formData.append('message', messageBody)
-      formData.append('receiver_id', '1')
-      formData.append('receiver_type', 'employee')
-      formData.append('message_type', 'order')
-      formData.append('type_id', orderId)
-
-      await axiosInstance.post('/api/messages/send', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      })
-    } catch (msgErr) {
-      console.error('Failed to send order message to admin:', msgErr)
-    }
 
     if (checkoutUrl) {
       toast.success('Order placed! Redirecting to GCash...')

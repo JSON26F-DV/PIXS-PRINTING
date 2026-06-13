@@ -152,6 +152,39 @@ const MessengerPage: React.FC = () => {
     }
   }
 
+  const formatMessage = (m: ApiMessage): IMessage => {
+    const isMine = String(m.sender_id) === String(user?.id)
+    let replyTo = undefined
+    if (m.reply_to) {
+      const replyIsMine = String(m.reply_to.sender_id) === String(user?.id)
+      replyTo = {
+        id: m.reply_to.id,
+        text: m.reply_to.text,
+        senderName: replyIsMine ? 'You' : (m.reply_to.sender_type === 'employee' ? 'PIXS Admin' : 'Customer'),
+        isDeleted: m.reply_to.is_deleted === 1,
+      }
+    }
+    return {
+      id: m.id,
+      sender: isMine ? 'customer' : 'admin',
+      senderName: isMine ? 'You' : (m.sender_type === 'employee' ? 'PIXS Admin' : 'Customer'),
+      text: m.message,
+      timestamp: m.created_at,
+      attachments: m.attachments ? m.attachments.map((a) => ({ type: a.type, url: a.url, name: a.name })) : [],
+      reactions: m.reactions ? m.reactions.map((r) => ({ user: r.user, emoji: r.emoji })) : [],
+      replyTo,
+      senderId: m.sender_id,
+      receiverId: m.receiver_id,
+      message_type: m.message_type,
+      type_id: m.type_id,
+      is_confirm: m.is_confirm,
+      is_pinned: m.is_pinned,
+      isDeleted: m.is_deleted === 1,
+      is_email: Boolean(m.is_email),
+      product_concern: Boolean(m.product_concern)
+    }
+  }
+
   const fetchMessages = async (cursor?: string) => {
     try {
       const endpoint = '/api/messages'
@@ -166,45 +199,27 @@ const MessengerPage: React.FC = () => {
       }
 
       const res = await axiosInstance.get(`${endpoint}?${params.toString()}`)
-      const formatted = res.data.data.map((m: ApiMessage) => {
-        const isMine = String(m.sender_id) === String(user?.id)
-        
-        let replyTo = undefined;
-        if (m.reply_to) {
-          const replyIsMine = String(m.reply_to.sender_id) === String(user?.id);
-          replyTo = {
-            id: m.reply_to.id,
-            text: m.reply_to.text,
-            senderName: replyIsMine ? 'You' : (m.reply_to.sender_type === 'employee' ? 'PIXS Admin' : 'Customer'),
-            isDeleted: m.reply_to.is_deleted === 1,
-          };
-        }
-
-        return {
-          id: m.id,
-          sender: isMine ? 'customer' : 'admin', 
-          senderName: isMine ? 'You' : (m.sender_type === 'employee' ? 'PIXS Admin' : 'Customer'),
-          text: m.message,
-          timestamp: m.created_at,
-          attachments: m.attachments ? m.attachments.map((a: { type: 'image' | 'file', url: string, name: string }) => ({ type: a.type, url: a.url, name: a.name })) : [],
-          reactions: m.reactions ? m.reactions.map((r: { user: string, emoji: string }) => ({ user: r.user, emoji: r.emoji })) : [],
-          replyTo,
-          senderId: m.sender_id,
-          receiverId: m.receiver_id,
-          message_type: m.message_type,
-          type_id: m.type_id,
-          is_confirm: m.is_confirm,
-          is_pinned: m.is_pinned,
-          isDeleted: m.is_deleted === 1,
-          is_email: Boolean(m.is_email),
-          product_concern: Boolean(m.product_concern)
-        }
-      })
+      const formatted = res.data.data.map((m: ApiMessage) => formatMessage(m))
       
       return { formatted, nextCursor: res.data.next_cursor }
     } catch (error) {
       console.error('Failed to load messages', error)
       return { formatted: [], nextCursor: null }
+    }
+  }
+
+  const markMessagesAsRead = async () => {
+    try {
+      // Mark all messages in current conversation as read
+      await axiosInstance.patch('/api/messages/mark-read', {
+        target_id: selectedUserId || (user?.role !== 'admin' ? '1' : undefined),
+      })
+      // Refresh users list to update unread counts
+      if (user?.role === 'admin') {
+        fetchUsers()
+      }
+    } catch (error) {
+      console.error('Failed to mark messages as read', error)
     }
   }
 
@@ -215,7 +230,11 @@ const MessengerPage: React.FC = () => {
     const { formatted: olderMessages, nextCursor } = await fetchMessages(cursor)
     
     if (olderMessages.length > 0) {
-      setMessages(prev => [...olderMessages, ...prev])
+      setMessages(prev => {
+        const existingIds = new Set(prev.map(m => m.id))
+        const uniqueOlder = olderMessages.filter((m: IMessage) => !existingIds.has(m.id))
+        return [...uniqueOlder, ...prev]
+      })
       setHasMoreMessages(nextCursor !== null)
     } else {
       setHasMoreMessages(false)
@@ -255,6 +274,93 @@ const MessengerPage: React.FC = () => {
     initializeMessages()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, selectedUserId])
+
+  // POLLING: Fetch new messages periodically
+  useEffect(() => {
+    if (!user?.id) return
+    if (user.role === 'admin' && !selectedUserId) return // Admin with no selected user, skip polling
+    
+    const POLL_INTERVAL = 4000 // 4 seconds
+    
+    const pollMessages = async () => {
+      try {
+        // Fetch the latest page to sync edits, deletes, reactions, and new messages
+        // We pass poll=true to bypass the backend auto-mark-as-read mechanism
+        const endpoint = user.role === 'admin' && selectedUserId
+          ? `/api/messages?per_page=20&target_id=${selectedUserId}&poll=true`
+          : `/api/messages?per_page=20&poll=true`
+        
+        const res = await axiosInstance.get(endpoint)
+        
+        if (res.data.data) {
+          const polledMessages = res.data.data.map((m: ApiMessage) => formatMessage(m))
+          
+          setMessages(prev => {
+            const existingMap = new Map(prev.map(msg => [msg.id, msg]))
+            let hasChanges = false
+            
+            // Sync modifications to existing messages (reactions, text, pins, confirms, deletes)
+            const updated = prev.map(msg => {
+              const polledMsg = polledMessages.find((pm: IMessage) => pm.id === msg.id)
+              if (polledMsg) {
+                const reactionsChanged = JSON.stringify(polledMsg.reactions) !== JSON.stringify(msg.reactions)
+                const textChanged = polledMsg.text !== msg.text
+                const deletedChanged = polledMsg.isDeleted !== msg.isDeleted
+                const pinnedChanged = polledMsg.is_pinned !== msg.is_pinned
+                const confirmChanged = polledMsg.is_confirm !== msg.is_confirm
+                
+                if (reactionsChanged || textChanged || deletedChanged || pinnedChanged || confirmChanged) {
+                  hasChanges = true
+                  return {
+                    ...msg,
+                    reactions: polledMsg.reactions,
+                    text: polledMsg.text,
+                    isDeleted: polledMsg.isDeleted,
+                    is_pinned: polledMsg.is_pinned,
+                    is_confirm: polledMsg.is_confirm,
+                    isEdited: polledMsg.isEdited,
+                    originalText: polledMsg.originalText,
+                  }
+                }
+              }
+              return msg
+            })
+            
+            // Append any new messages (also skip if it matches a temp optimistic ID pattern)
+            const newMessages = polledMessages.filter((pm: IMessage) => {
+              if (existingMap.has(pm.id)) return false
+              // Check if any existing temp message matches (sent but not yet ID-swapped)
+              const hasTempDuplicate = prev.some(m => 
+                m.id.startsWith('msg_') && m.text === pm.text && m.senderId === pm.senderId
+              )
+              return !hasTempDuplicate
+            })
+            if (newMessages.length > 0) {
+              hasChanges = true
+              return [...updated, ...newMessages]
+            }
+            
+            return hasChanges ? updated : prev
+          })
+        }
+      } catch (error) {
+        console.error('Polling error:', error)
+      }
+    }
+    
+    const interval = setInterval(pollMessages, POLL_INTERVAL)
+    return () => clearInterval(interval)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, selectedUserId])
+
+  // Mark messages as read when viewing a conversation
+  useEffect(() => {
+    if (user) {
+      if (user.role === 'admin' && !selectedUserId) return
+      markMessagesAsRead()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedUserId, user])
 
   const [isHeroVisible, setIsHeroVisible] = useState(() => {
     return localStorage.getItem('pixs_messenger_hero_seen') !== 'true'

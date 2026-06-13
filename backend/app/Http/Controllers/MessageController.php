@@ -62,7 +62,7 @@ class MessageController extends Controller
         $messages = $query->limit($perPage)->get();
 
         // Mark all fetched messages as read for the current user
-        if ($messages->isNotEmpty()) {
+        if ($messages->isNotEmpty() && !$request->query('latest') && !$request->query('poll')) {
             DB::table('messages')
                 ->where('receiver_id', $user->id)
                 ->where('is_read', 0)
@@ -207,10 +207,11 @@ class MessageController extends Controller
             'screenplate_request_id' => 'nullable|string|max:20',
             'payment_code_id' => 'nullable|string|max:30',
             'product_concern' => 'nullable|boolean',
+            'is_email' => 'nullable|boolean',
             'expenditures_id' => 'nullable|string|max:30',
             'attachments' => 'nullable|array|max:20',
             'attachments.*.file' => [
-                'nullable', 'file', 'max:5120',           // 5 MB in KB (reduced from 10MB)
+                'nullable', 'file', 'max:10240',           // 10 MB in KB
                 'mimes:jpeg,jpg,png,webp,pdf,doc,docx,csv,xls,xlsx',
             ],
             'attachments.*.type' => 'required|in:image,file',
@@ -257,18 +258,18 @@ class MessageController extends Controller
                     ], 422);
                 }
 
-                // Image: max 3MB
-                if ($type === 'image' && $file->getSize() > (3 * 1024 * 1024)) {
+                // Image: max 10MB
+                if ($type === 'image' && $file->getSize() > (10 * 1024 * 1024)) {
                     return response()->json([
-                        'message' => "Image \"{$file->getClientOriginalName()}\" exceeds the 3MB limit.",
+                        'message' => "Image \"{$file->getClientOriginalName()}\" exceeds the 10MB limit.",
                         'error_code' => 'IMAGE_TOO_LARGE',
                     ], 422);
                 }
 
-                // Document: max 5MB
-                if ($type === 'file' && $file->getSize() > (5 * 1024 * 1024)) {
+                // Document: max 10MB
+                if ($type === 'file' && $file->getSize() > (10 * 1024 * 1024)) {
                     return response()->json([
-                        'message' => "Document \"{$file->getClientOriginalName()}\" exceeds the 5MB limit.",
+                        'message' => "Document \"{$file->getClientOriginalName()}\" exceeds the 10MB limit.",
                         'error_code' => 'DOC_TOO_LARGE',
                     ], 422);
                 }
@@ -320,8 +321,8 @@ class MessageController extends Controller
             // Insert message
             DB::insert('
                 INSERT INTO messages 
-                (id, conversation_id, sender_id, sender_type, receiver_id, receiver_type, message, reply_to_id, message_type, type_id, product_concern, created_at, updated_at) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+                (id, conversation_id, sender_id, sender_type, receiver_id, receiver_type, message, reply_to_id, message_type, type_id, product_concern, is_email, created_at, updated_at) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
             ', [
                 $msgId,
                 $convId,
@@ -334,6 +335,7 @@ class MessageController extends Controller
                 $messageType,
                 $typeId,
                 ! empty($validated['product_concern']) ? 1 : 0,
+                ! empty($validated['is_email']) ? 1 : 0,
             ]);
 
             if (! empty($attachments)) {
@@ -400,13 +402,30 @@ class MessageController extends Controller
     public function markConversationAsRead(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'conversation_id' => 'required|string|max:100',
+            'conversation_id' => 'nullable|string|max:100',
+            'target_id' => 'nullable|string|max:20',
         ]);
 
         $user = $request->user();
+        $conversationId = $validated['conversation_id'] ?? null;
+
+        if (!$conversationId && !empty($validated['target_id'])) {
+            $targetId = $validated['target_id'];
+            $senderType = $user->role === 'customer' ? 'customer' : 'employee';
+
+            if ($senderType === 'customer') {
+                $conversationId = $targetId . '_' . $user->id;
+            } else {
+                $conversationId = $user->id . '_' . $targetId;
+            }
+        }
+
+        if (!$conversationId) {
+            return response()->json(['message' => 'Missing conversation_id or target_id'], 422);
+        }
 
         DB::table('messages')
-            ->where('conversation_id', $validated['conversation_id'])
+            ->where('conversation_id', $conversationId)
             ->where('receiver_id', $user->id)  // IDOR guard: only own messages
             ->where('is_read', 0)
             ->update(['is_read' => 1, 'updated_at' => now()]);

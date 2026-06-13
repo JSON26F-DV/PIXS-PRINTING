@@ -92,8 +92,9 @@ const HelpSupportSection: React.FC = () => {
       setIsSending(true)
       const response = await axiosInstance.post('/api/messages/send', {
         message,
-        receiver_id: 'EMP-001',
+        receiver_id: '1',
         receiver_type: 'employee',
+        is_email: 1,
       })
       toast.success(response.data.message)
       setMessage('')

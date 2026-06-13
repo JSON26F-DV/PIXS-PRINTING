@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react'
 import { m, AnimatePresence } from 'framer-motion'
+import { clsx } from 'clsx'
 import {
   Paperclip,
   Image as ImageIcon,
@@ -12,10 +13,10 @@ import debounce from 'lodash/debounce'
 import type { IMessage } from '../MessengerPage.tsx'
 
 // --- Upload Constraints ---
-const IMAGE_MAX_SIZE_MB = 3
-const IMAGE_MAX_SIZE_BYTES = IMAGE_MAX_SIZE_MB * 1024 * 1024 // 3MB
-const DOC_MAX_SIZE_MB = 5
-const DOC_MAX_SIZE_BYTES = DOC_MAX_SIZE_MB * 1024 * 1024 // 5MB
+const IMAGE_MAX_SIZE_MB = 10
+const IMAGE_MAX_SIZE_BYTES = IMAGE_MAX_SIZE_MB * 1024 * 1024 // 10MB
+const DOC_MAX_SIZE_MB = 10
+const DOC_MAX_SIZE_BYTES = DOC_MAX_SIZE_MB * 1024 * 1024 // 10MB
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp']
 const BLOCKED_VIDEO_TYPES = ['video/']
 const ALLOWED_DOC_EXTENSIONS = ['.pdf', '.doc', '.docx', '.csv', '.xls', '.xlsx']
@@ -42,6 +43,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null)
   const imageInputRef = useRef<HTMLInputElement>(null)
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768)
+  const [isFocused, setIsFocused] = useState(false)
 
   // Handle responsive placeholder
   React.useEffect(() => {
@@ -163,7 +165,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4"
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 sm:p-6"
             onClick={() => setAlertModal({ ...alertModal, open: false })}
           >
             <m.div
@@ -171,7 +173,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
               onClick={(e) => e.stopPropagation()}
-              className="relative w-full max-w-[420px] rounded-3xl bg-white p-8 shadow-2xl"
+              className="relative w-full max-w-sm sm:max-w-[420px] rounded-3xl bg-white p-6 sm:p-8 shadow-2xl overflow-y-auto max-h-[90vh] mx-auto"
             >
               <div className="flex items-start gap-4">
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-rose-50">
@@ -238,7 +240,10 @@ const MessageInput: React.FC<MessageInputProps> = ({
           onSubmit={handleSubmit}
           className="mx-auto flex max-w-4xl items-end gap-3 md:gap-4"
         >
-          <div className="flex items-center gap-1 rounded-2xl border border-slate-100 bg-slate-50 p-1.5 shadow-inner md:p-2">
+          <div className={clsx(
+            "transition-all duration-300 ease-out flex items-center gap-1 rounded-2xl border border-slate-100 bg-slate-50 p-1.5 shadow-inner md:p-2 overflow-hidden shrink-0",
+            (isMobile && isFocused) ? "max-w-0 opacity-0 p-0 border-none pointer-events-none" : "max-w-[120px] md:max-w-[150px] opacity-100"
+          )}>
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
@@ -276,6 +281,8 @@ const MessageInput: React.FC<MessageInputProps> = ({
             <textarea
               value={text}
               onChange={(e) => setText(e.target.value)}
+              onFocus={() => setIsFocused(true)}
+              onBlur={() => setIsFocused(false)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault()

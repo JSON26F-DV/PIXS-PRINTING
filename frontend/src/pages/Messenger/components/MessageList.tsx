@@ -16,7 +16,7 @@ import {
   ArrowDown,
   Pin,
   Copy,
-  Mail,
+
   AlertCircle,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
@@ -175,6 +175,16 @@ const MessageBubbleComponent: React.FC<{
   const containerRef = useRef<HTMLDivElement>(null)
   const indicatorRef = useRef<HTMLDivElement>(null)
 
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const isLongPressRef = useRef(false)
+
+  const cancelLongPress = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current)
+      longPressTimerRef.current = null
+    }
+  }
+
   React.useEffect(() => {
     if (activeReactionMessageId !== message.id) {
       setShowQuickBar(false)
@@ -187,6 +197,31 @@ const MessageBubbleComponent: React.FC<{
       setShowOptions(false)
     }
   }, [activeOptionsMessageId, message.id])
+
+  React.useEffect(() => {
+    if (!showQuickBar && !showOptions) return
+    const handleOuterClick = (e: MouseEvent | TouchEvent) => {
+      const target = e.target as HTMLElement
+      if (
+        anchorRef.current &&
+        !anchorRef.current.contains(target) &&
+        !target.closest('.bubble-emoji') &&
+        !target.closest('.emoji-picker-react') &&
+        !target.closest('.w-36')
+      ) {
+        setShowQuickBar(false)
+        setShowOptions(false)
+        setActiveReactionMessageId(null)
+        setActiveOptionsMessageId(null)
+      }
+    }
+    document.addEventListener('mousedown', handleOuterClick)
+    document.addEventListener('touchstart', handleOuterClick)
+    return () => {
+      document.removeEventListener('mousedown', handleOuterClick)
+      document.removeEventListener('touchstart', handleOuterClick)
+    }
+  }, [showQuickBar, showOptions, setActiveReactionMessageId, setActiveOptionsMessageId])
   const touchStartRef = useRef<{ x: number; y: number } | null>(null)
   const isSwipingRef = useRef(false)
   const swipeThreshold = 60
@@ -196,6 +231,19 @@ const MessageBubbleComponent: React.FC<{
     const touch = e.touches[0]
     touchStartRef.current = { x: touch.clientX, y: touch.clientY }
     isSwipingRef.current = false
+
+    isLongPressRef.current = false
+    const target = e.currentTarget
+    longPressTimerRef.current = setTimeout(() => {
+      isLongPressRef.current = true
+      if (navigator.vibrate) {
+        navigator.vibrate(50)
+      }
+      setAnchorRect(target.getBoundingClientRect())
+      setShowOptions(true)
+      setActiveOptionsMessageId(message.id)
+      setActiveReactionMessageId(null)
+    }, 600)
   }
 
   const handleTouchMove = (e: React.TouchEvent) => {
@@ -203,6 +251,10 @@ const MessageBubbleComponent: React.FC<{
     const touch = e.touches[0]
     const diffX = touch.clientX - touchStartRef.current.x
     const diffY = touch.clientY - touchStartRef.current.y
+
+    if (Math.abs(diffX) > 10 || Math.abs(diffY) > 10) {
+      cancelLongPress()
+    }
 
     if (!isSwipingRef.current) {
       const absX = Math.abs(diffX)
@@ -241,6 +293,7 @@ const MessageBubbleComponent: React.FC<{
   }
 
   const handleTouchEnd = () => {
+    cancelLongPress()
     if (!touchStartRef.current) return
     if (isSwipingRef.current && Math.abs(swipeTranslationRef.current) >= swipeThreshold) {
       onReply()
@@ -345,6 +398,10 @@ const MessageBubbleComponent: React.FC<{
                 return;
               }
               e.stopPropagation();
+              if (isLongPressRef.current) {
+                isLongPressRef.current = false;
+                return;
+              }
               setAnchorRect(e.currentTarget.getBoundingClientRect());
               const nextVal = !showQuickBar;
               setShowQuickBar(nextVal);
@@ -359,6 +416,11 @@ const MessageBubbleComponent: React.FC<{
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
+          onContextMenu={(e) => {
+            if (window.innerWidth < 768) {
+              e.preventDefault();
+            }
+          }}
           style={{
             transform: `translateX(0px)`,
             transition: 'transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
@@ -499,17 +561,7 @@ const MessageBubbleComponent: React.FC<{
             </div>
           )}
 
-          {message.is_email && (
-            <div className="mt-3 rounded-xl border border-blue-200 bg-blue-50/50 p-4 break-words">
-              <div className="flex items-center gap-2 mb-2">
-                <Mail size={16} className="text-blue-500 shrink-0" />
-                <span className="text-[10px] font-black tracking-widest uppercase text-blue-500">
-                  EMAIL SENT
-                </span>
-              </div>
-              <p className="text-sm font-medium whitespace-pre-wrap">{message.text}</p>
-            </div>
-          )}
+
 
           {message.product_concern && message.message_type !== 'refund' && !message.is_email && !message.text?.startsWith('[LIVE_QUEUE_COMPLETED]') && !message.text?.startsWith('[LIVE_QUEUE_NOT_COMPLETED]') && (
             <div className="mt-3 rounded-xl border p-4 break-words border-amber-200 bg-amber-50/50 text-amber-950">
@@ -815,23 +867,38 @@ const MessageBubbleComponent: React.FC<{
                 const visibleCount = getVisibleOptionsCount();
                 const estimatedHeight = visibleCount * 44 + 16;
  
+                const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 667
+                const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 375
+                const spaceBelow = viewportHeight - anchorRect.bottom
+                
+                let top = 0
+                if (spaceBelow >= estimatedHeight + 20) {
+                  top = anchorRect.bottom + 6
+                } else {
+                  top = anchorRect.top - estimatedHeight - 6
+                }
+                top = Math.max(10, Math.min(viewportHeight - estimatedHeight - 10, top))
+
+                let left = isCustomer
+                  ? anchorRect.right - 144
+                  : anchorRect.left
+                left = Math.max(10, Math.min(viewportWidth - 144 - 10, left))
+
                 return (
                   <MessagePortal>
                     <div
                       style={{
                         position: 'fixed',
-                        top: Math.max(10, anchorRect.top - estimatedHeight),
-                        left: isCustomer
-                          ? anchorRect.right - 144
-                          : anchorRect.right + 10,
+                        top,
+                        left,
                         zIndex: 9999,
                         pointerEvents: 'auto',
                       }}
                       className={clsx(
                         'w-36 rounded-2xl border border-slate-100 bg-white p-2 shadow-xl',
-                        isCustomer
-                          ? 'origin-bottom-right'
-                          : 'origin-bottom-left',
+                        spaceBelow >= estimatedHeight + 20
+                          ? (isCustomer ? 'origin-top-right' : 'origin-top-left')
+                          : (isCustomer ? 'origin-bottom-right' : 'origin-bottom-left')
                       )}
                     >
                       {message.isDeleted ? (
@@ -1003,25 +1070,33 @@ const MessageList: React.FC<MessageListProps> = ({
   // Auto-scroll to bottom on new messages
   const prevMessagesLength = useRef(messages.length)
   const prevLastMessageId = useRef<string | null>(messages.length > 0 ? messages[messages.length - 1].id : null)
+  const [hasUnreadNewMessages, setHasUnreadNewMessages] = useState(false)
 
   useEffect(() => {
     const currentLength = messages.length
     const currentLastMessageId = currentLength > 0 ? messages[currentLength - 1].id : null
 
     if (currentLength > prevMessagesLength.current && currentLastMessageId !== prevLastMessageId.current) {
-      if (virtuosoRef.current) {
+      if (isNearBottom) {
+        if (virtuosoRef.current) {
+          setTimeout(() => {
+            virtuosoRef.current?.scrollToIndex({
+              index: currentLength - 1,
+              behavior: 'smooth',
+            })
+          }, 100)
+        }
+      } else {
         setTimeout(() => {
-          virtuosoRef.current?.scrollToIndex({
-            index: currentLength - 1,
-            behavior: 'smooth',
-          })
-        }, 100)
+          setHasUnreadNewMessages(true)
+          setShowScrollDown(true)
+        }, 0)
       }
     }
     
     prevMessagesLength.current = currentLength
     prevLastMessageId.current = currentLastMessageId
-  }, [messages])
+  }, [messages, isNearBottom])
 
   return (
     <div className="relative w-full h-full overflow-x-hidden flex flex-col">
@@ -1055,7 +1130,10 @@ const MessageList: React.FC<MessageListProps> = ({
           }}
           atBottomStateChange={(atBottom) => {
             setIsNearBottom(atBottom)
-            if (atBottom) setShowScrollDown(false)
+            if (atBottom) {
+              setShowScrollDown(false)
+              setHasUnreadNewMessages(false)
+            }
           }}
           rangeChanged={({ startIndex }) => {
             setShowScrollDown(startIndex < messages.length - 10 && !isNearBottom)
@@ -1120,7 +1198,10 @@ const MessageList: React.FC<MessageListProps> = ({
 
       {showScrollDown && (
         <button
-          onClick={() => virtuosoRef.current?.scrollToIndex({ index: messages.length - 1, behavior: 'smooth' })}
+          onClick={() => {
+            virtuosoRef.current?.scrollToIndex({ index: messages.length - 1, behavior: 'smooth' })
+            setHasUnreadNewMessages(false)
+          }}
           className="group absolute bottom-4 md:bottom-6 left-1/2 z-50 flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full border border-slate-100 bg-white text-slate-900 shadow-2xl active:scale-95"
           style={{ transform: 'translateX(-50%)' }}
         >
@@ -1128,8 +1209,11 @@ const MessageList: React.FC<MessageListProps> = ({
             size={20}
             className="group-hover:translate-y-0.5 md:group-hover:translate-y-1 md:size-[24px]"
           />
+          {hasUnreadNewMessages && (
+            <span className="absolute -top-1 -right-1 flex h-3 w-3 rounded-full bg-rose-500 animate-pulse" />
+          )}
           <div className="absolute -top-12 rounded-xl bg-slate-900 px-4 py-2 text-[10px] font-black tracking-widest whitespace-nowrap text-white uppercase opacity-0 transition-opacity group-hover:opacity-100">
-            Latest fulfillment
+            {hasUnreadNewMessages ? 'New message below' : 'Latest fulfillment'}
           </div>
         </button>
       )}
