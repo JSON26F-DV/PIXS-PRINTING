@@ -11,6 +11,7 @@ interface ChatHeaderProps {
   onOpenAdminControls?: () => void
   title?: string
   subtitle?: string
+  userContactNumbers?: string
 }
 
 const ChatHeader: FC<ChatHeaderProps> = (props) => {
@@ -18,6 +19,7 @@ const ChatHeader: FC<ChatHeaderProps> = (props) => {
     onOpenAdminControls,
     title,
     subtitle,
+    userContactNumbers,
   } = props
   const { user } = useAuth()
   const navigate = useNavigate()
@@ -40,9 +42,15 @@ const ChatHeader: FC<ChatHeaderProps> = (props) => {
         </div>
 
         <div>
-          <h2 className="text-[12px] leading-none font-black tracking-tighter text-slate-900 uppercase italic min-[360px]:text-[13px] min-[414px]:text-sm">
-            {title || 'PIXS Production Admin'}
-          </h2>
+          {userContactNumbers ? (
+            <h2 className="text-[12px] leading-none font-black tracking-tighter text-slate-900 uppercase italic min-[360px]:text-[13px] min-[414px]:text-sm">
+              {userContactNumbers}
+            </h2>
+          ) : (
+            <h2 className="text-[12px] leading-none font-black tracking-tighter text-slate-900 uppercase italic min-[360px]:text-[13px] min-[414px]:text-sm">
+              {title || 'PIXS Production Admin'}
+            </h2>
+          )}
           <div className="mt-1.5 flex items-center gap-1.5">
             <span className="text-[9px] font-bold tracking-widest text-emerald-500 uppercase">
               Active
@@ -80,11 +88,11 @@ const ChatHeader: FC<ChatHeaderProps> = (props) => {
           /* Dashboard Navigation Button */
           <button
             onClick={() => navigate('/admin/dashboard')}
-            className="flex h-9 px-3 items-center justify-center gap-1.5 rounded-xl bg-slate-900 text-white font-bold text-xs uppercase italic tracking-wider transition-all hover:bg-slate-800 active:scale-95 min-[360px]:h-10 shadow-sm"
+            className="hidden md:flex h-9 px-3 items-center justify-center gap-1.5 rounded-xl bg-slate-900 text-white font-bold text-xs uppercase italic tracking-wider transition-all hover:bg-slate-800 active:scale-95 min-[360px]:h-10 shadow-sm"
             title="Back to Dashboard"
           >
             <ArrowLeft size={14} className="text-pixs-mint" />
-            <span className="hidden sm:inline">Dashboard</span>
+            <span>Dashboard</span>
           </button>
         )}
       </div>

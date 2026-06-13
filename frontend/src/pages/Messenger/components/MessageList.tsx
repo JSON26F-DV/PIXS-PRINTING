@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react'
+import React, { useRef, useEffect, useState, useCallback } from 'react'
 import { Virtuoso, type VirtuosoHandle } from 'react-virtuoso'
 
 import { createPortal } from 'react-dom'
@@ -13,7 +13,6 @@ import {
   Plus,
   FileText,
   Download,
-  ArrowDown,
   Pin,
   Copy,
 
@@ -49,6 +48,9 @@ interface MessageListProps {
   isLoadingMore?: boolean
   scrollToMessageId?: string | null
   onDeleteMedia?: (messageId: string, filename: string) => void
+  onShowScrollDownChange?: (show: boolean) => void
+  onHasUnreadNewMessagesChange?: (hasUnread: boolean) => void
+  scrollToBottomRef?: React.MutableRefObject<(() => void) | null>
 }
 
 const QUICK_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '😡']
@@ -78,17 +80,20 @@ const QuickReactBar: React.FC<{
   const quickBarWidth = 296
   const quickBarHeight = 54
 
-  // Top position: default above anchor. If not enough space, place below.
   let top = anchorRect.top - quickBarHeight - 6
-  if (top < 8) {
-    top = anchorRect.bottom + 6
-  }
-  // Clamp top to viewport boundaries
-  top = Math.max(8, Math.min(viewportHeight - quickBarHeight - 8, top))
+  let left = isCustomer ? anchorRect.right - quickBarWidth : anchorRect.left
 
-  // Left position
-  const calculatedLeft = isCustomer ? anchorRect.right - quickBarWidth : anchorRect.left
-  const left = Math.max(8, Math.min(viewportWidth - quickBarWidth - 8, calculatedLeft))
+  const isMobile = viewportWidth < 768
+  if (isMobile) {
+    top = viewportHeight - quickBarHeight - 16
+    left = (viewportWidth - quickBarWidth) / 2
+  } else {
+    if (top < 8) {
+      top = anchorRect.bottom + 6
+    }
+    top = Math.max(8, Math.min(viewportHeight - quickBarHeight - 8, top))
+    left = Math.max(8, Math.min(viewportWidth - quickBarWidth - 8, left))
+  }
 
   return (
     <MessagePortal>
@@ -97,7 +102,7 @@ const QuickReactBar: React.FC<{
           position: 'fixed',
           top,
           left,
-          zIndex: 9999,
+          zIndex: 99999,
         }}
         className={clsx(
           'pointer-events-auto flex items-center gap-1 rounded-full border border-slate-100 bg-white p-1.5 shadow-2xl transition-all duration-200',
@@ -743,7 +748,7 @@ const MessageBubbleComponent: React.FC<{
                     setActiveReactionMessageId(null)
                   }
                 }}
-                className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-100 bg-white text-slate-400 shadow-md hover:text-slate-900"
+                className="hidden md:flex h-9 w-9 items-center justify-center rounded-full border border-slate-100 bg-white text-slate-400 shadow-md hover:text-slate-900"
               >
                 <Smile size={18} />
               </button>
@@ -773,27 +778,65 @@ const MessageBubbleComponent: React.FC<{
                   </>
                 )}
  
-              {showFullPicker && anchorRect && (() => {
+              {showFullPicker && (() => {
                 const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 375
+                const isMobile = viewportWidth < 768
+
+                if (isMobile) {
+                  return (
+                    <MessagePortal>
+                      <div 
+                        style={{ position: 'fixed', inset: 0, zIndex: 99999, background: 'rgba(0,0,0,0.5)', pointerEvents: 'auto' }}
+                        onClick={() => {
+                          setShowFullPicker(false)
+                          setActiveReactionMessageId(null)
+                        }}
+                      >
+                        <div 
+                          style={{ 
+                            position: 'absolute', 
+                            bottom: 0, 
+                            left: 0, 
+                            right: 0,
+                            maxHeight: '70vh',
+                            background: 'white',
+                            borderTopLeftRadius: '16px',
+                            borderTopRightRadius: '16px',
+                            overflow: 'hidden'
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <EmojiPicker
+                            onEmojiClick={(emoji: EmojiClickData) => {
+                              onReact(emoji.emoji)
+                              setShowFullPicker(false)
+                              setActiveReactionMessageId(null)
+                            }}
+                            theme={Theme.LIGHT}
+                            skinTonesDisabled
+                            searchDisabled
+                            width="100%"
+                            height="70vh"
+                          />
+                        </div>
+                      </div>
+                    </MessagePortal>
+                  )
+                }
+
+                if (!anchorRect) return null
+
                 const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 667
-                const pickerWidth = viewportWidth < 360 ? 280 : 320
+                const pickerWidth = 320
                 const pickerHeight = 380
 
                 let top = anchorRect.top - pickerHeight - 10
                 if (top < 10) {
                   top = anchorRect.bottom + 10
                 }
-                if (top + pickerHeight > viewportHeight - 10 || viewportWidth < 768) {
-                  top = Math.max(10, (viewportHeight - pickerHeight) / 2)
-                } else {
-                  top = Math.max(10, Math.min(viewportHeight - pickerHeight - 10, top))
-                }
+                top = Math.max(10, Math.min(viewportHeight - pickerHeight - 10, top))
 
-                let left = viewportWidth < 768
-                  ? Math.max(10, (viewportWidth - pickerWidth) / 2)
-                  : isCustomer
-                    ? anchorRect.right - pickerWidth
-                    : anchorRect.left
+                let left = isCustomer ? anchorRect.right - pickerWidth : anchorRect.left
                 left = Math.max(10, Math.min(viewportWidth - pickerWidth - 10, left))
 
                 return (
@@ -803,7 +846,7 @@ const MessageBubbleComponent: React.FC<{
                         position: 'fixed',
                         top,
                         left,
-                        zIndex: 9999,
+                        zIndex: 99999,
                         pointerEvents: 'auto',
                       }}
                     >
@@ -847,7 +890,7 @@ const MessageBubbleComponent: React.FC<{
                     setActiveOptionsMessageId(null)
                   }
                 }}
-                className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-100 bg-white text-slate-400 shadow-md hover:text-slate-900"
+                className="hidden md:flex h-9 w-9 items-center justify-center rounded-full border border-slate-100 bg-white text-slate-400 shadow-md hover:text-slate-900"
               >
                 <MoreHorizontal size={18} />
               </button>
@@ -891,7 +934,7 @@ const MessageBubbleComponent: React.FC<{
                         position: 'fixed',
                         top,
                         left,
-                        zIndex: 9999,
+                        zIndex: 99999,
                         pointerEvents: 'auto',
                       }}
                       className={clsx(
@@ -1039,13 +1082,42 @@ const MessageList: React.FC<MessageListProps> = ({
   isLoadingMore,
   scrollToMessageId,
   onDeleteMedia,
+  onShowScrollDownChange,
+  onHasUnreadNewMessagesChange,
+  scrollToBottomRef,
 }) => {
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null)
   const [activeReactionMessageId, setActiveReactionMessageId] = useState<string | null>(null)
   const [activeOptionsMessageId, setActiveOptionsMessageId] = useState<string | null>(null)
   const virtuosoRef = useRef<VirtuosoHandle>(null)
+  const isScrollLockedRef = useRef(false)
   const [isNearBottom, setIsNearBottom] = useState(true)
-  const [showScrollDown, setShowScrollDown] = useState(false)
+
+  // Notify parent of scroll state changes
+  const setShowScrollDown = useCallback((show: boolean) => {
+    onShowScrollDownChange?.(show)
+  }, [onShowScrollDownChange])
+
+  const setHasUnreadNewMessages = useCallback((hasUnread: boolean) => {
+    onHasUnreadNewMessagesChange?.(hasUnread)
+  }, [onHasUnreadNewMessagesChange])
+
+  // Expose scroll to bottom action to parent
+  useEffect(() => {
+    if (scrollToBottomRef) {
+      scrollToBottomRef.current = () => {
+        virtuosoRef.current?.scrollTo({ top: 9999999, behavior: 'smooth' })
+        setHasUnreadNewMessages(false)
+        setIsNearBottom(true)
+        setShowScrollDown(false)
+      }
+    }
+    return () => {
+      if (scrollToBottomRef) {
+        scrollToBottomRef.current = null
+      }
+    }
+  }, [scrollToBottomRef, setShowScrollDown, setHasUnreadNewMessages])
 
   const [galleryOpen, setGalleryOpen] = useState(false)
   const [activeImage, setActiveImage] = useState('')
@@ -1070,33 +1142,34 @@ const MessageList: React.FC<MessageListProps> = ({
   // Auto-scroll to bottom on new messages
   const prevMessagesLength = useRef(messages.length)
   const prevLastMessageId = useRef<string | null>(messages.length > 0 ? messages[messages.length - 1].id : null)
-  const [hasUnreadNewMessages, setHasUnreadNewMessages] = useState(false)
-
   useEffect(() => {
     const currentLength = messages.length
     const currentLastMessageId = currentLength > 0 ? messages[currentLength - 1].id : null
 
     if (currentLength > prevMessagesLength.current && currentLastMessageId !== prevLastMessageId.current) {
-      if (isNearBottom) {
-        if (virtuosoRef.current) {
-          setTimeout(() => {
-            virtuosoRef.current?.scrollToIndex({
-              index: currentLength - 1,
-              behavior: 'smooth',
-            })
-          }, 100)
-        }
-      } else {
+      if (isScrollLockedRef.current) return
+
+      const isMyMessage = currentLength > 0 && messages[currentLength - 1].senderName === 'You'
+
+      if ((isNearBottom || isMyMessage) && virtuosoRef.current) {
+        setTimeout(() => {
+          virtuosoRef.current?.scrollTo({
+            top: 9999999,
+            behavior: 'smooth',
+          })
+          setIsNearBottom(true)
+        }, 100)
+      } else if (!isNearBottom && !isMyMessage) {
         setTimeout(() => {
           setHasUnreadNewMessages(true)
           setShowScrollDown(true)
         }, 0)
       }
     }
-    
+
     prevMessagesLength.current = currentLength
     prevLastMessageId.current = currentLastMessageId
-  }, [messages, isNearBottom])
+  }, [messages, isNearBottom, setShowScrollDown, setHasUnreadNewMessages])
 
   return (
     <div className="relative w-full h-full overflow-x-hidden flex flex-col">
@@ -1118,7 +1191,7 @@ const MessageList: React.FC<MessageListProps> = ({
       ) : (
         <Virtuoso
           ref={virtuosoRef}
-          className="MessageList no-scrollbar overflow-x-hidden bg-emoji-pattern flex-1 bg-slate-50/20 px-6 pt-8 pb-10 md:px-12 md:pt-12 md:pb-14"
+          className="MessageList no-scrollbar overflow-x-hidden bg-emoji-pattern flex-1 bg-slate-50/20 px-6 pt-8 pb-24 md:px-12 md:pt-12 md:pb-28"
           data={messages}
           computeItemKey={(_, item) => item.id}
           followOutput="auto"
@@ -1128,15 +1201,19 @@ const MessageList: React.FC<MessageListProps> = ({
             height: '100%',
             WebkitOverflowScrolling: 'touch',
           }}
-          atBottomStateChange={(atBottom) => {
-            setIsNearBottom(atBottom)
-            if (atBottom) {
-              setShowScrollDown(false)
-              setHasUnreadNewMessages(false)
-            }
+          isScrolling={(scrolling) => {
+            isScrollLockedRef.current = scrolling
           }}
-          rangeChanged={({ startIndex }) => {
-            setShowScrollDown(startIndex < messages.length - 10 && !isNearBottom)
+          atBottomStateChange={(atBottom) => {
+            setTimeout(() => {
+              setIsNearBottom(atBottom)
+              if (atBottom) {
+                setShowScrollDown(false)
+                setHasUnreadNewMessages(false)
+              } else {
+                setShowScrollDown(true)
+              }
+            }, 50)
           }}
           startReached={() => {
             if (onLoadMore && !isLoadingMore) {
@@ -1182,7 +1259,7 @@ const MessageList: React.FC<MessageListProps> = ({
             ) : (
               <div className="h-4" />
             ),
-            Footer: () => <div className="md:pb-10" />,
+            Footer: () => <div className="h-24 md:h-32" />,
           }}
         />
       )}
@@ -1195,28 +1272,6 @@ const MessageList: React.FC<MessageListProps> = ({
           productName="Production Assets"
         />
       </MessagePortal>
-
-      {showScrollDown && (
-        <button
-          onClick={() => {
-            virtuosoRef.current?.scrollToIndex({ index: messages.length - 1, behavior: 'smooth' })
-            setHasUnreadNewMessages(false)
-          }}
-          className="group absolute bottom-4 md:bottom-6 left-1/2 z-50 flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full border border-slate-100 bg-white text-slate-900 shadow-2xl active:scale-95"
-          style={{ transform: 'translateX(-50%)' }}
-        >
-          <ArrowDown
-            size={20}
-            className="group-hover:translate-y-0.5 md:group-hover:translate-y-1 md:size-[24px]"
-          />
-          {hasUnreadNewMessages && (
-            <span className="absolute -top-1 -right-1 flex h-3 w-3 rounded-full bg-rose-500 animate-pulse" />
-          )}
-          <div className="absolute -top-12 rounded-xl bg-slate-900 px-4 py-2 text-[10px] font-black tracking-widest whitespace-nowrap text-white uppercase opacity-0 transition-opacity group-hover:opacity-100">
-            {hasUnreadNewMessages ? 'New message below' : 'Latest fulfillment'}
-          </div>
-        </button>
-      )}
     </div>
   )
 }

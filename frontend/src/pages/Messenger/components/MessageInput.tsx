@@ -235,19 +235,19 @@ const MessageInput: React.FC<MessageInputProps> = ({
         )}
       </AnimatePresence>
 
-      <div className="p-4 md:p-6">
+      <div className="p-5 md:p-6">
         <form
           onSubmit={handleSubmit}
-          className="mx-auto flex max-w-4xl items-end gap-3 md:gap-4"
+          className="mx-auto flex max-w-4xl items-center gap-3 md:gap-4"
         >
           <div className={clsx(
-            "transition-all duration-300 ease-out flex items-center gap-1 rounded-2xl border border-slate-100 bg-slate-50 p-1.5 shadow-inner md:p-2 overflow-hidden shrink-0",
+            "transition-all duration-300 ease-out flex h-11 items-center gap-1 rounded-[20px] border border-slate-100 bg-slate-50 p-1 shadow-inner overflow-hidden shrink-0",
             (isMobile && isFocused) ? "max-w-0 opacity-0 p-0 border-none pointer-events-none" : "max-w-[120px] md:max-w-[150px] opacity-100"
           )}>
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-400 transition-all hover:bg-white hover:text-slate-900 active:scale-90"
+              className="flex h-9 w-9 items-center justify-center rounded-[14px] text-slate-400 transition-all hover:bg-white hover:text-slate-900 active:scale-90"
               title="Attach Production Specs"
             >
               <Paperclip size={18} />
@@ -263,7 +263,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
             <button
               type="button"
               onClick={() => imageInputRef.current?.click()}
-              className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-400 transition-all hover:bg-white hover:text-slate-900 active:scale-90"
+              className="flex h-9 w-9 items-center justify-center rounded-[14px] text-slate-400 transition-all hover:bg-white hover:text-slate-900 active:scale-90"
               title="Attach Design Template"
             >
               <ImageIcon size={18} />
@@ -277,7 +277,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
             </button>
           </div>
 
-          <div className="group relative h-14 flex-1">
+          <div className="group relative min-h-[44px] flex-1">
             <textarea
               value={text}
               onChange={(e) => setText(e.target.value)}
@@ -290,7 +290,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
                 }
               }}
               placeholder={isMobile ? "Message" : "Type your message ..."}
-              className="max-h-[150px] min-h-[56px] w-full resize-none overflow-hidden rounded-[24px] border border-slate-100 bg-slate-50 px-6 py-4 text-sm leading-relaxed font-bold text-slate-700 shadow-inner transition-all placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-slate-900/5 focus:outline-none"
+              className="max-h-[150px] min-h-[44px] w-full resize-none overflow-hidden rounded-[20px] border border-slate-100 bg-slate-50 px-4 py-3 text-sm leading-relaxed font-bold text-slate-700 shadow-inner transition-all placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-slate-900/5 focus:outline-none"
               rows={1}
             />
           </div>
@@ -298,14 +298,14 @@ const MessageInput: React.FC<MessageInputProps> = ({
           <button
             type="submit"
             disabled={!text.trim()}
-            className="group flex h-14 w-12 items-center justify-center transition-all active:scale-90 disabled:opacity-30 disabled:grayscale"
+            className="group flex h-11 w-11 items-center justify-center transition-all active:scale-90 disabled:opacity-30 disabled:grayscale"
           >
             <m.div
               whileHover={text.trim() ? { rotateX: 30, rotateY: -15, rotateZ: 10, scale: 1.1 } : {}}
               transition={{ type: 'spring', stiffness: 400, damping: 17 }}
             >
               <Send
-                size={28}
+                size={24}
                 strokeWidth={2.5}
                 style={{ color: text.trim() ? '#75eea5' : '#cbd5e1' }}
                 className="drop-shadow-sm"

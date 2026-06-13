@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import React from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import Storefront from '../views/customer/Homepage'
 import LandingPage from '../views/customer/LandingPage'
@@ -112,17 +112,7 @@ const NotFoundPage: React.FC = () => {
   // If logged in, redirect to their dashboard
   if (user.isLoggedIn) {
     const homePath = getHomePathForRole(user.role)
-    useEffect(() => {
-      window.location.href = homePath
-    }, [homePath])
-    return (
-      <div className="flex h-screen w-screen items-center justify-center bg-white">
-        <div className="text-center">
-          <h1 className="text-4xl font-bold text-slate-900">404</h1>
-          <p className="text-slate-500">Redirecting to your dashboard...</p>
-        </div>
-      </div>
-    )
+    return <Navigate replace to={homePath} />
   }
 
   // If not logged in, show error and allow refresh

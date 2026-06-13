@@ -1,11 +1,14 @@
 import React from 'react'
-import { Outlet } from 'react-router-dom'
+import { Outlet, useLocation } from 'react-router-dom'
 import CustomerNavbar from '../components/customer/CustomerNavbar'
 
 const CustomerLayout: React.FC = () => {
+  const location = useLocation()
+  const isChatPage = location.pathname.includes('/chat')
+
   return (
     <>
-      <CustomerNavbar />
+      <CustomerNavbar hideOnMobile={isChatPage} />
       <Outlet />
     </>
   )

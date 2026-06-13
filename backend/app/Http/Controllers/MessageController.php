@@ -322,7 +322,7 @@ class MessageController extends Controller
             DB::insert('
                 INSERT INTO messages 
                 (id, conversation_id, sender_id, sender_type, receiver_id, receiver_type, message, reply_to_id, message_type, type_id, product_concern, is_email, created_at, updated_at) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NULL)
             ', [
                 $msgId,
                 $convId,

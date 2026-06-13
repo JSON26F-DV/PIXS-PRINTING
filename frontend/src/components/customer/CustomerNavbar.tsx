@@ -31,7 +31,7 @@ import BoxFallback from '../common/BoxFallback'
 import { clsx } from 'clsx'
 import { getProductById } from '../../api/products.api'
 
-const CustomerNavbar: React.FC = () => {
+const CustomerNavbar: React.FC<{ hideOnMobile?: boolean }> = ({ hideOnMobile }) => {
   const { user } = useAuth()
   const [isAddressModalOpen, setIsAddressModalOpen] = useState(false)
   const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false)
@@ -273,8 +273,9 @@ const CustomerNavbar: React.FC = () => {
       {/* ─────────────────────────────────────────── */}
       {/*  MOBILE NAVBAR                             */}
       {/* ─────────────────────────────────────────── */}
-      <div className="md:hidden">
-        {/* 🔝 TOP BAR */}
+      {!hideOnMobile && (
+        <div className="md:hidden">
+          {/* 🔝 TOP BAR */}
         {(() => {
           const isProductPage = location.pathname.startsWith('/product/')
           const isCartPage = location.pathname === '/cart'
@@ -593,6 +594,7 @@ const CustomerNavbar: React.FC = () => {
           </Link>
         </div>
       </div>
+      )}
 
       <AddressSelectModal
         isOpen={isAddressModalOpen}

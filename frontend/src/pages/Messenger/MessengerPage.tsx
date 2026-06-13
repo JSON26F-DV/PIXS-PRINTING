@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { m, AnimatePresence } from 'framer-motion'
 import { clsx } from 'clsx'
-import { Search, User as UserIcon } from 'lucide-react'
+import { Search, User as UserIcon, ArrowDown } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useAuth } from '../../hooks/useAuth'
 import BoxFallback from '../../components/common/BoxFallback'
@@ -17,7 +17,7 @@ import GalleryView from './components/GalleryView.tsx'
 import AdminControlModal from './components/AdminControlModal.tsx'
 
 import axiosInstance from '../../lib/axiosInstance.ts'
-
+import { STORAGE_KEYS } from '../../constants/storageKeys'
 
 interface UserData {
   id: string
@@ -27,6 +27,7 @@ interface UserData {
   profile_picture?: string
   status?: 'online' | 'offline'
   unread_count?: number
+  contact_numbers?: string
 }
 
 export interface IMessage {
@@ -115,11 +116,19 @@ const SidebarUserAvatar: React.FC<{
 const MessengerPage: React.FC = () => {
   const { user } = useAuth()
   const [users, setUsers] = useState<UserData[]>([])
-  const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(() => {
+    return localStorage.getItem(STORAGE_KEYS.SELECTED_USER_ID)
+  })
   const [searchQuery, setSearchQuery] = useState('')
   const [roleFilter, setRoleFilter] = useState<'all' | 'employee' | 'customer'>('all')
 
   const selectedUser = users.find(u => u.id === selectedUserId)
+
+  useEffect(() => {
+    if (selectedUserId) {
+      localStorage.setItem(STORAGE_KEYS.SELECTED_USER_ID, selectedUserId)
+    }
+  }, [selectedUserId])
 
   const fetchUsers = async () => {
     try {
@@ -363,6 +372,7 @@ const MessengerPage: React.FC = () => {
   }, [selectedUserId, user])
 
   const [isHeroVisible, setIsHeroVisible] = useState(() => {
+    if (user?.role && user.role !== 'customer') return false
     return localStorage.getItem('pixs_messenger_hero_seen') !== 'true'
   })
 
@@ -379,6 +389,20 @@ const MessengerPage: React.FC = () => {
   const [activeReplyTo, setActiveReplyTo] = useState<IMessage | null>(null)
   // scrollToMessageId: set by AdminControlModal pin/search; consumed by MessageList
   const [scrollToMessageId, setScrollToMessageId] = useState<string | null>(null)
+
+  const [showScrollDown, setShowScrollDown] = useState(false)
+  const [hasUnreadNewMessages, setHasUnreadNewMessages] = useState(false)
+  const scrollToBottomRef = useRef<(() => void) | null>(null)
+
+  const handleScrollDown = () => {
+    scrollToBottomRef.current?.()
+  }
+
+  // Reset scroll down states when user changes
+  useEffect(() => {
+    setShowScrollDown(false)
+    setHasUnreadNewMessages(false)
+  }, [selectedUserId])
 
   // Auto-manage panel visibility based on terminal viewport
   // Accounts panel is admin-only — never auto-open for other roles
@@ -652,7 +676,7 @@ const MessengerPage: React.FC = () => {
   }
 
   return (
-    <div className="MessengerTerminal relative flex h-screen max-h-screen overflow-hidden flex-col bg-slate-50">
+    <div className="MessengerTerminal relative flex h-[100dvh] w-[100dvw] max-h-screen overflow-hidden flex-col bg-slate-50">
       {user?.role === 'admin' ? (
         <div className="flex flex-1 flex-col h-full overflow-hidden">
           {/* Header Fixed Logic */}
@@ -671,10 +695,11 @@ const MessengerPage: React.FC = () => {
               }}
               title={selectedUser?.name}
               subtitle={messages.length > 0 ? `Response: ${format(new Date(messages[messages.length - 1].timestamp), 'HH:mm')}` : 'No messages'}
+              userContactNumbers={selectedUser?.contact_numbers || (user as UserData)?.contact_numbers}
             />
           </div>
 
-          <main className="relative flex flex-1 overflow-hidden pt-[80px] pb-[116px]">
+          <main className="relative flex flex-1 overflow-hidden pt-[80px]">
             {selectedUserId ? (
               <div className="flex flex-1 flex-col overflow-x-hidden">
                 <MessageList 
@@ -690,6 +715,9 @@ const MessengerPage: React.FC = () => {
                   isLoadingMore={isLoadingMore}
                   scrollToMessageId={scrollToMessageId}
                   onDeleteMedia={handleDeleteMediaAttachment}
+                  onShowScrollDownChange={setShowScrollDown}
+                  onHasUnreadNewMessagesChange={setHasUnreadNewMessages}
+                  scrollToBottomRef={scrollToBottomRef}
                 />
               </div>
             ) : (
@@ -802,6 +830,24 @@ const MessengerPage: React.FC = () => {
           {/* MessageInput Fixed Logic */}
           {selectedUserId && (
             <div className="fixed bottom-0 left-0 z-40 w-full bg-white">
+              {showScrollDown && (
+                <button
+                  onClick={handleScrollDown}
+                  className="group absolute bottom-[calc(100%+16px)] left-1/2 z-50 flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full border border-slate-100 bg-white text-slate-900 shadow-2xl active:scale-95"
+                  style={{ transform: 'translateX(-50%)' }}
+                >
+                  <ArrowDown
+                    size={20}
+                    className="group-hover:translate-y-0.5 md:group-hover:translate-y-1 md:size-[24px]"
+                  />
+                  {hasUnreadNewMessages && (
+                    <span className="absolute -top-1 -right-1 flex h-3 w-3 rounded-full bg-rose-500 animate-pulse" />
+                  )}
+                  <div className="absolute -top-12 rounded-xl bg-slate-900 px-4 py-2 text-[10px] font-black tracking-widest whitespace-nowrap text-white uppercase opacity-0 transition-opacity group-hover:opacity-100">
+                    {hasUnreadNewMessages ? 'New message below' : 'Latest fulfillment'}
+                  </div>
+                </button>
+              )}
               <MessageInput onSend={handleSendMessage} activeReplyTo={activeReplyTo} onCancelReply={() => setActiveReplyTo(null)} totalImageUploads={imageUploadCount} isEmployee={true} />
             </div>
           )}
@@ -816,6 +862,7 @@ const MessengerPage: React.FC = () => {
                 isGalleryOpen={isGalleryOpen}
                 onOpenAdminControls={() => setIsAdminControlsOpen(true)}
                 subtitle={messages.length > 0 ? `Response: ${format(new Date(messages[messages.length - 1].timestamp), 'HH:mm')}` : 'Response: ~5m'}
+                userContactNumbers={(user as UserData)?.contact_numbers}
               />
             </div>
             <main className="flex flex-1 items-center justify-center p-6 pt-32 md:pt-40">
@@ -834,16 +881,17 @@ const MessengerPage: React.FC = () => {
         ) : (
           <div className="flex flex-1 flex-col h-full overflow-hidden">
             {/* Header Fixed Logic */}
-            <div className="fixed top-0 left-0 z-40 w-full md:top-20">
+            <div className={`fixed top-0 left-0 z-40 w-full ${user?.role === 'customer' ? 'md:top-20' : ''}`}>
               <ChatHeader
                 onToggleGallery={() => setIsGalleryOpen(!isGalleryOpen)}
                 isGalleryOpen={isGalleryOpen}
                 onOpenAdminControls={() => setIsAdminControlsOpen(true)}
                 subtitle={messages.length > 0 ? `Response: ${format(new Date(messages[messages.length - 1].timestamp), 'HH:mm')}` : 'Response: ~5m'}
+                userContactNumbers={(user as UserData)?.contact_numbers}
               />
             </div>
 
-            <main className="relative flex flex-1 overflow-hidden pt-[80px] pb-[196px] md:pt-[176px] md:pb-[116px]">
+            <main className={`relative flex flex-1 overflow-hidden ${user?.role === 'customer' ? 'pt-[80px] md:pt-[176px]' : 'pt-[80px]'}`}>
               <div className="flex flex-1 flex-col overflow-x-hidden">
                 <MessageList
                   messages={messages}
@@ -858,6 +906,9 @@ const MessengerPage: React.FC = () => {
                   isLoadingMore={isLoadingMore}
                   scrollToMessageId={scrollToMessageId}
                   onDeleteMedia={undefined}
+                  onShowScrollDownChange={setShowScrollDown}
+                  onHasUnreadNewMessagesChange={setHasUnreadNewMessages}
+                  scrollToBottomRef={scrollToBottomRef}
                 />
               </div>
 
@@ -881,7 +932,25 @@ const MessengerPage: React.FC = () => {
             </main>
 
             {/* MessageInput Fixed Logic */}
-            <div className="fixed bottom-0 left-0 z-40 w-full bg-white pb-20 md:pb-0">
+            <div className={`fixed bottom-0 left-0 z-40 w-full bg-white `}>
+              {showScrollDown && (
+                <button
+                  onClick={handleScrollDown}
+                  className="group absolute bottom-[calc(100%+16px)] left-1/2 z-50 flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full border border-slate-100 bg-white text-slate-900 shadow-2xl active:scale-95"
+                  style={{ transform: 'translateX(-50%)' }}
+                >
+                  <ArrowDown
+                    size={20}
+                    className="group-hover:translate-y-0.5 md:group-hover:translate-y-1 md:size-[24px]"
+                  />
+                  {hasUnreadNewMessages && (
+                    <span className="absolute -top-1 -right-1 flex h-3 w-3 rounded-full bg-rose-500 animate-pulse" />
+                  )}
+                  <div className="absolute -top-12 rounded-xl bg-slate-900 px-4 py-2 text-[10px] font-black tracking-widest whitespace-nowrap text-white uppercase opacity-0 transition-opacity group-hover:opacity-100">
+                    {hasUnreadNewMessages ? 'New message below' : 'Latest fulfillment'}
+                  </div>
+                </button>
+              )}
               <MessageInput
                 onSend={handleSendMessage}
                 activeReplyTo={activeReplyTo}
