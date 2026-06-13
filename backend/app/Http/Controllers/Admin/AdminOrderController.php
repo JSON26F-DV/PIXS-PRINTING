@@ -454,6 +454,7 @@ class AdminOrderController extends Controller
 
             if (! empty($validated['employee_ids'])) {
                 $rows = [];
+                $notifications = [];
                 $now = now();
                 foreach ($validated['order_ids'] as $orderId) {
                     foreach ($validated['employee_ids'] as $empId) {
@@ -463,13 +464,26 @@ class AdminOrderController extends Controller
                             'created_at' => $now,
                             'updated_at' => $now,
                         ];
+
+                        $notifications[] = [
+                            'id' => (string) Str::uuid(),
+                            'employee_id' => $empId,
+                            'customer_id' => null,
+                            'title' => 'New Queue Assignment',
+                            'message' => "You have been assigned to process Order #{$orderId}.",
+                            'type' => 'queue_assignment',
+                            'is_read' => false,
+                            'created_at' => $now,
+                            'updated_at' => $now,
+                        ];
                     }
                 }
                 DB::table('order_employee_queue')->insert($rows);
+                DB::table('notifications')->insert($notifications);
             }
         });
 
-        return response()->json(['message' => 'Queue assignments saved']);
+        return response()->json(['message' => 'Queue assignments saved and employees notified.']);
     }
 
     /**

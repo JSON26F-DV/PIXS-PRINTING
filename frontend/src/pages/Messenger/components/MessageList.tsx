@@ -511,27 +511,15 @@ const MessageBubbleComponent: React.FC<{
             </div>
           )}
 
-          {message.product_concern && message.message_type !== 'refund' && !message.is_email && !message.text?.startsWith('[LIVE_QUEUE_COMPLETED]') && (
-            <div className={clsx(
-              "mt-3 rounded-xl border p-4 break-words",
-              message.text?.startsWith('[LIVE_QUEUE_NOT_COMPLETED]') 
-                ? "border-rose-200 bg-rose-50/50 text-rose-950" 
-                : "border-amber-200 bg-amber-50/50 text-amber-950"
-            )}>
+          {message.product_concern && message.message_type !== 'refund' && !message.is_email && !message.text?.startsWith('[LIVE_QUEUE_COMPLETED]') && !message.text?.startsWith('[LIVE_QUEUE_NOT_COMPLETED]') && (
+            <div className="mt-3 rounded-xl border p-4 break-words border-amber-200 bg-amber-50/50 text-amber-950">
               <div className="flex items-center gap-2 mb-2">
-                <AlertCircle size={16} className={"shrink-0 " + (message.text?.startsWith('[LIVE_QUEUE_NOT_COMPLETED]') ? "text-rose-500" : "text-amber-500")} />
-                <span className={clsx(
-                  "text-[10px] font-black tracking-widest uppercase",
-                  message.text?.startsWith('[LIVE_QUEUE_NOT_COMPLETED]') ? "text-rose-500" : "text-amber-500"
-                )}>
-                  {message.text?.startsWith('[LIVE_QUEUE_NOT_COMPLETED]') ? "PRODUCTION TASK INCOMPLETE" : "PRODUCT CONCERN"}
+                <AlertCircle size={16} className="shrink-0 text-amber-500" />
+                <span className="text-[10px] font-black tracking-widest uppercase text-amber-500">
+                  PRODUCT CONCERN
                 </span>
               </div>
-              <p className="text-sm font-medium whitespace-pre-wrap">
-                {message.text?.startsWith('[LIVE_QUEUE_NOT_COMPLETED]') 
-                  ? message.text.replace('[LIVE_QUEUE_NOT_COMPLETED] ', '') 
-                  : message.text}
-              </p>
+              <p className="text-sm font-medium whitespace-pre-wrap">{message.text}</p>
               <p className="mt-2 text-xs opacity-60">Awaiting admin response</p>
             </div>
           )}

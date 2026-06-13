@@ -2834,6 +2834,69 @@ const Orders: React.FC = () => {
                           </div>
                        </div>
 
+                       {/* Queue Assignment Selection (Admin Only) */}
+                       {isAdmin && (
+                         <div className="space-y-4">
+                            <h4 className="text-[10px] font-black tracking-[3px] text-slate-400 uppercase">Queue Assignment</h4>
+                            <div className="rounded-xl border border-slate-100 bg-white p-6">
+                               <p className="mb-4 text-[10px] font-bold text-slate-400 uppercase italic">Assign Employee(s) to this Order</p>
+                               <div className="space-y-2 max-h-[200px] overflow-y-auto custom-scrollbar pr-1">
+                                 {employees.map((emp) => {
+                                    const assigned = queueAssignments[mobileDetailOrder.order_id] || []
+                                    const isAssigned = assigned.includes(emp.id)
+                                    return (
+                                       <button
+                                         key={emp.id}
+                                         type="button"
+                                         onClick={async () => {
+                                           const currentAssigned = [...assigned]
+                                           let nextAssigned: string[]
+                                           if (currentAssigned.includes(emp.id)) {
+                                             nextAssigned = currentAssigned.filter(id => id !== emp.id)
+                                           } else {
+                                             nextAssigned = [...currentAssigned, emp.id]
+                                           }
+                                           
+                                           try {
+                                             await axiosInstance.post('/api/admin/orders/assign-queue', {
+                                               order_ids: [mobileDetailOrder.order_id],
+                                               employee_ids: nextAssigned,
+                                             })
+                                             toast.success(`Updated queue assignments for Order #${mobileDetailOrder.order_id}`)
+                                             fetchEmployeesAndQueue()
+                                           } catch (err) {
+                                             console.error('Failed to update assignments', err)
+                                             toast.error('Failed to update assignments')
+                                           }
+                                         }}
+                                         className={cn(
+                                           "w-full flex items-center gap-3 rounded-xl border p-3 transition-all text-left",
+                                           isAssigned 
+                                             ? "border-violet-300 bg-violet-50/50 text-violet-900 shadow-sm" 
+                                             : "border-slate-100 bg-slate-50/30 text-slate-700 hover:border-slate-200"
+                                         )}
+                                       >
+                                          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-violet-100 font-black text-[11px] text-violet-700 shrink-0">
+                                            {emp.name.charAt(0)}
+                                          </div>
+                                          <div className="flex-1 min-w-0">
+                                            <p className="text-[11px] font-black uppercase italic truncate">{emp.name}</p>
+                                            <p className="text-[7.5px] font-bold opacity-50 uppercase tracking-widest leading-none">{emp.role}</p>
+                                          </div>
+                                          <div className={cn(
+                                            "h-4 w-4 rounded-full border flex items-center justify-center shrink-0 transition-all",
+                                            isAssigned ? "border-violet-600 bg-violet-600 text-white" : "border-slate-200 bg-white"
+                                          )}>
+                                            {isAssigned && <Check size={10} strokeWidth={3} />}
+                                          </div>
+                                       </button>
+                                    )
+                                 })}
+                               </div>
+                            </div>
+                         </div>
+                       )}
+
                        {(mobileDetailOrder.feedback || mobileDetailOrder.complaint || (mobileDetailOrder.rating || 0) > 0) && (
                          <div className="space-y-4">
                             <h4 className="text-[10px] font-black tracking-[3px] text-slate-400 uppercase">Customer Sentiment</h4>

@@ -39,6 +39,8 @@ class NotificationController extends Controller
             'title' => 'required|string',
             'message' => 'required|string',
             'type' => 'required|string',
+            'employee_id' => 'nullable|string',
+            'customer_id' => 'nullable|string',
         ]);
 
         $user = $request->user();
@@ -46,8 +48,8 @@ class NotificationController extends Controller
 
         $notification = Notification::create([
             'id' => (string) Str::uuid(),
-            'customer_id' => $isCustomer ? $user->id : null,
-            'employee_id' => ! $isCustomer ? $user->id : null,
+            'customer_id' => $validated['customer_id'] ?? ($isCustomer ? $user->id : null),
+            'employee_id' => $validated['employee_id'] ?? (! $isCustomer ? $user->id : null),
             'title' => $validated['title'],
             'message' => $validated['message'],
             'type' => $validated['type'],

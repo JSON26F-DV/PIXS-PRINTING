@@ -147,7 +147,7 @@ class StaffLiveQueueController extends Controller
                 );
 
                 // 2. Create message in messages table with product_concern = 1
-                $convId = $employeeId.'_'.$customerId;
+                $convId = $employeeId.'_1';
 
                 // Ensure conversation exists
                 DB::table('conversations')->insertOrIgnore([
@@ -162,8 +162,8 @@ class StaffLiveQueueController extends Controller
                     'conversation_id' => $convId,
                     'sender_id' => $employeeId,
                     'sender_type' => 'employee',
-                    'receiver_id' => $customerId,
-                    'receiver_type' => 'customer',
+                    'receiver_id' => '1',
+                    'receiver_type' => 'employee',
                     'message' => $messageText,
                     'reply_to_id' => null,
                     'message_type' => 'order',

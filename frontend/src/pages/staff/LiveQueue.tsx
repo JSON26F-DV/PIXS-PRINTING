@@ -48,21 +48,6 @@ const LiveQueue: React.FC = () => {
   const [expandedOrderIds, setExpandedOrderIds] = useState<Set<string>>(new Set())
   const [mobileDetailOrder, setMobileDetailOrder] = useState<LiveQueueOrder | null>(null)
 
-  const handlePendingOrderClick = async (order: LiveQueueOrder) => {
-    try {
-      await axiosInstance.post('/api/notifications', {
-        title: `Pending Execution: Order #${order.order_id}`,
-        message: `Order #${order.order_id} is currently pending execution.`,
-        type: 'order_update',
-      })
-      toast.success(`Notification created for Order #${order.order_id}`)
-      refreshNotifications()
-    } catch (err) {
-      console.error('Failed to create execution notification', err)
-      toast.error('Failed to create notification')
-    }
-  }
-  
   const [messageModal, setMessageModal] = useState<{
     isOpen: boolean
     orderId: string
@@ -107,8 +92,16 @@ const LiveQueue: React.FC = () => {
         receiver_id: '1',
         receiver_type: 'employee',
         order_id: messageModal.orderId,
+        product_concern: true,
+      })
+      await axiosInstance.post('/api/notifications', {
+        title: `Message: Order #${messageModal.orderId}`,
+        message: messageModal.message,
+        type: 'message',
+        employee_id: '1',
       })
       toast.success('Message sent to admin successfully')
+      refreshNotifications()
       setMessageModal({
         isOpen: false,
         orderId: '',
@@ -154,11 +147,13 @@ const LiveQueue: React.FC = () => {
     order: LiveQueueOrder | null
     taskStatus: 'COMPLETED' | 'NOT_COMPLETED' | null
     customMessage: string
+    isSubmitting?: boolean
   }>({
     isOpen: false,
     order: null,
     taskStatus: null,
     customMessage: '',
+    isSubmitting: false,
   })
 
   // Load Data
@@ -303,8 +298,9 @@ const LiveQueue: React.FC = () => {
 
   // Handle task status submission
   const handleSubmitTaskStatus = async () => {
-    if (!modalState.order || !modalState.taskStatus) return
+    if (!modalState.order || !modalState.taskStatus || modalState.isSubmitting) return
 
+    setModalState((prev) => ({ ...prev, isSubmitting: true }))
     try {
       await axiosInstance.post(
           `/api/staff/orders/${modalState.order.order_id}/task-status`,
@@ -313,8 +309,19 @@ const LiveQueue: React.FC = () => {
             message: modalState.customMessage,
           },
       )
+      await axiosInstance.post('/api/notifications', {
+        title: modalState.taskStatus === 'COMPLETED'
+          ? `Task Completed: Order #${modalState.order.order_id}`
+          : `Task Not Completed: Order #${modalState.order.order_id}`,
+        message: modalState.customMessage || (modalState.taskStatus === 'COMPLETED'
+          ? 'Task has been marked as completed.'
+          : 'The production task for this order could not be completed at this time.'),
+        type: 'task_status',
+        employee_id: '1',
+      })
       toast.success('Task status logged successfully!')
-      setModalState({ isOpen: false, order: null, taskStatus: null, customMessage: '' })
+      refreshNotifications()
+      setModalState({ isOpen: false, order: null, taskStatus: null, customMessage: '', isSubmitting: false })
       setMobileDetailOrder(null)
       refetch()
     } catch (err: unknown) {
@@ -323,6 +330,7 @@ const LiveQueue: React.FC = () => {
           ? err.response?.data?.message || 'Failed to update task status.'
           : 'Failed to update task status.'
       toast.error(errorMsg)
+      setModalState((prev) => ({ ...prev, isSubmitting: false }))
     }
   }
 
@@ -534,7 +542,6 @@ const LiveQueue: React.FC = () => {
                     key={order.order_id}
                     order={order}
                     onClick={() => setMobileDetailOrder(order)}
-                    onRecreateNotification={() => handlePendingOrderClick(order)}
                   />
                 ) : (
                   <OrderCardDesktop
@@ -554,7 +561,6 @@ const LiveQueue: React.FC = () => {
                       message: '',
                       isSubmitting: false,
                     })}
-                    onRecreateNotification={() => handlePendingOrderClick(order)}
                   />
                 )
               ))}
@@ -713,8 +719,9 @@ const LiveQueue: React.FC = () => {
                 </p>
               </div>
               <button
-                onClick={() => setModalState({ isOpen: false, order: null, taskStatus: null, customMessage: '' })}
-                className="rounded-full bg-white/10 p-1.5 text-white/80 hover:bg-white/20 hover:text-white transition-colors"
+                onClick={() => setModalState({ isOpen: false, order: null, taskStatus: null, customMessage: '', isSubmitting: false })}
+                disabled={modalState.isSubmitting}
+                className="rounded-full bg-white/10 p-1.5 text-white/80 hover:bg-white/20 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
@@ -747,8 +754,9 @@ const LiveQueue: React.FC = () => {
                       placeholder="e.g. Awaiting raw materials, machine downtime..."
                       value={modalState.customMessage}
                       onChange={(e) => setModalState(prev => ({ ...prev, customMessage: e.target.value }))}
+                      disabled={modalState.isSubmitting}
                       rows={4}
-                      className="w-full rounded-lg border border-slate-200 p-4 text-xs font-semibold focus:ring-2 focus:outline-none placeholder:text-slate-300 resize-none focus:ring-rose-500/20"
+                      className="w-full rounded-lg border border-slate-200 p-4 text-xs font-semibold focus:ring-2 focus:outline-none placeholder:text-slate-300 resize-none focus:ring-rose-500/20 disabled:bg-slate-50 disabled:text-slate-400"
                     />
                     <span className="text-[9px] text-slate-400 italic block">
                       Leave blank to default to: "The production task for this order could not be completed at this time."
@@ -761,19 +769,21 @@ const LiveQueue: React.FC = () => {
             {/* Footer */}
             <div className="bg-slate-50 px-6 py-4 flex justify-end gap-3">
               <button
-                onClick={() => setModalState({ isOpen: false, order: null, taskStatus: null, customMessage: '' })}
-                className="rounded-lg border border-slate-200 bg-white px-5 py-2.5 text-xs font-black tracking-widest text-slate-600 uppercase hover:bg-slate-100 transition-colors"
+                onClick={() => setModalState({ isOpen: false, order: null, taskStatus: null, customMessage: '', isSubmitting: false })}
+                disabled={modalState.isSubmitting}
+                className="rounded-lg border border-slate-200 bg-white px-5 py-2.5 text-xs font-black tracking-widest text-slate-600 uppercase hover:bg-slate-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSubmitTaskStatus}
+                disabled={modalState.isSubmitting}
                 className={cn(
-                  "rounded-lg px-6 py-2.5 text-xs font-black tracking-widest text-white uppercase shadow-md transition-all hover:scale-105 active:scale-95",
+                  "rounded-lg px-6 py-2.5 text-xs font-black tracking-widest text-white uppercase shadow-md transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed",
                   modalState.taskStatus === 'COMPLETED' ? "bg-slate-900 hover:bg-slate-800" : "bg-rose-600 hover:bg-rose-500"
                 )}
               >
-                Confirm Submit
+                {modalState.isSubmitting ? 'Submitting...' : 'Confirm Submit'}
               </button>
             </div>
           </div>
@@ -999,15 +1009,11 @@ const CompactOrderCardMobile: React.FC<{
   order: LiveQueueOrder
   isLogged?: boolean
   onClick: () => void
-  onRecreateNotification?: () => void
-}> = ({ order, isLogged, onClick, onRecreateNotification }) => {
+}> = ({ order, isLogged, onClick }) => {
   return (
     <div
       onClick={() => {
         onClick()
-        if (!isLogged && onRecreateNotification) {
-          onRecreateNotification()
-        }
       }}
       className="cursor-pointer flex flex-col justify-between p-3.5 rounded-xl border border-slate-100 bg-white shadow-sm hover:shadow-md hover:border-slate-200 transition-all text-left"
     >
@@ -1055,8 +1061,7 @@ const OrderCardDesktop: React.FC<{
   onToggleExpand: () => void
   onStatusSelect?: (status: 'COMPLETED' | 'NOT_COMPLETED') => void
   onMessageClick?: () => void
-  onRecreateNotification?: () => void
-}> = ({ order, isLogged, isExpanded, onToggleExpand, onStatusSelect, onMessageClick, onRecreateNotification }) => {
+}> = ({ order, isLogged, isExpanded, onToggleExpand, onStatusSelect, onMessageClick }) => {
   return (
     <div
       className="overflow-hidden rounded-xl border border-slate-100 bg-white shadow-md hover:shadow-lg transition-all"
@@ -1065,9 +1070,6 @@ const OrderCardDesktop: React.FC<{
       <div 
         onClick={() => {
           onToggleExpand()
-          if (!isLogged && onRecreateNotification) {
-            onRecreateNotification()
-          }
         }}
         className="cursor-pointer border-b border-slate-50 p-6 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center hover:bg-slate-50/50 transition-colors"
       >
