@@ -43,6 +43,7 @@ import { twMerge } from 'tailwind-merge'
 import toast from 'react-hot-toast'
 import { v4 as uuidv4 } from 'uuid'
 import axiosInstance from '../../lib/axiosInstance'
+import Select from 'react-select'
 
 // Utility for class merging
 function cn(...inputs: ClassValue[]) {
@@ -269,6 +270,7 @@ const MarketingPromotions: React.FC = () => {
       discount_value: 0,
       title: '',
       code: '',
+      assigned_user_id: '',
       min_quantity: 0,
     },
   })
@@ -276,6 +278,14 @@ const MarketingPromotions: React.FC = () => {
   const watchType = useWatch({ control, name: 'discount_type' })
   const watchTarget = useWatch({ control, name: 'target_type' })
   const watchOneTime = useWatch({ control, name: 'is_one_time' })
+  const watchAssignedUserId = useWatch({ control, name: 'assigned_user_id' })
+
+  const customerOptions = useMemo(() => {
+    return customers.map((u) => ({
+      value: u.id,
+      label: `${u.name} (${u.email})`,
+    }))
+  }, [customers])
 
   useEffect(() => {
     if (watchOneTime) setValue('max_uses', 1)
@@ -354,9 +364,10 @@ const MarketingPromotions: React.FC = () => {
         type: data.discount_type === 'percentage' ? 'percentage' : 'fixed',
         value: data.discount_value,
         customer_id: data.target_type === 'specific_user' ? data.assigned_user_id : null,
+        assigned_user_id: data.target_type === 'code' ? data.code?.toUpperCase() : null,
         product_id: data.discount_type === 'product-specific' ? data.product_id : null,
         variant_id: null,
-        code: data.target_type === 'code' ? data.code?.toUpperCase() : (data.target_type === 'all_users' ? `GLOBAL${uuidv4().substring(0, 4).toUpperCase()}` : `CUST${uuidv4().substring(0, 4).toUpperCase()}`),
+        code: data.target_type === 'code' ? data.code?.toUpperCase() : null,
         min_spend: data.min_quantity || 0,
         expires_at: data.expires_at,
         already_used: data.max_uses > 1 ? false : undefined // defaults
@@ -474,6 +485,7 @@ const MarketingPromotions: React.FC = () => {
                 discount_value: 0,
                 title: '',
                 code: '',
+                assigned_user_id: '',
                 min_quantity: 0,
               })
               setIsModalOpen(true)
@@ -1408,17 +1420,17 @@ const MarketingPromotions: React.FC = () => {
                         <label className="text-xs font-semibold text-slate-600">
                           Select Customer
                         </label>
-                        <select
-                          {...register('assigned_user_id')}
-                          className="w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-900 focus:border-slate-400 focus:outline-none transition-colors animate-in fade-in duration-200"
-                        >
-                          <option value="">Select User...</option>
-                          {allUsers.map((u) => (
-                            <option key={u.id} value={u.id}>
-                              {u.name} ({u.email})
-                            </option>
-                          ))}
-                        </select>
+                        <input type="hidden" {...register('assigned_user_id')} />
+                        <Select
+                          options={customerOptions}
+                          value={customerOptions.find((o) => o.value === watchAssignedUserId) || null}
+                          onChange={(opt) => {
+                            setValue('assigned_user_id', opt?.value || '')
+                          }}
+                          placeholder="Search and select customer..."
+                          isSearchable={true}
+                          className="text-xs text-slate-900"
+                        />
                       </div>
                     )}
 
@@ -1435,12 +1447,11 @@ const MarketingPromotions: React.FC = () => {
                           />
                           <button
                             type="button"
-                            onClick={() =>
-                              setValue(
-                                'code',
-                                uuidv4().substring(0, 8).toUpperCase(),
-                              )
-                            }
+                            onClick={() => {
+                              const generatedCode = uuidv4().substring(0, 8).toUpperCase()
+                              setValue('code', generatedCode)
+                              setValue('assigned_user_id', generatedCode)
+                            }}
                             className="absolute top-1/2 right-2.5 -translate-y-1/2 text-slate-400 hover:text-slate-900"
                             title="Generate random code"
                           >

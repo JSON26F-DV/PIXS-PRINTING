@@ -27,7 +27,8 @@ class DiscountController extends Controller
     {
         $validated = $request->validate([
             'title' => 'nullable|string|max:150',
-            'customer_id' => 'nullable|string|exists:customers,id',
+            'customer_id' => 'nullable|string',
+            'assigned_user_id' => 'nullable|string',
             'product_id' => 'nullable|string|exists:products,id',
             'variant_id' => 'nullable|string|exists:product_variants,variant_id',
             'code' => 'nullable|string|max:50|unique:discounts,code',
@@ -39,12 +40,16 @@ class DiscountController extends Controller
 
         $code = ! empty($validated['code'])
             ? strtoupper($validated['code'])
-            : strtoupper(Str::random(8));
+            : null;
+
+        $customerId = ! empty($validated['assigned_user_id'])
+            ? $validated['assigned_user_id']
+            : ($validated['customer_id'] ?? null);
 
         $discount = Discount::create([
             'id' => 'dsc_'.Str::random(10),
             'title' => $validated['title'] ?? null,
-            'customer_id' => $validated['customer_id'] ?? null,
+            'customer_id' => $customerId,
             'product_id' => $validated['product_id'] ?? null,
             'variant_id' => $validated['variant_id'] ?? null,
             'code' => $code,
@@ -145,10 +150,11 @@ class DiscountController extends Controller
 
         $validated = $request->validate([
             'title' => 'nullable|string|max:150',
-            'customer_id' => 'nullable|string|exists:customers,id',
+            'customer_id' => 'nullable|string',
+            'assigned_user_id' => 'nullable|string',
             'product_id' => 'nullable|string|exists:products,id',
             'variant_id' => 'nullable|string|exists:product_variants,variant_id',
-            'code' => 'required|string|max:50|unique:discounts,code,'.$id,
+            'code' => 'nullable|string|max:50|unique:discounts,code,'.$id,
             'type' => 'required|in:fixed,percentage',
             'value' => 'required|numeric|min:0',
             'min_spend' => 'nullable|numeric|min:0',
@@ -156,12 +162,16 @@ class DiscountController extends Controller
             'already_used' => 'nullable|boolean',
         ]);
 
+        $customerId = ! empty($validated['assigned_user_id'])
+            ? $validated['assigned_user_id']
+            : ($validated['customer_id'] ?? null);
+
         $discount->update([
             'title' => $validated['title'] ?? null,
-            'customer_id' => $validated['customer_id'] ?? null,
+            'customer_id' => $customerId,
             'product_id' => $validated['product_id'] ?? null,
             'variant_id' => $validated['variant_id'] ?? null,
-            'code' => strtoupper($validated['code']),
+            'code' => ! empty($validated['code']) ? strtoupper($validated['code']) : null,
             'type' => $validated['type'],
             'value' => $validated['value'],
             'min_spend' => $validated['min_spend'] ?? 0,

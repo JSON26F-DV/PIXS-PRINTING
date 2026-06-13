@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Customer;
 use App\Http\Controllers\Controller;
 use App\Models\Customer;
 use App\Models\CustomerAddress;
-use App\Models\MarketingPromotion;
+use App\Models\Discount;
 use App\Services\AuditService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -174,16 +174,35 @@ class CustomerController extends Controller
     {
         $customer = $request->user();
 
-        $promotions = MarketingPromotion::where('status', 'active')
-            ->where(function ($query) use ($customer) {
-                $query->where('target_type', 'all_users')
-                    ->orWhere('assigned_user_id', $customer->id);
-            })
-            ->where('expires_at', '>', now())
+        $discounts = Discount::whereNotNull('code')
+            ->where('code', '!=', '')
+            ->where('customer_id', $customer->id)
             ->get();
 
+        $mapped = $discounts->map(function ($discount) {
+            $status = 'active';
+            if ($discount->already_used) {
+                $status = 'used';
+            } elseif ($discount->expires_at && $discount->expires_at->isPast()) {
+                $status = 'expired';
+            }
+
+            return [
+                'id' => $discount->id,
+                'code' => $discount->code,
+                'title' => $discount->title ?? ("Campaign " . ($discount->code ?? $discount->id)),
+                'discount_type' => $discount->type === 'percentage' ? 'percentage' : 'fixed',
+                'discount_value' => (float) $discount->value,
+                'product_id' => $discount->product_id,
+                'expires_at' => $discount->expires_at ? $discount->expires_at->toIso8601String() : null,
+                'status' => $status,
+                'target_type' => 'specific_user',
+                'assigned_user_id' => $discount->customer_id,
+            ];
+        });
+
         return response()->json([
-            'data' => $promotions,
+            'data' => $mapped,
         ]);
     }
 
@@ -194,28 +213,43 @@ class CustomerController extends Controller
     {
         $request->validate(['code' => 'required|string']);
 
-        $promotion = MarketingPromotion::where('code', $request->code)
-            ->where('status', 'active')
-            ->where('expires_at', '>', now())
+        $promotion = Discount::where('code', strtoupper($request->code))
+            ->whereColumn('customer_id', 'code')
             ->first();
 
         if (! $promotion) {
-            return response()->json(['message' => 'Invalid or expired promotion code'], 422);
+            return response()->json(['message' => 'Invalid or already used promotion code'], 422);
         }
 
-        if ($promotion->max_uses && $promotion->used_count >= $promotion->max_uses) {
-            return response()->json(['message' => 'Promotion code has reached its usage limit'], 422);
+        if ($promotion->expires_at && $promotion->expires_at->isPast()) {
+            return response()->json(['message' => 'This promotion code has expired'], 422);
         }
 
-        if ($promotion->target_type === 'specific_user' && $promotion->assigned_user_id !== $request->user()->id) {
-            return response()->json(['message' => 'This promotion is not available for your account'], 403);
-        }
+        $userId = $request->user()->id;
 
-        // Normally we'd track usage here or on order checkout
-        // For simulation, we return success
+        $promotion->update([
+            'customer_id' => $userId,
+            'already_used' => false,
+        ]);
+
+        AuditService::updated('discount', $promotion->id, [], ['redeemed_by' => $userId]);
+
+        $fresh = $promotion->fresh();
+
         return response()->json([
             'message' => 'Promotion code applied successfully',
-            'data' => $promotion,
+            'data' => [
+                'id' => $fresh->id,
+                'code' => $fresh->code,
+                'title' => $fresh->title ?? ("Campaign " . ($fresh->code ?? $fresh->id)),
+                'discount_type' => $fresh->type === 'percentage' ? 'percentage' : 'fixed',
+                'discount_value' => (float) $fresh->value,
+                'product_id' => $fresh->product_id,
+                'expires_at' => $fresh->expires_at ? $fresh->expires_at->toIso8601String() : null,
+                'status' => 'active',
+                'target_type' => 'specific_user',
+                'assigned_user_id' => $fresh->customer_id,
+            ],
         ]);
     }
 

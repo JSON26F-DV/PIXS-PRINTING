@@ -39,7 +39,7 @@ export const usePromotionStore = create<PromotionStore>((set) => ({
 
   redeemPromotion: async (code: string) => {
     const response = await axiosInstance.post('/api/customer/awards/redeem', {
-      code,
+      code: code.toUpperCase(),
     })
     return response.data.data
   },
