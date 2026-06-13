@@ -6,7 +6,7 @@ import { toast } from 'react-hot-toast'
 async function fetchCategories({ signal }: { signal?: AbortSignal }) {
   const token = localStorage.getItem(STORAGE_KEYS.TOKEN)
   const res = await fetch(
-    `${import.meta.env.VITE_API_URL}/api/categories`,
+    `${import.meta.env.VITE_API_URL || ''}/api/categories`,
     {
       signal,
       headers: {

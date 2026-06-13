@@ -83,10 +83,10 @@ Route::post('/xendit/invoice-webhook', function (Request $request) {
             // Legacy flow: Order already exists, just update status
             $order = Order::find($externalId);
             if ($order) {
-                $order->status = 'PROCESSING';
+                $order->status = 'PENDING';
                 $order->save();
 
-                AuditService::updated('order', $order->id, [], ['status' => 'PROCESSING']);
+                AuditService::updated('order', $order->id, [], ['status' => 'PENDING']);
 
                 Notification::create([
                     'id' => Str::uuid(),
@@ -97,7 +97,7 @@ Route::post('/xendit/invoice-webhook', function (Request $request) {
                     'is_read' => false,
                 ]);
 
-                logger("Order {$externalId} status updated to PROCESSING via Invoice webhook (legacy flow).");
+                logger("Order {$externalId} status updated to PENDING via Invoice webhook (legacy flow).");
             }
         }
     }

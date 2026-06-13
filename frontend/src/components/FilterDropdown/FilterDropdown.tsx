@@ -9,6 +9,8 @@ interface FilterDropdownProps {
   value: string | null
   options: { label: string; value: string | null }[] | string[]
   onChange: (val: string | null) => void
+  className?: string
+  hideChevron?: boolean
 }
 
 const FilterDropdown: React.FC<FilterDropdownProps> = ({
@@ -17,6 +19,8 @@ const FilterDropdown: React.FC<FilterDropdownProps> = ({
   value,
   options,
   onChange,
+  className,
+  hideChevron = false,
 }) => {
 
   const [isOpen, setIsOpen] = useState(false)
@@ -58,22 +62,23 @@ const FilterDropdown: React.FC<FilterDropdownProps> = ({
     value !== 'Price: Low to High'
 
   return (
-    <div ref={dropdownRef} className="relative min-w-[180px] flex-1">
+    <div ref={dropdownRef} className={clsx("relative flex-1", className || "min-w-[180px]")}>
       <button
         onClick={() => setIsOpen(!isOpen)}
         className={clsx(
-          'MarketplaceDropdownButton flex w-full items-center justify-between rounded-2xl border px-5 py-3.5 text-[10px] font-black tracking-widest uppercase transition-all',
+          'MarketplaceDropdownButton flex w-full items-center justify-between rounded-2xl border py-3.5 text-[10px] font-black tracking-widest uppercase transition-all min-w-0 overflow-hidden',
+          hideChevron ? 'px-3' : 'px-5',
           isActive
             ? 'border-pixs-mint text-pixs-mint shadow-pixs-mint/5 bg-white shadow-lg'
             : 'border-slate-100 bg-white text-slate-400 hover:border-slate-200',
         )}
       >
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2 min-w-0 w-full">
           <Icon
             size={14}
             className={clsx(isActive ? 'text-pixs-mint' : 'text-slate-300')}
           />
-          <span className="truncate">
+          <span className="truncate block w-full text-left">
             {value === null ||
             value === 'All' ||
             (typeof value === 'string' && value.includes('All'))
@@ -81,13 +86,15 @@ const FilterDropdown: React.FC<FilterDropdownProps> = ({
               : getLabel(value)}
           </span>
         </div>
-        <ChevronDown
-          size={14}
-          className={clsx(
-            'transition-transform duration-300',
-            isOpen && 'rotate-180',
-          )}
-        />
+        {!hideChevron && (
+          <ChevronDown
+            size={14}
+            className={clsx(
+              'transition-transform duration-300 flex-shrink-0',
+              isOpen && 'rotate-180',
+            )}
+          />
+        )}
       </button>
 
       <AnimatePresence>
@@ -109,7 +116,8 @@ const FilterDropdown: React.FC<FilterDropdownProps> = ({
                     setIsOpen(false)
                   }}
                   className={clsx(
-                    'MarketplaceDropdownItem w-full rounded-xl px-4 py-3 text-left text-[10px] font-black tracking-widest uppercase transition-colors',
+                    'MarketplaceDropdownItem w-full rounded-xl py-3 text-left text-[10px] font-black tracking-widest uppercase transition-colors',
+                    hideChevron ? 'px-3' : 'px-4',
                     value === optVal
                       ? 'bg-pixs-mint text-slate-900'
                       : 'text-slate-500 hover:bg-slate-50',

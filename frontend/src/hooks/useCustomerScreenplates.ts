@@ -16,7 +16,7 @@ export function useCustomerScreenplates() {
     try {
       const token = localStorage.getItem(STORAGE_KEYS.TOKEN)
       const res = await fetch(
-        `${import.meta.env.VITE_API_URL}/api/customer/screenplates`,
+        `${import.meta.env.VITE_API_URL || ''}/api/customer/screenplates`,
         {
           signal,
           headers: {

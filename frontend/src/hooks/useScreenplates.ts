@@ -6,7 +6,7 @@ import { toast } from 'react-hot-toast'
 async function fetchScreenplates({ signal }: { signal?: AbortSignal }) {
   const token = localStorage.getItem(STORAGE_KEYS.TOKEN)
   const res = await fetch(
-    `${import.meta.env.VITE_API_URL}/api/screenplates`,
+    `${import.meta.env.VITE_API_URL || ''}/api/screenplates`,
     {
       signal,
       headers: {

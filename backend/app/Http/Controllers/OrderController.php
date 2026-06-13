@@ -556,7 +556,7 @@ class OrderController extends Controller
                     'discount_id' => $discountId,
                     'total_discount_amount' => $totalDiscountAmount,
                     'total_amount' => $finalAmount,
-                    'status' => 'PROCESSING',
+                    'status' => 'PENDING',
                     'rating' => 0,
                     'feedback' => null,
                     'admin_comment' => null,
@@ -658,7 +658,7 @@ class OrderController extends Controller
 
                 AuditService::created('order', $orderId, [
                     'total_amount' => $finalAmount,
-                    'status' => 'PROCESSING',
+                    'status' => 'PENDING',
                     'item_count' => $cartItems->count(),
                 ]);
 

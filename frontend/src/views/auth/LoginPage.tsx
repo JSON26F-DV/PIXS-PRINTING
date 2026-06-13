@@ -39,7 +39,7 @@ const LoginPage: React.FC = () => {
   }
 
   const handleOAuth = (provider: 'google' | 'facebook') => {
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+    const apiUrl = import.meta.env.VITE_API_URL || ''
     window.location.href = `${apiUrl}/api/auth/${provider}`
   }
 

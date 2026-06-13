@@ -5,7 +5,7 @@ import { toast } from 'react-hot-toast'
 async function fetchSoldCounts({ signal }: { signal?: AbortSignal }) {
   const token = localStorage.getItem(STORAGE_KEYS.TOKEN)
   const res = await fetch(
-    `${import.meta.env.VITE_API_URL}/api/products/sold-counts`,
+    `${import.meta.env.VITE_API_URL || ''}/api/products/sold-counts`,
     {
       signal,
       headers: {

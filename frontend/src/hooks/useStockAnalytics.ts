@@ -42,7 +42,7 @@ interface StockAnalyticsData {
 
 async function fetchStockAnalytics({ signal }: { signal?: AbortSignal }): Promise<StockAnalyticsData> {
   const token = localStorage.getItem(STORAGE_KEYS.TOKEN)
-  const res = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/stock-analytics`, {
+  const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/admin/stock-analytics`, {
     signal,
     headers: {
       'Content-Type': 'application/json',
@@ -95,7 +95,7 @@ export function useStockAnalytics() {
   const addExpenditure = async (payload: Partial<IExpenditure>) => {
     try {
       const token = localStorage.getItem(STORAGE_KEYS.TOKEN)
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/expenditures`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/admin/expenditures`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -115,7 +115,7 @@ export function useStockAnalytics() {
   const updateExpenditure = async (id: number, payload: Partial<IExpenditure>) => {
     try {
       const token = localStorage.getItem(STORAGE_KEYS.TOKEN)
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/expenditures/${id}`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/admin/expenditures/${id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -135,7 +135,7 @@ export function useStockAnalytics() {
   const deleteExpenditure = async (id: number) => {
     try {
       const token = localStorage.getItem(STORAGE_KEYS.TOKEN)
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/expenditures/${id}`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/admin/expenditures/${id}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -154,7 +154,7 @@ export function useStockAnalytics() {
   const undoInventoryLog = async (id: string) => {
     try {
       const token = localStorage.getItem(STORAGE_KEYS.TOKEN)
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/inventory-logs/${id}/undo`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/admin/inventory-logs/${id}/undo`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

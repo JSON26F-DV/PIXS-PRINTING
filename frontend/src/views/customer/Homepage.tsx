@@ -429,42 +429,45 @@ const Homepage: React.FC = () => {
               </div>
 
               {/* Mobile Inline Filters */}
-              <div className="xl:hidden">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <FilterDropdown
-                      label="All"
-                      icon={Package}
-                      options={['All', ...categories.map((c) => c.label)]}
-                      value={
-                        categories.find((c) => c.id === filters.category)
-                          ?.label || 'All'
-                      }
-                      onChange={handleCategoryChange}
+              <div className="xl:hidden w-full">
+                <div className="flex items-center gap-2 w-full">
+                  <FilterDropdown
+                    label="All"
+                    icon={getCategoryIcon(
+                      categories.find((c) => c.id === filters.category)
+                        ?.label || 'All'
+                    )}
+                    options={['All', ...categories.map((c) => c.label)]}
+                    value={
+                      categories.find((c) => c.id === filters.category)
+                        ?.label || 'All'
+                    }
+                    onChange={handleCategoryChange}
+                    className="min-w-0 flex-[2]"
+                    hideChevron
+                  />
+                  <button
+                    onClick={() => {
+                      setFilters((prev) => ({
+                        ...prev,
+                        favoritesOnly: !prev.favoritesOnly,
+                      }))
+                      setCurrentPage(1)
+                    }}
+                    className={`flex flex-1 items-center justify-center gap-2 rounded-2xl border px-3 py-3.5 text-[10px] font-black tracking-widest uppercase transition-all ${
+                      filters.favoritesOnly
+                        ? 'border-rose-500 bg-rose-50 text-rose-500 shadow-xl shadow-rose-200/50'
+                        : 'border-slate-100 bg-white text-slate-400 hover:border-slate-200'
+                    }`}
+                  >
+                    <Heart
+                      size={14}
+                      className={filters.favoritesOnly ? 'fill-rose-500' : ''}
                     />
-                    <button
-                      onClick={() => {
-                        setFilters((prev) => ({
-                          ...prev,
-                          favoritesOnly: !prev.favoritesOnly,
-                        }))
-                        setCurrentPage(1)
-                      }}
-                      className={`flex items-center gap-2 rounded-2xl border px-4 py-3.5 text-[10px] font-black tracking-widest uppercase transition-all ${
-                        filters.favoritesOnly
-                          ? 'border-rose-500 bg-rose-50 text-rose-500 shadow-xl shadow-rose-200/50'
-                          : 'border-slate-100 bg-white text-slate-400 hover:border-slate-200'
-                      }`}
-                    >
-                      <Heart
-                        size={14}
-                        className={filters.favoritesOnly ? 'fill-rose-500' : ''}
-                      />
-                    </button>
-                  </div>
+                  </button>
                   <button
                     onClick={() => setShowFilters(!showFilters)}
-                    className="flex shrink-0 items-center gap-2 rounded-2xl bg-slate-900 px-5 py-3.5 text-[10px] font-black tracking-widest text-white uppercase shadow-xl shadow-slate-200 transition-all active:scale-95"
+                    className="flex flex-[1.5] items-center justify-center gap-2 rounded-2xl bg-slate-900 px-3 py-3.5 text-[10px] font-black tracking-widest text-white uppercase shadow-xl shadow-slate-200 transition-all active:scale-95"
                   >
                     <Activity
                       size={14}
@@ -494,7 +497,10 @@ const Homepage: React.FC = () => {
                       <div className="hidden xl:block">
                         <FilterDropdown
                           label="Divisions"
-                          icon={Package}
+                          icon={getCategoryIcon(
+                            categories.find((c) => c.id === filters.category)
+                              ?.label || 'All'
+                          )}
                           options={['All', ...categories.map((c) => c.label)]}
                           value={
                             categories.find((c) => c.id === filters.category)

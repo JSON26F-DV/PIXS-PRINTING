@@ -44,10 +44,10 @@ class eWalletWebhookListener
         if ($status === 'SUCCEEDED' && $referenceId) {
             $order = Order::find($referenceId);
             if ($order) {
-                $order->status = 'PROCESSING';
+                $order->status = 'PENDING';
                 $order->save();
 
-                AuditService::updated('order', $order->id, [], ['status' => 'PROCESSING']);
+                AuditService::updated('order', $order->id, [], ['status' => 'PENDING']);
 
                 // Create a notification for the customer
                 Notification::create([
@@ -59,7 +59,7 @@ class eWalletWebhookListener
                     'is_read' => false,
                 ]);
 
-                logger("Order {$referenceId} status successfully updated to PROCESSING via eWallet webhook.");
+                logger("Order {$referenceId} status successfully updated to PENDING via eWallet webhook.");
             } else {
                 logger("Order {$referenceId} not found for eWallet payment update.");
             }

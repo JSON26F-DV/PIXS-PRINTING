@@ -31,7 +31,7 @@ async function fetchDiscoverySearch({
 
   const token = localStorage.getItem('pixs_token')
   const res = await fetch(
-    `${import.meta.env.VITE_API_URL}/api/products/search?${params}`,
+    `${import.meta.env.VITE_API_URL || ''}/api/products/search?${params}`,
     {
       signal,
       headers: {

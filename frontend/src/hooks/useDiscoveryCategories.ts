@@ -4,7 +4,7 @@ import type { ICategory } from '../types/product.types'
 async function fetchDiscoveryCategories({ signal }: { signal?: AbortSignal }) {
   const token = localStorage.getItem('pixs_token')
   const res = await fetch(
-    `${import.meta.env.VITE_API_URL}/api/categories`,
+    `${import.meta.env.VITE_API_URL || ''}/api/categories`,
     {
       signal,
       headers: {
