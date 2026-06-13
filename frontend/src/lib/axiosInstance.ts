@@ -1,6 +1,8 @@
 import axios, { type AxiosError } from 'axios'
 import axiosRetry from 'axios-retry'
 import toast from 'react-hot-toast'
+import { useNavigate } from 'react-router-dom'
+
 import {
   AUTH_MESSAGES,
   isTechnicalMessage,
@@ -83,11 +85,81 @@ axiosInstance.interceptors.request.use((config) => {
   return config
 })
 
+// Store navigate function globally for use in interceptor
+let globalNavigate: ReturnType<typeof useNavigate> | null = null
+
+export const setGlobalNavigate = (navigate: ReturnType<typeof useNavigate>) => {
+  globalNavigate = navigate
+}
+
 axiosInstance.interceptors.response.use(
   (response) => response,
-  (error: AxiosError<{ message?: string }>) => {
+  (error: AxiosError<{ message?: string; banned?: boolean }>) => {
+    const status = error.response?.status
+
+    // ── 401 Unauthorized → Session expired ──
+    if (status === 401) {
+      const isAuthRequest = error.config?.url?.includes('/api/auth/login') || error.config?.url?.includes('/api/auth/register')
+      const isPublicPage = ['/login', '/register', '/'].includes(window.location.pathname)
+
+      if (isAuthRequest || isPublicPage) {
+        return Promise.reject(error)
+      }
+
+      const token = localStorage.getItem('pixs_token')
+      const userData = localStorage.getItem('pixs_user')
+      
+      // Clear session storage
+      localStorage.removeItem('pixs_token')
+      localStorage.removeItem('pixs_user')
+      delete axiosInstance.defaults.headers.common['Authorization']
+      
+      // Show toast with duration (auto-dismiss after 3 seconds)
+      toast.error('Session expired. Please login again.', {
+        duration: 3000,
+        id: 'session-expired', // Use ID to prevent duplicate toasts
+      })
+      
+      // Redirect based on login status
+      if (token && userData) {
+        // Was logged in → redirect to homepage/dashboard
+        const user = JSON.parse(userData)
+        const role = user?.role || 'customer'
+        const homePath = getHomePathForRole(role)
+        if (globalNavigate) {
+          globalNavigate(homePath, { replace: true })
+        } else {
+          window.location.href = homePath
+        }
+      } else {
+        // Was not logged in → refresh current page
+        window.location.reload()
+      }
+      
+      return Promise.reject(error)
+    }
+
+    // ── 403 Forbidden ──
+    if (status === 403) {
+      toast.error('Access denied.', {
+        duration: 3000,
+        id: 'access-denied',
+      })
+      
+      // If banned, redirect to delete-account page
+      if (error.response?.data?.banned) {
+        if (globalNavigate) {
+          globalNavigate('/delete-account', { replace: true })
+        } else {
+          window.location.href = '/delete-account'
+        }
+      }
+      
+      return Promise.reject(error)
+    }
+
     // ── 429 Too Many Requests → enter cooldown ──
-    if (error.response?.status === 429) {
+    if (status === 429) {
       enterRateLimit()
     }
 
@@ -114,5 +186,17 @@ axiosInstance.interceptors.response.use(
     return Promise.reject(error)
   },
 )
+
+// Helper function to get home path based on role
+function getHomePathForRole(role: string): string {
+  const paths: Record<string, string> = {
+    admin: '/admin/dashboard',
+    staff: '/staff/overview',
+    technician: '/staff/overview',
+    inventory: '/inventory/overview',
+    customer: '/homepage',
+  }
+  return paths[role] || '/'
+}
 
 export default axiosInstance

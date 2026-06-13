@@ -31,10 +31,10 @@ const LoginPage: React.FC = () => {
     try {
       toast.loading('Signing in...', { id: 'login' })
       await login(email, password)
-      toast.success('Welcome back!', { id: 'login' })
+      toast.success('Welcome back!', { id: 'login', duration: 1000 })
     } catch {
       setSubmitError(authError || 'Login failed. Please check your credentials.')
-      toast.error('Login failed.', { id: 'login' })
+      toast.error('Login failed.', { id: 'login', duration: 1000 })
     }
   }
 

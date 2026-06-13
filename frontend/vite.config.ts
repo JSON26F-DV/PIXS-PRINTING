@@ -25,10 +25,6 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       proxy: {
-        '/login':    proxyTarget,
-        '/logout':   proxyTarget,
-        '/register': proxyTarget,
-        '/user':     proxyTarget,
         '/api':      proxyTarget,
         '/sanctum':  proxyTarget,
       },

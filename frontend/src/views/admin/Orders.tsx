@@ -641,6 +641,17 @@ const Orders: React.FC = () => {
     else setEmployeeQueuePreview({ pending_orders: [], production_orders: [] })
   }, [selectedEmployeeId, fetchEmployeeQueue])
 
+  useEffect(() => {
+    if (statusResultModal.isOpen && statusResultModal.isSuccess) {
+      const timer = setTimeout(() => {
+        setStatusResultModal(prev => ({ ...prev, isOpen: false }))
+        setMobileDetailOrder(null)
+      }, 1500)
+      return () => clearTimeout(timer)
+    }
+  }, [statusResultModal.isOpen, statusResultModal.isSuccess])
+
+
 
 
   return (
@@ -1761,100 +1772,6 @@ const Orders: React.FC = () => {
             </div>
           </div>
 
-          {/* 📊 PIE CHART AREA */}
-          <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
-            <div className="rounded-2xl border border-slate-100 bg-white p-8 shadow-xl">
-              <h4 className="mb-8 text-sm font-black text-slate-900 uppercase italic">
-                Order Status Distribution
-              </h4>
-              <div className="h-[260px] w-full">
-                <ResponsiveContainer width="100%" height={260} minWidth={0}>
-                  <PieChart>
-                    <Pie
-                      data={chartData.statusPie}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={60}
-                      outerRadius={80}
-                      paddingAngle={5}
-                      dataKey="value"
-                    >
-                      {chartData.statusPie.map((entry, index) => (
-                        <Cell
-                          key={`cell-${index}`}
-                          fill={entry.color}
-                          stroke="none"
-                        />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      contentStyle={{
-                        borderRadius: '16px',
-                        border: 'none',
-                        fontWeight: 'bold',
-                        boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)',
-                      }}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="mt-4 flex flex-wrap justify-center gap-4">
-                {chartData.statusPie.map((item) => (
-                  <div key={item.name} className="flex items-center gap-2">
-                    <div
-                      className="h-2 w-2 rounded-full"
-                      style={{ backgroundColor: item.color }}
-                    />
-                    <span className="text-[9px] font-black tracking-widest text-slate-400 uppercase">
-                      {item.name}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="relative overflow-hidden rounded-2xl border border-slate-800 bg-slate-900 p-8 shadow-2xl">
-              <div className="absolute top-0 right-0 p-8 opacity-10">
-                <TrendingUp className="text-[#75EEA5]" size={100} />
-              </div>
-              <div className="relative z-10">
-                <h4 className="mb-8 text-sm font-black text-white uppercase italic">
-                  Top Customers
-                </h4>
-                <div className="space-y-6">
-                  {customers.slice(0, 3).map((c, idx) => (
-                    <div
-                      key={c.id}
-                      className="flex items-center justify-between"
-                    >
-                      <div className="flex items-center gap-4">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/5 font-black text-[#75EEA5] italic">
-                          #{idx + 1}
-                        </div>
-                        <div>
-                          <p className="text-sm font-black tracking-tight text-white uppercase italic">
-                            {c.name}
-                          </p>
-                          <p className="text-[9px] font-bold tracking-widest text-white/40 uppercase">
-                            {c.orderCount} ACTIVE LOADS
-                          </p>
-                        </div>
-                      </div>
-                      <p className="text-base font-black text-[#75EEA5] italic">
-                        ₱{c.totalSpent.toLocaleString()}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-                <div className="mt-10 border-t border-white/10 pt-8">
-                  <p className="text-center text-[9px] font-bold tracking-[4px] text-white/30 uppercase">
-                    Top Customer Performance Summary
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
           {/* 👷 EMPLOYEE QUEUE SECTION — shown when an employee is selected */}
           {selectedEmployeeId && (() => {
             const emp = employees.find(e => e.id === selectedEmployeeId)
@@ -2075,6 +1992,100 @@ const Orders: React.FC = () => {
               </div>
             )
           })()}
+
+          {/* 📊 PIE CHART AREA */}
+          <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
+            <div className="rounded-2xl border border-slate-100 bg-white p-8 shadow-xl">
+              <h4 className="mb-8 text-sm font-black text-slate-900 uppercase italic">
+                Order Status Distribution
+              </h4>
+              <div className="h-[260px] w-full">
+                <ResponsiveContainer width="100%" height={260} minWidth={0}>
+                  <PieChart>
+                    <Pie
+                      data={chartData.statusPie}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={80}
+                      paddingAngle={5}
+                      dataKey="value"
+                    >
+                      {chartData.statusPie.map((entry, index) => (
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={entry.color}
+                          stroke="none"
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{
+                        borderRadius: '16px',
+                        border: 'none',
+                        fontWeight: 'bold',
+                        boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)',
+                      }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="mt-4 flex flex-wrap justify-center gap-4">
+                {chartData.statusPie.map((item) => (
+                  <div key={item.name} className="flex items-center gap-2">
+                    <div
+                      className="h-2 w-2 rounded-full"
+                      style={{ backgroundColor: item.color }}
+                    />
+                    <span className="text-[9px] font-black tracking-widest text-slate-400 uppercase">
+                      {item.name}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="relative overflow-hidden rounded-2xl border border-slate-880 bg-slate-900 p-8 shadow-2xl">
+              <div className="absolute top-0 right-0 p-8 opacity-10">
+                <TrendingUp className="text-[#75EEA5]" size={100} />
+              </div>
+              <div className="relative z-10">
+                <h4 className="mb-8 text-sm font-black text-white uppercase italic">
+                  Top Customers
+                </h4>
+                <div className="space-y-6">
+                  {customers.slice(0, 3).map((c, idx) => (
+                    <div
+                      key={c.id}
+                      className="flex items-center justify-between"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/5 font-black text-[#75EEA5] italic">
+                          #{idx + 1}
+                        </div>
+                        <div>
+                          <p className="text-sm font-black tracking-tight text-white uppercase italic">
+                            {c.name}
+                          </p>
+                          <p className="text-[9px] font-bold tracking-widest text-white/40 uppercase">
+                            {c.orderCount} ACTIVE LOADS
+                          </p>
+                        </div>
+                      </div>
+                      <p className="text-base font-black text-[#75EEA5] italic">
+                        ₱{c.totalSpent.toLocaleString()}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-10 border-t border-white/10 pt-8">
+                  <p className="text-center text-[9px] font-bold tracking-[4px] text-white/30 uppercase">
+                    Top Customer Performance Summary
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
         </main>
       </div>
       {/* ➕ Add to Queue Modal */}
@@ -2672,7 +2683,7 @@ const Orders: React.FC = () => {
       {/* Mobile Detail Modal */}
       <AnimatePresence>
         {mobileDetailOrder && (
-          <div className="fixed inset-0 z-[110] flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div className="fixed inset-0 z-[145] flex items-end sm:items-center justify-center p-0 sm:p-4">
             <m.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -2866,6 +2877,103 @@ const Orders: React.FC = () => {
                     Dismiss
                   </button>
                </div>
+            </m.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Mobile Employee Drawer (Admin Only) */}
+      <AnimatePresence>
+        {isMobileEmployeeDrawerOpen && isAdmin && (
+          <div className="fixed inset-0 z-[140] flex justify-end">
+            <m.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsMobileEmployeeDrawerOpen(false)}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+            />
+            <m.div 
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="relative z-10 flex h-full w-full max-w-sm flex-col bg-white shadow-2xl"
+            >
+              <div className="border-b border-slate-100 bg-slate-50/50 p-6 flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-black text-slate-900 uppercase italic">
+                    Employee List
+                  </h3>
+                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Select to view their live queue</p>
+                </div>
+                <button
+                  onClick={() => setIsMobileEmployeeDrawerOpen(false)}
+                  className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 transition-colors"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="custom-scrollbar flex-1 space-y-2 overflow-y-auto p-4">
+                {employees.length === 0 ? (
+                  <div className="flex flex-col items-center gap-2 py-10 text-center opacity-40">
+                    <Users size={28} className="text-slate-400" />
+                    <p className="text-[10px] font-black text-slate-400 uppercase">No employees found</p>
+                  </div>
+                ) : (
+                  employees.map(emp => {
+                    const isSelectedEmp = selectedEmployeeId === emp.id
+                    const empQueueCount = Object.entries(queueAssignments).filter(([orderId, ids]) => {
+                      if (!ids.includes(emp.id)) return false
+                      const order = orders.find(o => o.order_id === orderId)
+                      return order?.status?.toUpperCase() === 'PENDING'
+                    }).length
+                    return (
+                      <div
+                        key={emp.id}
+                        onClick={() => {
+                          setSelectedEmployeeId(isSelectedEmp ? null : emp.id)
+                          setIsMobileEmployeeDrawerOpen(false)
+                        }}
+                        className={cn(
+                          'cursor-pointer rounded-xl border p-4 transition-all',
+                          isSelectedEmp
+                            ? 'border-violet-300 bg-violet-600 shadow-md'
+                            : 'border-slate-100 bg-white hover:border-violet-200 hover:bg-violet-50/30'
+                        )}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={cn(
+                            'flex h-9 w-9 items-center justify-center rounded-xl font-black text-xs shrink-0',
+                            isSelectedEmp ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'
+                          )}>
+                            {emp.name.charAt(0)}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className={cn(
+                              'truncate text-xs font-black uppercase italic',
+                              isSelectedEmp ? 'text-white' : 'text-slate-900'
+                            )}>{emp.name}</p>
+                            <p className={cn(
+                              'text-[8px] font-bold uppercase tracking-wider',
+                              isSelectedEmp ? 'text-white/60' : 'text-slate-400'
+                            )}>{emp.role}</p>
+                          </div>
+                          {empQueueCount > 0 && (
+                            <span className={cn(
+                              'flex h-5 w-5 items-center justify-center rounded-full text-[8px] font-black',
+                              isSelectedEmp ? 'bg-white/20 text-white' : 'bg-violet-100 text-violet-700'
+                            )}>
+                              {empQueueCount}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })
+                )}
+              </div>
             </m.div>
           </div>
         )}
@@ -3099,103 +3207,6 @@ const Orders: React.FC = () => {
                 >
                   <ChevronRight size={16} />
                 </button>
-              </div>
-            </m.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* Mobile Employee Drawer (Admin Only) */}
-      <AnimatePresence>
-        {isMobileEmployeeDrawerOpen && isAdmin && (
-          <div className="fixed inset-0 z-[140] flex justify-end">
-            <m.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsMobileEmployeeDrawerOpen(false)}
-              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
-            />
-            <m.div 
-              initial={{ x: '100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '100%' }}
-              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="relative z-10 flex h-full w-full max-w-sm flex-col bg-white shadow-2xl"
-            >
-              <div className="border-b border-slate-100 bg-slate-50/50 p-6 flex items-center justify-between">
-                <div>
-                  <h3 className="text-sm font-black text-slate-900 uppercase italic">
-                    Employee List
-                  </h3>
-                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Select to view their live queue</p>
-                </div>
-                <button
-                  onClick={() => setIsMobileEmployeeDrawerOpen(false)}
-                  className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 transition-colors"
-                >
-                  <X size={18} />
-                </button>
-              </div>
-
-              <div className="custom-scrollbar flex-1 space-y-2 overflow-y-auto p-4">
-                {employees.length === 0 ? (
-                  <div className="flex flex-col items-center gap-2 py-10 text-center opacity-40">
-                    <Users size={28} className="text-slate-400" />
-                    <p className="text-[10px] font-black text-slate-400 uppercase">No employees found</p>
-                  </div>
-                ) : (
-                  employees.map(emp => {
-                    const isSelectedEmp = selectedEmployeeId === emp.id
-                    const empQueueCount = Object.entries(queueAssignments).filter(([orderId, ids]) => {
-                      if (!ids.includes(emp.id)) return false
-                      const order = orders.find(o => o.order_id === orderId)
-                      return order?.status?.toUpperCase() === 'PENDING'
-                    }).length
-                    return (
-                      <div
-                        key={emp.id}
-                        onClick={() => {
-                          setSelectedEmployeeId(isSelectedEmp ? null : emp.id)
-                          setIsMobileEmployeeDrawerOpen(false)
-                        }}
-                        className={cn(
-                          'cursor-pointer rounded-xl border p-4 transition-all',
-                          isSelectedEmp
-                            ? 'border-violet-300 bg-violet-600 shadow-md'
-                            : 'border-slate-100 bg-white hover:border-violet-200 hover:bg-violet-50/30'
-                        )}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className={cn(
-                            'flex h-9 w-9 items-center justify-center rounded-xl font-black text-xs shrink-0',
-                            isSelectedEmp ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'
-                          )}>
-                            {emp.name.charAt(0)}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className={cn(
-                              'truncate text-xs font-black uppercase italic',
-                              isSelectedEmp ? 'text-white' : 'text-slate-900'
-                            )}>{emp.name}</p>
-                            <p className={cn(
-                              'text-[8px] font-bold uppercase tracking-wider',
-                              isSelectedEmp ? 'text-white/60' : 'text-slate-400'
-                            )}>{emp.role}</p>
-                          </div>
-                          {empQueueCount > 0 && (
-                            <span className={cn(
-                              'flex h-5 w-5 items-center justify-center rounded-full text-[8px] font-black',
-                              isSelectedEmp ? 'bg-white/20 text-white' : 'bg-violet-100 text-violet-700'
-                            )}>
-                              {empQueueCount}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    )
-                  })
-                )}
               </div>
             </m.div>
           </div>

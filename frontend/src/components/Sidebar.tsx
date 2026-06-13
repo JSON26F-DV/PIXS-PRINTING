@@ -31,6 +31,7 @@ import { twMerge } from 'tailwind-merge'
 import { useNavigate, useLocation } from 'react-router-dom'
 import AdminLogoutModal from './admin/AdminLogoutModal'
 import toast from 'react-hot-toast'
+import { getHomePathForRole } from '../utils/authRouting'
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -122,8 +123,9 @@ const Sidebar: React.FC<SidebarProps> = ({
     logout()
     setIsLoggingOut(false)
     setShowLogoutModal(false)
-    toast.success('Session terminated')
-    navigate('/login')
+    toast.success('Session terminated', {
+      duration: 1000,
+    })
   }
 
   const navItems: Record<
@@ -203,7 +205,10 @@ const Sidebar: React.FC<SidebarProps> = ({
         </button>
 
         <div className={cn('flex-1 overflow-y-auto p-6 custom-scrollbar', isCollapsed && 'px-4')}>
-          <div className="mb-10 flex items-center gap-3 overflow-hidden">
+          <div
+            onClick={() => navigate(getHomePathForRole(user.role))}
+            className="mb-10 flex items-center gap-3 overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
+          >
             <div className="bg-pixs-mint flex h-9 w-9 min-w-[36px] flex-shrink-0 items-center justify-center rounded-[12px] text-lg font-black text-slate-900 shadow-sm">
               P
             </div>
@@ -305,18 +310,6 @@ const Sidebar: React.FC<SidebarProps> = ({
           </nav>
         </div>
 
-        <div className="border-t border-slate-100 p-4">
-          <button
-            onClick={() => setShowLogoutModal(true)}
-            className={cn(
-              'flex w-full items-center gap-3 rounded-xl text-sm font-medium text-slate-500 transition-colors hover:bg-rose-50 hover:text-rose-600',
-              isCollapsed ? 'h-12 justify-center px-0' : 'px-4 py-3',
-            )}
-          >
-            <LogOut size={20} />
-            {!isCollapsed && <span>Logout</span>}
-          </button>
-        </div>
       </aside>
 
       <AdminLogoutModal

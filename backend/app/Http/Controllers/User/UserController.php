@@ -52,6 +52,8 @@ class UserController extends Controller
                 'profile_picture' => $user->profile_picture,
                 'role' => $user->role,
                 'status' => $user->status,
+                'age' => $user->age,
+                'gender' => $user->gender,
                 'daily_rate' => (float) $user->daily_rate,
                 'ot_rate' => (float) $user->ot_rate,
                 'contacts' => $user->contacts,

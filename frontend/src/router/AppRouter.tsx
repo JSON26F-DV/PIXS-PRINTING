@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import Storefront from '../views/customer/Homepage'
 import LandingPage from '../views/customer/LandingPage'
@@ -103,6 +103,50 @@ const ProtectedRoute: React.FC<{
   }
 
   return <>{children}</>
+}
+
+const NotFoundPage: React.FC = () => {
+  const { user } = useAuth()
+  const location = window.location.pathname
+
+  // If logged in, redirect to their dashboard
+  if (user.isLoggedIn) {
+    const homePath = getHomePathForRole(user.role)
+    useEffect(() => {
+      window.location.href = homePath
+    }, [homePath])
+    return (
+      <div className="flex h-screen w-screen items-center justify-center bg-white">
+        <div className="text-center">
+          <h1 className="text-4xl font-bold text-slate-900">404</h1>
+          <p className="text-slate-500">Redirecting to your dashboard...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // If not logged in, show error and allow refresh
+  return (
+    <div className="flex h-screen w-screen flex-col items-center justify-center bg-white">
+      <h1 className="text-6xl font-bold text-slate-900">404</h1>
+      <p className="mt-4 text-lg text-slate-500">Page not found</p>
+      <p className="mt-2 text-sm text-slate-400">Current path: {location}</p>
+      <div className="mt-6 flex gap-4">
+        <button
+          onClick={() => window.location.href = '/'}
+          className="rounded-md bg-slate-900 px-4 py-2 text-white hover:bg-slate-800"
+        >
+          Go to Homepage
+        </button>
+        <button
+          onClick={() => window.location.reload()}
+          className="rounded-md border border-slate-300 px-4 py-2 text-slate-700 hover:bg-slate-50"
+        >
+          Refresh Page
+        </button>
+      </div>
+    </div>
+  )
 }
 
 const AppRouter: React.FC = () => {
@@ -284,7 +328,7 @@ const AppRouter: React.FC = () => {
       </Route>
 
       {/* Fallback */}
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   )
 }

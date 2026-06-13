@@ -21,11 +21,6 @@ async function fetchScreenplates({ signal }: { signal?: AbortSignal }) {
     throw new Error('Rate limited')
   }
 
-  if (res.status === 401) {
-    localStorage.removeItem(STORAGE_KEYS.TOKEN)
-    window.location.href = '/login'
-    throw new Error('Unauthorized')
-  }
 
   if (res.status === 403) {
     throw new Error('Access Denied')

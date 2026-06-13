@@ -9,7 +9,7 @@ import React, {
 import type { ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
-import axiosInstance from '../lib/axiosInstance'
+import axiosInstance, { setGlobalNavigate } from '../lib/axiosInstance'
 import {
   AUTH_MESSAGES,
   getAuthErrorMessage,
@@ -175,6 +175,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({})
   const navigate = useNavigate()
 
+  // Initialize global navigate for axios interceptor
+  useEffect(() => {
+    setGlobalNavigate(navigate)
+  }, [navigate])
+
   const clearAuthErrors = useCallback(() => {
     setError(null)
     setFieldErrors({})
@@ -299,6 +304,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       } else {
         setError(AUTH_MESSAGES.unexpected)
       }
+      throw err
     } finally {
       setIsAuthLoading(false)
     }

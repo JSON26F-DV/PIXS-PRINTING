@@ -41,11 +41,6 @@ async function fetchDiscoverySearch({
     },
   )
 
-  if (res.status === 401) {
-    localStorage.removeItem('pixs_token')
-    window.location.href = '/login'
-    throw new Error('Unauthorized')
-  }
 
   if (res.status === 429) {
     throw new Error('Too many searches. Please slow down.')

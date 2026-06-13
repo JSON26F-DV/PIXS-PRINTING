@@ -293,7 +293,7 @@ export default function OrderConfirmMessage({ messageId, orderId, isCustomer, is
       )}
 
       {/* Confirm Button */}
-      {!isProductConcern && (
+      {!isProductConcern && isCustomer && user?.id === order.user_id && (
         <div className="p-6 flex justify-end">
           <button
             onClick={handleConfirm}

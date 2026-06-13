@@ -593,7 +593,15 @@ const Topbar: React.FC<TopbarProps> = ({
           <div className="mx-1 h-6 w-px bg-slate-200" />
 
           <button
-            onClick={() => navigate('/settings')}
+            onClick={() => {
+              const base =
+                user.role === 'staff' || user.role === 'technician'
+                  ? '/staff'
+                  : user.role === 'inventory'
+                    ? '/inventory'
+                    : '/admin'
+              navigate(`${base}/setting/account`)
+            }}
             className="group flex items-center gap-3 transition-opacity hover:opacity-80"
           >
             <div className="hidden text-right sm:block">

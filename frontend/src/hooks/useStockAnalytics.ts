@@ -50,11 +50,6 @@ async function fetchStockAnalytics({ signal }: { signal?: AbortSignal }): Promis
     },
   })
 
-  if (res.status === 401) {
-    localStorage.removeItem(STORAGE_KEYS.TOKEN)
-    window.location.href = '/login'
-    throw new Error('Unauthorized')
-  }
 
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
 
