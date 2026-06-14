@@ -13,7 +13,7 @@ interface CalcParams {
 
 /**
  * Enterprise Price Logic Engine (PD Module).
- * Formula: total_price = (variant_price × quantity) + (print_price_per_unit × quantity)
+ * Formula: total_price = variant_price × quantity (print cost included in unit price)
  * Rule: Setup fees are handled globally in the plate management module, not added per detail configurator.
  */
 export const calculatePrice = ({
@@ -57,23 +57,13 @@ export const calculatePriceWithPlate = (
   quantity: number,
   variantId: string,
 ): IPriceBreakdown => {
-  const compat = plate.compatibility.find((cp) => cp.product_id === productId)
+  // Print cost is now included in cup unit price - no separate print fee
+  const printPricePerUnit = 0
   
-  let printPricePerUnit = 0
-  if (compat?.print_price_per_unit) {
-    printPricePerUnit =
-      compat.print_price_per_unit[variantId] ??
-      compat.print_price_per_unit['ALL'] ??
-      0
-  }
-
-  // Rule: Setup Fee is completely removed as per updated specification.
-  const setupFee = 0
-
   const subtotal = breakdown.variantUnitPrice * quantity
-  const total = subtotal + printPricePerUnit * quantity + setupFee
+  const total = subtotal  // No additional print cost
 
-  return { ...breakdown, printPricePerUnit, setupFee, subtotal, total }
+  return { ...breakdown, printPricePerUnit, setupFee: 0, subtotal, total }
 }
 
 export const getStockStatus = (stock: number, threshold: number) => {

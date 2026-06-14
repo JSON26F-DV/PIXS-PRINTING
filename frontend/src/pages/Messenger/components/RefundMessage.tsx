@@ -17,6 +17,7 @@ interface Refund {
   employee_last_name?: string
   order_id?: string
   payment_code_id?: string
+  payment_code?: string
   amount: number
   message?: string
   status: 'pending' | 'completed' | 'cancelled'
@@ -147,9 +148,9 @@ export default function RefundMessage({ refundId, isCustomer }: RefundMessagePro
         <div className="flex justify-between items-center bg-emerald-500/5 dark:bg-emerald-500/10 border border-emerald-500/10 p-4 rounded-2xl">
           <div className="flex flex-col">
             <span className="text-[8px] font-black tracking-widest uppercase text-emerald-500">Refund Amount</span>
-            {refund.payment_code_id && (
+            {(refund.payment_code || refund.payment_code_id) && (
               <span className="text-[8px] font-mono font-black text-slate-400 uppercase tracking-wide mt-1">
-                Code: {refund.payment_code_id}
+                Code: {refund.payment_code || refund.payment_code_id}
               </span>
             )}
           </div>

@@ -830,26 +830,29 @@ const RefundPage: React.FC = () => {
                     </span>
                   </div>
                 )}
-                {selectedRefund.payment_code && (
-                  <div className="flex flex-col gap-1 rounded-xl bg-slate-50 p-4">
-                    <span className="text-xs text-slate-500 font-bold">Generated Payment Code</span>
-                    <div className="flex items-center justify-between mt-1">
-                      <span className="font-mono text-sm font-bold text-slate-900">
-                        {selectedRefund.payment_code}
-                      </span>
-                      <button
-                        onClick={() => {
-                          navigator.clipboard.writeText(selectedRefund.payment_code || '')
-                          toast.success('Code copied!')
-                        }}
-                        className="rounded-lg p-2 hover:bg-slate-200"
-                        title="Copy Code"
-                      >
-                        <Copy size={14} />
-                      </button>
+                {(selectedRefund.payment_code || selectedRefund.payment_code_id) && (() => {
+                  const displayCode = selectedRefund.payment_code || selectedRefund.payment_code_id || '';
+                  return (
+                    <div className="flex flex-col gap-1 rounded-xl bg-slate-50 p-4">
+                      <span className="text-xs text-slate-500 font-bold">Generated Payment Code</span>
+                      <div className="flex items-center justify-between mt-1">
+                        <span className="font-mono text-sm font-bold text-slate-900">
+                          {displayCode}
+                        </span>
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(displayCode)
+                            toast.success('Code copied!')
+                          }}
+                          className="rounded-lg p-2 hover:bg-slate-200"
+                          title="Copy Code"
+                        >
+                          <Copy size={14} />
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
                 {selectedRefund.message && (
                   <div className="rounded-xl bg-slate-50 p-4">
                     <p className="mb-2 text-xs font-bold tracking-widest text-slate-500 uppercase">Message</p>

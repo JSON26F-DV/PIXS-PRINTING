@@ -112,36 +112,16 @@ const AddToCartPage: React.FC = () => {
       const pending = pendingMap[item.id]
       const merged = pending ? { ...item, ...pending } : { ...item }
 
-      // Dynamically determine plate price based on selected variant's compatibility mapping
-      if (merged.plate && merged.plate.compatibility) {
-        const product = item.fullProduct
-        const comp = merged.plate.compatibility.find(
-          (c) => c.product_id === product?.id,
-        )
-        if (comp && comp.print_price_per_unit) {
-          const vId = merged.variant.id
-          const dynamicPrice =
-            comp.print_price_per_unit[vId] ?? comp.print_price_per_unit['ALL']
 
-          if (dynamicPrice !== undefined) {
-            merged.plate = {
-              ...merged.plate,
-              printPricePerUnit: Number(dynamicPrice),
-            }
-          }
-        }
-      }
 
-      // Explicit pending override takes precedence (if any)
-      if (pending?.platePrice !== undefined && merged.plate) {
-        merged.plate = { ...merged.plate, printPricePerUnit: pending.platePrice }
+      if (merged.plate) {
+        merged.plate = { ...merged.plate, printPricePerUnit: 0 }
       }
 
       // Recalculate totalCartPrice for UI subtotal accuracy
       const quantity = merged.quantity
       const unitPrice = merged.variant.unitPrice
-      const printPrice = merged.plate?.printPricePerUnit ?? 0
-      merged.totalCartPrice = quantity * unitPrice + quantity * printPrice
+      merged.totalCartPrice = quantity * unitPrice
 
       // Auto-deselect if variant no longer has sufficient stock
       if (merged.variant.stock < merged.minOrder) {
@@ -753,16 +733,7 @@ const AddToCartPage: React.FC = () => {
                                         : 'Front'}{' '}
                                     | {item.plate.channels} channels
                                   </p>
-                                  <p className="mt-2 text-xs font-black italic">
-                                    Printing Price: ₱
-                                    {(item.plate.printPricePerUnit || 0).toFixed(2)}/unit
-                                  </p>
-                                  <p className="mt-1 text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                                    Printing Subtotal: ₱
-                                    {(
-                                      (item.plate.printPricePerUnit || 0) * item.quantity
-                                    ).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                                  </p>
+
                                 </div>
                               )}
                             </m.div>

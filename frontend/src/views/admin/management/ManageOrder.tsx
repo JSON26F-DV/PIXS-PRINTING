@@ -236,7 +236,7 @@ const ManageOrder: React.FC = () => {
       productName: data.product.name,
       productImage: data.product.main_image,
       totalCartPrice: data.priceBreakdown.total,
-      plate_price: data.plate?.compatibility?.find((c: { product_id: string, print_price_per_unit?: Record<string, number> }) => c.product_id === data.product.id)?.print_price_per_unit?.[data.variant.variant_id] ?? data.plate?.compatibility?.find((c: { product_id: string, print_price_per_unit?: Record<string, number> }) => c.product_id === data.product.id)?.print_price_per_unit?.['ALL'] ?? 0
+      plate_price: 0
     }])
     setActiveProductId(null)
     toast.success('Added to order list')

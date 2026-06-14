@@ -46,6 +46,7 @@ export interface IMessage {
   receiverId?: string
   message_type?: string | null
   type_id?: string | null
+  payment_code?: string | null
   is_confirm?: number
   is_pinned?: string | null
   is_email?: boolean
@@ -72,6 +73,7 @@ interface ApiMessage {
   } | null;
   message_type?: string | null
   type_id?: string | null
+  payment_code?: string | null
   is_confirm?: number
   is_pinned?: string | null
   is_email?: number | boolean
@@ -186,6 +188,7 @@ const MessengerPage: React.FC = () => {
       receiverId: m.receiver_id,
       message_type: m.message_type,
       type_id: m.type_id,
+      payment_code: m.payment_code,
       is_confirm: m.is_confirm,
       is_pinned: m.is_pinned,
       isDeleted: m.is_deleted === 1,
@@ -444,7 +447,8 @@ const MessengerPage: React.FC = () => {
   const handleSendMessage = async (
     text: string,
     attachments: { type: 'image' | 'file'; url: string; name: string; fileObj?: File }[] = [],
-    payment_code_id?: string
+    payment_code_id?: string,
+    payment_code?: string
   ) => {
     const tempId = `msg_${Date.now()}`
     const newMessage: IMessage = {
@@ -457,6 +461,7 @@ const MessengerPage: React.FC = () => {
       reactions: [],
       message_type: payment_code_id ? 'payment_code' : null,
       type_id: payment_code_id || null,
+      payment_code: payment_code || null,
       replyTo: activeReplyTo
         ? {
             id: activeReplyTo.id,

@@ -54,7 +54,7 @@ export const uploadScreenplateImage = async (id: string, file: File): Promise<st
 // Single-row compatibility helper
 export const addScreenplateCompatibility = async (
   screenplateId: string,
-  data: { product_id: string; variant_id?: string; print_price_per_unit?: number },
+  data: { product_id: string; variant_id?: string },
 ) => {
   const response = await axiosInstance.post(`/api/admin/screenplates/${screenplateId}/compatibility`, data)
   return response.data

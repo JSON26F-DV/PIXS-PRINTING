@@ -342,7 +342,7 @@ const MessageBubbleComponent: React.FC<{
     if (onCancelEdit) onCancelEdit()
   }
 
-  const hasCard = !!(message.message_type || message.is_email);
+  const hasCard = !!(message.message_type || message.is_email) && message.message_type !== 'payment_code';
 
   return (
     <div
@@ -533,27 +533,37 @@ const MessageBubbleComponent: React.FC<{
             </div>
           )}
 
-          {message.message_type === 'payment_code' && message.type_id && !isEditing && !message.isDeleted && (
-            <div className={clsx(
-              "mt-3 flex items-center gap-2 rounded-lg p-2 border overflow-hidden",
-              isCustomer ? "bg-slate-800/50 border-white/10" : "bg-slate-50 border-slate-200"
-            )}>
-              <span className={clsx("shrink-0 text-[10px] font-black uppercase", isCustomer ? "text-pixs-mint" : "text-slate-500")}>Pay Code:</span>
-              <span className="truncate text-[12px] font-bold tracking-wider min-w-0">{message.type_id}</span>
-              <button 
-                onClick={() => { 
-                  navigator.clipboard.writeText(message.type_id!); 
-                  toast.success('Payment code copied!'); 
-                }}
-                className={clsx(
-                  "ml-auto flex items-center gap-1 rounded px-2 py-1 text-[9px] transition",
-                  isCustomer ? "bg-white/10 hover:bg-white/20" : "bg-white hover:bg-slate-100 border border-slate-200"
-                )}
-              >
-                <Copy size={10} /> Copy
-              </button>
-            </div>
-          )}
+          {message.message_type === 'payment_code' && message.type_id && !isEditing && !message.isDeleted && (() => {
+            const paycodeString = message.payment_code || (() => {
+              const match = message.text?.match(/PIXS-[A-Z0-9]{10}/i);
+              return match ? match[0] : message.type_id;
+            })();
+            
+            return (
+              <div className={clsx(
+                "mt-2.5 flex items-center gap-2 rounded-xl p-2.5 font-mono text-[11px] font-bold leading-none border-0 shadow-none",
+                isCustomer ? "bg-white/10 text-white" : "bg-slate-100 text-slate-800"
+              )}>
+                <span className={clsx("text-[9px] font-black uppercase tracking-wider select-none", isCustomer ? "text-pixs-mint" : "text-slate-500")}>
+                  Code:
+                </span>
+                <span className="tracking-wider select-all">{paycodeString}</span>
+                <button 
+                  onClick={() => { 
+                    navigator.clipboard.writeText(paycodeString!); 
+                    toast.success('Payment code copied!'); 
+                  }}
+                  className={clsx(
+                    "ml-auto flex h-6 w-6 items-center justify-center rounded-lg transition-all duration-200 active:scale-95",
+                    isCustomer ? "hover:bg-white/10 text-slate-300 hover:text-white" : "hover:bg-slate-200 text-slate-500 hover:text-slate-900"
+                  )}
+                  title="Copy Code"
+                >
+                  <Copy size={12} />
+                </button>
+              </div>
+            );
+          })()}
           
           {(message.message_type && message.type_id && 
             !['order', 'screenplate_request', 'payment_code', 'refund', 'expenditure'].includes(message.message_type)) && (

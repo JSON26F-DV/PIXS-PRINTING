@@ -162,7 +162,7 @@ export default function ManageScreenplate() {
 
       if (targetState) {
         if (idx === -1) {
-          next.push({ product_id: productId, allowed_variants: [variantId], print_price_per_unit: {} })
+          next.push({ product_id: productId, allowed_variants: [variantId] })
         } else {
           next[idx].allowed_variants.push(variantId)
         }
@@ -180,16 +180,7 @@ export default function ManageScreenplate() {
 
 
 
-  const handlePriceChange = (productId: string, variantId: string, price: number) => {
-    setData((prev: IScreenplate) => {
-      const next = [...prev.compatibility]
-      const idx = next.findIndex((c) => c.product_id === productId)
-      if (idx === -1) return prev
-      const prices = { ...(next[idx].print_price_per_unit || {}), [variantId]: price }
-      next[idx] = { ...next[idx], print_price_per_unit: prices }
-      return { ...prev, compatibility: next }
-    })
-  }
+
 
   const loadVariants = async (productId: string) => {
     try {
@@ -710,8 +701,6 @@ export default function ManageScreenplate() {
                                   config?.allowed_variants.includes(
                                     v.variant_id,
                                   )
-                                const currentPrice = config?.print_price_per_unit?.[v.variant_id]
-
                                 return (
                                   <div
                                     key={v.variant_id}
@@ -761,20 +750,6 @@ export default function ManageScreenplate() {
                                         </div>
                                       )}
                                     </div>
-
-                                    {isLinked && (
-                                      <div className="pl-10">
-                                        <input
-                                          type="number"
-                                          step="0.01"
-                                          min="0"
-                                          placeholder="Print price per unit (₱)"
-                                          value={currentPrice ?? ''}
-                                          onChange={(e) => handlePriceChange(p.id, v.variant_id, parseFloat(e.target.value) || 0)}
-                                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-[9px] font-bold text-slate-700 outline-none transition-all focus:border-[#75EEA5] focus:ring-2 focus:ring-[#75EEA5]/20"
-                                        />
-                                      </div>
-                                    )}
                                   </div>
                                 )
                               })

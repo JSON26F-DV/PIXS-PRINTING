@@ -16,7 +16,7 @@ interface AdminControlModalProps {
   messages: IMessage[]
   targetUser?: { id: string; name: string; profile_picture?: string; company_name?: string | null }
   onDeleteConversation?: (targetId: string) => void
-  onSendMessage?: (text: string, attachments?: { type: 'image' | 'file'; url: string; name: string; fileObj?: File }[], payment_code_id?: string) => void
+  onSendMessage?: (text: string, attachments?: { type: 'image' | 'file'; url: string; name: string; fileObj?: File }[], payment_code_id?: string, payment_code?: string) => void
   onToggleGallery?: () => void
   onScrollToMessage?: (messageId: string) => void
   isAdmin?: boolean
@@ -244,7 +244,7 @@ const AdminControlModal: React.FC<AdminControlModalProps> = ({
       const res = await axiosInstance.post('/api/admin/payment-codes', { quantity: 1 })
       const newCode = res.data.data[0]
       if (onSendMessage) {
-        onSendMessage(`Please use this payment code to proceed with your transaction: ${newCode.code}`, [], newCode.id)
+        onSendMessage(`Please use this payment code to proceed with your transaction: ${newCode.code}`, [], newCode.id, newCode.code)
         toast.success('Generated and sent!')
         onClose()
       }

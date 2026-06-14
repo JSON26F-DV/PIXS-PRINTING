@@ -121,7 +121,7 @@ class RefundController extends Controller
             'message_type' => 'refund',
             'type_id' => $refundId,
             'created_at' => now(),
-            'updated_at' => now(),
+            'updated_at' => null,
         ]);
 
         AuditService::created('refund', $refundId, [

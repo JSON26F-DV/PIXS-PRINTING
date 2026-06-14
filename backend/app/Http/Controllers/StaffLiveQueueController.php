@@ -170,7 +170,7 @@ class StaffLiveQueueController extends Controller
                     'type_id' => $id,
                     'product_concern' => 1,
                     'created_at' => now(),
-                    'updated_at' => now(),
+                    'updated_at' => null,
                 ]);
             });
 

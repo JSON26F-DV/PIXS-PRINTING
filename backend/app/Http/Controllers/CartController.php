@@ -276,9 +276,6 @@ class CartController extends Controller
             return [
                 'product_id' => $productId,
                 'allowed_variants' => $rows->pluck('variant_id')->map(fn ($v) => $v ?? 'ALL')->toArray(),
-                'print_price_per_unit' => $rows->pluck('print_price_per_unit', 'variant_id')->mapWithKeys(function ($price, $vId) {
-                    return [$vId ?? 'ALL' => (float) $price];
-                })->toArray(),
             ];
         })->values();
 

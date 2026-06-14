@@ -72,6 +72,7 @@ export interface IColor {
 export interface IScreenPlateCompatibility {
   product_id: string
   allowed_variants: string[]
+  /** @deprecated Print cost is now included directly in the cup unit price */
   print_price_per_unit?: Record<string, number>
 }
 

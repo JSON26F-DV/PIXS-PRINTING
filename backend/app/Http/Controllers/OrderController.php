@@ -653,7 +653,7 @@ class OrderController extends Controller
                     'message_type' => 'order',
                     'type_id' => $orderId,
                     'created_at' => now(),
-                    'updated_at' => now(),
+                    'updated_at' => null,
                 ]);
 
                 AuditService::created('order', $orderId, [
@@ -953,7 +953,7 @@ class OrderController extends Controller
                     'message_type' => 'order',
                     'type_id' => $orderId,
                     'created_at' => now(),
-                    'updated_at' => now(),
+                    'updated_at' => null,
                 ]);
 
                 // STEP 9.6: If payment method is an e-wallet, initiate a payment link via Xendit Invoices

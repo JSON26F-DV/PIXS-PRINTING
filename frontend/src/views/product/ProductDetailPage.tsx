@@ -116,15 +116,7 @@ const ProductDetailInner: React.FC<{
         screenplate_id: computed.selectedPlate?.id || null,
         quantity: state.quantity,
         unit_price: variant.price,
-        plate_price: computed.selectedVariant && computed.selectedPlate
-          ? (() => {
-               const cp = computed.selectedPlate.compatibility.find(
-                 (c: { product_id: string }) => c.product_id === product.id
-               );
-               return cp?.print_price_per_unit?.[computed.selectedVariant.variant_id] ?? 
-                      cp?.print_price_per_unit?.['ALL'] ?? 0;
-             })()
-          : 0,
+        plate_price: 0,
         total_cart_price: computed.priceBreakdown.total,
         colors: computed.selectedColors.map((c, index) => ({
           color_id: c.id,
@@ -197,15 +189,7 @@ const ProductDetailInner: React.FC<{
         screenplate_id: computed.selectedPlate?.id || null,
         quantity: state.quantity,
         unit_price: variant.price,
-        plate_price: computed.selectedVariant && computed.selectedPlate
-          ? (() => {
-              const cp = computed.selectedPlate.compatibility.find(
-                (c: { product_id: string }) => c.product_id === product.id
-              );
-              return cp?.print_price_per_unit?.[computed.selectedVariant.variant_id] ?? 
-                     cp?.print_price_per_unit?.['ALL'] ?? 0;
-            })()
-          : 0,
+        plate_price: 0,
         total_cart_price: computed.priceBreakdown.total,
         colors: computed.selectedColors.map((c, index) => ({
           color_id: c.id,

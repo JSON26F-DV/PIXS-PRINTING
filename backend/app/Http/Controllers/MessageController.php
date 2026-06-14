@@ -31,14 +31,21 @@ class MessageController extends Controller
             'created_at', 'updated_at',
         ];
 
+        $selectColumns = array_map(fn($col) => "messages.{$col}", $safeColumns);
+        $selectColumns[] = 'payment_codes.code as payment_code';
+
         $query = DB::table('messages')
-            ->select($safeColumns)
-            ->orderBy('created_at', 'desc');
+            ->select($selectColumns)
+            ->leftJoin('payment_codes', function ($join) {
+                $join->on('messages.type_id', '=', 'payment_codes.id')
+                     ->where('messages.message_type', '=', 'payment_code');
+            })
+            ->orderBy('messages.created_at', 'desc');
 
         if ($cursor) {
             $cursorMsg = DB::table('messages')->where('id', $cursor)->first();
             if ($cursorMsg) {
-                $query->where('created_at', '<', $cursorMsg->created_at);
+                $query->where('messages.created_at', '<', $cursorMsg->created_at);
             }
         }
 
@@ -46,16 +53,16 @@ class MessageController extends Controller
             $targetId = $request->query('target_id');
             if ($targetId) {
                 $query->where(function ($q) use ($targetId) {
-                    $q->where('sender_id', $targetId)
-                        ->orWhere('receiver_id', $targetId);
+                    $q->where('messages.sender_id', $targetId)
+                        ->orWhere('messages.receiver_id', $targetId);
                 });
             } else {
                 $query->whereRaw('1 = 0');
             }
         } else {
             $query->where(function ($q) use ($user) {
-                $q->where('sender_id', $user->id)
-                    ->orWhere('receiver_id', $user->id);
+                $q->where('messages.sender_id', $user->id)
+                    ->orWhere('messages.receiver_id', $user->id);
             });
         }
 
@@ -570,9 +577,11 @@ class MessageController extends Controller
                 'customers.email as customer_email',
                 'employees.first_name as employee_first_name',
                 'employees.last_name as employee_last_name',
+                'payment_codes.code as payment_code'
             )
             ->leftJoin('customers', 'refunds.customer_id', '=', 'customers.id')
             ->leftJoin('employees', 'refunds.employee_id', '=', 'employees.id')
+            ->leftJoin('payment_codes', 'refunds.payment_code_id', '=', 'payment_codes.id')
             ->where('refunds.id', $id)
             ->first();
 

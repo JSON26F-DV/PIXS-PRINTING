@@ -119,7 +119,17 @@ class AdminPaymentCodeController extends Controller
             ], 422);
         }
 
-        $paymentCode->delete();
+        try {
+            $paymentCode->delete();
+        } catch (\Illuminate\Database\QueryException $e) {
+            // Check for integrity constraint violation (SQLSTATE 23000)
+            if ($e->getCode() === '23000' || str_contains($e->getMessage(), 'Integrity constraint violation')) {
+                return response()->json([
+                    'message' => 'Cannot delete this payment code because it is linked to refund or order records.',
+                ], 422);
+            }
+            throw $e;
+        }
 
         AuditService::deleted('payment_code', $id);
 

@@ -32,23 +32,19 @@ class CustomerScreenplateController extends Controller
             $transformed = $plates->map(function ($plate) {
                 // Group compatibility by product_id
                 $comp = $plate->compatibility->groupBy('product_id')->map(function ($items, $productId) {
-                    $prices = [];
                     $variants = [];
                     foreach ($items as $item) {
                         if ($item->variant_id) {
                             $variants[] = $item->variant_id;
-                            $prices[$item->variant_id] = (float) $item->print_price_per_unit;
                         } else {
                             // NULL variant_id means all variants
                             $variants[] = 'ALL';
-                            $prices['ALL'] = (float) $item->print_price_per_unit;
                         }
                     }
 
                     return [
                         'product_id' => $productId,
                         'allowed_variants' => $variants,
-                        'print_price_per_unit' => $prices,
                     ];
                 })->values();
 
