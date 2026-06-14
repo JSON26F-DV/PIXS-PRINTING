@@ -5,7 +5,6 @@ export interface IVariant {
   height: string
   price: number
   stock: number
-  is_need_screenplate?: boolean
 }
 
 export interface IProduct {
@@ -26,7 +25,6 @@ export interface IProduct {
   gallery: string[]
   print_method: string
   tags: string[]
-  is_need_screenplate: boolean
   is_need_color: boolean
   variants: IVariant[]
   total_sold?: number
@@ -41,29 +39,6 @@ export interface ICategory {
   image?: string
 }
 
-export interface ICompatibilityNode {
-  product_id: string
-  allowed_variants: string[]
-  /** @deprecated Print cost is now included directly in the cup unit price */
-  print_price_per_unit?: Record<string, number>
-}
-
-export interface IScreenplate {
-  id: string
-  owner_id: string
-  plate_name: string
-  image: string
-  channels: number
-  alignment: string
-  supported_alignments?: string[]
-  dimensions?: string
-  technical_info: string
-  comment: string
-  base_setup_fee?: number
-  is_flatscreen: boolean
-  compatibility: ICompatibilityNode[]
-}
-
 export interface IUser {
   id: string
   name: string
@@ -74,21 +49,6 @@ export interface IUser {
   role?: string
   company_name?: string
   business_address?: string
-}
-
-export interface IScreenplateRequest {
-  id: string
-  customer_id: string
-  product_id: string
-  variant_id: string
-  reference_image: string
-  color_count: number
-  alignment: string
-  status: string
-  created_at?: string
-  customer?: IUser
-  product?: IProduct
-  variant?: IVariant
 }
 
 export interface IRestockLog {

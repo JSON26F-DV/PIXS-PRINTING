@@ -162,12 +162,6 @@ class AdminOrderController extends Controller
                         'name' => $c->colorDetails?->name ?? 'Unknown',
                         'hex' => $c->colorDetails?->hex ?? '#000000',
                     ]),
-                    'plate' => $item->screenplate ? [
-                        'id' => $item->screenplate->id,
-                        'name' => $item->screenplate->name,
-                        'setupFee' => (float) $item->screenplate->setup_fee,
-                        'printPricePerUnit' => (float) $item->plate_price,
-                    ] : null,
                     'customRequirements' => $o->production_notes,
                     'created_at' => $o->created_at->toISOString(),
                 ]),
@@ -187,10 +181,8 @@ class AdminOrderController extends Controller
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|string|exists:products,id',
             'items.*.variant_id' => 'nullable|string',
-            'items.*.screenplate_id' => 'nullable|string',
             'items.*.quantity' => 'required|integer|min:1',
             'items.*.unit_price' => 'required|numeric|min:0',
-            'items.*.plate_price' => 'nullable|numeric|min:0',
             'items.*.total_price' => 'required|numeric|min:0',
             'items.*.colors' => 'nullable|array',
             'items.*.colors.*.color_id' => 'required|string',
@@ -241,10 +233,8 @@ class AdminOrderController extends Controller
                         'customer_id' => $validated['customer_id'],
                         'product_id' => $item['product_id'],
                         'variant_id' => $item['variant_id'] ?? null,
-                        'screenplate_id' => $item['screenplate_id'] ?? null,
                         'quantity' => $item['quantity'],
                         'unit_price' => $item['unit_price'],
-                        'plate_price' => $item['plate_price'] ?? 0,
                     ]);
 
                     // Update variant stock

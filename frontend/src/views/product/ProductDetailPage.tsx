@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useLayoutEffect, useCallback } from 'react'
-import { useParams, useNavigate, useLocation } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, PackageCheck } from 'lucide-react'
 
 import { clsx } from 'clsx'
@@ -9,8 +9,8 @@ import gsap from 'gsap'
 import toast from 'react-hot-toast'
 
 // Core Technical Implementation Dependencies
-import type { IProduct, IScreenPlate } from '../../types/product.types'
-import { getProductById, getCustomerScreenplates } from '../../api/products.api'
+import type { IProduct } from '../../types/product.types'
+import { getProductById } from '../../api/products.api'
 import { addToCart, buyNowCart } from '../../api/cart.api'
 import { useProductDetail } from './hooks/useProductDetail'
 import { getStockStatus } from './utils/priceCalculator'
@@ -20,7 +20,6 @@ import ImageGallery from './components/ImageGallery'
 import VariantSelector from './components/VariantSelector'
 import QuantityPicker from './components/QuantityPicker'
 import ColorPicker from './components/ColorPicker'
-import PlateSelector from './components/PlateSelector'
 import ProductInfoCard from './components/ProductInfoCard'
 import PriceCalculatorUI from './components/PriceCalculatorUI'
 import ProductReviews from './components/ProductReviews'
@@ -37,9 +36,7 @@ const Skeleton: React.FC<{ className?: string }> = ({ className }) => (
 // ─── Product Detail Inner Configuration (Data Hydrated) ───────────────────────
 const ProductDetailInner: React.FC<{
   product: IProduct
-  compatiblePlates: IScreenPlate[]
-  preselectedPlateName?: string | null
-}> = ({ product, compatiblePlates, preselectedPlateName }) => {
+}> = ({ product }) => {
   const navigate = useNavigate()
 
 
@@ -53,8 +50,6 @@ const ProductDetailInner: React.FC<{
   // Logic Engine Integration
   const { state, actions, computed } = useProductDetail({
     product,
-    compatiblePlates,
-    preselectedPlateName,
   })
 
   const stockStatus = getStockStatus(
@@ -91,7 +86,7 @@ const ProductDetailInner: React.FC<{
 
   const handleAddToCart = useCallback(async () => {
     if (!computed.canAddToCart) {
-      toast.error('Please complete all required selections (Variant, Color, and Screenplate).')
+      toast.error('Please complete all required selections (Variant and Color).')
       return
     }
     const variant = computed.selectedVariant
@@ -100,23 +95,21 @@ const ProductDetailInner: React.FC<{
       return
     }
 
-    // Cart ID Format: {product_id}__{variant_id}__{color_id_joined}__{screenplate_id}
+    // Cart ID Format: {product_id}__{variant_id}__{color_id_joined}
     const colorIdPart =
       computed.selectedColors
         .map((c) => c.id)
         .sort()
         .join('-') || 'no-color'
-    const compositeId = `${product.id}__${variant.variant_id}__${colorIdPart}__${computed.selectedPlate?.id ?? 'no-plate'}`
+    const compositeId = `${product.id}__${variant.variant_id}__${colorIdPart}`
 
     try {
       await addToCart({
         id: compositeId,
         product_id: product.id,
         variant_id: variant.variant_id,
-        screenplate_id: computed.selectedPlate?.id || null,
         quantity: state.quantity,
         unit_price: variant.price,
-        plate_price: 0,
         total_cart_price: computed.priceBreakdown.total,
         colors: computed.selectedColors.map((c, index) => ({
           color_id: c.id,
@@ -154,7 +147,7 @@ const ProductDetailInner: React.FC<{
 
   const handleBuyNow = async () => {
     if (!computed.canAddToCart) {
-      toast.error('Please complete all required selections (Variant, Color, and Screenplate).')
+      toast.error('Please complete all required selections (Variant and Color).')
       return
     }
     const variant = computed.selectedVariant
@@ -179,17 +172,15 @@ const ProductDetailInner: React.FC<{
         .map((c) => c.id)
         .sort()
         .join('-') || 'no-color'
-    const compositeId = `${product.id}__${variant.variant_id}__${colorIdPart}__${computed.selectedPlate?.id ?? 'no-plate'}`
+    const compositeId = `${product.id}__${variant.variant_id}__${colorIdPart}`
 
     try {
       await buyNowCart({
         id: compositeId,
         product_id: product.id,
         variant_id: variant.variant_id,
-        screenplate_id: computed.selectedPlate?.id || null,
         quantity: state.quantity,
         unit_price: variant.price,
-        plate_price: 0,
         total_cart_price: computed.priceBreakdown.total,
         colors: computed.selectedColors.map((c, index) => ({
           color_id: c.id,
@@ -350,7 +341,6 @@ const ProductDetailInner: React.FC<{
                 onSelect={actions.setSelectedVariantId}
                 minThreshold={product.min_threshold ?? 5}
                 minOrder={product.min_order}
-                variantCompatibilityMap={state.variantCompatibilityMap}
               />
             </div>
 
@@ -360,7 +350,7 @@ const ProductDetailInner: React.FC<{
                 <ColorPicker
                   colors={state.colors}
                   selectedColorIds={state.selectedColorIds}
-                  maxChannels={computed.selectedPlate?.channels || 1}
+                  maxChannels={1}
                   onSelect={actions.handleColorChange}
                 />
               </div>
@@ -376,23 +366,6 @@ const ProductDetailInner: React.FC<{
               />
             </div>
 
-            {/* Selection Node: Screen Plate Logic Allocation (Filtered Inventory) */}
-            {computed.isScreenplateRequired && (
-              <>
-                <div className="stagger-item">
-                  <PlateSelector
-                    selectablePlates={state.selectablePlates}
-                    selectedPlateId={state.selectedPlateId}
-                    onPlateChange={actions.handlePlateChange}
-                    isRequired={computed.isScreenplateRequired}
-                    productId={product.id}
-                    selectedVariantSize={computed.selectedVariant?.size}
-                    incompatiblePlateIds={state.incompatiblePlateIds}
-                  />
-                </div>
-              </>
-            )}
-
             {/* Dynamic Finalization Logic: Price Calculation UI (Inclusive Protocol) */}
             <div className="stagger-item border-t-4 border-slate-50 pt-8">
               <PriceCalculatorUI
@@ -401,8 +374,6 @@ const ProductDetailInner: React.FC<{
                 isOutOfStock={computed.isOutOfStock}
                 minOrder={product.min_order}
                 isQuantityTooLow={computed.isQuantityTooLow}
-                hasRequiredPlate={computed.hasRequiredPlate}
-                isNeedScreenplate={computed.isScreenplateRequired}
                 hasRequiredColor={computed.hasRequiredColor}
                 isNeedColor={product.is_need_color}
                 onAddToCart={handleAddToCart}
@@ -445,7 +416,6 @@ const ProductDetailPage: React.FC = () => {
   const navigate = useNavigate()
 
   const [product, setProduct] = useState<IProduct | null>(null)
-  const [plates, setPlates] = useState<IScreenPlate[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
 
@@ -453,8 +423,8 @@ const ProductDetailPage: React.FC = () => {
     if (!id) return
     let isMounted = true
 
-    Promise.all([getProductById(id), getCustomerScreenplates()])
-      .then(([prodRes, plsRes]) => {
+    getProductById(id)
+      .then((prodRes) => {
         if (!isMounted) return
         if (!prodRes || prodRes.status === 'error') {
           setNotFound(true)
@@ -465,11 +435,6 @@ const ProductDetailPage: React.FC = () => {
             return
           }
           setProduct(prodRes.data)
-          const allPlates: IScreenPlate[] = plsRes.data || []
-          const filtered = allPlates.filter((p) =>
-            p.compatibility?.some((cp) => cp.product_id === prodRes.data.id),
-          )
-          setPlates(filtered)
         }
         setIsLoading(false)
       })
@@ -483,10 +448,6 @@ const ProductDetailPage: React.FC = () => {
       isMounted = false
     }
   }, [id, navigate])
-
-  const location = useLocation()
-  const searchParams = new URLSearchParams(location.search)
-  const plateName = searchParams.get('plate')
 
   if (isLoading) {
     return (
@@ -527,8 +488,6 @@ const ProductDetailPage: React.FC = () => {
     <ProductDetailInner
       key={product.id}
       product={product}
-      compatiblePlates={plates}
-      preselectedPlateName={plateName}
     />
   )
 }

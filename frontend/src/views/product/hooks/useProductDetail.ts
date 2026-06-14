@@ -1,31 +1,25 @@
 import { useState, useMemo, useEffect } from 'react'
 import type {
   IProduct,
-  IScreenPlate,
   IPriceBreakdown,
   IColor,
 } from '../../../types/product.types'
 import {
   calculatePrice,
-  calculatePriceWithPlate,
 } from '../utils/priceCalculator'
 import { getColors } from '../../../api/products.api'
 
 interface UseProductDetailProps {
   product: IProduct
-  compatiblePlates: IScreenPlate[]
-  preselectedPlateName?: string | null
 }
 
 /**
  * Enterprise Product Logic Controller.
- * Business Rule: Enforces mandatory selection of Color and Screenplate ONLY if required by the product metadata.
+ * Business Rule: Enforces mandatory selection of Color ONLY if required by the product metadata.
  * Protocol: Bypasses selections for standalone hardware (is_need_color: false, etc).
  */
 export const useProductDetail = ({
   product,
-  compatiblePlates,
-  preselectedPlateName,
 }: UseProductDetailProps) => {
   const defaultVariant = product.variants[0] ?? null
 
@@ -69,43 +63,6 @@ export const useProductDetail = ({
     }
     return []
   })
-
-  const [selectedPlateId, setSelectedPlateId] = useState<string | null>(() => {
-    const saved = localStorage.getItem(STORAGE_KEY)
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved)
-        return parsed.selectedPlateId ?? null
-      } catch {
-        return null
-      }
-    }
-
-    // Protocol: If a plate is pre-selected via navigation, prioritize its node ID
-    if (preselectedPlateName) {
-      const plate = compatiblePlates.find(
-        (p) => p.plate_name === preselectedPlateName,
-      )
-      if (plate) return plate.id
-    }
-
-    return null
-  })
-
-  const [selectedPosition, setSelectedPosition] = useState<string | null>(
-    () => {
-      const saved = localStorage.getItem(STORAGE_KEY)
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved)
-          return parsed.selectedPosition ?? null
-        } catch {
-          return null
-        }
-      }
-      return null
-    },
-  )
 
   const [customRequirements, setCustomRequirements] = useState<string>(() => {
     const saved = localStorage.getItem(STORAGE_KEY)
@@ -153,8 +110,6 @@ export const useProductDetail = ({
       selectedVariantId,
       quantity,
       selectedColorIds,
-      selectedPlateId,
-      selectedPosition,
       customRequirements,
     }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(config))
@@ -162,76 +117,9 @@ export const useProductDetail = ({
     selectedVariantId,
     quantity,
     selectedColorIds,
-    selectedPlateId,
-    selectedPosition,
     customRequirements,
     STORAGE_KEY,
   ])
-
-  // Filter Protocol: Only show plates that are COMPATIBLE with this specific product
-  const selectablePlates = useMemo(
-    () => compatiblePlates.filter((plate) => {
-      // NOTE: compatiblePlates are already owned by the customer (fetched via /api/customer/screenplates)
-      return plate.compatibility.some(cp => cp.product_id === product.id)
-    }),
-    [compatiblePlates, product.id],
-  )
-
-  // Identify plates that are specifically INCOMPATIBLE with the selected variant
-  const incompatiblePlateIds = useMemo(() => {
-    if (!selectedVariantId) return []
-    const variant = product.variants.find(v => v.variant_id === selectedVariantId)
-    if (!variant) return []
-
-    // Incompatibility is derived from missing entries in screenplate_compatibility
-    return selectablePlates
-      .filter(plate => {
-        const comp = plate.compatibility.find(c => c.product_id === product.id)
-        if (!comp) return true
-
-        if (!comp.allowed_variants || comp.allowed_variants.length === 0 || comp.allowed_variants.includes('ALL')) {
-           return false 
-        }
-
-        return !comp.allowed_variants.includes(variant.variant_id) && !comp.allowed_variants.includes(variant.size)
-      })
-      .map(p => p.id)
-  }, [selectablePlates, selectedVariantId, product.id, product.variants])
-
-  // New: Variant-level compatibility map for the selected plate
-  const variantCompatibilityMap = useMemo(() => {
-    const map: Record<string, { isCompatible: boolean; reason?: string }> = {}
-    
-    product.variants.forEach(v => {
-      // If no plate selected, all variants are compatible by default (no plate requirements yet)
-      if (!selectedPlateId) {
-        map[v.variant_id] = { isCompatible: true }
-        return
-      }
-
-      const plate = selectablePlates.find(p => p.id === selectedPlateId)
-      if (!plate) {
-        map[v.variant_id] = { isCompatible: true }
-        return
-      }
-
-      const comp = plate.compatibility.find(c => c.product_id === product.id)
-
-      const isAllowed = comp && (
-        comp.allowed_variants.includes(v.variant_id) || 
-        comp.allowed_variants.includes(v.size) || 
-        comp.allowed_variants.includes('ALL')
-      )
-
-      if (isAllowed) {
-        map[v.variant_id] = { isCompatible: true }
-      } else {
-        map[v.variant_id] = { isCompatible: false, reason: 'Not Compatible' }
-      }
-    })
-    
-    return map
-  }, [product.variants, product.id, selectedPlateId, selectablePlates])
 
   const selectedVariant = useMemo(() => {
     if (product.variants.length === 0) {
@@ -249,40 +137,21 @@ export const useProductDetail = ({
     )
   }, [product, selectedVariantId])
 
-  const selectedPlate = useMemo(
-    () => selectablePlates.find((p) => p.id === selectedPlateId) ?? null,
-    [selectablePlates, selectedPlateId],
-  )
-
   const selectedColors = useMemo(
     () => colors.filter((c) => selectedColorIds.includes(c.id)),
     [colors, selectedColorIds],
   )
 
   const priceBreakdown = useMemo<IPriceBreakdown>(() => {
-    const base = calculatePrice({
+    return calculatePrice({
       product,
       variantId: selectedVariantId,
-      plateId: selectedPlateId,
       quantity,
     })
-    if (selectedPlate && selectedVariant) {
-      return calculatePriceWithPlate(
-        base,
-        selectedPlate,
-        product.id,
-        quantity,
-        selectedVariant.variant_id,
-      )
-    }
-    return base
   }, [
     product,
     selectedVariantId,
-    selectedVariant,
     quantity,
-    selectedPlateId,
-    selectedPlate,
   ])
 
   const stockForVariant = selectedVariant?.stock ?? (product.is_in_stock ? 1000 : 0)
@@ -305,20 +174,7 @@ export const useProductDetail = ({
     return () => clearTimeout(t)
   }, [stockForVariant, product.min_order, setQuantity])
 
-  const isScreenplateRequired = useMemo(() => {
-    const prodNeed = Number(product.is_need_screenplate) === 1 || product.is_need_screenplate === true
-    if (!prodNeed) return false
-    
-    if (selectedVariant && selectedVariant.is_need_screenplate !== undefined) {
-      return Number(selectedVariant.is_need_screenplate) === 1 || selectedVariant.is_need_screenplate === true
-    }
-    return true
-  }, [product.is_need_screenplate, selectedVariant])
-
   // Enforced Protocols: Check if required metadata selections are satisfied
-  const hasRequiredPlate =
-    !isScreenplateRequired ||
-    (isScreenplateRequired && selectablePlates.length > 0 && !!selectedPlateId)
   const hasRequiredColor =
     !product.is_need_color ||
     (product.is_need_color && selectedColorIds.length > 0)
@@ -328,35 +184,14 @@ export const useProductDetail = ({
     !isQuantityTooHigh &&
     !isOutOfStock &&
     (product.variants.length === 0 || selectedVariantId !== '') &&
-    hasRequiredColor &&
-    hasRequiredPlate &&
-    (!selectedPlateId || !incompatiblePlateIds.includes(selectedPlateId)) &&
-    (!selectedVariantId || (variantCompatibilityMap[selectedVariantId]?.isCompatible !== false))
-
-  const handlePlateChange = (plateId: string | null) => {
-    setSelectedPlateId(plateId)
-    setSelectedPosition(null)
-
-    // Protocol: Ensure color selection respects the new plate's channel count
-    const newPlate = selectablePlates.find((p) => p.id === plateId)
-    if (newPlate && selectedColorIds.length > newPlate.channels) {
-      setSelectedColorIds((prev) => prev.slice(0, newPlate.channels))
-    }
-  }
+    hasRequiredColor
 
   const handleColorChange = (colorId: string) => {
-    const maxChannels = selectedPlate?.channels || 1
     setSelectedColorIds((prev) => {
       if (prev.includes(colorId)) {
         return prev.filter((id) => id !== colorId)
       }
-      if (prev.length < maxChannels) {
-        return [...prev, colorId]
-      }
-      // If at max, we could replace the last one or do nothing.
-      // Typically, for better UX, we replace the last selection if single channel, or just block if multi.
-      if (maxChannels === 1) return [colorId]
-      return prev
+      return [colorId]
     })
   }
 
@@ -365,12 +200,7 @@ export const useProductDetail = ({
       selectedVariantId,
       quantity,
       selectedColorIds,
-      selectedPlateId,
-      selectedPosition,
       colors,
-      selectablePlates,
-      incompatiblePlateIds,
-      variantCompatibilityMap,
       isLoadingMetadata,
       customRequirements,
     },
@@ -378,13 +208,10 @@ export const useProductDetail = ({
       setSelectedVariantId,
       setQuantity,
       handleColorChange,
-      handlePlateChange,
-      setSelectedPosition,
       setCustomRequirements,
     },
     computed: {
       selectedVariant,
-      selectedPlate,
       selectedColors,
       priceBreakdown,
       stockForVariant,
@@ -393,9 +220,7 @@ export const useProductDetail = ({
       isOutOfStock,
       isStockInsufficient,
       canAddToCart,
-      hasRequiredPlate,
       hasRequiredColor,
-      isScreenplateRequired,
     },
   }
 }

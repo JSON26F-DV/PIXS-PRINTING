@@ -7,8 +7,6 @@ use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\AdminOrderController;
 use App\Http\Controllers\Admin\AdminPaymentCodeController;
 use App\Http\Controllers\Admin\AdminPayrollController;
-use App\Http\Controllers\Admin\AdminScreenplateController;
-use App\Http\Controllers\Admin\AdminScreenplateRequestController;
 use App\Http\Controllers\Admin\AdminStockAnalyticsController;
 use App\Http\Controllers\Admin\AdminVerificationController;
 use App\Http\Controllers\Admin\BlockedIpController;
@@ -21,14 +19,12 @@ use App\Http\Controllers\CartController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ColorController;
 use App\Http\Controllers\Customer\CustomerController;
-use App\Http\Controllers\Customer\CustomerScreenplateController;
 use App\Http\Controllers\DeliveryMethodController;
 use App\Http\Controllers\DiscountController;
 use App\Http\Controllers\MessageController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProductController;
-use App\Http\Controllers\ScreenplateRequestController;
 use App\Http\Controllers\StaffLiveQueueController;
 use App\Http\Controllers\User\UserController;
 use App\Models\Notification;
@@ -193,13 +189,6 @@ Route::middleware(['auth:sanctum', 'block.ip', 'role:customer', 'throttle:api'])
     Route::get('/awards', [CustomerController::class, 'promotions']);
     Route::post('/awards/redeem', [CustomerController::class, 'redeemPromotion']);
 
-    // Screenplates (owner rows in `screenplates`)
-    Route::get('/screenplates', [CustomerScreenplateController::class, 'index']);
-
-    // Screenplate Requests
-    Route::get('/screenplate-requests', [ScreenplateRequestController::class, 'index']);
-    Route::post('/screenplate-requests', [ScreenplateRequestController::class, 'store']);
-
     // Orders
     Route::get('/orders', [OrderController::class, 'index']);
     Route::get('/orders/{id}', [OrderController::class, 'show']);
@@ -229,26 +218,6 @@ Route::middleware(['auth:sanctum', 'block.ip', 'throttle:api'])->prefix('admin')
 
     // Customers
     Route::get('/customers', [AdminCustomerController::class, 'index'])->middleware('role:admin');
-
-    // Screenplates
-    Route::get('/screenplates', [AdminScreenplateController::class, 'index'])->middleware('role:admin');
-    Route::get('/screenplates/{id}', [AdminScreenplateController::class, 'show'])->middleware('role:admin');
-    Route::post('/screenplates', [AdminScreenplateController::class, 'store'])->middleware('role:admin');
-    Route::patch('/screenplates/{id}', [AdminScreenplateController::class, 'update'])->middleware('role:admin');
-    Route::delete('/screenplates/{id}', [AdminScreenplateController::class, 'destroy'])->middleware('role:admin');
-    Route::post('/screenplates/{id}/upload-image', [AdminScreenplateController::class, 'uploadImage'])->middleware('role:admin');
-
-    // Compatibility / Incompatible single-row endpoints
-    Route::post('/screenplates/{id}/compatibility', [AdminScreenplateController::class, 'addCompatibility'])->middleware('role:admin');
-    Route::delete('/screenplates/{id}/compatibility', [AdminScreenplateController::class, 'removeCompatibility'])->middleware('role:admin');
-    Route::post('/screenplates/{id}/incompatible', [AdminScreenplateController::class, 'addIncompatible'])->middleware('role:admin');
-    Route::delete('/screenplates/{id}/incompatible', [AdminScreenplateController::class, 'removeIncompatible'])->middleware('role:admin');
-
-    // Screenplate Requests & Visibility
-    Route::get('/screenplate-requests', [AdminScreenplateRequestController::class, 'index'])->middleware('role:admin');
-    Route::patch('/screenplate-requests/{id}/status', [AdminScreenplateRequestController::class, 'updateStatus'])->middleware('role:admin');
-    Route::patch('/products/{id}/screenplate-visibility', [AdminScreenplateRequestController::class, 'updateProductVisibility'])->middleware('role:admin');
-    Route::patch('/variants/{id}/screenplate-visibility', [AdminScreenplateRequestController::class, 'updateVariantVisibility'])->middleware('role:admin');
 
     // Discount Management
     Route::get('/discounts', [DiscountController::class, 'index'])->middleware('role:admin');
@@ -358,7 +327,6 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::get('/messages', [MessageController::class, 'index']);
     Route::get('/messages/users', [MessageController::class, 'getUsers']);
     Route::get('/messages/orders/{id}', [MessageController::class, 'getOrderContext']);
-    Route::get('/messages/screenplate-requests/{id}', [MessageController::class, 'getScreenplateRequestContext']);
     Route::get('/messages/expenditures/{id}', [MessageController::class, 'getExpenditureContext']);
     Route::get('/messages/refunds/{id}', [MessageController::class, 'getRefundContext']);
     Route::get('/messages/image-count', [MessageController::class, 'getImageUploadCount']);

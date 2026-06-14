@@ -78,12 +78,6 @@ class StaffLiveQueueController extends Controller
                         'name' => $c->colorDetails?->name ?? 'Unknown',
                         'hex' => $c->colorDetails?->hex ?? '#000000',
                     ]),
-                    'plate' => $item->screenplate ? [
-                        'id' => $item->screenplate->id,
-                        'name' => $item->screenplate->name,
-                        'setupFee' => (float) $item->screenplate->setup_fee,
-                        'printPricePerUnit' => (float) $item->plate_price,
-                    ] : null,
                     'customRequirements' => $o->production_notes,
                 ])->toArray(),
             ];

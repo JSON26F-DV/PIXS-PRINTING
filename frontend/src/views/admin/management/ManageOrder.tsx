@@ -9,14 +9,13 @@ import { clsx } from 'clsx'
 import { useProducts } from '../../../hooks/useProducts'
 import { useDebounce } from '../../../hooks/useDebounce'
 import { getProductById } from '../../../api/products.api'
-import type { IProduct, IScreenPlate } from '../../../types/product.types'
+import type { IProduct } from '../../../types/product.types'
 import { useProductDetail } from '../../product/hooks/useProductDetail'
 import BoxFallback from '../../../components/common/BoxFallback'
 import Pagination from '../../../components/Pagination/Pagination'
 import VariantSelector from '../../product/components/VariantSelector'
 import ColorPicker from '../../product/components/ColorPicker'
 import QuantityPicker from '../../product/components/QuantityPicker'
-import PlateSelector from '../../product/components/PlateSelector'
 import PriceCalculatorUI from '../../product/components/PriceCalculatorUI'
 import DeliverySection from '../../../components/Transactions/DeliverySection'
 import type { DeliveryMethod } from '../../../components/Transactions/DeliverySection'
@@ -44,14 +43,12 @@ interface IAdminCartItem {
   id: string;
   product: IProduct;
   variant: { variant_id: string; size: string; price: number };
-  plate: IScreenPlate | null;
   colors: { id: string }[];
   quantity: number;
   priceBreakdown: { total: number };
   productName: string;
   productImage: string;
   totalCartPrice: number;
-  plate_price: number;
 }
 
 // --- Sub-components ---
@@ -80,8 +77,8 @@ const AdminAddressSelector = ({
   )
 }
 
-const ProductDetailInner = ({ product, plates, onClose, onAdd }: { product: IProduct, plates: IScreenPlate[], onClose: () => void, onAdd: (data: unknown) => void }) => {
-  const hook = useProductDetail({ product, compatiblePlates: plates, preselectedPlateName: null })
+const ProductDetailInner = ({ product, onClose, onAdd }: { product: IProduct, onClose: () => void, onAdd: (data: unknown) => void }) => {
+  const hook = useProductDetail({ product })
 
   const adminCanAddToCart = hook.state.selectedVariantId && hook.state.quantity >= product.min_order && (!product.is_need_color || hook.computed.hasRequiredColor);
 
@@ -93,7 +90,6 @@ const ProductDetailInner = ({ product, plates, onClose, onAdd }: { product: IPro
     onAdd({
       product,
       variant: hook.computed.selectedVariant,
-      plate: hook.computed.selectedPlate,
       colors: hook.computed.selectedColors,
       quantity: hook.state.quantity,
       priceBreakdown: hook.computed.priceBreakdown
@@ -107,12 +103,11 @@ const ProductDetailInner = ({ product, plates, onClose, onAdd }: { product: IPro
       </button>
       <h2 className="text-2xl md:text-3xl font-black italic uppercase text-slate-900 mb-8 pr-12 leading-tight">{product.name}</h2>
       <div className="space-y-8">
-        <VariantSelector variants={product.variants} selectedVariantId={hook.state.selectedVariantId} onSelect={hook.actions.setSelectedVariantId} minThreshold={product.min_threshold ?? 5} minOrder={product.min_order} variantCompatibilityMap={hook.state.variantCompatibilityMap} />
-        {product.is_need_color && <ColorPicker colors={hook.state.colors} selectedColorIds={hook.state.selectedColorIds} maxChannels={hook.computed.selectedPlate?.channels || 1} onSelect={hook.actions.handleColorChange} />}
+        <VariantSelector variants={product.variants} selectedVariantId={hook.state.selectedVariantId} onSelect={hook.actions.setSelectedVariantId} minThreshold={product.min_threshold ?? 5} minOrder={product.min_order} />
+        {product.is_need_color && <ColorPicker colors={hook.state.colors} selectedColorIds={hook.state.selectedColorIds} maxChannels={4} onSelect={hook.actions.handleColorChange} />}
         <QuantityPicker quantity={hook.state.quantity} minOrder={product.min_order} maxStock={hook.computed.stockForVariant} onChange={hook.actions.setQuantity} />
-        {product.is_need_screenplate && <PlateSelector selectablePlates={hook.state.selectablePlates} selectedPlateId={hook.state.selectedPlateId} onPlateChange={hook.actions.handlePlateChange} isRequired={product.is_need_screenplate} productId={product.id} selectedVariantSize={hook.computed.selectedVariant?.size} incompatiblePlateIds={hook.state.incompatiblePlateIds} />}
         <div className="pt-8 border-t border-slate-100">
-          <PriceCalculatorUI breakdown={hook.computed.priceBreakdown} canAddToCart={!!adminCanAddToCart} isOutOfStock={hook.computed.isOutOfStock} minOrder={product.min_order} isQuantityTooLow={hook.computed.isQuantityTooLow} hasRequiredPlate={true} isNeedScreenplate={product.is_need_screenplate} hasRequiredColor={hook.computed.hasRequiredColor} isNeedColor={product.is_need_color} onAddToCart={handleAdd} onBuyNow={() => {}} quantity={hook.state.quantity} isStockInsufficient={hook.computed.isStockInsufficient} hideBuyNow={true} />
+          <PriceCalculatorUI breakdown={hook.computed.priceBreakdown} canAddToCart={!!adminCanAddToCart} isOutOfStock={hook.computed.isOutOfStock} minOrder={product.min_order} isQuantityTooLow={hook.computed.isQuantityTooLow} hasRequiredColor={hook.computed.hasRequiredColor} isNeedColor={product.is_need_color} onAddToCart={handleAdd} onBuyNow={() => {}} quantity={hook.state.quantity} isStockInsufficient={hook.computed.isStockInsufficient} hideBuyNow={true} />
         </div>
       </div>
     </div>
@@ -121,19 +116,13 @@ const ProductDetailInner = ({ product, plates, onClose, onAdd }: { product: IPro
 
 const ProductDetailModal = ({ productId, onClose, onAdd }: { productId: string; onClose: () => void; onAdd: (data: unknown) => void }) => {
   const [product, setProduct] = useState<IProduct | null>(null)
-  const [plates, setPlates] = useState<IScreenPlate[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
     let mounted = true
-    Promise.all([
-      getProductById(productId), 
-      axiosInstance.get('/api/admin/screenplates')
-    ]).then(([prodRes, plsRes]) => {
+    getProductById(productId).then((prodRes) => {
       if (!mounted) return
       setProduct(prodRes.data)
-      const filtered = (plsRes.data?.data || plsRes.data || []).filter((p: IScreenPlate) => p.compatibility?.some((cp: { product_id: string }) => cp.product_id === prodRes.data.id))
-      setPlates(filtered)
       setIsLoading(false)
     }).catch(() => {
       if (!mounted) return
@@ -148,7 +137,7 @@ const ProductDetailModal = ({ productId, onClose, onAdd }: { productId: string; 
       {isLoading || !product ? (
         <Loader2 className="animate-spin text-emerald-500 size-12" />
       ) : (
-        <ProductDetailInner product={product} plates={plates} onClose={onClose} onAdd={onAdd} />
+        <ProductDetailInner product={product} onClose={onClose} onAdd={onAdd} />
       )}
     </div>
   )
@@ -157,7 +146,6 @@ const ProductDetailModal = ({ productId, onClose, onAdd }: { productId: string; 
 interface IAddPayload {
   product: IProduct;
   variant: { variant_id: string; size: string; price: number };
-  plate: IScreenPlate | null;
   colors: { id: string }[];
   quantity: number;
   priceBreakdown: { total: number };
@@ -236,7 +224,6 @@ const ManageOrder: React.FC = () => {
       productName: data.product.name,
       productImage: data.product.main_image,
       totalCartPrice: data.priceBreakdown.total,
-      plate_price: 0
     }])
     setActiveProductId(null)
     toast.success('Added to order list')
@@ -264,10 +251,8 @@ const ManageOrder: React.FC = () => {
         items: adminCart.map(i => ({
           product_id: i.product.id,
           variant_id: i.variant.variant_id,
-          screenplate_id: i.plate?.id || null,
           quantity: i.quantity,
           unit_price: i.variant.price,
-          plate_price: i.plate_price,
           total_price: i.totalCartPrice,
           colors: i.colors.map((c: { id: string }, colorIdx: number) => ({
             color_id: c.id,

@@ -4,7 +4,6 @@ import { m, AnimatePresence } from 'framer-motion'
 import {
   TrendingUp,
   Activity,
-  Printer,
   Heart,
   Package,
   Star,
@@ -24,7 +23,6 @@ import { useCategories } from '../../hooks/useCategories'
 import { useProducts } from '../../hooks/useProducts'
 import { useSoldCounts } from '../../hooks/useSoldCounts'
 import { useHomepageFavorites } from '../../hooks/useHomepageFavorites'
-import { useCustomerScreenplates } from '../../hooks/useCustomerScreenplates'
 // import { useDiscovery } from '../../context/DiscoveryContext'
 import { useDebounce } from '../../hooks/useDebounce'
 
@@ -66,7 +64,7 @@ const HERO_SLIDES = [
   {
     src: hero3,
     title: 'Your Logo. Our Craft.',
-    sub: 'Screenplate printing with same-day turnaround.',
+    sub: 'Industrial printing with same-day turnaround.',
   },
 ] as const
 
@@ -95,7 +93,6 @@ const getCategoryIcon = (label: string) => {
   if (cleanLabel.includes('machine')) return Cpu
   if (cleanLabel.includes('mold')) return Shapes
   if (cleanLabel.includes('accessories')) return Wrench
-  if (cleanLabel.includes('screenplate') || cleanLabel.includes('screen plate')) return Printer
   return Package
 }
 
@@ -109,7 +106,6 @@ const getCategoryIconColor = (label: string) => {
   if (cleanLabel.includes('machine')) return 'text-cyan-500'
   if (cleanLabel.includes('mold')) return 'text-purple-500'
   if (cleanLabel.includes('accessories')) return 'text-violet-500'
-  if (cleanLabel.includes('screenplate') || cleanLabel.includes('screen plate')) return 'text-blue-500'
   return 'text-slate-500'
 }
 
@@ -178,7 +174,6 @@ const Homepage: React.FC = () => {
     category: 'ALL',
     availability: 'ALL',
     favoritesOnly: false,
-    screenplateId: 'ALL',
     minRating: 'ALL',
     soldFilter: 'ALL',
   })
@@ -189,7 +184,6 @@ const Homepage: React.FC = () => {
 
   // Data fetching
   const { categories, isLoading: catLoading } = useCategories()
-  const { screenplates } = useCustomerScreenplates()
   const { favoriteIds, toggleFavorite } = useHomepageFavorites()
   const { soldMap } = useSoldCounts()
 
@@ -215,8 +209,6 @@ const Homepage: React.FC = () => {
       filters.priceSort === 'MOST_SOLD' || filters.soldFilter === 'MOST_SOLD',
     min_rating: filters.minRating === 'ALL' ? undefined : filters.minRating,
     status: filters.availability === 'IN_STOCK' ? 'In Stock' : filters.availability === 'OUT_OF_STOCK' ? 'Out of Stock' : undefined,
-    screenplate_id:
-      filters.screenplateId === 'ALL' ? undefined : filters.screenplateId,
     page: currentPage,
     per_page: itemsPerPage,
   })
@@ -613,28 +605,6 @@ const Homepage: React.FC = () => {
                               STATUS_OPTIONS.find(
                                 (o) => o.label === (label as string),
                               )?.value || 'ALL',
-                          }))
-                          setCurrentPage(1)
-                        }}
-                      />
-                      <FilterDropdown
-                        label="Press"
-                        icon={Printer}
-                        options={[
-                          'All',
-                          ...screenplates.map((s) => s.plate_name),
-                        ]}
-                        value={
-                          screenplates.find(
-                            (s) => s.id === filters.screenplateId,
-                          )?.plate_name || 'All'
-                        }
-                        onChange={(label) => {
-                          setFilters((prev) => ({
-                            ...prev,
-                            screenplateId:
-                              screenplates.find((s) => s.plate_name === label)
-                                ?.id || 'ALL',
                           }))
                           setCurrentPage(1)
                         }}

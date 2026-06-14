@@ -24,16 +24,9 @@ class CartController extends Controller
                 'colors.color',
                 'product.variants',
                 'variant',
-                'screenplate.compatibility',
             ])
                 ->where('customer_id', $user->id)
                 ->get();
-
-            foreach ($items as $item) {
-                if ($item->screenplate) {
-                    $this->transformScreenplate($item->screenplate);
-                }
-            }
 
             return response()->json([
                 'status' => 'success',
@@ -63,10 +56,8 @@ class CartController extends Controller
             'id' => 'required|string',
             'product_id' => 'required|string',
             'variant_id' => 'required|string',
-            'screenplate_id' => 'nullable|string',
             'quantity' => 'required|integer|min:1',
             'unit_price' => 'required|numeric',
-            'plate_price' => 'nullable|numeric',
             'total_cart_price' => 'nullable|numeric',
             'selected' => 'nullable|boolean',
             'temp' => 'nullable|boolean',
@@ -83,10 +74,8 @@ class CartController extends Controller
                     [
                         'product_id' => $validated['product_id'],
                         'variant_id' => $validated['variant_id'],
-                        'screenplate_id' => $validated['screenplate_id'],
                         'quantity' => $validated['quantity'],
                         'unit_price' => $validated['unit_price'],
-                        'plate_price' => $validated['plate_price'] ?? 0,
                         'total_cart_price' => $validated['total_cart_price'] ?? 0,
                         'selected' => $validated['selected'] ?? false,
                         'temp' => $validated['temp'] ?? false,
@@ -105,10 +94,7 @@ class CartController extends Controller
                     }
                 }
 
-                $cartItem->load(['colors.color', 'product.variants', 'variant', 'screenplate.compatibility']);
-                if ($cartItem->screenplate) {
-                    $this->transformScreenplate($cartItem->screenplate);
-                }
+                $cartItem->load(['colors.color', 'product.variants', 'variant']);
 
                 return response()->json([
                     'status' => 'success',
@@ -137,10 +123,8 @@ class CartController extends Controller
             'id' => 'required|string',
             'product_id' => 'required|string',
             'variant_id' => 'required|string',
-            'screenplate_id' => 'nullable|string',
             'quantity' => 'required|integer|min:1',
             'unit_price' => 'required|numeric',
-            'plate_price' => 'nullable|numeric',
             'total_cart_price' => 'nullable|numeric',
             'temp' => 'nullable|boolean',
             'colors' => 'nullable|array',
@@ -159,10 +143,8 @@ class CartController extends Controller
                     [
                         'product_id' => $validated['product_id'],
                         'variant_id' => $validated['variant_id'],
-                        'screenplate_id' => $validated['screenplate_id'],
                         'quantity' => $validated['quantity'],
                         'unit_price' => $validated['unit_price'],
-                        'plate_price' => $validated['plate_price'] ?? 0,
                         'total_cart_price' => $validated['total_cart_price'] ?? 0,
                         'selected' => 1,
                         'temp' => $validated['temp'] ?? false,
@@ -180,10 +162,7 @@ class CartController extends Controller
                     }
                 }
 
-                $cartItem->load(['colors.color', 'product.variants', 'variant', 'screenplate.compatibility']);
-                if ($cartItem->screenplate) {
-                    $this->transformScreenplate($cartItem->screenplate);
-                }
+                $cartItem->load(['colors.color', 'product.variants', 'variant']);
 
                 return response()->json([
                     'status' => 'success',
@@ -234,10 +213,7 @@ class CartController extends Controller
                     }
                 }
 
-                $cartItem->load(['colors.color', 'product.variants', 'variant', 'screenplate.compatibility']);
-                if ($cartItem->screenplate) {
-                    $this->transformScreenplate($cartItem->screenplate);
-                }
+                $cartItem->load(['colors.color', 'product.variants', 'variant']);
 
                 return response()->json([
                     'status' => 'success',
@@ -268,17 +244,5 @@ class CartController extends Controller
             'status' => 'success',
             'message' => 'Item removed',
         ]);
-    }
-
-    private function transformScreenplate($screenplate)
-    {
-        $screenplate->compatibilityMapped = $screenplate->compatibility->groupBy('product_id')->map(function ($rows, $productId) {
-            return [
-                'product_id' => $productId,
-                'allowed_variants' => $rows->pluck('variant_id')->map(fn ($v) => $v ?? 'ALL')->toArray(),
-            ];
-        })->values();
-
-        $screenplate->setRelation('compatibility', $screenplate->compatibilityMapped);
     }
 }

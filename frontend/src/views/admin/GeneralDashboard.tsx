@@ -620,7 +620,7 @@ const GeneralDashboard: React.FC = () => {
                   Pending Operations Queue
                 </h3>
                 <p className="mt-0.5 text-xs sm:text-sm font-medium text-slate-500">
-                  Review orders and screenplate requests
+                  Review and manage active orders
                 </p>
               </div>
               <div className="flex items-center justify-between sm:justify-start gap-2 w-full sm:w-auto">

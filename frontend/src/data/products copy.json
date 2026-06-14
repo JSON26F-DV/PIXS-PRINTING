@@ -19,7 +19,6 @@
     ],
     "print_method": "Screen Print / Offset",
     "tags": ["Budget-Friendly", "Food Grade", "High Volume"],
-    "is_need_screenplate": true,
     "is_need_color": true,
     "variants": [
       { "variant_id": "V-PPY-12OZ", "size": "12oz", "width": "90mm", "height": "100mm", "price": 2.85, "stock": 3000 },
@@ -47,7 +46,6 @@
     ],
     "print_method": "Screen Print / Offset",
     "tags": ["Premium Look", "Food Grade", "Crystal Clear"],
-    "is_need_screenplate": true,
     "is_need_color": true,
     "variants": [
       { "variant_id": "V-UCUP-12OZ", "size": "12oz", "width": "90mm", "height": "100mm", "price": 2.95, "stock": 2500 },
@@ -75,7 +73,6 @@
     ],
     "print_method": "Screen Print / Offset",
     "tags": ["Ergonomic", "Food Grade", "Modern Design"],
-    "is_need_screenplate": true,
     "is_need_color": true,
     "variants": [
       { "variant_id": "V-SLIM-16OZ", "size": "16oz", "width": "80mm", "height": "140mm", "price": 3.80, "stock": 3000 },
@@ -102,7 +99,6 @@
     ],
     "print_method": "Screen Print / Offset",
     "tags": ["Best Seller", "Insulated", "Includes Lid", "Food Grade"],
-    "is_need_screenplate": true,
     "is_need_color": true,
     "variants": [
       { "variant_id": "V-DW-8OZ",  "size": "8oz",  "width": "80mm", "height": "90mm",  "price": 7.00, "stock": 1000 },
@@ -130,7 +126,6 @@
     ],
     "print_method": "Screen Print / Offset",
     "tags": ["Eco-Friendly", "Crystal Clear", "BPA-Free", "Recyclable"],
-    "is_need_screenplate": true,
     "is_need_color": true,
     "variants": [
       { "variant_id": "V-PET95-12OZ", "size": "12oz", "width": "95mm", "height": "100mm", "price": 3.20, "stock": 2500 },
@@ -158,7 +153,6 @@
     ],
     "print_method": "Screen Print / Offset",
     "tags": ["Wide Mouth", "BPA-Free", "Recyclable", "Crystal Clear"],
-    "is_need_screenplate": true,
     "is_need_color": true,
     "variants": [
       { "variant_id": "V-PET98-12OZ", "size": "12oz", "width": "98mm", "height": "98mm",  "price": 4.45, "stock": 2000 },
@@ -185,7 +179,6 @@
     ],
     "print_method": "N/A",
     "tags": ["Food Grade", "Dome Top", "Topping-Friendly"],
-    "is_need_screenplate": false,
     "is_need_color": false,
     "variants": [
       { "variant_id": "V-DOME-90MM", "size": "Standard (90mm)", "width": "90mm", "height": "25mm", "price": 1.30, "stock": 8000 },
@@ -211,7 +204,6 @@
     ],
     "print_method": "N/A",
     "tags": ["Eco-Friendly", "No Straw", "Food Grade"],
-    "is_need_screenplate": false,
     "is_need_color": false,
     "variants": [
       { "variant_id": "V-SLL-90MM", "size": "Standard (90mm)", "width": "90mm", "height": "18mm", "price": 1.20, "stock": 6000 },
@@ -238,7 +230,6 @@
     ],
     "print_method": "N/A",
     "tags": ["Food Grade", "Minimal Design", "Leak-Proof"],
-    "is_need_screenplate": false,
     "is_need_color": false,
     "variants": []
   },
@@ -261,7 +252,6 @@
     ],
     "print_method": "N/A",
     "tags": ["Unique", "Double Cup", "Takeaway-Friendly", "Food Grade"],
-    "is_need_screenplate": false,
     "is_need_color": false,
     "variants": []
   },
@@ -284,7 +274,6 @@
     ],
     "print_method": "N/A",
     "tags": ["Food Grade", "Black", "Premium Look"],
-    "is_need_screenplate": false,
     "is_need_color": false,
     "variants": []
   },
@@ -308,7 +297,6 @@
     ],
     "print_method": "Flexographic Print",
     "tags": ["Eco-Friendly", "Food Grade", "Leak-Resistant", "Hot Food Safe"],
-    "is_need_screenplate": true,
     "is_need_color": true,
     "variants": [
       { "variant_id": "V-PB-220CC", "size": "220cc", "width": "95mm",  "height": "55mm", "price": 2.40, "stock": 2000 },
@@ -339,7 +327,6 @@
     ],
     "print_method": "Flexographic Print / Screen Print",
     "tags": ["Food Grade", "Hot & Cold Safe", "Customizable", "Eco-Friendly"],
-    "is_need_screenplate": true,
     "is_need_color": true,
     "variants": [
       { "variant_id": "V-PC-3OZ",   "size": "3oz",   "width": "62mm", "height": "65mm",  "price": 1.81, "stock": 2500 },
@@ -371,7 +358,6 @@
     ],
     "print_method": "Flexographic Print",
     "tags": ["Food Grade", "Leak-Resistant", "Takeaway"],
-    "is_need_screenplate": true,
     "is_need_color": true,
     "variants": []
   },
@@ -394,7 +380,6 @@
     ],
     "print_method": "Flexographic Print",
     "tags": ["Food Grade", "Clamshell", "Grease-Resistant", "Hot Food Safe"],
-    "is_need_screenplate": true,
     "is_need_color": true,
     "variants": []
   },
@@ -418,7 +403,6 @@
     ],
     "print_method": "Flexographic Print",
     "tags": ["Food Grade", "Rice Meal", "Grease-Resistant", "Takeaway"],
-    "is_need_screenplate": true,
     "is_need_color": true,
     "variants": [
       { "variant_id": "V-MB-750CC", "size": "750cc", "width": "140mm", "height": "55mm", "price": 5.05, "stock": 3000 },
@@ -444,7 +428,6 @@
     ],
     "print_method": "Flexographic Print",
     "tags": ["Food Grade", "Tall Profile", "Grease-Resistant", "Catering"],
-    "is_need_screenplate": true,
     "is_need_color": true,
     "variants": []
   },
@@ -467,7 +450,6 @@
     ],
     "print_method": "Flexographic Print",
     "tags": ["Food Grade", "Grease-Resistant", "Heavy Duty", "Takeaway"],
-    "is_need_screenplate": true,
     "is_need_color": true,
     "variants": []
   },
@@ -490,7 +472,6 @@
     ],
     "print_method": "Flexographic Print",
     "tags": ["Food Grade", "2 Compartments", "Grease-Resistant", "Combo Meal"],
-    "is_need_screenplate": true,
     "is_need_color": true,
     "variants": []
   },
@@ -513,7 +494,6 @@
     ],
     "print_method": "Flexographic Print",
     "tags": ["Food Grade", "Grease-Resistant", "Street Food", "Elongated"],
-    "is_need_screenplate": true,
     "is_need_color": true,
     "variants": []
   }

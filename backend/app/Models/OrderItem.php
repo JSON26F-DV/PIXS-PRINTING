@@ -15,10 +15,8 @@ class OrderItem extends Model
         'customer_id',
         'product_id',
         'variant_id',
-        'screenplate_id',
         'quantity',
         'unit_price',
-        'plate_price',
     ];
 
     public function order(): BelongsTo
@@ -39,10 +37,5 @@ class OrderItem extends Model
     public function variant(): BelongsTo
     {
         return $this->belongsTo(ProductVariant::class);
-    }
-
-    public function screenplate(): BelongsTo
-    {
-        return $this->belongsTo(Screenplate::class);
     }
 }

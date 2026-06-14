@@ -47,7 +47,6 @@ const productSchema = z.object({
   gallery: z.array(z.string()),
   print_method: z.string().min(1, 'Print method is required'),
   tags: z.array(z.string()),
-  is_need_screenplate: z.boolean(),
   is_need_color: z.boolean(),
   variants: z.array(
     z.object({
@@ -595,10 +594,6 @@ export const ProductsSection: React.FC<ProductsSectionProps> = ({
 
                 <div className="flex items-center gap-6 border-t border-slate-50 pt-4">
                   <div className="flex items-center gap-2">
-                    <div className={cn("h-3.5 w-3.5 rounded-full border", selectedMobileProduct.is_need_screenplate ? "bg-emerald-500 border-emerald-600" : "bg-slate-200 border-slate-300")} />
-                    <span className="text-[9px] font-black tracking-widest text-slate-500 uppercase">Requires Plate</span>
-                  </div>
-                  <div className="flex items-center gap-2">
                     <div className={cn("h-3.5 w-3.5 rounded-full border", selectedMobileProduct.is_need_color ? "bg-emerald-500 border-emerald-600" : "bg-slate-200 border-slate-300")} />
                     <span className="text-[9px] font-black tracking-widest text-slate-500 uppercase">Multi-Color</span>
                   </div>
@@ -889,16 +884,6 @@ const ProductModal = ({
               </div>
 
               <div className="flex items-center gap-8 pt-4">
-                <label className="group flex cursor-pointer items-center gap-3">
-                  <input
-                    type="checkbox"
-                    {...register('is_need_screenplate')}
-                    className="h-5 w-5 rounded-lg border-slate-300 text-blue-600 focus:ring-blue-500"
-                  />
-                  <span className="text-[11px] font-bold tracking-widest text-slate-500 uppercase group-hover:text-slate-900">
-                    Requires Plate
-                  </span>
-                </label>
                 <label className="group flex cursor-pointer items-center gap-3">
                   <input
                     type="checkbox"

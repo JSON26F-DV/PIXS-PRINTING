@@ -37,7 +37,7 @@ export const useCart = () => {
     setLocalItems((prev) =>
       (prev || resolvedItems).map((i) => {
         if (i.id === item.id) {
-          const nextTotal = (i.variant.unitPrice * nextQty) + ((i.plate?.printPricePerUnit ?? 0) * nextQty);
+          const nextTotal = i.variant.unitPrice * nextQty;
           return { ...i, quantity: nextQty, totalCartPrice: nextTotal };
         }
         return i;
@@ -53,21 +53,7 @@ export const useCart = () => {
   }
 
 
-  const updatePlatePrice = (
-    itemId: string,
-    printPricePerUnit: number,
-  ) => {
-    setLocalItems((prev) =>
-      (prev || resolvedItems).map((i) => {
-        if (i.id === itemId) {
-          const nextPlate = i.plate ? { ...i.plate, printPricePerUnit } : null;
-          const nextTotal = (i.variant.unitPrice * i.quantity) + (printPricePerUnit * i.quantity);
-          return { ...i, plate: nextPlate, totalCartPrice: nextTotal };
-        }
-        return i;
-      }),
-    )
-  }
+
   
   const updateSelected = (itemId: string, selected: boolean) => {
     setLocalItems((prev) =>
@@ -92,7 +78,6 @@ export const useCart = () => {
     itemId: string,
     updates: Partial<{
       colors: CartItem['colors'];
-      platePrice: number;
       quantity: number;
       selected: boolean;
       variant: CartItem['variant'];
@@ -104,10 +89,9 @@ export const useCart = () => {
           const nextQty = updates.quantity ?? i.quantity;
           const nextColors = updates.colors ?? i.colors;
           const nextSelected = updates.selected ?? i.selected;
-          const nextPrintPrice = updates.platePrice !== undefined ? updates.platePrice : (i.plate?.printPricePerUnit ?? 0);
           const nextVariant = updates.variant ?? i.variant;
 
-          const nextTotal = (nextVariant.unitPrice * nextQty) + (nextPrintPrice * nextQty);
+          const nextTotal = nextVariant.unitPrice * nextQty;
           
           return { 
             ...i, 
@@ -116,7 +100,6 @@ export const useCart = () => {
             selected: nextSelected,
             variant: nextVariant,
             totalCartPrice: nextTotal,
-            plate: i.plate ? { ...i.plate, printPricePerUnit: nextPrintPrice } : null
           };
         }
         return i;
@@ -160,7 +143,6 @@ export const useCart = () => {
     updateQuantity,
     removeItem,
     updateColors,
-    updatePlatePrice,
     getItemTotal,
     getStockStatusLabel,
     updateSelected,

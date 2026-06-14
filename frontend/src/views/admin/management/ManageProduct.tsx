@@ -35,7 +35,6 @@ const productSchema = z.object({
   min_threshold: z.number().min(0, 'Threshold must be positive'),
   min_order: z.number().min(1, 'Min order must be at least 1'),
   print_method: z.string().optional(),
-  is_need_screenplate: z.boolean(),
   is_need_color: z.boolean(),
   is_in_stock: z.boolean(),
   ratings: z.number().min(0).max(5),
@@ -196,7 +195,6 @@ const ManageProduct: React.FC = () => {
       min_threshold: 0,
       min_order: 1,
       print_method: '',
-      is_need_screenplate: false,
       is_need_color: false,
       is_in_stock: true,
       ratings: 5,
@@ -237,7 +235,6 @@ const ManageProduct: React.FC = () => {
           min_threshold: p.min_threshold ?? 0,
           min_order: p.min_order ?? 1,
           print_method: p.print_method || '',
-          is_need_screenplate: Boolean(p.is_need_screenplate),
           is_need_color: Boolean(p.is_need_color),
           is_in_stock: Boolean(p.is_in_stock),
           ratings: p.ratings ?? 5,
@@ -584,7 +581,6 @@ const ManageProduct: React.FC = () => {
               <div className="space-y-4">
                 {[
                   { name: 'is_in_stock' as const, label: 'Available / In Stock' },
-                  { name: 'is_need_screenplate' as const, label: 'Needs Screenplate' },
                   { name: 'is_need_color' as const, label: 'Multi-Color' },
                 ].map(({ name, label }) => {
                   const val = watch(name)

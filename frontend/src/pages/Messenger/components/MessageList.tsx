@@ -27,7 +27,6 @@ import type { EmojiClickData } from 'emoji-picker-react'
 
 import type { IMessage } from '../MessengerPage.tsx'
 import OrderConfirmMessage from './OrderConfirmMessage'
-import ScreenplateConfirmMessage from './ScreenplateConfirmMessage'
 import ExpenditureConfirmMessage from './ExpenditureConfirmMessage'
 import RefundMessage from './RefundMessage'
 import EmailMessage from './EmailMessage'
@@ -527,12 +526,6 @@ const MessageBubbleComponent: React.FC<{
             </div>
           )}
 
-          {message.message_type === 'screenplate_request' && message.type_id && !isEditing && !message.isDeleted && (
-            <div className="mt-2 group-last:mb-0">
-              <ScreenplateConfirmMessage requestId={message.type_id} isCustomer={isCustomer} onImageClick={onImageClick} />
-            </div>
-          )}
-
           {message.message_type === 'payment_code' && message.type_id && !isEditing && !message.isDeleted && (() => {
             const paycodeString = message.payment_code || (() => {
               const match = message.text?.match(/PIXS-[A-Z0-9]{10}/i);
@@ -566,7 +559,7 @@ const MessageBubbleComponent: React.FC<{
           })()}
           
           {(message.message_type && message.type_id && 
-            !['order', 'screenplate_request', 'payment_code', 'refund', 'expenditure'].includes(message.message_type)) && (
+            !['order', 'payment_code', 'refund', 'expenditure'].includes(message.message_type)) && (
             <div className="mt-2">
               <MessageNotFound 
                   messageType={message.message_type}

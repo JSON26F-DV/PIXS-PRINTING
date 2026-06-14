@@ -4,13 +4,10 @@ import {
   MapPin,
   MessageCircle,
   Bell,
-  Printer,
   ShoppingBag,
   ShoppingCart,
   Home,
   User,
-  CheckCircle2,
-  Circle,
   ChevronDown,
   Package,
   ArrowLeft,
@@ -93,7 +90,6 @@ const CustomerNavbar: React.FC<{ hideOnMobile?: boolean }> = ({ hideOnMobile }) 
     }
   }, [location.pathname])
 
-  const plateStatus = 'Ready'
   const cartItemCount = getCartCount()
 
   const handleAddressClick = () => {
@@ -195,30 +191,11 @@ const CustomerNavbar: React.FC<{ hideOnMobile?: boolean }> = ({ hideOnMobile }) 
           {/* Right: Identity Terminal */}
           <div className="CustomerNavbarRight flex shrink-0 items-center gap-2 min-[1251px]:gap-4">
             <div className="flex items-center gap-1 min-[1251px]:gap-4">
-              <div className="hidden flex-col items-center px-4 min-[1251px]:flex">
-                <div className="flex items-center gap-1.5 text-[9px] font-black tracking-tighter text-slate-900 uppercase italic opacity-80">
-                  {plateStatus === 'Ready' ? (
-                    <CheckCircle2 size={14} className="text-pixs-mint" />
-                  ) : (
-                    <Circle
-                      size={14}
-                      className="animate-pulse text-slate-300"
-                    />
-                  )}
-                  Sync
-                </div>
-              </div>
               <NavbarActionButton
                 to="/cart"
                 icon={ShoppingBag}
                 label="Cart"
                 badge={cartItemCount}
-              />
-              <NavbarActionButton
-                to="/screenplate"
-                icon={Printer}
-                label="Plate"
-                className="hidden sm:flex"
               />
               <NavbarActionButton
                 to="/chat"
@@ -281,7 +258,6 @@ const CustomerNavbar: React.FC<{ hideOnMobile?: boolean }> = ({ hideOnMobile }) 
           const isCartPage = location.pathname === '/cart'
           const isTransactionsPage = location.pathname === '/transactions'
           const isOrdersPage = location.pathname === '/order'
-          const isScreenplatePage = location.pathname === '/screenplate'
           const isHomepage = location.pathname === '/homepage' || location.pathname === '/'
 
           if (isHomepage) {
@@ -360,7 +336,7 @@ const CustomerNavbar: React.FC<{ hideOnMobile?: boolean }> = ({ hideOnMobile }) 
             )
           }
 
-          if (isProductPage || isCartPage || isTransactionsPage || isOrdersPage || isScreenplatePage) {
+          if (isProductPage || isCartPage || isTransactionsPage || isOrdersPage) {
             let centerText = ''
             let CenterIcon: LucideIcon = ShoppingBag
             let rightElement: React.ReactNode = null
@@ -402,17 +378,6 @@ const CustomerNavbar: React.FC<{ hideOnMobile?: boolean }> = ({ hideOnMobile }) 
               centerText = 'Orders'
               CenterIcon = Package
               rightElement = null
-            } else if (isScreenplatePage) {
-              centerText = 'Screenplate'
-              CenterIcon = Printer
-              rightElement = (
-                <button
-                  onClick={() => window.dispatchEvent(new CustomEvent('pixs-screenplate-pay'))}
-                  className="flex h-11 w-11 items-center justify-end text-slate-800 transition-transform active:scale-95"
-                >
-                  <Check size={24} strokeWidth={2.5} />
-                </button>
-              )
             }
 
             return (

@@ -9,7 +9,6 @@ export interface IProductVariant {
   size: string
   width: string
   height: string
-  is_need_screenplate?: boolean
 }
 
 export interface IProduct {
@@ -20,7 +19,6 @@ export interface IProduct {
   is_in_stock: boolean
   main_image: string
   min_order: number
-  is_need_screenplate: boolean
   is_need_color: boolean
   category_id: string
   category_label: string
@@ -55,7 +53,6 @@ export interface IFilters {
   price: string
   sort: string
   status: string
-  screenplate: string
 }
 
 // ─── Color Domain Types ───────────────────────────────────────────────────────
@@ -67,31 +64,6 @@ export interface IColor {
   type: 'Standard' | 'Premium'
 }
 
-// ─── Screen Plate Domain Types ───────────────────────────────────────────────
-
-export interface IScreenPlateCompatibility {
-  product_id: string
-  allowed_variants: string[]
-  /** @deprecated Print cost is now included directly in the cup unit price */
-  print_price_per_unit?: Record<string, number>
-}
-
-export interface IScreenPlate {
-  id: string
-  owner_id: string
-  plate_name: string
-  base_setup_fee: number
-  is_flatscreen: boolean
-  channels: number
-  alignment: string
-  supported_alignments: string[]
-  dimensions: string
-  image: string
-  comment?: string
-  technical_info?: string
-  compatibility: IScreenPlateCompatibility[]
-}
-
 // ─── Order Configuration ──────────────────────────────────────────────────────
 
 export interface IOrderConfig {
@@ -99,8 +71,6 @@ export interface IOrderConfig {
   variantId: string
   quantity: number
   colorIds: string[]
-  plateId: string | null
-  printPosition: string | null
 }
 
 export interface IPriceBreakdown {

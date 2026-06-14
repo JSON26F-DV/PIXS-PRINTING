@@ -10,7 +10,6 @@ export interface ProductQueryParams {
   price_max?: number
   sort?: string
   status?: string
-  screenplate_id?: string | null
   most_sold?: boolean
   min_rating?: number
   in_stock_only?: boolean
@@ -37,7 +36,6 @@ async function fetchProducts(
     price_max: params.price_max,
     sort: params.sort,
     status: params.status,
-    screenplate_id: params.screenplate_id,
     most_sold: params.most_sold,
     min_rating: params.min_rating,
     page: params.page,
@@ -51,8 +49,7 @@ async function fetchProducts(
       value !== '' &&
       value !== 'All' &&
       value !== 'All Prices' &&
-      value !== 'All Status' &&
-      value !== 'All Plates'
+      value !== 'All Status'
     ) {
       queryParams.append(key, value.toString())
     }

@@ -35,7 +35,6 @@ class OrderController extends Controller
             'items.product',
             'items.variant',
             'items.colors.colorDetails',
-            'items.screenplate',
             'address',
         ])
             ->where('customer_id', $user->id)
@@ -72,15 +71,6 @@ class OrderController extends Controller
                         ];
                     })->toArray() : [];
 
-                    $plate = $item->screenplate ? [
-                        'id' => $item->screenplate_id,
-                        'name' => $item->screenplate->plate_name ?? 'Custom Plate',
-                        'type' => $item->screenplate->type ?? 'Flatscreen',
-                        'channels' => (int) $item->screenplate->channels ?? 1,
-                        'setupFee' => 0,
-                        'printPricePerUnit' => (float) $item->plate_price,
-                    ] : null;
-
                     return [
                         'id' => (string) $item->id,
                         'product_id' => $item->product_id,
@@ -98,7 +88,6 @@ class OrderController extends Controller
                             'unitPrice' => (float) $item->unit_price,
                         ],
                         'order_item_colors' => $order_item_colors,
-                        'plate' => $plate,
                         'customRequirements' => $order->production_notes,
                     ];
                 })->toArray(),
@@ -117,7 +106,6 @@ class OrderController extends Controller
             'items.product',
             'items.variant',
             'items.colors.colorDetails',
-            'items.screenplate',
             'address',
         ])
             ->where('id', $id)
@@ -161,15 +149,6 @@ class OrderController extends Controller
                     ];
                 })->toArray() : [];
 
-                $plate = $item->screenplate ? [
-                    'id' => $item->screenplate_id,
-                    'name' => $item->screenplate->plate_name ?? 'Custom Plate',
-                    'type' => $item->screenplate->type ?? 'Flatscreen',
-                    'channels' => (int) $item->screenplate->channels ?? 1,
-                    'setupFee' => 0,
-                    'printPricePerUnit' => (float) $item->plate_price,
-                ] : null;
-
                 return [
                     'id' => (string) $item->id,
                     'product_id' => $item->product_id,
@@ -187,7 +166,6 @@ class OrderController extends Controller
                         'unitPrice' => (float) $item->unit_price,
                     ],
                     'order_item_colors' => $order_item_colors,
-                    'plate' => $plate,
                 ];
             })->toArray(),
         ];
@@ -283,7 +261,7 @@ class OrderController extends Controller
         }
 
         // Load cart items with relations
-        $cartItems = CartItem::with(['colors', 'variant', 'screenplate', 'product'])
+        $cartItems = CartItem::with(['colors', 'variant', 'product'])
             ->whereIn('id', $validated['cart_item_ids'])
             ->get();
 
@@ -519,7 +497,7 @@ class OrderController extends Controller
         try {
             return DB::transaction(function () use ($pendingData, $cartItemIds, $customer, $customerId) {
                 // Reload cart items
-                $cartItems = CartItem::with(['colors', 'variant', 'screenplate', 'product'])
+                $cartItems = CartItem::with(['colors', 'variant', 'product'])
                     ->whereIn('id', $cartItemIds)
                     ->get();
 
@@ -574,10 +552,8 @@ class OrderController extends Controller
                         'customer_id' => $cartItem->customer_id,
                         'product_id' => $cartItem->product_id,
                         'variant_id' => $cartItem->variant_id,
-                        'screenplate_id' => $cartItem->screenplate_id,
                         'quantity' => $cartItem->quantity,
                         'unit_price' => $cartItem->unit_price,
-                        'plate_price' => $cartItem->plate_price,
                     ]);
 
                     // Deduct stock
@@ -731,7 +707,7 @@ class OrderController extends Controller
         try {
             return DB::transaction(function () use ($validated, $user, $payCode) {
                 // STEP 2: Load cart items with relations
-                $cartItems = CartItem::with(['colors', 'variant', 'screenplate', 'product'])
+                $cartItems = CartItem::with(['colors', 'variant', 'product'])
                     ->whereIn('id', $validated['cart_item_ids'])
                     ->get();
 
@@ -862,10 +838,8 @@ class OrderController extends Controller
                         'customer_id' => $cartItem->customer_id,
                         'product_id' => $cartItem->product_id,
                         'variant_id' => $cartItem->variant_id,
-                        'screenplate_id' => $cartItem->screenplate_id,
                         'quantity' => $cartItem->quantity,
                         'unit_price' => $cartItem->unit_price,
-                        'plate_price' => $cartItem->plate_price,
                     ]);
 
                     // Deduct variant stock first, then re-evaluate is_in_stock

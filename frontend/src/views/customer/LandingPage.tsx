@@ -2,7 +2,6 @@ import React from 'react'
 import { m } from 'framer-motion'
 import {
   ChevronRight,
-  Printer,
   Package,
   Activity,
   ShieldCheck,
@@ -101,7 +100,7 @@ const LandingPage: React.FC = () => {
             <div className="w-64 rounded-2xl border border-slate-200/60 bg-white p-2 shadow-xl">
               <div className="relative aspect-video overflow-hidden rounded-xl bg-slate-100">
                 <div className="absolute inset-0 flex items-center justify-center bg-slate-900/5">
-                  <Printer size={32} className="text-slate-300" />
+                  <Package size={32} className="text-slate-300" />
                 </div>
                 <div className="absolute top-2 right-2 flex h-7 w-7 items-center justify-center rounded-lg bg-white/90 shadow-sm">
                   <Heart size={14} className="fill-rose-500 text-rose-500" />
@@ -145,8 +144,8 @@ const LandingPage: React.FC = () => {
               </div>
               <div className="space-y-2">
                 <div className="flex justify-between text-[7px] font-mono text-slate-400">
-                  <span>PLATE_ID</span>
-                  <span className="text-white">SP-4402</span>
+                  <span>SYSTEM_UPTIME</span>
+                  <span className="text-white">99.9%</span>
                 </div>
                 <div className="flex justify-between text-[7px] font-mono text-slate-400">
                   <span>INK_LEVEL</span>
@@ -231,7 +230,7 @@ const LandingPage: React.FC = () => {
               className="mx-auto mb-12 max-w-2xl text-sm leading-relaxed font-medium text-slate-500 uppercase tracking-wide md:text-lg"
             >
               The definitive substrate matrix for milk tea franchises and
-              B2B packaging. High-volume screenplate manufacturing with
+              B2B packaging. High-volume manufacturing with
               technical precision.
             </m.p>
 
@@ -311,9 +310,9 @@ const LandingPage: React.FC = () => {
             <div className="grid gap-6 md:grid-cols-3">
               {[
                 {
-                  title: 'Screenplate Tech',
-                  desc: 'Proprietary chemical etching for ultra-sharp vector reproduction on curved surfaces.',
-                  icon: Printer,
+                  title: 'Precision Print',
+                  desc: 'Proprietary industrial etching for ultra-sharp vector reproduction on curved surfaces.',
+                  icon: Package,
                 },
                 {
                   title: 'Bulk Logic',

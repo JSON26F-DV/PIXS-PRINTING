@@ -15,11 +15,6 @@ export const getColors = async () => {
   return response.data
 }
 
-export const getCustomerScreenplates = async () => {
-  const response = await axiosInstance.get('/api/customer/screenplates')
-  return response.data
-}
-
 export const getAdminProducts = async () => {
   const response = await axiosInstance.get('/api/admin/products')
   return response.data

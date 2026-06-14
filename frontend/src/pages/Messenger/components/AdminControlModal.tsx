@@ -142,15 +142,15 @@ const SearchPanel: React.FC<{
   )
 }
 
-// ─── Sub-panel: Orders & Screenplates ────────────────────────────────────────
+// ─── Sub-panel: Orders ────────────────────────────────────────
 
-const OrdersScreenplatesPanel: React.FC<{
+const OrdersPanel: React.FC<{
   msgs: IMessage[]
   onScrollTo?: (id: string) => void
   onBack: () => void
 }> = ({ msgs, onScrollTo, onBack }) => (
   <m.div
-    key="orders-screenplates"
+    key="orders"
     initial={{ x: '100%' }}
     animate={{ x: 0 }}
     exit={{ x: '100%' }}
@@ -164,14 +164,14 @@ const OrdersScreenplatesPanel: React.FC<{
       <div className="flex items-center gap-2">
         <ShoppingBag size={14} className="text-slate-400" />
         <h3 className="text-[11px] font-black uppercase tracking-widest text-slate-900">
-          Orders & Screenplates ({msgs.length})
+          Orders ({msgs.length})
         </h3>
       </div>
     </div>
     <div className="flex-1 overflow-y-auto p-5 space-y-2 custom-scrollbar">
       {msgs.length === 0 ? (
         <p className="text-xs font-bold text-slate-300 italic p-6 text-center bg-slate-50 rounded-2xl">
-          No orders or screenplates.
+          No orders.
         </p>
       ) : msgs.map(msg => (
         <button
@@ -189,14 +189,9 @@ const OrdersScreenplatesPanel: React.FC<{
                 Order
               </span>
             )}
-            {msg.message_type === 'screenplate_request' && (
-              <span className="px-2 py-0.5 text-[8px] font-black bg-blue-50 text-blue-600 border border-blue-100 rounded uppercase tracking-wider">
-                Screenplate
-              </span>
-            )}
           </div>
           <p className="text-xs font-bold text-slate-800 line-clamp-3">
-            {msg.text || (msg.message_type === 'order' ? 'Order Confirmation Message' : 'Screenplate Confirmation Message')}
+            {msg.text || (msg.message_type === 'order' ? 'Order Confirmation Message' : '')}
           </p>
         </button>
       ))}
@@ -255,7 +250,7 @@ const AdminControlModal: React.FC<AdminControlModalProps> = ({
   }
 
   const pinnedMsgs = messages.filter(m => m.is_pinned && !m.isDeleted)
-  const orderScreenplateMsgs = messages.filter(m => !m.isDeleted && (m.message_type === 'order' || m.message_type === 'screenplate_request'))
+  const orderMsgs = messages.filter(m => !m.isDeleted && m.message_type === 'order')
 
   // Build all image URLs from conversation attachments
   const getAssetUrl = (at: { type: string; name: string; url: string }) => {
@@ -345,7 +340,7 @@ const AdminControlModal: React.FC<AdminControlModalProps> = ({
                 </button>
               </section>
 
-              {/* ── Orders & Screenplates — button that opens sub-panel ── */}
+              {/* ── Orders — button that opens sub-panel ── */}
               <section>
                 <button
                   onClick={() => setActivePanel('orders')}
@@ -355,9 +350,9 @@ const AdminControlModal: React.FC<AdminControlModalProps> = ({
                     <ShoppingBag size={18} />
                   </div>
                   <div className="text-left flex-1">
-                    <h3 className="text-[11px] font-black uppercase text-slate-900">Orders & Screenplates</h3>
+                    <h3 className="text-[11px] font-black uppercase text-slate-900">Orders</h3>
                     <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mt-0.5">
-                      {orderScreenplateMsgs.length === 0 ? 'None found' : `${orderScreenplateMsgs.length} items`}
+                      {orderMsgs.length === 0 ? 'None found' : `${orderMsgs.length} items`}
                     </p>
                   </div>
                   <ChevronRight size={14} className="text-slate-300 group-hover:text-slate-900 transition-colors" />
@@ -463,8 +458,8 @@ const AdminControlModal: React.FC<AdminControlModalProps> = ({
                   />
                 )}
                 {activePanel === 'orders' && (
-                  <OrdersScreenplatesPanel
-                    msgs={orderScreenplateMsgs}
+                  <OrdersPanel
+                    msgs={orderMsgs}
                     onScrollTo={onScrollToMessage}
                     onBack={() => setActivePanel(null)}
                   />

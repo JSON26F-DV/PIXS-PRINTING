@@ -1,7 +1,6 @@
 import React, { useMemo } from 'react'
 import type { ICategory, IProduct } from '../../../types/product.types'
 import type {
-  CustomerScreenplateListItem,
   HomepageProductFilters,
 } from '../../../types/homepage.types'
 import ProductCard from './ProductCard'
@@ -14,7 +13,6 @@ interface ProductGridProps {
   filters: HomepageProductFilters
   setFilters: React.Dispatch<React.SetStateAction<HomepageProductFilters>>
   categories: ICategory[]
-  screenplates: CustomerScreenplateListItem[]
   page: number
   totalPages: number
   onPageChange: (page: number) => void
@@ -28,7 +26,6 @@ const ProductGrid: React.FC<ProductGridProps> = ({
   filters,
   setFilters,
   categories,
-  screenplates,
   page,
   totalPages,
   onPageChange,
@@ -48,7 +45,6 @@ const ProductGrid: React.FC<ProductGridProps> = ({
         filters={filters}
         setFilters={setFilters}
         categories={categories}
-        screenplates={screenplates}
       />
 
       <div className="pb-16">

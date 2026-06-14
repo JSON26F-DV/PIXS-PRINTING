@@ -7,7 +7,6 @@ use App\Models\ProductGallery;
 use App\Models\ProductReview;
 use App\Models\ProductTag;
 use App\Models\ProductVariant;
-use App\Models\ScreenplateCompatibility;
 use App\Services\AuditService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -66,20 +65,6 @@ class ProductController extends Controller
                 $query->where('is_in_stock', true);
             }
 
-            // Screenplate compatibility
-            if ($request->filled('screenplate_id')) {
-                $screenplateId = $request->screenplate_id;
-                $compatibleIds = ScreenplateCompatibility::where('screenplate_id', $screenplateId)
-                    ->pluck('product_id')
-                    ->unique()
-                    ->toArray();
-                if (! empty($compatibleIds)) {
-                    $query->whereIn('id', $compatibleIds);
-                } else {
-                    $query->whereRaw('1 = 0');
-                }
-            }
-
             // Min rating
             if ($request->filled('min_rating')) {
                 $query->where('ratings', '>=', (float) $request->min_rating);
@@ -123,7 +108,6 @@ class ProductController extends Controller
                         'height' => $v->height,
                         'price' => (float) $v->price,
                         'stock' => (int) $v->stock,
-                        'is_need_screenplate' => (bool) $v->is_need_screenplate,
                     ]);
 
                     return $data;
@@ -159,7 +143,6 @@ class ProductController extends Controller
                 'height' => $v->height,
                 'price' => (float) $v->price,
                 'stock' => (int) $v->stock,
-                'is_need_screenplate' => (bool) $v->is_need_screenplate,
             ]);
             $data['gallery'] = $product->gallery->sortBy('sort_order')->values()->map(
                 fn ($img) => $img->image_url
@@ -276,7 +259,6 @@ class ProductController extends Controller
                         'height' => $v->height,
                         'price' => (float) $v->price,
                         'stock' => (int) $v->stock,
-                        'is_need_screenplate' => (bool) $v->is_need_screenplate,
                     ]);
 
                     return $data;
@@ -327,7 +309,6 @@ class ProductController extends Controller
                 'min_order' => 'nullable|integer|min:1',
                 'print_method' => 'nullable|string|max:100',
                 'is_in_stock' => 'nullable|in:0,1,true,false',
-                'is_need_screenplate' => 'nullable|in:0,1,true,false',
                 'is_need_color' => 'nullable|in:0,1,true,false',
                 'ratings' => 'nullable|integer|min:0|max:5',
                 'total_sold' => 'nullable|integer|min:0',
@@ -367,7 +348,6 @@ class ProductController extends Controller
                     'min_order' => (int) $request->input('min_order', 1),
                     'print_method' => $request->input('print_method'),
                     'is_in_stock' => filter_var($request->input('is_in_stock', true), FILTER_VALIDATE_BOOLEAN),
-                    'is_need_screenplate' => filter_var($request->input('is_need_screenplate', false), FILTER_VALIDATE_BOOLEAN),
                     'is_need_color' => filter_var($request->input('is_need_color', false), FILTER_VALIDATE_BOOLEAN),
                     'ratings' => (int) $request->input('ratings', 5),
                     'total_sold' => (int) $request->input('total_sold', 0),
@@ -424,7 +404,6 @@ class ProductController extends Controller
                 'min_order' => 'nullable|integer|min:1',
                 'print_method' => 'nullable|string|max:100',
                 'is_in_stock' => 'nullable|in:0,1,true,false',
-                'is_need_screenplate' => 'nullable|in:0,1,true,false',
                 'is_need_color' => 'nullable|in:0,1,true,false',
                 'ratings' => 'nullable|integer|min:0|max:5',
                 'total_sold' => 'nullable|integer|min:0',
@@ -457,7 +436,6 @@ class ProductController extends Controller
                     'min_order' => (int) $request->input('min_order', 1),
                     'print_method' => $request->input('print_method'),
                     'is_in_stock' => filter_var($request->input('is_in_stock'), FILTER_VALIDATE_BOOLEAN),
-                    'is_need_screenplate' => filter_var($request->input('is_need_screenplate'), FILTER_VALIDATE_BOOLEAN),
                     'is_need_color' => filter_var($request->input('is_need_color'), FILTER_VALIDATE_BOOLEAN),
                     'ratings' => (int) $request->input('ratings', $product->ratings),
                     'total_sold' => (int) $request->input('total_sold', $product->total_sold),
@@ -844,7 +822,6 @@ class ProductController extends Controller
             'min_order' => (int) $product->min_order,
             'main_image' => $product->main_image,
             'print_method' => $product->print_method,
-            'is_need_screenplate' => (bool) $product->is_need_screenplate,
             'is_need_color' => (bool) $product->is_need_color,
             'is_in_stock' => (bool) $product->is_in_stock,
             'ratings' => (float) $product->ratings,

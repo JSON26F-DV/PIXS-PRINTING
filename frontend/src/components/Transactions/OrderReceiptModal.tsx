@@ -75,11 +75,6 @@ const OrderReceiptModal: React.FC<ReceiptModalProps> = ({
                       <p className="text-[9px] font-black tracking-widest text-slate-400 uppercase">
                         {item.quantity} Unit{item.quantity > 1 ? 's' : ''}
                       </p>
-                      {item.screenplate_id && (
-                        <span className="mt-1 flex items-center gap-1 text-[8px] font-black tracking-widest text-pixs-mint uppercase">
-                          Custom Plate Configured
-                        </span>
-                      )}
                     </div>
                     <div className="text-right">
                       <p className="text-xs font-black text-slate-900 italic">PHP {(item.quantity * item.unit_price).toLocaleString()}</p>

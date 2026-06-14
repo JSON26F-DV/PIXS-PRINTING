@@ -50,7 +50,6 @@ type PendingConfig = {
   quantity?: number
   colors?: CartColorInfo[]
   variant?: CartItem['variant']
-  platePrice?: number
 }
 
 const AddToCartPage: React.FC = () => {
@@ -66,57 +65,12 @@ const AddToCartPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true)
   const [pendingMap, setPendingMap] = useState<Record<string, PendingConfig>>({})
 
-  // Merge cart item with its pending overrides and RECALCULATE totals
-  const getVariantCompatibilityMap = useCallback((item: CartItem) => {
-    const map: Record<string, { isCompatible: boolean; reason?: string }> = {}
-    try {
-      const product = item.fullProduct
-      if (!product || !product.variants) return map
 
-      // We use the merged item's plate to get compatibility info
-      const plate = item.plate
-
-      product.variants.forEach((v) => {
-        if (!plate) {
-          map[v.variant_id] = { isCompatible: true }
-          return
-        }
-
-        const comp = plate.compatibility?.find((c) => c.product_id === product.id)
-
-        if (!comp) {
-          map[v.variant_id] = { isCompatible: true }
-          return
-        }
-
-        const isAllowed =
-          comp.allowed_variants?.includes(v.variant_id) ||
-          comp.allowed_variants?.includes(v.size) ||
-          comp.allowed_variants?.includes('ALL')
-
-        if (isAllowed) {
-          map[v.variant_id] = { isCompatible: true }
-        } else {
-          map[v.variant_id] = { isCompatible: false, reason: 'Not Compatible' }
-        }
-      })
-    } catch (err) {
-      console.error('Compatibility calculation failed:', err)
-    }
-
-    return map
-  }, [])
 
   const getMergedItem = useCallback(
     (item: CartItem): CartItem => {
       const pending = pendingMap[item.id]
       const merged = pending ? { ...item, ...pending } : { ...item }
-
-
-
-      if (merged.plate) {
-        merged.plate = { ...merged.plate, printPricePerUnit: 0 }
-      }
 
       // Recalculate totalCartPrice for UI subtotal accuracy
       const quantity = merged.quantity
@@ -158,31 +112,6 @@ const AddToCartPage: React.FC = () => {
     fetchData()
   }, [])
 
-  // Auto-remove products/variants that require a screenplate but have none attached
-  useEffect(() => {
-    if (isCartLoading || isLoading) return
-
-    const invalidItems = items.filter((item) => {
-      const prodNeed = item.fullProduct && (Number(item.fullProduct.is_need_screenplate) === 1 || item.fullProduct.is_need_screenplate === true)
-      if (!prodNeed) return false
-
-      const selectedVariant = item.fullProduct?.variants?.find(v => v.variant_id === item.variant.id)
-      let itemNeedsScreenplate = true
-      if (selectedVariant && selectedVariant.is_need_screenplate !== undefined) {
-        itemNeedsScreenplate = Number(selectedVariant.is_need_screenplate) === 1 || selectedVariant.is_need_screenplate === true
-      }
-      
-      return itemNeedsScreenplate && !item.plate
-    })
-
-    if (invalidItems.length > 0) {
-      invalidItems.forEach((invalidItem) => {
-        removeItem(invalidItem.id)
-        toast.error(`Removed "${invalidItem.productName}" from cart: Screenplate is required but missing.`)
-      })
-    }
-  }, [items, isCartLoading, isLoading, removeItem])
-
   // ─── Merged items list ────────────────────────────────────────────────────
   const mergedItems: CartItem[] = items.map(getMergedItem)
 
@@ -203,8 +132,7 @@ const AddToCartPage: React.FC = () => {
   const hasMissingColor = selectedItems.some(item => {
     const productMeta = item.fullProduct
     if (productMeta?.is_need_color) {
-      const requiredChannels = item.plate?.channels || 1
-      return item.colors.length < requiredChannels
+      return item.colors.length < 1
     }
     return false
   })
@@ -212,12 +140,6 @@ const AddToCartPage: React.FC = () => {
   const selectedTotal = selectedItems.reduce((acc, item) => {
     return acc + item.totalCartPrice
   }, 0)
-
-  const hasIncompatibleVariant = selectedItems.some((item) => {
-    if (!item.variant || !item.variant.id) return false
-    const compMap = getVariantCompatibilityMap(item)
-    return compMap[item.variant.id]?.isCompatible === false
-  })
 
   // Prevent checkout if any selected items are lower than their mandatory minimum order
   const hasLowQuantityItem = selectedItems.some(
@@ -243,13 +165,6 @@ const AddToCartPage: React.FC = () => {
 
     if (hasLowQuantityItem) {
       toast.error('Some selected items do not meet their minimum quantity requirements. Please adjust to continue.')
-      return
-    }
-
-    if (hasIncompatibleVariant) {
-      toast.error(
-        'Some selected products have incompatible sizes for their assigned screenplates.',
-      )
       return
     }
 
@@ -305,7 +220,6 @@ const AddToCartPage: React.FC = () => {
     selectedItems,
     hasMissingColor,
     hasLowQuantityItem,
-    hasIncompatibleVariant,
     hasInsufficientStockVariant,
     mergedItems,
     syncCart,
@@ -376,20 +290,13 @@ const AddToCartPage: React.FC = () => {
     const selectedColor = colors.find((c) => c.id === colorId)
     if (!selectedColor) return
 
-    const maxChannels = item.plate?.channels || 1
     const currentColors = item.colors || []
 
     let nextColors: CartColorInfo[]
     if (currentColors.some((c) => c.id === colorId)) {
       nextColors = currentColors.filter((c) => c.id !== colorId)
-    } else if (currentColors.length < maxChannels) {
-      nextColors = [...currentColors, selectedColor]
     } else {
-      if (maxChannels === 1) {
-        nextColors = [selectedColor]
-      } else {
-        return
-      }
+      nextColors = [selectedColor]
     }
 
     setPending(item.id, { colors: nextColors })
@@ -595,7 +502,6 @@ const AddToCartPage: React.FC = () => {
                                       onSelect={(vId) => handleVariantChange(item.id, vId)}
                                       minThreshold={productMeta.min_threshold ?? 5}
                                       minOrder={item.minOrder}
-                                      variantCompatibilityMap={getVariantCompatibilityMap(item)}
                                   />
                                 </div>
                               )}
@@ -605,11 +511,9 @@ const AddToCartPage: React.FC = () => {
                                 <div className="CartProductColorPicker space-y-2">
                                   <div className="flex items-center justify-between">
                                     <label className="text-[10px] font-black tracking-widest text-slate-500 uppercase">
-                                      Master Color Sequence{' '}
-                                      {item.plate &&
-                                        `(${item.colors.length}/${item.plate.channels} Channels)`}
+                                      Master Color Sequence
                                     </label>
-                                    {item.colors.length < (item.plate?.channels || 1) && (
+                                    {item.colors.length < 1 && (
                                       <span className="text-[10px] font-black tracking-widest text-rose-500 uppercase animate-pulse">
                                         * Color required
                                       </span>
@@ -718,24 +622,6 @@ const AddToCartPage: React.FC = () => {
                                   </p>
                                 </div>
                               </div>
-
-                              {/* Plate Info */}
-                              {item.plate && (
-                                <div className="mt-2 border-t border-slate-100 pt-4">
-                                  <p className="flex items-center gap-2 text-sm font-black tracking-tight text-slate-900 italic">
-                                    🖨 {item.plate.name}
-                                  </p>
-                                  <p className="mt-1 text-[10px] font-black tracking-widest text-slate-400 uppercase">
-                                    {item.plate.type === 'Flatscreen'
-                                      ? 'Flat'
-                                      : item.plate.type === 'Cylindrical'
-                                        ? 'Center'
-                                        : 'Front'}{' '}
-                                    | {item.plate.channels} channels
-                                  </p>
-
-                                </div>
-                              )}
                             </m.div>
                           )}
                         </AnimatePresence>

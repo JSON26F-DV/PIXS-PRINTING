@@ -639,7 +639,6 @@ const AuditLogView: React.FC = () => {
                 onChange={(e) => handleFilterChange('entity_type', e.target.value)}
               >
                 <option value="">Entity: All</option>
-                <option value="screenplate">Screenplate</option>
                 <option value="order">Order</option>
                 <option value="product">Product</option>
                 <option value="user">User</option>

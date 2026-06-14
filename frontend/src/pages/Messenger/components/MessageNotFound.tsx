@@ -89,7 +89,6 @@ const MessageNotFound: React.FC<MessageNotFoundProps> = ({
 function formatType(type: string): string {
   const typeMap: Record<string, string> = {
     'order': 'Order',
-    'screenplate_request': 'Screenplate Request',
     'payment_code': 'Payment Code',
     'refund': 'Refund',
     'expenditure': 'Expenditure',

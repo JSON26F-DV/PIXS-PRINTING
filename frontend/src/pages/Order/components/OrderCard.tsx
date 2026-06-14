@@ -33,7 +33,6 @@ export interface OrderItem {
   }
   short_description?: string
   order_item_colors?: { id: string; name: string; hex: string }[]
-  plate?: { id: string; name: string; type: string; channels: number; setupFee: number; printPricePerUnit: number } | null
   customRequirements?: string
 }
 
@@ -179,14 +178,12 @@ export const OrderCard: React.FC<OrderCardProps> = ({
             id: self.crypto.randomUUID(), // New unique ID for the recreate cart item
             product_id: item.product_id,
             variant_id: item.variant.id,
-            screenplate_id: item.plate?.id || null,
             quantity: item.quantity,
             unit_price: item.variant.unitPrice,
-            plate_price: item.plate?.printPricePerUnit || 0,
             temp: true,
             selected: true,
             total_cart_price:
-              (item.variant.unitPrice + (item.plate?.printPricePerUnit || 0)) *
+              item.variant.unitPrice *
               item.quantity,
             colors: (item.order_item_colors || []).map((c, idx) => ({
               id: c.id,
@@ -304,7 +301,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({
                     </div>
                   )}
 
-                  {/* Quantity & Plate */}
+                  {/* Quantity */}
                   <div className="flex flex-wrap items-center gap-3">
                     <div className="OrderProductQuantity flex items-center gap-2">
                       <span className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-black text-slate-900 md:px-3 md:py-1.5 md:text-sm">
@@ -312,12 +309,6 @@ export const OrderCard: React.FC<OrderCardProps> = ({
                       </span>
                       <span className="text-[10px] font-bold text-slate-400">qty</span>
                     </div>
-
-                    {product.plate && (
-                      <div className="flex items-center gap-1.5 text-[10px] font-black italic text-slate-600 md:gap-2 md:text-xs">
-                        🖨 {product.plate.name}
-                      </div>
-                    )}
                   </div>
 
                   {/* Price Summary - Stacked on Mobile */}

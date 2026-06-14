@@ -67,13 +67,10 @@ export interface IOrderData {
   products: {
     product_id: string
     variant_id: string
-    screenplate_id: string | null
     product_name: string
     product_image: string
     quantity: number
     unit_price: number
-    plate_setup_fee: number
-    plate_print_price: number
     custom_requirements?: string
     colors: { name: string; hex: string }[]
   }[]

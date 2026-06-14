@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Customer;
 use App\Models\Order;
-use App\Models\ScreenplateRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -68,25 +67,17 @@ class AdminDashboardController extends Controller
     private function getRevenueMetrics(): array
     {
         $customerRevenue = Customer::sum('total_orders_value');
-        $screenplateRevenue = ScreenplateRequest::sum('calculated_total');
 
         $orderPoints = Order::selectRaw('DATE(created_at) as date, SUM(total_amount) as total_amount')
             ->groupBy('date')
             ->get();
 
-        $screenplatePoints = ScreenplateRequest::selectRaw('DATE(created_at) as date, SUM(calculated_total) as total_amount')
-            ->groupBy('date')
-            ->get();
-
-        $unifiedPoints = $orderPoints->concat($screenplatePoints)
-            ->groupBy('date')
-            ->map(function ($group, $date) {
-                return [
-                    'date' => $date,
-                    'total_amount' => (float) $group->sum('total_amount'),
-                ];
-            })
-            ->values();
+        $unifiedPoints = $orderPoints->map(function ($row) {
+            return [
+                'date' => $row->date,
+                'total_amount' => (float) $row->total_amount,
+            ];
+        })->values();
 
         $tableData = Order::with('customer')
             ->latest()
@@ -102,7 +93,7 @@ class AdminDashboardController extends Controller
             ]);
 
         return [
-            'total' => $customerRevenue + $screenplateRevenue,
+            'total' => $customerRevenue,
             'points' => $unifiedPoints,
             'tableData' => $tableData,
         ];
@@ -213,20 +204,6 @@ class AdminDashboardController extends Controller
                 'itemName' => $order->items->first()?->product?->name ?? 'Order',
             ]);
 
-        $screenplates = ScreenplateRequest::latest()
-            ->with('customer')
-            ->take(25)
-            ->get()
-            ->map(fn ($req) => [
-                'id' => $req->id,
-                'customerName' => $req->customer ? "{$req->customer->first_name} {$req->customer->last_name}" : 'Anonymous',
-                'total' => (float) $req->calculated_total,
-                'status' => strtoupper($req->status),
-                'type' => 'Screenplate',
-                'createdAt' => $req->created_at->toIso8601String(),
-                'itemName' => 'Custom Screenplate',
-            ]);
-
-        return $orders->concat($screenplates)->sortByDesc('createdAt')->values();
+        return $orders->sortByDesc('createdAt')->values();
     }
 }

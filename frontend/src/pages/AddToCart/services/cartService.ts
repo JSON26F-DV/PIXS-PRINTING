@@ -9,7 +9,7 @@ import type {
   CartColorInfo,
   AddToCartData,
 } from '../../../types/cart'
-import type { IProduct, IScreenPlateCompatibility } from '../../../types/product.types'
+import type { IProduct } from '../../../types/product.types'
 
 const mapBackendToFrontend = (item: {
   id: string
@@ -39,16 +39,6 @@ const mapBackendToFrontend = (item: {
       type?: string
     }
   }>
-  screenplate?: {
-    plate_name: string
-    is_flatscreen: boolean
-    channels: number
-    base_setup_fee: string
-    technical_info?: string
-    compatibility?: IScreenPlateCompatibility[]
-  }
-  screenplate_id: string
-  plate_price: string
   total_cart_price?: string | number
   selected?: boolean | number
   created_at: string
@@ -76,19 +66,6 @@ const mapBackendToFrontend = (item: {
       hex: c.color?.hex || '',
       type: (c.color?.type as 'Standard' | 'Premium') || 'Standard',
     })),
-    plate: item.screenplate
-      ? {
-          id: item.screenplate_id,
-          name: item.screenplate.plate_name,
-          type: item.screenplate.is_flatscreen ? 'Flatscreen' : 'Rotary',
-          printPricePerUnit: parseFloat(item.plate_price),
-          setupFee: parseFloat(item.screenplate.base_setup_fee),
-          channels: item.screenplate.channels,
-          printingInfo: item.screenplate.technical_info || '',
-          isOwned: true,
-          compatibility: item.screenplate.compatibility,
-        }
-      : null,
     customRequirements: '',
     createdAt: item.created_at,
     selected: Boolean(item.selected),
@@ -122,15 +99,6 @@ export const cartService = {
         channel_order: index,
       })),
     })
-    return this.getCartItems()
-  },
-
-
-  async updatePlatePrice(
-    itemId: string,
-    platePrice: number,
-  ): Promise<CartItem[]> {
-    await updateCartItem(itemId, { plate_price: platePrice })
     return this.getCartItems()
   },
 

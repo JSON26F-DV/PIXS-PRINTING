@@ -18,7 +18,6 @@
     ],
     "print_method": "Screen Print / Offset",
     "tags": ["Best Seller", "Eco-Friendly", "Food Grade"],
-    "is_need_screenplate": true,
     "is_need_color": true,
     "variants": [
       { "variant_id": "V-12OZ", "size": "12oz", "width": "95mm", "height": "100mm", "price": 4.5, "stock": 1500 },
@@ -42,7 +41,6 @@
     "gallery": [],
     "print_method": "Screen",
     "tags": ["Premium", "Durable"],
-    "is_need_screenplate": true,
     "is_need_color": true,
     "variants": [
       { "variant_id": "U-12OZ", "size": "12oz", "width": "95mm", "height": "95mm", "price": 4.75, "stock": 420 },
@@ -65,7 +63,6 @@
     "gallery": [],
     "print_method": "Industrial Hardware",
     "tags": ["Machinery", "Industrial", "Automation"],
-    "is_need_screenplate": false,
     "is_need_color": false,
     "variants": [{ "variant_id": "M-PRO-01", "size": "Standard", "width": "450mm", "height": "800mm", "price": 12500, "stock": 25 }]
   },
@@ -85,7 +82,6 @@
     "gallery": [],
     "print_method": "None",
     "tags": ["Essential"],
-    "is_need_screenplate": false,
     "is_need_color": false,
     "variants": [{ "variant_id": "L-95MM", "size": "95mm", "width": "95mm", "height": "10mm", "price": 1.5, "stock": 15000 }]
   }

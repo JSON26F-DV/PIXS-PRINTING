@@ -9,7 +9,6 @@ import Transactions from '../pages/Transactions/Transactions'
 import PaymentSuccess from '../pages/Transactions/PaymentSuccess'
 import OrderSuccess from '../pages/Transactions/OrderSuccess'
 import MessengerPage from '../pages/Messenger/MessengerPage'
-import ScreenplatePage from '../pages/Screenplate/ScreenplatePage'
 import DeletedAccount from '../views/auth/DeletedAccount'
 import OrderPage from '../pages/Order/OrderPage'
 import DiscoveryPage from '../pages/Discovery/DiscoveryPage'
@@ -27,8 +26,6 @@ import AdminLayout from '../layouts/AdminLayout'
 import Dashboard from '../views/admin/Dashboard'
 import ProductManagement from '../views/admin/ProductManagement'
 import ManageProduct from '../views/admin/management/ManageProduct'
-import ScreenplateManagement from '../views/admin/ScreenplateManagement'
-import ManageScreenplate from '../views/admin/management/ManageScreenplate'
 import StockAnalytics from '../views/admin/StockAnalytics'
 import ManageStock from '../views/admin/management/ManageStock'
 import Accounts from '../views/admin/Accounts'
@@ -221,7 +218,6 @@ const AppRouter: React.FC = () => {
         <Route path="/payment/success" element={<PaymentSuccess />} />
         <Route path="/order-success/:orderId" element={<OrderSuccess />} />
         <Route path="/chat" element={<MessengerPage />} />
-        <Route path="/screenplate" element={<ScreenplatePage />} />
         <Route path="/order" element={<OrderPage />} />
         <Route path="/discovery" element={<DiscoveryPage />} />
       </Route>
@@ -252,9 +248,6 @@ const AppRouter: React.FC = () => {
         <Route path="product" element={<ProductManagement />} />
         <Route path="product/manage" element={<ManageProduct />} />
         <Route path="product/manage/:product_id" element={<ManageProduct />} />
-        <Route path="screenplate" element={<ScreenplateManagement />} />
-        <Route path="screenplate/manage" element={<ManageScreenplate />} />
-        <Route path="screenplate/manage/:id" element={<ManageScreenplate />} />
         <Route path="stock" element={<StockAnalytics />} />
         <Route path="stock/manage/:product_id" element={<ManageStock />} />
         <Route path="account" element={<Accounts />} />

@@ -10,14 +10,11 @@ export const calculateItemTotal = (
   setupFeeApplied: number,
 ): CartItemTotals => {
   const variantCost = item.variant.unitPrice * item.quantity
-  const printCost = (item.plate?.printPricePerUnit ?? 0) * item.quantity
-  const total = variantCost + printCost + setupFeeApplied
+  const total = variantCost + setupFeeApplied
 
   return {
     itemId: item.id,
     variantCost,
-    printCost,
-    setupFeeApplied,
     total,
   }
 }

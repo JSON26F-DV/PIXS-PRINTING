@@ -10,8 +10,6 @@ import { Link } from 'react-router-dom'
 import Footer from '../../components/Footer/Footer'
 import { orderApi } from '../../api/orders.api'
 import { OrderCard, type Order } from './components/OrderCard'
-import { ScreenplateRequestCard, type ScreenplateRequest } from './components/ScreenplateRequestCard'
-import { getScreenplateRequests } from '../../api/screenplate.api'
 
 const TABS = [
   { id: 'all', label: 'All', status: 'ALL' },
@@ -20,7 +18,6 @@ const TABS = [
   { id: 'to-receive', label: 'To Receive', status: 'SHIPPED' },
   { id: 'to-review', label: 'To Review', status: 'DELIVERED' },
   { id: 'unpaid', label: 'Unpaid', status: 'UNPAID' },
-  { id: 'screenplates', label: 'Screenplates', status: 'SCREENPLATE' },
   {
     id: 'return-cancellation',
     label: 'Return & Cancellation',
@@ -163,7 +160,6 @@ const CancelOrderModal: React.FC<{
 
 const OrderPage: React.FC = () => {
   const [orders, setOrders] = useState<Order[]>([])
-  const [screenplateRequests, setScreenplateRequests] = useState<ScreenplateRequest[]>([])
   const [activeTab, setActiveTab] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [cancelModal, setCancelModal] = useState<{
@@ -184,17 +180,6 @@ const OrderPage: React.FC = () => {
       })
       .catch((err) => {
         console.error('Failed to fetch orders:', err)
-      })
-
-    // Fetch Screenplate Requests
-    getScreenplateRequests()
-      .then((data) => {
-        if (mounted) {
-          setScreenplateRequests(data)
-        }
-      })
-      .catch((err) => {
-        console.error('Failed to fetch screenplate requests:', err)
       })
 
     return () => { mounted = false }
@@ -256,7 +241,6 @@ const OrderPage: React.FC = () => {
   // ─── Filter Logic ────────────────────────────────────────────────────────
   const filterOrdersByStatus = (orders: Order[], status: string) => {
     if (status === 'ALL') return orders
-    if (status === 'SCREENPLATE') return [] // Handled via filteredItems combine
     return orders.filter((o) => o.status.toUpperCase() === status)
   }
 
@@ -274,35 +258,8 @@ const OrderPage: React.FC = () => {
       )
     }
 
-    // Filter Screenplate Requests
-    let currentRequests: ScreenplateRequest[] = []
-    if (targetStatus === 'ALL' || targetStatus === 'SCREENPLATE' || targetStatus === 'PENDING') {
-        currentRequests = screenplateRequests;
-        if (targetStatus === 'PENDING') {
-            currentRequests = currentRequests.filter(r => r.status === 'Pending')
-        }
-        if (targetStatus === 'SCREENPLATE') {
-            // specifically show all screenplates in screenplate tab
-        }
-
-        if (searchQuery) {
-            const query = searchQuery.toLowerCase()
-            currentRequests = currentRequests.filter(r => 
-                r.id.toLowerCase().includes(query) || 
-                r.product?.name.toLowerCase().includes(query)
-            )
-        }
-    } else {
-        currentRequests = []
-    }
-
-    const combined = [
-      ...currentOrders.map(o => ({ type: 'order' as const, data: o, date: new Date(o.created_at) })),
-      ...currentRequests.map(r => ({ type: 'screenplate' as const, data: r, date: new Date(r.created_at) }))
-    ]
-
-    return combined.sort((a, b) => b.date.getTime() - a.date.getTime())
-  }, [orders, screenplateRequests, activeTab, searchQuery])
+    return currentOrders.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+  }, [orders, activeTab, searchQuery])
 
   return (
     <div className="order-page-wrapper min-h-screen bg-white">
@@ -373,22 +330,15 @@ const OrderPage: React.FC = () => {
           <AnimatePresence mode="popLayout">
             {filteredItems.length > 0 ? (
               filteredItems.map((item) => (
-                item.type === 'order' ? (
-                  <OrderCard
-                    key={item.data.order_id}
-                    order={item.data}
-                    onUpdateReview={updateOrderReview}
-                    onCancelOrder={(id) =>
-                      setCancelModal({ isOpen: true, orderId: id })
-                    }
-                    onConfirmReceived={handleConfirmReceipt}
-                  />
-                ) : (
-                  <ScreenplateRequestCard
-                    key={item.data.id}
-                    request={item.data}
-                  />
-                )
+                <OrderCard
+                  key={item.order_id}
+                  order={item}
+                  onUpdateReview={updateOrderReview}
+                  onCancelOrder={(id) =>
+                    setCancelModal({ isOpen: true, orderId: id })
+                  }
+                  onConfirmReceived={handleConfirmReceipt}
+                />
               ))
             ) : (
               <m.div

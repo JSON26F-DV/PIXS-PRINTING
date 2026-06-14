@@ -5,18 +5,6 @@ export interface CartColorInfo {
   type: 'Standard' | 'Premium'
 }
 
-export interface CartPlateInfo {
-  id: string
-  name: string
-  type: string
-  printPricePerUnit: number
-  setupFee: number
-  channels: number
-  printingInfo: string
-  isOwned: boolean
-  compatibility?: IScreenPlateCompatibility[]
-}
-
 export interface CartVariantInfo {
   id: string
   size: string
@@ -26,7 +14,7 @@ export interface CartVariantInfo {
   stock: number
 }
 
-import type { IProduct, IScreenPlateCompatibility } from './product.types'
+import type { IProduct } from './product.types'
 
 export interface CartItem {
   id: string
@@ -39,7 +27,6 @@ export interface CartItem {
   quantity: number
   variant: CartVariantInfo
   colors: CartColorInfo[]
-  plate: CartPlateInfo | null
   customRequirements?: string
   createdAt: string
   selected: boolean
@@ -51,8 +38,6 @@ export interface CartItem {
 export interface CartItemTotals {
   itemId: string
   variantCost: number
-  printCost: number
-  setupFeeApplied: number
   total: number
 }
 
@@ -60,10 +45,8 @@ export interface AddToCartData {
   id: string
   product_id: string
   variant_id: string
-  screenplate_id: string | null
   quantity: number
   unit_price: number
-  plate_price: number
   total_cart_price: number
   temp?: boolean
   selected?: boolean
@@ -81,7 +64,6 @@ export interface UpdateCartItemData {
   variant_id?: string
   unit_price?: number
   total_cart_price?: number
-  plate_price?: number
   colors?: {
     id: string
     channel_label: string

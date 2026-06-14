@@ -305,7 +305,6 @@ class AdminAccountController extends Controller
                 DB::table('cart_items')->where('customer_id', $id)->delete();
                 DB::table('product_reviews')->where('customer_id', $id)->delete();
                 DB::table('notifications')->where('customer_id', $id)->delete();
-                DB::table('screenplate_requests')->where('customer_id', $id)->delete();
                 DB::table('refunds')->where('customer_id', $id)->delete();
             }
 
@@ -501,12 +500,6 @@ class AdminAccountController extends Controller
                         'name' => $c->colorDetails?->name ?? 'Unknown',
                         'hex' => $c->colorDetails?->hex ?? '#000000',
                     ]),
-                    'plate' => $item->screenplate ? [
-                        'id' => $item->screenplate->id,
-                        'name' => $item->screenplate->name,
-                        'setupFee' => (float) $item->screenplate->setup_fee,
-                        'printPricePerUnit' => (float) $item->plate_price,
-                    ] : null,
                     'customRequirements' => $o->production_notes,
                 ])->toArray(),
             ];

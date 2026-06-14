@@ -16,8 +16,6 @@ interface PriceCalculatorUIProps {
   isOutOfStock: boolean
   minOrder: number
   isQuantityTooLow: boolean
-  hasRequiredPlate: boolean
-  isNeedScreenplate: boolean
   hasRequiredColor: boolean
   isNeedColor: boolean
   onAddToCart: () => void
@@ -38,8 +36,6 @@ const PriceCalculatorUI: React.FC<PriceCalculatorUIProps> = ({
   isOutOfStock,
   minOrder,
   isQuantityTooLow,
-  hasRequiredPlate,
-  isNeedScreenplate,
   hasRequiredColor,
   isNeedColor,
   onAddToCart,
@@ -49,7 +45,6 @@ const PriceCalculatorUI: React.FC<PriceCalculatorUIProps> = ({
   hideBuyNow,
 }) => {
   const isColorMissing = isNeedColor && !hasRequiredColor
-  const isPlateMissing = isNeedScreenplate && !hasRequiredPlate
 
   return (
     <div className="animate-in slide-in-from-bottom-8 space-y-8 duration-700">
@@ -142,18 +137,9 @@ const PriceCalculatorUI: React.FC<PriceCalculatorUIProps> = ({
           </div>
         )}
 
-        {isPlateMissing && (
-          <div className="animate-in slide-in-from-left flex items-center gap-3 rounded-2xl border border-rose-800 bg-rose-900 p-5 text-rose-100 italic transition-all duration-500 md:rounded-[28px]">
-            <Layers size={18} strokeWidth={3} className="text-rose-400" />
-            <p className="text-[10px] font-black tracking-[2px] uppercase">
-              Required: Please select a screenplate to proceed.
-            </p>
-          </div>
-        )}
-
         {isColorMissing && (
-          <div className="flex animate-pulse items-center gap-3 rounded-2xl border border-dashed border-slate-800 bg-slate-900 p-5 text-amber-500 italic transition-all md:rounded-[28px]">
-            <Palette size={18} strokeWidth={3} className="text-amber-400" />
+          <div className="flex animate-pulse items-center gap-3 rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-5 text-amber-600 italic transition-all md:rounded-[28px]">
+            <Palette size={18} strokeWidth={3} className="text-amber-500" />
             <p className="text-[10px] font-black tracking-[2px] uppercase">
               Required: Please select a color to proceed.
             </p>

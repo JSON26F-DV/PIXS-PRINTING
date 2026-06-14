@@ -1,11 +1,8 @@
 import type {
   IProduct,
-  IScreenPlate,
   IColor,
-  IScreenPlateCompatibility,
 } from '../../../types/product.types'
 import productsData from '../../../data/products.json'
-import screenplateData from '../../../data/screenplate.json'
 import colorData from '../../../data/color.json'
 
 // Simulated latency to mimic actual production API call
@@ -24,27 +21,8 @@ export const fetchProductById = async (
   return product ?? null
 }
 
-/** Fetch all active screen plates compatible with the specific product ID */
-export const fetchCompatiblePlates = async (
-  productId: string,
-): Promise<IScreenPlate[]> => {
-  await delay(SIMULATED_DELAY_MS)
-  return (screenplateData as IScreenPlate[]).filter((plate) =>
-    plate.compatibility.some(
-      (cp: IScreenPlateCompatibility) => cp.product_id === productId,
-    ),
-  )
-}
-
 /** Fetch the master inventory of standard and premium colors */
 export const fetchColors = async (): Promise<IColor[]> => {
   await delay(SIMULATED_DELAY_MS)
   return colorData as IColor[]
-}
-
-/** Mock checking if a customer already owns a screen plate to waive setup fees */
-export const checkOwnedPlates = async (): Promise<string[]> => {
-  await delay(SIMULATED_DELAY_MS)
-  // Returns real plate IDs from screenplate.json for demonstration
-  return (screenplateData as IScreenPlate[]).map((p) => p.id)
 }

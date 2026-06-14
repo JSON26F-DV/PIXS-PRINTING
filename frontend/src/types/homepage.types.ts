@@ -14,8 +14,6 @@ export interface HomepageProductFilters {
   category: string | 'ALL'
   availability: HomepageAvailabilityFilter
   favoritesOnly: boolean
-  /** `screenplates.id` or ALL. */
-  screenplateId: string | 'ALL'
   minRating: number | 'ALL'
   soldFilter: 'ALL' | 'MOST_SOLD'
 }
@@ -31,11 +29,4 @@ export function mockRatingFromProductId(id: string): number {
   let sum = 0
   for (let i = 0; i < id.length; i++) sum += id.charCodeAt(i)
   return ((sum % 20) + 30) / 10
-}
-
-/** Row from `GET /api/customer/screenplates` (subset used by FilterBar). */
-export interface CustomerScreenplateListItem {
-  id: string
-  plate_name: string
-  owner_id: string
 }

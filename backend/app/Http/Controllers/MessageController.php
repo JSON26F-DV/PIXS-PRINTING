@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Order;
-use App\Models\ScreenplateRequest;
 use App\Services\AuditService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -208,10 +207,9 @@ class MessageController extends Controller
             'receiver_id' => 'required|string|max:20',
             'receiver_type' => 'required|in:employee,customer',
             'reply_to_id' => 'nullable|string|max:30',
-            'message_type' => 'nullable|in:order,screenplate_request,payment_code,refund,expenditure',
+            'message_type' => 'nullable|in:order,payment_code,refund,expenditure',
             'type_id' => 'nullable|string|max:30',
             'order_id' => 'nullable|string|max:30',
-            'screenplate_request_id' => 'nullable|string|max:20',
             'payment_code_id' => 'nullable|string|max:30',
             'product_concern' => 'nullable|boolean',
             'is_email' => 'nullable|boolean',
@@ -309,9 +307,6 @@ class MessageController extends Controller
             if (! empty($validated['order_id'])) {
                 $messageType = 'order';
                 $typeId = $validated['order_id'];
-            } elseif (! empty($validated['screenplate_request_id'])) {
-                $messageType = 'screenplate_request';
-                $typeId = $validated['screenplate_request_id'];
             } elseif (! empty($validated['payment_code_id'])) {
                 $messageType = 'payment_code';
                 $typeId = $validated['payment_code_id'];
@@ -469,7 +464,6 @@ class MessageController extends Controller
             'items.product',
             'items.variant',
             'items.colors.colorDetails',
-            'items.screenplate',
             'address',
             'customer',
         ])->where('id', $id)->first();
@@ -509,15 +503,6 @@ class MessageController extends Controller
                     ];
                 })->toArray() : [];
 
-                $plate = $item->screenplate ? [
-                    'id' => $item->screenplate_id,
-                    'name' => $item->screenplate->plate_name ?? 'Custom Plate',
-                    'type' => $item->screenplate->type ?? 'Flatscreen',
-                    'channels' => (int) $item->screenplate->channels ?? 1,
-                    'setupFee' => 0,
-                    'printPricePerUnit' => (float) $item->plate_price,
-                ] : null;
-
                 return [
                     'id' => (string) $item->id,
                     'product_id' => $item->product_id,
@@ -535,25 +520,11 @@ class MessageController extends Controller
                         'unitPrice' => (float) $item->unit_price,
                     ],
                     'order_item_colors' => $order_item_colors,
-                    'plate' => $plate,
                 ];
             })->toArray(),
         ];
 
         return response()->json($formatted);
-    }
-
-    public function getScreenplateRequestContext($id): JsonResponse
-    {
-        $request = ScreenplateRequest::with('product')
-            ->where('id', $id)
-            ->first();
-
-        if (! $request) {
-            return response()->json(['notFound' => true]);
-        }
-
-        return response()->json($request);
     }
 
     public function getExpenditureContext($id): JsonResponse

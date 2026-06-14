@@ -93,12 +93,6 @@ const Footer: React.FC = () => {
                 Products
               </Link>
               <Link
-                to="/screenplate"
-                className="FooterLink text-sm font-bold text-slate-500 italic transition-colors hover:text-slate-900"
-              >
-                Screenplate
-              </Link>
-              <Link
                 to="/store"
                 className="FooterLink text-sm font-bold text-slate-500 italic transition-colors hover:text-slate-900"
               >

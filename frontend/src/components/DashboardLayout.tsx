@@ -45,7 +45,6 @@ import { SafeTerminal } from '../utils/safeTerminal'
 
 // Mock Data imports (will use SafeTerminal to read them)
 import orderRaw from '../data/order.json'
-import requestScreenplateRaw from '../data/request_screenplate.json'
 import productsRaw from '../data/products.json'
 import restockLogsRaw from '../data/restock_logs.json'
 import salaryRaw from '../data/salary.json'
@@ -78,15 +77,7 @@ interface RawOrder {
   items?: { productName: string }[]
 }
 
-interface RawRequest {
-  request_id?: string | number
-  id?: string | number
-  customer_id: string | number
-  product_id: string | number
-  calculated_total: string | number
-  status: string
-  created_at: string
-}
+
 
 interface RawProduct {
   id: string | number
@@ -160,10 +151,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ role }) => {
   const analytics = useMemo((): AnalyticsResult => {
     try {
       const orderData = SafeTerminal.array<RawOrder>(orderRaw)
-      const requestScreenplateData = SafeTerminal.array<RawRequest>(
-        requestScreenplateRaw,
-      )
-      const productsData = SafeTerminal.array<RawProduct>(productsRaw)
+      SafeTerminal.array<RawProduct>(productsRaw)
       const restockLogsData = SafeTerminal.array<RawRestockLog>(restockLogsRaw)
       const salaryData = SafeTerminal.array<RawSalary>(salaryRaw)
 
@@ -193,20 +181,6 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ role }) => {
             itemName: String(o.items?.[0]?.productName || 'Order'),
           }),
         ),
-        ...requestScreenplateData.map((r: RawRequest): AnalyticsItem => {
-          const product = productsData.find(
-            (p: RawProduct) => String(p.id) === String(r.product_id),
-          )
-          return {
-            id: String(r.request_id || r.id),
-            customerName: 'Customer #' + r.customer_id,
-            total: Number(r.calculated_total || 0),
-            status: String(r.status || 'PENDING').toUpperCase(),
-            type: 'Screenplate Req',
-            createdAt: String(r.created_at || new Date().toISOString()),
-            itemName: String(product?.name || 'Screenplate'),
-          }
-        }),
       ]
 
       allItems.forEach((item: AnalyticsItem) => {
